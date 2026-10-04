@@ -19,7 +19,12 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Assets : le porteur du projet possède des packs Unity Asset Store et d'autres ; il en manquera, qu'il créera sous Blender avec accompagnement.
 - Unity envisagé comme **évolution future** (pas de compétence actuelle).
 
+## Méthode de travail
+- Une étape à la fois : Claude réalise → le PO valide → on continue ; blocage → on analyse ensemble.
+- Quand le PO doit agir (Claude ne peut pas), guider **pas à pas**, sans jargon, avec résultat attendu.
+
 ## Documents de référence
+- `docs/architecture.md` : plan technique et chantiers du prototype (PROPOSITION en attente de validation du PO).
 - `docs/besoins.md` : cahier des charges (menu, édition de partie, paramètres, simulation).
 - `docs/risques.md` : sujets à trancher tôt pour éviter de gros chantiers.
 
