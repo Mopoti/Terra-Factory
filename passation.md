@@ -3,6 +3,10 @@
 > Fichier de transmission entre discussions. Mettre à jour à chaque fin de session.
 > Dernière mise à jour : 2026-10-04
 
+## Rôles
+- **Utilisateur = Product Owner** : décide de l'avancement et donne les directives. Non développeur (aucun langage maîtrisé).
+- **Claude = dev sénior** : propose, tranche les choix techniques, code, explique simplement et sans jargon inutile.
+
 ## Vision
 Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans le navigateur**.
 
@@ -16,7 +20,15 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Unity envisagé comme **évolution future** (pas de compétence actuelle).
 
 ## Décisions
-- (aucune encore — stack technique à valider, voir ci-dessous)
+- Multijoueur à prévoir dès l'architecture : d'abord **hôte = un joueur** (pas de serveur dédié), plus tard **mini serveur dédié**.
+- Terrain : plat au départ, mais l'architecture doit permettre plus tard un **terrain creusable** : voxels par blocs (navigateur, profondeur limitée à ~3-5 couches) ; en Unity, creusage profond. Le sol plat = un monde voxel à une seule couche de hauteur utile.
+- Stack technique : toujours à valider (voir ci-dessous).
+
+## Règles d'architecture (pour garder ces portes ouvertes)
+- Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.
+- Tous les changements passent par des **commandes/événements** (ex. « construire X en position Y ») : base du multijoueur et des sauvegardes.
+- Simulation déterministe à pas fixe (même seed + mêmes commandes = même résultat).
+- Monde découpé en chunks avec une grille 3D (même si une seule couche utile au début).
 
 ## Proposition de stack (à valider)
 - TypeScript + Vite
