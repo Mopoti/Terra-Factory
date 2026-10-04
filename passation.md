@@ -19,7 +19,12 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Assets : le porteur du projet possède des packs Unity Asset Store et d'autres ; il en manquera, qu'il créera sous Blender avec accompagnement.
 - Unity envisagé comme **évolution future** (pas de compétence actuelle).
 
+## Documents de référence
+- `docs/besoins.md` : cahier des charges (menu, édition de partie, paramètres, simulation).
+- `docs/risques.md` : sujets à trancher tôt pour éviter de gros chantiers.
+
 ## Décisions
+- Stack validée par le PO : TypeScript + Vite + Three.js.
 - Multijoueur à prévoir dès l'architecture : d'abord **hôte = un joueur** (pas de serveur dédié), plus tard **mini serveur dédié**.
 - Terrain : plat au départ, mais l'architecture doit permettre plus tard un **terrain creusable** : voxels par blocs (navigateur, profondeur limitée à ~3-5 couches) ; en Unity, creusage profond. Le sol plat = un monde voxel à une seule couche de hauteur utile.
 - Stack technique : toujours à valider (voir ci-dessous).
@@ -44,7 +49,8 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Déterminisme : ne jamais utiliser `Math.random()` dans la génération du monde.
 
 ## Prochaines étapes
-1. Valider la stack et le périmètre du MVP.
+0. Finir la discussion de cadrage (`docs/risques.md`) avant de coder.
+1. Périmètre du prototype : menu d'accueil complet (Continuer/Nouvelle/Charger/Paramètres/Quitter), édition de partie, sol plat, 3 vues.
 2. Prototype : scène Three.js, sol plat, caméra 3 vues, contrôles remappables.
 3. Génération de chunks infinie avec seed + ressources.
 4. Sauvegarde multi-slots.
