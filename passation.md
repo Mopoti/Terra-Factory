@@ -29,6 +29,10 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Terrain : plat au départ, mais l'architecture doit permettre plus tard un **terrain creusable** : voxels par blocs (navigateur, profondeur limitée à ~3-5 couches) ; en Unity, creusage profond. Le sol plat = un monde voxel à une seule couche de hauteur utile.
 - Stack technique : toujours à valider (voir ci-dessous).
 
+- Tour 2 de cadrage : voir `docs/besoins.md` §5 (échelle 50 cm, grille, chargeur de chunk, électricité, véhicules, saisons/biomes, pollution→nids…).
+- Stockage sauvegardes (choix Claude) : IndexedDB comme stockage principal + export/import de fichier (.zip) obligatoire ; option « dossier sur disque » (File System Access API, Chrome/Edge) plus tard ; version bureau ensuite.
+- Restent à trancher : taille d'équipe multijoueur (reco 2-4), version bureau (reco plus tard), ennemis en vagues vs zones.
+
 ## Règles d'architecture (pour garder ces portes ouvertes)
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.
 - Tous les changements passent par des **commandes/événements** (ex. « construire X en position Y ») : base du multijoueur et des sauvegardes.

@@ -26,3 +26,18 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - Vie (joueur, ennemis, objets destructibles), endurance, dégâts, vitesse/vélocité, puissance.
 - Combustion : chaque combustible a une énergie (un bout de bois < un charbon).
 - 🔶 Voir `docs/risques.md` pour les compléments proposés.
+
+## 5. Décisions du PO — cadrage tour 2
+- **Échelle** : 1 case = 50×50×50 cm. Unités affichées configurables (métrique/impérial, °C/°F/K, etc.) ; le jeu stocke toujours en unités SI et ne convertit qu'à l'affichage.
+- **Construction** : sur grille (type Factorio). À prévoir : placement libre sans grille en fin de projet (navigateur puis Unity).
+- **Sauvegardes** : survivent aux mises à jour (ids stables + format versionné + migrations). Données de jeu séparées du code.
+- **Zones éloignées** : l'usine continue de tourner. Navigateur : un objet « chargeur de chunk » (difficile à fabriquer) garde une zone active ; Unity : tout tourne partout.
+- **Énergie** : réseaux électriques (volt, ampère, watt). Exemple de chaîne : eau douce → chauffée à 100 °C → vapeur → tuyaux → turbines → électricité.
+- **Inventaire** : limité en poids ET en volume/taille. Véhicules (brouette, voiture à combustible, voiture électrique, tank, camion, train…) avec carburant/munitions. Optionnel : usure par pièce (chaque véhicule a un inventaire d'équipement ; retirer le pneu = plus de roulage).
+- **Arbre des technologies** : oui.
+- **Sous-produits** : chaleur, pollution, résidus.
+- **Pollution** : fait grossir plus vite les ennemis. Cycle : reproduction → bébés → croissance → nid plus gros → départ d'essaims qui fondent de nouveaux nids.
+- **Physique** : la plus réaliste possible, **niveau de réalisme configurable** dans l'écran d'édition de partie.
+- **Saisons et météo** : influencent la température extérieure et l'humidité ; l'intérieur d'un abri chauffé dépend de la saison. Climat par **biome**.
+- **Quitter** : bouton affiché seulement quand il est utilisable (version bureau/Unity).
+- **Stockage des sauvegardes** : choix de Claude (voir passation.md).
