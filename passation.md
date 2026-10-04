@@ -31,7 +31,8 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 2 de cadrage : voir `docs/besoins.md` §5 (échelle 50 cm, grille, chargeur de chunk, électricité, véhicules, saisons/biomes, pollution→nids…).
 - Stockage sauvegardes (choix Claude) : IndexedDB comme stockage principal + export/import de fichier (.zip) obligatoire ; option « dossier sur disque » (File System Access API, Chrome/Edge) plus tard ; version bureau ensuite.
-- Restent à trancher : taille d'équipe multijoueur (reco 2-4), version bureau (reco plus tard), ennemis en vagues vs zones.
+- Tour 3 (voir `docs/besoins.md` §6) : tick 20/s, multi 5 joueurs max, bureau plus tard, ennemis configurables (défaut : non agressifs mais s'étendent).
+- Cadrage terminé pour l'essentiel. Prochaine étape : plan d'architecture technique + ordre des chantiers du prototype (à soumettre au PO).
 
 ## Règles d'architecture (pour garder ces portes ouvertes)
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.

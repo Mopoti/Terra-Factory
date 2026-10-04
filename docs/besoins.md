@@ -41,3 +41,9 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - **Saisons et météo** : influencent la température extérieure et l'humidité ; l'intérieur d'un abri chauffé dépend de la saison. Climat par **biome**.
 - **Quitter** : bouton affiché seulement quand il est utilisable (version bureau/Unity).
 - **Stockage des sauvegardes** : choix de Claude (voir passation.md).
+
+## 6. Décisions du PO — cadrage tour 3
+- **Tick** : 20 ticks/s (1 tick = 0,05 s) pour démarrer, ajustable plus tard.
+- **Multijoueur** : 5 joueurs maximum en simultané.
+- **Version bureau** : plus tard.
+- **Ennemis** : options dans l'écran d'édition de partie : agressifs oui/non, expansion (création de nouveaux nids) oui/non. **Par défaut : non agressifs mais s'étendent.**
