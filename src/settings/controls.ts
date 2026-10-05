@@ -15,6 +15,17 @@ export function presetForLocale(locale: string): KeyboardPreset {
   return locale === 'fr' ? 'zqsd' : 'wasd';
 }
 
+/**
+ * Type de clavier le plus probable : d'après la vraie disposition si le navigateur la donne
+ * (la touche physique W porte un « z » sur un AZERTY), sinon d'après la langue.
+ */
+export function detectKeyboardPreset(locale: string): KeyboardPreset {
+  const upperLeft = currentLayout ? new Map(currentLayout.entries()).get('KeyW') : undefined;
+  if (upperLeft === 'z') return 'zqsd';
+  if (upperLeft === 'w') return 'wasd';
+  return presetForLocale(locale);
+}
+
 export type Binding = string | null;
 export type BindingPair = [Binding, Binding];
 

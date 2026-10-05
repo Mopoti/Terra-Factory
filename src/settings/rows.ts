@@ -75,6 +75,7 @@ export const DISPLAY_SECTION: Section = {
       ),
     ),
     toggle('display.showFps'),
+    toggle('display.showDebug'),
   ],
 };
 

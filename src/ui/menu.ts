@@ -6,6 +6,17 @@ import './menu.css';
 
 type Screen = 'main' | 'newGame' | 'loadGame' | 'settings';
 
+/** Icône « mélanger » (deux flèches qui se croisent). */
+const SHUFFLE_ICON =
+  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>';
+
+const SEED_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+/** Seed aléatoire lisible (sans caractères ambigus). Le hasard est permis ici : c'est de l'interface, pas du monde. */
+export function randomSeed(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return Array.from(bytes, (b) => SEED_ALPHABET[b % SEED_ALPHABET.length]).join('');
+}
+
 /** Faux tant qu'on est dans un navigateur : un site ne peut pas toujours fermer son onglet. */
 function canQuit(): boolean {
   return false;
@@ -102,19 +113,45 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   function newGamePanel(): HTMLElement {
     const panel = el('div', 'panel');
     panel.append(el('h2', undefined, t('screen.newGame.title')));
-    const field = el('label', 'field');
-    field.append(el('span', undefined, t('screen.newGame.name')));
-    const input = el('input');
-    input.type = 'text';
-    input.maxLength = 40;
-    input.value = t('screen.newGame.defaultName', { n: String(saves.list().length + 1) });
-    field.append(input);
-    panel.append(field);
+
+    const nameField = el('label', 'field');
+    nameField.append(el('span', undefined, t('screen.newGame.name')));
+    const nameInput = el('input');
+    nameInput.type = 'text';
+    nameInput.maxLength = 40;
+    nameInput.value = t('screen.newGame.defaultName', { n: String(saves.list().length + 1) });
+    nameField.append(nameInput);
+
+    const seedField = el('div', 'field');
+    seedField.append(el('label', undefined, t('screen.newGame.seed')));
+    const seedRow = el('div', 'seed-row');
+    const seedInput = el('input');
+    seedInput.type = 'text';
+    seedInput.maxLength = 40;
+    seedInput.value = randomSeed();
+    seedInput.id = 'seed-input';
+    seedField.firstElementChild?.setAttribute('for', 'seed-input');
+    const shuffle = el('button', 'icon-btn');
+    shuffle.type = 'button';
+    shuffle.title = t('screen.newGame.shuffle');
+    shuffle.setAttribute('aria-label', t('screen.newGame.shuffle'));
+    shuffle.innerHTML = SHUFFLE_ICON;
+    shuffle.addEventListener('click', () => {
+      seedInput.value = randomSeed();
+      seedInput.focus();
+    });
+    seedRow.append(seedInput, shuffle);
+    seedField.append(seedRow, el('small', 'help', t('screen.newGame.seedHelp')));
+
+    panel.append(nameField, seedField);
     const launch = (): void => {
-      const name = input.value.trim() || t('screen.newGame.defaultName', { n: '1' });
-      onStartGame(saves.create(name));
+      const name = nameInput.value.trim() || t('screen.newGame.defaultName', { n: '1' });
+      const seed = seedInput.value.trim() || randomSeed();
+      onStartGame(saves.create(name, seed));
     };
-    input.addEventListener('keydown', (e) => e.key === 'Enter' && launch());
+    for (const input of [nameInput, seedInput]) {
+      input.addEventListener('keydown', (e) => e.key === 'Enter' && launch());
+    }
     panel.append(
       el('p', undefined, t('screen.newGame.provisional')),
       button(t('screen.newGame.launch'), launch, 'menu-btn primary'),

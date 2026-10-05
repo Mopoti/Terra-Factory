@@ -42,7 +42,13 @@ function startGame(game: GameSummary): void {
   stopBackground();
   bgEl.hidden = true;
   uiEl.hidden = true;
-  stopGame = startGameView(appEl);
+  const params = new URLSearchParams(window.location.search);
+  const at = params.get('at')?.split(',').map(Number);
+  const start =
+    devMode && at && at.length === 2 && at.every(Number.isFinite)
+      ? { x: at[0], z: at[1], distance: Number(params.get('dist')) || undefined }
+      : undefined;
+  stopGame = startGameView(appEl, game, { start });
 
   const label = document.createElement('div');
   label.className = 'game-hud';

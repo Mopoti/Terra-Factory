@@ -23,6 +23,7 @@ export interface Settings {
     timeFormat: TimeFormat;
     colorblind: ColorBlindMode;
     showFps: boolean;
+    showDebug: boolean;
     units: UnitPrefs;
   };
   sound: {
@@ -104,6 +105,7 @@ export function defaultSettings(preset: KeyboardPreset): Settings {
       timeFormat: 'auto',
       colorblind: 'none',
       showFps: false,
+      showDebug: true,
       units: { distance: 'm', temperature: 'C', mass: 'kg', pressure: 'Pa', energy: 'SI' },
     },
     sound: {

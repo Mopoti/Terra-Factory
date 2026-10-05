@@ -3,6 +3,7 @@ import {
   ACTION_IDS,
   bindingLabel,
   defaultControls,
+  detectKeyboardPreset,
   findConflict,
   isCustomized,
   isValidBinding,
@@ -211,5 +212,20 @@ describe('type de clavier', () => {
     expect(sanitize({ data: { keyboard: 'azerty' } }, 'zqsd').keyboard).toBe('zqsd');
     expect(sanitize({ data: { keyboard: 'wasd' } }, 'zqsd').controls.map[0]).toBe('KeyM');
     expect(sanitize({ data: { keyboard: 'zqsd' } }, 'wasd').controls.map[0]).toBe('Semicolon');
+  });
+});
+
+describe('détection du type de clavier', () => {
+  it('sans information : suit la langue', () => {
+    expect(detectKeyboardPreset('fr')).toBe('zqsd');
+    expect(detectKeyboardPreset('en')).toBe('wasd');
+  });
+  it('avec la vraie disposition : un AZERTY donne ZQSD même en anglais', () => {
+    setLayoutForTests({ entries: () => new Map([['KeyW', 'z']]).entries() });
+    expect(detectKeyboardPreset('en')).toBe('zqsd');
+  });
+  it('avec la vraie disposition : un QWERTY donne WASD même en français', () => {
+    setLayoutForTests({ entries: () => new Map([['KeyW', 'w']]).entries() });
+    expect(detectKeyboardPreset('fr')).toBe('wasd');
   });
 });

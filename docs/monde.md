@@ -1,6 +1,6 @@
 # Génération du monde — proposition (chantier 3)
 
-Statut : PROPOSITION à valider par le PO avant codage. Toutes les valeurs chiffrées sont des points de départ réglables dans des fichiers de données (`content/`), sans toucher au code.
+Statut : VALIDÉ par le PO (tour 8) et IMPLÉMENTÉ au chantier 3. Précisions du PO : gisements en cases de minerai de 50 × 50 cm et 10 cm de haut maximum, regroupées en tas ; chaque case contient une quantité déterminée, plus riche au centre du tas (exemple du PO : ~3 500 au centre, ~315 au bord) ; fréquence / taille / densité règlent les tas ; la seed aura une icône de mélange pour en générer. Questions 3 à 5 (étangs infranchissables, zone de départ garantie, déplacement provisoire) : le PO n'a pas répondu explicitement, les recommandations ont été appliquées (à revoir si besoin). Toutes les valeurs chiffrées sont des points de départ réglables dans des fichiers de données (`content/`), sans toucher au code.
 
 ## 1. Principes
 - **Seed** : n'importe quel texte (« 12345 », « mon monde »). Même texte exact = même monde, pour tous les joueurs et sur tous les appareils. Aucun `Math.random()` : un générateur pseudo-aléatoire maison, déterministe.
@@ -63,3 +63,12 @@ Arbre : 4 bois · Rocher : 20 pierre · Case de minerai : 200 à 1500 · Étang 
 3. **Étangs** : non traversables à pied pour l'instant (pas de nage), pompables plus tard ? (reco : oui)
 4. **Zone de départ garantie** (tous les types de ressources de base à moins de ≈ 150 m, pas de nid à moins de ≈ 250 m) ? (reco : oui)
 5. **Déplacement provisoire** dans ce chantier pour pouvoir explorer ? (reco : oui)
+
+
+## Implémentation (chantier 3) — ce qui a été décidé en codant
+- **Quantités de minerai** : `centerAmount` 3 500 et `edgeRatio` 0,09 (donc ≈ 315 au bord) dans `content/resources.json` ; richesse du tas ±20 % (centre entre ≈ 2 800 et 4 200) ; quantités arrondies à 5. Profil : `bord + (centre − bord) × (1 − t²)` où t = distance normalisée au centre (0 centre, 1 bord), avec un contour irrégulier. Hauteur affichée de la case : 2 cm (pauvre) à 10 cm (riche).
+- **Réglages** : *fréquence* = nombre de tas / bosquets / étangs / nids (taille des cases-candidates divisée par √fréquence) ; *taille* = rayon des tas, longueur d'onde des bosquets ; *densité* = quantité par case pour les minerais, arbres/rochers par emplacement dans les bosquets, probabilité d'un étang ou d'un nid par case-candidate. Limites ×0,25 à ×3.
+- **Zone de départ** : climat ramené à « prairie » dans un rayon de 150 m (retour progressif jusqu'à 350 m) ; un tas de fer, cuivre, charbon et un étang garantis à 60–110 m ; rien dans les 8 m autour du point d'apparition ; aucun nid à moins de 250 m. Tests sur 10 seeds.
+- **Performance** : ≈ 0,25 ms par chunk côté génération ; l'affichage fusionne chaque chunk en 2 objets 3D (sol + éléments).
+- **Précision des nombres** : chaque chunk est affiché relativement à sa propre origine ; au-delà de plusieurs dizaines de km, il faudra recentrer le monde autour du joueur (à faire plus tard).
+- **Hors chantier** : le joueur provisoire ne se souvient pas de sa position entre deux lancements (chantier 6).

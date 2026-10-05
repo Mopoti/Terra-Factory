@@ -406,3 +406,47 @@
   border-color: var(--accent);
   outline: none;
 }
+
+.seed-row {
+  display: flex;
+  gap: 8px;
+}
+.seed-row input {
+  flex: 1;
+  min-width: 0;
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  cursor: pointer;
+  color: inherit;
+  background: #1f2832;
+  border: 1px solid #33414f;
+  border-radius: 8px;
+}
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  background: #2a3745;
+}
+.field .help {
+  color: #9fb0bf;
+  font-size: 12px;
+}
+.debug-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  white-space: pre;
+  font:
+    12px/1.45 ui-monospace,
+    monospace;
+  background: rgba(16, 20, 25, 0.72);
+  color: #dbe5ee;
+  padding: 8px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+}

@@ -4,7 +4,7 @@ import {
   KEYBOARD_PRESETS,
   defaultControls,
   isValidBinding,
-  presetForLocale,
+  detectKeyboardPreset,
   type ActionId,
   type Binding,
   type KeyboardPreset,
@@ -110,7 +110,7 @@ function readStored(): unknown {
 }
 
 export function loadSettings(): Settings {
-  current = sanitize(readStored(), presetForLocale(getLocale()));
+  current = sanitize(readStored(), detectKeyboardPreset(getLocale()));
   return current;
 }
 
@@ -159,7 +159,7 @@ export function resetSection(section: SectionName | 'all'): void {
   const next = structuredClone(current);
   if (section === 'all') {
     resetLocale();
-    const fresh = defaultSettings(presetForLocale(getLocale()));
+    const fresh = defaultSettings(detectKeyboardPreset(getLocale()));
     commit(fresh);
     return;
   }
