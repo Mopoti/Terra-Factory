@@ -50,7 +50,7 @@ import { playSfx } from '../audio/sfx';
 import { pickPiece } from '../core/build/pick';
 import { riseFromDirection } from '../core/build/aim';
 import { RISE_DIR } from '../core/data/buildings';
-import { machineDef, machineForItem, type MachineDef } from '../core/data/machines';
+import { isChest, machineDef, machineForItem, type MachineDef } from '../core/data/machines';
 import {
   Factory,
   dims,
@@ -186,6 +186,9 @@ export function startGameView(
     rebuildChunk: (cx, cz) => buildInto(cx, cz),
     pickStructure: (o, d) => structureAt(o, d),
     demolish: (id) => demolishStructure(id),
+    openStructure: (id) => {
+      if (id.startsWith('machine:')) options.onOpenMachine?.(Number(id.slice(8)));
+    },
   });
 
   // --- Usine : monde des minerais, simulation, affichage ---------------------------------------
@@ -234,6 +237,8 @@ export function startGameView(
   let buildLevel = 0;
   /** Orientation en quarts de tour (touche R), `null` = automatique (le bord le plus proche, contre le mur visé). Pour un mur : pair = le long de x, impair = le long de z. */
   let buildRot: number | null = null;
+  /** Axe du dernier bord visé (pour que R parte de l'orientation actuelle d'un mur). */
+  let lastAimAxis: 'x' | 'z' = 'x';
   let lastBuildItem: string | null = null;
   let wallHeight = 1;
   let dragStart: BuildAim | null = null;
@@ -398,6 +403,7 @@ export function startGameView(
     const kind = aim ? resolveKind(buildKind(), (dragStart ?? aim).pos.slot) : buildKind();
     const down = input.isActionActive('interact');
     const player = { x: playerX, z: playerZ };
+    if (aim?.pos.axis) lastAimAxis = aim.pos.axis;
     if (!aim) {
       buildingView.hideGhost();
       if (!down) dragStart = null;
@@ -567,6 +573,7 @@ export function startGameView(
         id: `machine:${m.id}`,
         name: t(`item.${machineDef(m.type).item}` as TranslationKey),
         seconds: m.type === 'conveyor' ? 0.4 : 1.2,
+        usable: m.type !== 'conveyor',
         distance: hitM.t,
         box: machineBox(m),
       };
@@ -756,6 +763,17 @@ export function startGameView(
       );
       rows.push(`<div>${t('factory.input', { v: stackText(m.input, def.stockMax) })}</div>`);
       rows.push(`<div>${t('factory.output', { v: stackText(m.stock, def.stockMax) })}</div>`);
+    } else if (isChest(m.type)) {
+      rows.push(
+        `<div>${t('factory.chest', { n: String(m.slots.length), max: String(def.slots ?? 0) })}</div>`,
+      );
+      const top = [...m.slots].sort((a, b) => b.count - a.count).slice(0, 4);
+      for (const stack of top) {
+        rows.push(
+          `<div class="sub">${t(`item.${stack.item}` as TranslationKey)} : ${stack.count}</div>`,
+        );
+      }
+      if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
     } else {
       rows.push(
         `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
@@ -769,7 +787,8 @@ export function startGameView(
       );
     }
     rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
-    if (m.type !== 'conveyor') {
+    if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);
+    if (m.type !== 'conveyor' && !isChest(m.type)) {
       const out = outputCell(m.type, m.gx, m.gz, m.rot);
       const target = factory.machineAt(out.gx, out.gz);
       rows.push(
@@ -861,10 +880,14 @@ export function startGameView(
 
   const isLocked = (): boolean => document.pointerLockElement === renderer.domElement;
 
+  let rightMoved = 0;
   const onMouseMove = (e: MouseEvent): void => {
     mouseX = e.clientX;
     mouseY = e.clientY;
     if (paused) return;
+    // Clic droit maintenu sans bouger = démolir ; en bougeant, on tourne la caméra.
+    if (input.isBindingActive('Mouse2')) rightMoved += Math.hypot(e.movementX, e.movementY);
+    else rightMoved = 0;
     if (isLocked() || input.isBindingActive('Mouse2')) {
       rig.look(e.movementX, e.movementY, getSettings().views);
     }
@@ -1062,6 +1085,47 @@ export function startGameView(
   const crosshair = document.createElement('div');
   crosshair.className = 'crosshair';
   container.appendChild(crosshair);
+  // Boussole : le nord est vers −z (devant au départ), l'est vers +x.
+  const compass = document.createElement('div');
+  compass.className = 'compass';
+  const COMPASS_MARKS: { deg: number; key: TranslationKey; major: boolean }[] = [
+    { deg: 0, key: 'compass.n', major: true },
+    { deg: 45, key: 'compass.ne', major: false },
+    { deg: 90, key: 'compass.e', major: true },
+    { deg: 135, key: 'compass.se', major: false },
+    { deg: 180, key: 'compass.s', major: true },
+    { deg: 225, key: 'compass.sw', major: false },
+    { deg: 270, key: 'compass.w', major: true },
+    { deg: 315, key: 'compass.nw', major: false },
+  ];
+  const compassMarks = COMPASS_MARKS.map((mark) => {
+    const node = document.createElement('span');
+    node.className = mark.major ? 'compass-mark major' : 'compass-mark';
+    node.textContent = t(mark.key);
+    compass.append(node);
+    return node;
+  });
+  const compassValue = document.createElement('span');
+  compassValue.className = 'compass-value';
+  compass.append(compassValue);
+  container.appendChild(compass);
+  /** Cap de la caméra en degrés : 0 = nord, 90 = est. */
+  function updateCompass(): void {
+    const bearing = ((((-rig.yaw * 180) / Math.PI) % 360) + 360) % 360;
+    const half = 160;
+    const span = 80;
+    COMPASS_MARKS.forEach((mark, i) => {
+      const diff = ((mark.deg - bearing + 540) % 360) - 180;
+      const node = compassMarks[i];
+      const visible = Math.abs(diff) < span;
+      node.style.display = visible ? '' : 'none';
+      if (visible) {
+        node.style.left = `calc(50% + ${(diff / span) * half}px)`;
+        node.style.opacity = String(1 - Math.abs(diff) / span);
+      }
+    });
+    compassValue.textContent = `${Math.round(bearing)}°`;
+  }
   const hint = document.createElement('div');
   hint.className = 'look-hint';
   hint.textContent = t('hint.mouseLook');
@@ -1214,7 +1278,10 @@ export function startGameView(
       }
       if (building) {
         if (pressed('rotate')) {
-          buildRot = buildRot === null ? 0 : (buildRot + 1) % 4;
+          // Depuis l'automatique, on part de l'orientation actuelle : jamais deux fois la même.
+          const base =
+            buildingMachine || buildType() === 'stairs' ? autoRot() : lastAimAxis === 'z' ? 1 : 0;
+          buildRot = ((buildRot ?? base) + 1) % 4;
           renderBuildHud();
         }
         if (pressed('levelUp')) {
@@ -1264,6 +1331,7 @@ export function startGameView(
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
     updateGhost(views);
+    updateCompass();
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
     const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
     const inRoom = options.state.rooms().find((r) => r.level === 0 && r.cells.includes(pcell));
@@ -1308,6 +1376,7 @@ export function startGameView(
       dt: realDt,
       player: { x: playerX, z: playerZ },
       active: !paused && !building && input.isActionActive('interact'),
+      demolishing: !paused && !building && input.isActionActive('secondary') && rightMoved < 10,
       // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
       paused: paused || building,
       aimAtCenter: rig.view === 'first',
@@ -1374,6 +1443,7 @@ export function startGameView(
       renderer.dispose();
       renderer.domElement.remove();
       crosshair.remove();
+      compass.remove();
       hint.remove();
       fpsBox.remove();
       debugBox.remove();

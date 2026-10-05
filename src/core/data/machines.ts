@@ -1,6 +1,6 @@
 import raw from '../../../content/machines.json';
 
-export type MachineType = 'drill' | 'furnace' | 'conveyor';
+export type MachineType = 'drill' | 'furnace' | 'conveyor' | 'chest_wood' | 'chest_iron';
 
 export interface MachineDef {
   id: MachineType;
@@ -19,6 +19,8 @@ export interface MachineDef {
   mineSeconds?: number;
   /** Capacité de la case de stockage. */
   stockMax?: number;
+  /** Coffre : nombre de cases (une pile de 100 au plus par case). */
+  slots?: number;
   /** Tapis : cases par seconde et nombre d'objets portés par case. */
   cellsPerSecond?: number;
   capacity?: number;
@@ -29,6 +31,9 @@ export interface SmeltRecipe {
   out: string;
   seconds: number;
 }
+
+export const isChest = (type: MachineType): boolean =>
+  type === 'chest_wood' || type === 'chest_iron';
 
 export const MACHINES: MachineDef[] = raw.machines as MachineDef[];
 export const SMELTING: SmeltRecipe[] = raw.smelting;

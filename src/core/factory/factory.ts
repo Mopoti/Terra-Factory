@@ -1,7 +1,7 @@
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { itemById } from '../data/items';
-import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
+import { isChest, machineDef, smeltRecipe, type MachineType } from '../data/machines';
 
 /** Une pile dans une case de machine : un seul type d'objet. */
 export interface Stack {
@@ -36,6 +36,38 @@ export interface Machine {
   progress: number;
   /** Tapis : objets en route. */
   belt: BeltItem[];
+  /** Coffre : piles rangées (au plus `slots`). */
+  slots: Stack[];
+}
+
+/** Taille d'une pile dans un coffre. */
+export const CHEST_STACK = 100;
+
+/** Combien d'unités de cet objet le coffre peut encore recevoir. */
+export function chestRoom(m: Machine, item: string): number {
+  const cap = machineDef(m.type).slots ?? 0;
+  let room = Math.max(0, cap - m.slots.length) * CHEST_STACK;
+  for (const s of m.slots) if (s.item === item) room += CHEST_STACK - s.count;
+  return room;
+}
+
+/** Range des objets dans un coffre (remplit les piles entamées d'abord). Renvoie la quantité rangée. */
+export function chestPut(m: Machine, item: string, count: number): number {
+  let left = Math.min(count, chestRoom(m, item));
+  const stored = left;
+  for (const s of m.slots) {
+    if (left <= 0) break;
+    if (s.item !== item || s.count >= CHEST_STACK) continue;
+    const n = Math.min(left, CHEST_STACK - s.count);
+    s.count += n;
+    left -= n;
+  }
+  while (left > 0) {
+    const n = Math.min(left, CHEST_STACK);
+    m.slots.push({ item, count: n });
+    left -= n;
+  }
+  return stored;
 }
 
 /** Ce que l'usine sait du monde : minerai restant par case et extraction réelle. */
@@ -100,6 +132,7 @@ export function emptyMachine(
     stock: null,
     progress: 0,
     belt: [],
+    slots: [],
   };
 }
 
@@ -126,11 +159,13 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (typeof r !== 'object' || r === null) continue;
     const m = r as Record<string, unknown>;
     if (!isNum(m.id) || seen.has(m.id) || !isNum(m.gx) || !isNum(m.gz) || !isNum(m.rot)) continue;
-    if (m.type !== 'drill' && m.type !== 'furnace' && m.type !== 'conveyor') continue;
+    if (!['drill', 'furnace', 'conveyor', 'chest_wood', 'chest_iron'].includes(m.type as string)) {
+      continue;
+    }
     seen.add(m.id);
     const machine = emptyMachine(
       m.id,
-      m.type,
+      m.type as MachineType,
       Math.floor(m.gx),
       Math.floor(m.gz),
       Math.floor(m.rot),
@@ -153,6 +188,13 @@ export function normalizeMachines(raw: unknown): Machine[] {
           }
         }
       }
+    }
+    if (Array.isArray(m.slots) && isChest(machine.type)) {
+      for (const st of m.slots) {
+        const stack = normalizeStack(st);
+        if (stack) machine.slots.push({ ...stack, count: Math.min(stack.count, CHEST_STACK) });
+      }
+      machine.slots.length = Math.min(machine.slots.length, machineDef(machine.type).slots ?? 0);
     }
     out.push(machine);
   }
@@ -231,6 +273,11 @@ export class Factory {
 
   status(m: Machine): MachineStatus {
     const def = machineDef(m.type);
+    if (isChest(m.type)) {
+      const full =
+        m.slots.length >= (def.slots ?? 0) && m.slots.every((x) => x.count >= CHEST_STACK);
+      return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
+    }
     if (m.type === 'conveyor')
       return m.belt.length > 0 && m.belt[0].pos >= 1
         ? 'blocked'
@@ -254,6 +301,7 @@ export class Factory {
 
   tick(dt: number): void {
     for (const m of this.machines) {
+      if (isChest(m.type)) continue;
       if (m.type === 'conveyor') this.tickBelt(m, dt);
       else {
         this.pushOutput(m);
@@ -335,6 +383,7 @@ export class Factory {
 
   /** Une machine ou un tapis peut-il recevoir cet objet par cette case ? Si oui, l'y met. */
   private deliver(target: Machine, from: Machine, item: string): boolean {
+    if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (target.type === 'conveyor') {
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
       if (target.rot === (from.rot + 2) % 4 && from.type === 'conveyor') return false;

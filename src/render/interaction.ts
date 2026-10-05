@@ -45,6 +45,8 @@ export interface Structure {
   seconds: number;
   /** Distance le long du rayon (m). */
   distance: number;
+  /** Peut s'ouvrir d'un clic gauche (machine, coffre). */
+  usable?: boolean;
   /** Boîte englobante (m), pour la mise en évidence et la portée. */
   box: { x: number; y: number; z: number; sx: number; sy: number; sz: number };
 }
@@ -61,13 +63,17 @@ export interface InteractionOptions {
   pickStructure?(origin: THREE.Vector3, dir: THREE.Vector3): Structure | null;
   /** La construction a été démolie (le joueur l'a frappée assez longtemps). */
   demolish?(id: string): void;
+  /** Clic gauche sur une machine ou un coffre : ouvrir son interface. */
+  openStructure?(id: string): void;
 }
 
 export interface InteractionFrame {
   dt: number;
   player: { x: number; z: number };
-  /** Vrai si la touche « Interagir / récolter » est maintenue. */
+  /** Vrai si la touche « Interagir / récolter » (clic gauche) est maintenue. */
   active: boolean;
+  /** Vrai si le clic droit est maintenu sans bouger : démolir ce qui est visé. */
+  demolishing: boolean;
   paused: boolean;
   /** 1ère personne : on vise au centre de l'écran ; sinon sous le curseur. */
   aimAtCenter: boolean;
@@ -93,6 +99,7 @@ export class Interaction {
   private readonly feed: HTMLElement;
   private feedTotals = new Map<string, number>();
   private feedTimer = 0;
+  private wasActive = false;
   private holdingId: string | null = null;
   private holdingTime = 0;
   private unsubscribe: () => void;
@@ -326,6 +333,8 @@ export class Interaction {
   // --- Récolter / ramasser ---------------------------------------------------------------------
 
   update(frame: InteractionFrame): void {
+    const leftPressed = frame.active && !this.wasActive;
+    this.wasActive = frame.active;
     if (this.feedTimer > 0) {
       this.feedTimer -= frame.dt;
       if (this.feedTimer <= 0) {
@@ -348,6 +357,8 @@ export class Interaction {
         hit.type === 'structure' ? STRUCTURE_REACH_M : REACH_M,
       );
     this.showHighlight(hit, reachable);
+    // En première personne le réticule suffit : pas de boîte blanche autour de la cible.
+    if (frame.aimAtCenter) this.highlight.visible = false;
 
     if (!hit) {
       this.holdingId = null;
@@ -371,7 +382,14 @@ export class Interaction {
           : hit.target.secondsPerUnit;
     let bagFull = false;
 
-    if (reachable && frame.active) {
+    // Clic gauche sur une machine ou un coffre : on ouvre son interface.
+    if (reachable && leftPressed && hit.type === 'structure' && hit.structure.usable) {
+      this.options.openStructure?.(hit.structure.id);
+      return;
+    }
+    // Les constructions se démolissent au clic droit maintenu ; le reste se récolte au clic gauche.
+    const holdingNow = hit.type === 'structure' ? frame.demolishing : frame.active;
+    if (reachable && holdingNow) {
       if (this.holdingId !== id) {
         this.holdingId = id;
         this.holdingTime = 0;
@@ -436,11 +454,12 @@ export class Interaction {
     if (!reachable) status = t('harvest.tooFar');
     else if (bagFull) status = t('harvest.bagFull');
     else if (hit.type === 'drop') status = t('harvest.pickup');
-    else if (hit.type === 'structure') status = t('harvest.demolish');
-    else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
+    else if (hit.type === 'structure') {
+      status = t(hit.structure.usable ? 'harvest.structureUse' : 'harvest.demolish');
+    } else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
     this.hudDetail.textContent = status;
     this.hudDetail.classList.toggle('warn', !reachable || bagFull);
-    const holding = reachable && frame.active && this.holdingId === id;
+    const holding = reachable && holdingNow && this.holdingId === id;
     this.hudBar.hidden = !holding;
     this.hudFill.style.width = `${Math.min(100, (this.holdingTime / seconds) * 100)}%`;
     this.hud.hidden = false;

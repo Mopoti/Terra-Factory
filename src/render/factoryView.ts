@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
-import { machineDef, type MachineType } from '../core/data/machines';
+import { isChest, machineDef, type MachineType } from '../core/data/machines';
 import { dims, outputCell, type Factory, type Machine } from '../core/factory/factory';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -158,9 +158,11 @@ export class FactoryView {
         if (g.type === 'conveyor') mb.box(x, 0, z, 0.46, 0.14, 0.46, color, true);
         else
           mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
-        // Flèche de sortie.
-        const out = outputCell(g.type, g.gx, g.gz, g.rot);
-        mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
+        // Flèche de sortie (un coffre n'en a pas : il se remplit par les tapis).
+        if (!isChest(g.type)) {
+          const out = outputCell(g.type, g.gx, g.gz, g.rot);
+          mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
+        }
       }
       this.ghost.geometry.dispose();
       this.ghost.geometry = geometryOf(mb);
@@ -242,6 +244,17 @@ function addMachineBody(
   const color = hexToRgb(def.color);
   const [fx, fz] = RISE_DIR[rot];
   const out = outputCell(type, gx, gz, rot);
+  if (isChest(type)) {
+    // Coffre : caisse, couvercle un peu plus large, sangles sombres.
+    const iron = type === 'chest_iron';
+    mb.box(x, 0, z, 0.44, 0.38, 0.44, color, true);
+    mb.box(x, 0.38, z, 0.48, 0.2, 0.48, shade(color, iron ? 1.15 : 0.85), true);
+    const strap = hexToRgb(iron ? '#4a5058' : '#3a2a1a');
+    mb.box(x - 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
+    mb.box(x + 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
+    mb.box(x, 0.3, z - 0.24, 0.1, 0.12, 0.03, hexToRgb('#d9c15a'), true);
+    return;
+  }
   if (type === 'drill') {
     mb.box(x, 0, z, sx, 0.5, sz, hexToRgb('#4b4f55'), true);
     mb.box(x, 0.5, z, sx - 0.5, 0.45, sz - 0.5, color, true);

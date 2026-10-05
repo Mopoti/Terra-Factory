@@ -1,6 +1,6 @@
 import { playSfx } from '../audio/sfx';
 import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
-import { machineDef, smeltRecipe } from '../core/data/machines';
+import { isChest, machineDef, smeltRecipe } from '../core/data/machines';
 import { footprint, type Factory, type Machine, type Stack } from '../core/factory/factory';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
@@ -58,7 +58,8 @@ export function mountMachineWindow(
     fuel?: HTMLElement;
     ore?: HTMLElement;
     counts: Map<SlotName, HTMLElement>;
-  } = { counts: new Map() };
+    chest: HTMLElement[];
+  } = { counts: new Map(), chest: [] };
   /** Ce qui, s'il change, oblige à redessiner la fenêtre (sac, présence d'objets dans les cases). */
   let lastShape = '';
   const shape = (m: Machine): string =>
@@ -67,6 +68,7 @@ export function mountMachineWindow(
       m.fuel?.item ?? null,
       m.input?.item ?? null,
       m.stock?.item ?? null,
+      m.slots.map((x) => x.item),
       selected,
     ]);
 
@@ -198,15 +200,69 @@ export function mountMachineWindow(
       if (e.dataTransfer?.types.includes(MACHINE_SLOT_TYPE)) e.preventDefault();
     });
     grid.addEventListener('drop', (e) => {
-      const name = e.dataTransfer?.getData(MACHINE_SLOT_TYPE) as SlotName | '' | undefined;
+      const name = e.dataTransfer?.getData(MACHINE_SLOT_TYPE);
       if (!name) return;
       e.preventDefault();
       dragging = false;
-      if (state.unloadMachine(m, name) > 0) playSfx('pickup');
+      const taken = name.startsWith('chest:')
+        ? state.takeFromChest(m, Number(name.slice(6)))
+        : state.unloadMachine(m, name as SlotName);
+      if (taken > 0) playSfx('pickup');
       render();
     });
     col.append(grid, el('small', 'help', t('machine.dragHint')));
     return col;
+  }
+
+  /** Les cases du coffre : on y dépose un objet du sac, on clique ou glisse une case pour la reprendre. */
+  function chestGrid(m: Machine): HTMLElement {
+    const cap = machineDef(m.type).slots ?? 0;
+    const grid = el('div', 'slot-grid chest-grid');
+    for (let i = 0; i < cap; i++) {
+      const stack = m.slots[i] ?? null;
+      const cell = el('button', stack ? 'slot' : 'slot empty');
+      cell.type = 'button';
+      if (stack) {
+        cell.style.setProperty('--item', itemById(stack.item).color);
+        const count = el('span', 'slot-count', String(stack.count));
+        live.chest[i] = count;
+        cell.append(el('span', 'slot-name', itemName(stack.item)), count);
+        cell.draggable = true;
+        cell.addEventListener('dragstart', (e) => {
+          dragging = true;
+          e.dataTransfer?.setData(MACHINE_SLOT_TYPE, `chest:${i}`);
+        });
+        cell.addEventListener('dragend', () => {
+          dragging = false;
+          render();
+        });
+        cell.addEventListener('click', () => {
+          if (state.takeFromChest(m, i) > 0) playSfx('pickup');
+          render();
+        });
+      } else {
+        cell.addEventListener('click', () => {
+          if (selected) putInChest(m, selected);
+        });
+      }
+      grid.append(cell);
+    }
+    grid.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+    });
+    grid.addEventListener('drop', (e) => {
+      const item = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+      if (!item) return;
+      e.preventDefault();
+      dragging = false;
+      putInChest(m, item);
+    });
+    return grid;
+  }
+
+  function putInChest(m: Machine, item: string): void {
+    playSfx(state.putInChest(m, item, 100) > 0 ? 'pickup' : 'deny');
+    render();
   }
 
   const fuelText = (m: Machine): string =>
@@ -227,6 +283,10 @@ export function mountMachineWindow(
     }
     if (live.fuel) live.fuel.textContent = fuelText(m);
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
+    m.slots.forEach((stack, i) => {
+      const node = live.chest[i];
+      if (node) node.textContent = String(stack.count);
+    });
     const max = machineDef(m.type).stockMax ?? 100;
     for (const [name, node] of live.counts) {
       const stack = m[name];
@@ -241,7 +301,7 @@ export function mountMachineWindow(
       return;
     }
     const def = machineDef(m.type);
-    live = { counts: new Map() };
+    live = { counts: new Map(), chest: [] };
     lastShape = shape(m);
     const panel = el('div', 'panel machine-window');
     panel.setAttribute('role', 'dialog');
@@ -253,6 +313,7 @@ export function mountMachineWindow(
 
     const rows = el('div', 'mach-rows');
     rows.append(el('h3', undefined, itemName(def.item)));
+    if (isChest(m.type)) rows.append(chestGrid(m), el('small', 'help', t('machine.chestHint')));
     if (def.fuel) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));

@@ -900,3 +900,21 @@ describe('machines et tapis dans la partie', () => {
     expect(s.takeFromWorld('3,4', 5, 1)).toBe(0);
   });
 });
+
+describe('coffre dans la partie', () => {
+  it('on y range du sac, on reprend, et démolir rend le contenu', () => {
+    const noWorld = { oreAt: () => null, mineOre: () => 0 };
+    const s = new GameState({ inventory: { machine_chest_wood: 1, stone: 30, wood: 5 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'chest_wood', 2, 2, 0, () => false)).toBe('ok');
+    const c = s.changes.machines[0];
+    expect(s.putInChest(c, 'stone', 100)).toBe(30);
+    expect(s.inventory).toEqual({ wood: 5 });
+    expect(s.takeFromChest(c, 0)).toBe(30);
+    expect(c.slots).toHaveLength(0);
+    s.putInChest(c, 'wood', 3);
+    expect(s.removeMachine(f, c.id, { x: 0, z: 0 })).toBe(true);
+    expect(s.inventory.stone).toBe(30);
+    expect(s.inventory.wood).toBe(5 + 8); // 2 restants + 3 rangés + 8 de la recette
+  });
+});

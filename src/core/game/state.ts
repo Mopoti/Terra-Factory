@@ -1,4 +1,6 @@
 import {
+  chestPut,
+  chestRoom,
   emptyMachine,
   type Cell,
   type Factory,
@@ -328,7 +330,7 @@ export class GameState {
     if (!m) return false;
     const recipe = itemById(machineDef(m.type).item).recipe ?? {};
     for (const [item, n] of Object.entries(recipe)) this.giveBack(item, n, at);
-    for (const stack of [m.fuel, m.input, m.stock])
+    for (const stack of [m.fuel, m.input, m.stock, ...m.slots])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);
     this.emit({ type: 'factory' });
@@ -376,5 +378,30 @@ export class GameState {
     const n = Math.max(0, Math.min(units, this.remaining(key, total)));
     if (n > 0) this.changes.taken[key] = (this.changes.taken[key] ?? 0) + n;
     return n;
+  }
+
+  /** Range des objets du sac dans un coffre (jusqu'à `count`). Renvoie la quantité rangée. */
+  putInChest(m: Machine, item: string, count: number): number {
+    const n = Math.min(count, this.inventory[item] ?? 0, chestRoom(m, item));
+    if (n <= 0) return 0;
+    const stored = chestPut(m, item, n);
+    this.inventory = remove(this.inventory, item, stored).inventory;
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return stored;
+  }
+
+  /** Reprend dans le sac la pile n° `index` d'un coffre (tout ce qui tient). Renvoie la quantité. */
+  takeFromChest(m: Machine, index: number): number {
+    const stack = m.slots[index];
+    if (!stack) return 0;
+    const moved = Math.min(stack.count, maxAddable(this.inventory, stack.item, this.limits));
+    if (moved <= 0) return 0;
+    this.inventory = add(this.inventory, stack.item, moved);
+    stack.count -= moved;
+    if (stack.count <= 0) m.slots.splice(index, 1);
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return moved;
   }
 }

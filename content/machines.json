@@ -34,6 +34,26 @@
       "cellsPerSecond": 1.5,
       "capacity": 3,
       "height": 0.15
+    },
+    {
+      "id": "chest_wood",
+      "w": 1,
+      "d": 1,
+      "item": "machine_chest_wood",
+      "color": "#9a6b3c",
+      "height": 0.6,
+      "fuel": false,
+      "slots": 16
+    },
+    {
+      "id": "chest_iron",
+      "w": 1,
+      "d": 1,
+      "item": "machine_chest_iron",
+      "color": "#8d96a0",
+      "height": 0.6,
+      "fuel": false,
+      "slots": 32
     }
   ],
   "smelting": [

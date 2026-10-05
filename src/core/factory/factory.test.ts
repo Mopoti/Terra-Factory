@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   Factory,
+  chestPut,
+  chestRoom,
   emptyMachine,
   footprint,
   normalizeMachines,
@@ -168,5 +170,42 @@ describe('enregistrement', () => {
       ),
     );
     expect(back).toEqual([d, b]);
+  });
+});
+
+describe('coffres', () => {
+  it("rangent des piles de 100, par type, jusqu'au nombre de cases", () => {
+    const c = emptyMachine(1, 'chest_wood', 0, 0, 0);
+    expect(chestRoom(c, 'iron_ore')).toBe(1600); // 16 cases
+    expect(chestPut(c, 'iron_ore', 250)).toBe(250);
+    expect(c.slots).toEqual([
+      { item: 'iron_ore', count: 100 },
+      { item: 'iron_ore', count: 100 },
+      { item: 'iron_ore', count: 50 },
+    ]);
+    expect(chestPut(c, 'coal', 100)).toBe(100);
+    expect(chestRoom(c, 'iron_ore')).toBe(50 + 12 * 100);
+    const big = emptyMachine(2, 'chest_iron', 0, 0, 0);
+    expect(chestRoom(big, 'coal')).toBe(3200); // 32 cases
+    const full = emptyMachine(3, 'chest_wood', 0, 0, 0);
+    chestPut(full, 'stone', 1600);
+    expect(chestPut(full, 'stone', 5)).toBe(0);
+    expect(new Factory([full], makeWorld().world).status(full)).toBe('full');
+  });
+  it('un tapis dépose dans le coffre qui est devant lui', () => {
+    const { world } = makeWorld();
+    const belt = emptyMachine(1, 'conveyor', 0, 0, 0);
+    const chest = emptyMachine(2, 'chest_wood', 0, 1, 0);
+    for (let i = 0; i < 3; i++) belt.belt.push({ item: 'iron_ingot', pos: 0.1 * i });
+    const f = new Factory([belt, chest], world);
+    run(f, 4);
+    expect(chest.slots).toEqual([{ item: 'iron_ingot', count: 3 }]);
+    expect(belt.belt).toHaveLength(0);
+  });
+  it('les coffres sont enregistrés avec leur contenu', () => {
+    const c = emptyMachine(5, 'chest_iron', 3, 3, 0);
+    chestPut(c, 'wood', 130);
+    const back = normalizeMachines(JSON.parse(JSON.stringify([c])));
+    expect(back[0].slots).toEqual(c.slots);
   });
 });

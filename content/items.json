@@ -142,6 +142,24 @@
       "recipe": {
         "iron_ingot": 1
       }
+    },
+    {
+      "id": "machine_chest_wood",
+      "weightKg": 6,
+      "volumeL": 20,
+      "color": "#9a6b3c",
+      "recipe": {
+        "wood": 8
+      }
+    },
+    {
+      "id": "machine_chest_iron",
+      "weightKg": 12,
+      "volumeL": 20,
+      "color": "#8d96a0",
+      "recipe": {
+        "iron_ingot": 8
+      }
     }
   ]
 }
