@@ -20,11 +20,19 @@ const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
 /** Léger retrait pour éviter que le haut des murs se superpose au plafond (scintillement). */
 const EPS = 0.01;
+/** Débord de la dalle au-delà de la face du mur (2 mm), pour éviter que deux faces se confondent. */
+const JOIN_M = 0.002;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
 /** Ajoute le volume d'une pièce au maillage. Les positions sont en mètres. */
-export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?: Rgb): void {
+export function addPiece(
+  mb: MeshBuilder,
+  kind: PieceKind,
+  pos: PiecePos,
+  tint?: Rgb,
+  pieces?: Pieces,
+): void {
   const def = pieceDef(kind);
   const color = tint ?? hexToRgb(def.color);
   const y0 = pos.level * STOREY_HEIGHT_M;
@@ -40,9 +48,23 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
   if (def.type === 'ceiling') {
     // La dalle est posée sur la tranche haute d'un mur : sa face supérieure est au sommet du bloc `layer`.
     const layer = pos.layer ?? LAYERS_PER_STOREY - 1;
-    // (5 mm au-dessus du bloc, pour que la dalle et le mur ne se confondent pas à l'écran)
     const topY = y0 + (layer + 1) * LAYER_HEIGHT_M + SLAB_LIFT_M;
-    mb.box(cx, topY - T, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color);
+    // Là où la dalle touche un mur dont la dalle voisine ne recouvre pas l'autre moitié, elle déborde
+    // jusqu'à la face extérieure du mur : dalle et mur ne font alors qu'une seule surface.
+    const over = (axis: 'x' | 'z', gx: number, gz: number, nx: number, nz: number): number => {
+      const wall = pieces?.[pieceKey({ slot: 'edge', level: pos.level, gx, gz, axis, layer })];
+      if (!wall?.startsWith('wall') || tint) return 0;
+      const neighbour =
+        pieces?.[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz, layer })];
+      return neighbour ? 0 : T / 2 + JOIN_M;
+    };
+    const west = over('z', pos.gx, pos.gz, pos.gx - 1, pos.gz);
+    const east = over('z', pos.gx + 1, pos.gz, pos.gx + 1, pos.gz);
+    const north = over('x', pos.gx, pos.gz, pos.gx, pos.gz - 1);
+    const south = over('x', pos.gx, pos.gz + 1, pos.gx, pos.gz + 1);
+    const w = CELL_SIZE_M - gap + west + east;
+    const d = CELL_SIZE_M - gap + north + south;
+    mb.box(cx + (east - west) / 2, topY - T, cz + (south - north) / 2, w, T, d, color);
     return;
   }
   // Bord de case : le centre du mur est sur la ligne du bord ; on déborde de T pour fermer les angles.
@@ -59,7 +81,7 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
       y0 + layer * LAYER_HEIGHT_M + gap / 2,
       mz,
       sx - (alongX ? gap : 0),
-      LAYER_HEIGHT_M - (layer === LAYERS_PER_STOREY - 1 ? EPS : 0) - gap,
+      LAYER_HEIGHT_M - gap,
       sz - (alongX ? 0 : gap),
       color,
     );
@@ -145,7 +167,7 @@ export class BuildingView {
       let mbs = byLevel.get(pos.level);
       if (!mbs)
         byLevel.set(pos.level, (mbs = { main: new MeshBuilder(), ceilings: new MeshBuilder() }));
-      addPiece(pos.slot === 'ceiling' ? mbs.ceilings : mbs.main, kind, pos);
+      addPiece(pos.slot === 'ceiling' ? mbs.ceilings : mbs.main, kind, pos, undefined, pieces);
     }
     const make = (mb: MeshBuilder): THREE.Mesh => {
       const mesh = new THREE.Mesh(geometryOf(mb), propsMaterial);

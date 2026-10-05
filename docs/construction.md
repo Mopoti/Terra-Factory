@@ -74,3 +74,7 @@ Le plafond n'est plus forcément à 2,50 m : une dalle se pose **sur la tranche 
 - La hauteur des pieds est affichée dans le panneau de debug (`display.showDebug`), la caméra suit, et la hauteur est enregistrée dans la sauvegarde (`PlayerState.y`).
 - Limites actuelles : un mur de 2,5 m ne peut pas être escaladé (il faudra des escaliers/échelles) ; il n'y a pas encore de dégâts de chute ; les arbres et rochers restent infranchissables même en sautant.
 - Rendu : la dalle de plafond dépasse de 5 mm le haut du bloc de mur qui la porte pour éviter que deux faces se confondent à l'écran.
+
+### Tour 23 — jointure plafond/mur « d'un seul bloc »
+
+La dalle de plafond recouvre maintenant la tranche du mur qui la porte (elle déborde de la demi-épaisseur du mur, +2 mm, quand la dalle voisine ne recouvre pas l'autre moitié) et ne dépasse le haut du mur que de 3 mm : dessus continu, plus de marche ni de bande de mur visible à côté de la dalle. Le bloc du haut du mur n'est plus rogné de 1 cm.

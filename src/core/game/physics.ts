@@ -10,8 +10,8 @@ export const JUMP_SPEED_M_S = 7;
 
 /** Épaisseur de la dalle d'un plafond ou d'un sol. */
 const SLAB_M = THICKNESS_M;
-/** Au-dessus d'un mur, la dalle dépasse de 5 mm (évite que deux faces se confondent à l'écran). */
-export const SLAB_LIFT_M = 0.005;
+/** Au-dessus d'un mur, la dalle dépasse de 3 mm (évite que deux faces se confondent à l'écran). */
+export const SLAB_LIFT_M = 0.003;
 
 export interface Span {
   bottom: number;
