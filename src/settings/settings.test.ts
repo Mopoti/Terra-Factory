@@ -12,7 +12,7 @@ import {
   type ControlsSettings,
 } from './controls';
 import { ROW_BY_PATH } from './rows';
-import { sanitize } from './store';
+import { migrate, sanitize } from './store';
 import { defaultSettings } from './schema';
 import fr from '../i18n/fr.json';
 import en from '../i18n/en.json';
@@ -227,5 +227,29 @@ describe('détection du type de clavier', () => {
   it('avec la vraie disposition : un QWERTY donne WASD même en français', () => {
     setLayoutForTests({ entries: () => new Map([['KeyW', 'w']]).entries() });
     expect(detectKeyboardPreset('fr')).toBe('wasd');
+  });
+});
+
+describe('migration des réglages', () => {
+  it("v1 -> v2 : l'ancienne rotation par défaut de la vue du dessus est abandonnée", () => {
+    const s = sanitize(
+      { version: 1, data: { views: { top: { rotation: 'step', angle: 70 } } } },
+      'zqsd',
+    );
+    expect(s.views.top.rotation).toBe('free');
+    expect(s.views.top.angle).toBe(70); // le reste est conservé
+  });
+  it('v2 : un choix « par pas » du joueur est respecté', () => {
+    const s = sanitize({ version: 2, data: { views: { top: { rotation: 'step' } } } }, 'zqsd');
+    expect(s.views.top.rotation).toBe('step');
+  });
+  it('v1 : « bloquée » est conservée (ce n’était pas le défaut)', () => {
+    const s = sanitize({ version: 1, data: { views: { top: { rotation: 'locked' } } } }, 'zqsd');
+    expect(s.views.top.rotation).toBe('locked');
+  });
+  it("ne modifie pas les données d'origine", () => {
+    const data = { views: { top: { rotation: 'step' } } };
+    migrate(data, 1);
+    expect(data.views.top.rotation).toBe('step');
   });
 });

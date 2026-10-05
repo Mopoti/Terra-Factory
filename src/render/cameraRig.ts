@@ -53,6 +53,8 @@ export class CameraRig {
   private bobPhase = 0;
   private bobAmount = 0;
   private roll = 0;
+  /** Vrai pendant que le joueur fait tourner la caméra à la souris. */
+  private dragging = false;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -80,6 +82,7 @@ export class CameraRig {
   setView(view: ViewId, views: Settings['views']): void {
     if (view === this.view) return;
     this.view = view;
+    this.dragging = false;
     this.shownReady = false;
     if (view === 'top' && views.top.rotation === 'step')
       this.yawTarget = snapToQuarterTurn(this.yawTarget);
@@ -94,12 +97,24 @@ export class CameraRig {
   look(dx: number, dy: number, views: Settings['views']): void {
     const k = 0.005 * (views.common.mouseSensitivity / 50);
     const sign = views.common.invertY ? -1 : 1;
-    const yawAllowed = this.view !== 'top' || views.top.rotation === 'free';
-    if (yawAllowed) this.yawTarget -= dx * k;
+    const yawAllowed = this.view !== 'top' || views.top.rotation !== 'locked';
+    if (yawAllowed) {
+      this.yawTarget -= dx * k;
+      this.dragging = true;
+    }
     if (this.view === 'first')
       this.lookPitch = clamp(this.lookPitch + dy * k * sign, -PITCH_LIMIT, PITCH_LIMIT);
     else if (this.view === 'third') {
       this.orbitPitch = clamp(this.orbitPitch + dy * k * sign, ORBIT_PITCH_MIN, ORBIT_PITCH_MAX);
+    }
+  }
+
+  /** La souris cesse de faire tourner la caméra : en vue du dessus « par pas de 90° », le cap s'aimante. */
+  endLook(views: Settings['views']): void {
+    if (!this.dragging) return;
+    this.dragging = false;
+    if (this.view === 'top' && views.top.rotation === 'step') {
+      this.yawTarget = snapToQuarterTurn(this.yawTarget);
     }
   }
 
@@ -163,7 +178,7 @@ export class CameraRig {
     blockedAt: (x: number, y: number, z: number) => boolean,
   ): void {
     const rate = smoothingRate(views.common.smoothing);
-    const stepMode = this.view === 'top' && views.top.rotation === 'step';
+    const stepMode = this.view === 'top' && views.top.rotation === 'step' && !this.dragging;
     const previousYaw = this.yaw;
     this.yaw = damp(this.yaw, this.yawTarget, stepMode ? STEP_YAW_RATE : rate, dt);
     this.lookPitchShown = damp(this.lookPitchShown, this.lookPitch, rate, dt);

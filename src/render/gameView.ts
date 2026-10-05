@@ -85,14 +85,31 @@ export function startGameView(
   let playerZ = state.z;
   let facing = 0;
 
-  // Outil tenu en main (1ère personne), fixé à la caméra.
-  const hand = new THREE.Mesh(
-    new THREE.BoxGeometry(0.1, 0.1, 0.45),
-    new THREE.MeshStandardMaterial({ color: 0xb06a22 }),
-  );
-  hand.position.set(0.28, -0.24, -0.5);
-  hand.rotation.set(0.1, -0.2, 0);
+  // Outil (provisoire : une pioche simple). Tenu à la main du personnage (3ème personne, vue du
+  // dessus) et, en 1ère personne, fixé à la caméra.
+  const handle = new THREE.MeshStandardMaterial({ color: 0x7a4e24 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0xa9b2bb });
+  function makeTool(): THREE.Group {
+    const tool = new THREE.Group();
+    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), handle);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.1), metal);
+    head.position.z = 0.32;
+    tool.add(shaft, head);
+    tool.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = true;
+    });
+    return tool;
+  }
+  const hand = makeTool();
+  hand.position.set(0.28, -0.26, -0.55);
+  hand.rotation.set(0.15, -0.25, 0);
   camera.add(hand);
+  const bodyTool = makeTool();
+  bodyTool.scale.setScalar(1.15);
+  // Le personnage regarde vers +z (son repère local) : l'outil est à droite et devant.
+  bodyTool.position.set(-0.34, 0.1, 0.32);
+  bodyTool.rotation.set(-0.5, 0, 0);
+  player.add(bodyTool);
 
   const rig = new CameraRig(camera, state);
 
@@ -161,6 +178,9 @@ export function startGameView(
     }
   };
   window.addEventListener('mousemove', onMouseMove);
+  const onMouseUp = (): void => rig.endLook(getSettings().views);
+  window.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('blur', onMouseUp);
 
   const requestLock = (): void => {
     if (paused || rig.view !== 'first' || isLocked()) return;
@@ -430,6 +450,7 @@ export function startGameView(
     player.position.set(playerX, PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
     hand.visible = rig.view === 'first' && views.first.showHands;
+    bodyTool.visible = rig.view !== 'first';
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';
     hint.hidden = !(rig.view === 'first' && !paused && !isLocked());
     sun.position.set(playerX + 8, 16, playerZ + 6);
@@ -466,6 +487,8 @@ export function startGameView(
       if (isLocked()) document.exitPointerLock();
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
       renderer.domElement.removeEventListener('click', requestLock);
       ghostUniforms.uGhostOn.value = 0;

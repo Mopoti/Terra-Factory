@@ -152,7 +152,7 @@ export function defaultSettings(preset: KeyboardPreset): Settings {
         zoomMin: 4,
         zoomMax: 40,
         zoomSpeed: 50,
-        rotation: 'step',
+        rotation: 'free',
         edgeScroll: false,
         autoHideFloors: true,
         ghost: true,

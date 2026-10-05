@@ -14,7 +14,7 @@ import { defaultSettings, type SectionName, type Settings } from './schema';
 
 const STORAGE_KEY = 'terra.settings';
 /** Version du format enregistré. À incrémenter quand la structure change (voir `migrate`). */
-export const SETTINGS_VERSION = 1;
+export const SETTINGS_VERSION = 2;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -61,9 +61,25 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
   return out;
 }
 
+/**
+ * Met à niveau des réglages enregistrés par une ancienne version (sans modifier l'original).
+ * - v2 : la rotation de la vue du dessus passe par défaut de « par pas de 90° » à « libre » ;
+ *   l'ancienne valeur par défaut enregistrée est abandonnée (le joueur peut la re-choisir).
+ */
+export function migrate(data: Record<string, unknown>, version: number): Record<string, unknown> {
+  const out = structuredClone(data);
+  if (version < 2) {
+    const views = out.views;
+    const top = isRecord(views) ? views.top : undefined;
+    if (isRecord(top) && top.rotation === 'step') delete top.rotation;
+  }
+  return out;
+}
+
 /** Transforme des données enregistrées (n'importe quelle version) en réglages valides. */
 export function sanitize(raw: unknown, fallbackPreset: KeyboardPreset): Settings {
-  const data = isRecord(raw) && isRecord(raw.data) ? raw.data : {};
+  const version = isRecord(raw) && typeof raw.version === 'number' ? raw.version : 0;
+  const data = migrate(isRecord(raw) && isRecord(raw.data) ? raw.data : {}, version);
   const preset = KEYBOARD_PRESETS.find((p) => p === data.keyboard) ?? fallbackPreset;
   const defaults = defaultSettings(preset);
   const merged = merge({ ...defaults, controls: undefined }, { ...data, controls: undefined }, '');
@@ -110,7 +126,10 @@ function readStored(): unknown {
 }
 
 export function loadSettings(): Settings {
-  current = sanitize(readStored(), detectKeyboardPreset(getLocale()));
+  const stored = readStored();
+  current = sanitize(stored, detectKeyboardPreset(getLocale()));
+  // Réglages enregistrés par une ancienne version : on les réécrit à jour (la migration ne se rejoue pas).
+  if (isRecord(stored) && stored.version !== SETTINGS_VERSION) persist();
   return current;
 }
 
