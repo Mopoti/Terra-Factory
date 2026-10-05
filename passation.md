@@ -40,7 +40,8 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Cadrage terminé pour l'essentiel. Prochaine étape : plan d'architecture technique + ordre des chantiers du prototype (à soumettre au PO).
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
-- Plan `docs/architecture.md` : en attente de validation PO pour démarrer le chantier 0.
+- Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Chantier 0 (socle) : code écrit** (Vite+TS+Three, lint, tests, build OK, page de test avec cube 50 cm). Reste : mise en ligne d'un aperçu (action PO probable).
 
 - Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Tranché au §9 (murs sur bords de cases en navigateur, libres sous Unity ; dalles 10 cm ; angles = pilier 10×10×50 à étudier plus tard).
 

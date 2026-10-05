@@ -79,5 +79,5 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 
 ## 9. Précisions du PO — murs, sols, plafonds (tour 6)
 - **Murs** : navigateur = uniquement sur les **bords des cases** (extérieur de la case) ; Unity = n'importe où (pas de 10 cm).
-- **Angles** : deux murs d'épaisseur 10 cm qui se rejoignent laissent un petit vide de 10×10 cm à l'extérieur de l'angle. 🔶 À traiter plus tard : pilier d'angle de 10×10×50 cm (préféré si possible), sinon accepter le vide. **À ne pas oublier au chantier de construction.**
+- **Angles** : deux murs d'épaisseur 10 cm qui se rejoignent laissent un petit vide de 10×10 cm à l'extérieur de l'angle. **Décision PO : on accepte le vide.** Le joueur peut ajouter ou non un pilier de 10×10×50 cm (optionnel, décoratif) ; la pièce compte comme **fermée dans les deux cas**.
 - **Sols et plafonds** : dalles de 50×50 cm, 10 cm d'épaisseur.
