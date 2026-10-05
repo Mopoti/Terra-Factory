@@ -26,12 +26,18 @@ export interface PiecePos {
 /** Les pièces posées : clé d'emplacement -> type. Une seule pièce par emplacement. */
 export type Pieces = Record<string, PieceKind>;
 
+/** Bloc le plus haut d'un étage : un plafond « de pièce » est posé sur lui. */
+export const TOP_LAYER = LAYERS_PER_STOREY - 1;
+
 export function pieceKey(p: PiecePos): string {
   const base = `${p.slot[0]}:${p.level}:${p.gx},${p.gz}`;
-  return p.slot === 'edge' ? `${base}:${p.axis ?? 'x'}:${p.layer ?? 0}` : base;
+  if (p.slot === 'edge') return `${base}:${p.axis ?? 'x'}:${p.layer ?? 0}`;
+  if (p.slot === 'ceiling') return `${base}:${p.layer ?? TOP_LAYER}`;
+  return base;
 }
 
-const KEY_RE = /^([efc]):(-?\d+):(-?\d+),(-?\d+)(?::([xz]):(\d+))?$/;
+const KEY_RE = /^([efc]):(-?\d+):(-?\d+),(-?\d+)(?::([xz]):(\d+)|:(\d+))?$/;
+const LEGACY_CEILING_RE = /^c:(-?\d+):(-?\d+),(-?\d+)$/;
 const LEGACY_EDGE_RE = /^e:(-?\d+):(-?\d+),(-?\d+):([xz])$/;
 const SLOT_OF: Record<string, PieceSlot> = { e: 'edge', f: 'floor', c: 'ceiling' };
 
@@ -40,7 +46,9 @@ export function parseKey(key: string): PiecePos | null {
   if (!m) return null;
   const slot = SLOT_OF[m[1]];
   if ((slot === 'edge') !== (m[5] !== undefined)) return null;
-  const layer = m[6] === undefined ? undefined : Number(m[6]);
+  if ((slot === 'ceiling') !== (m[7] !== undefined)) return null;
+  const layerText = m[6] ?? m[7];
+  const layer = layerText === undefined ? undefined : Number(layerText);
   if (layer !== undefined && layer >= LAYERS_PER_STOREY) return null;
   return {
     slot,
@@ -48,6 +56,7 @@ export function parseKey(key: string): PiecePos | null {
     gx: Number(m[3]),
     gz: Number(m[4]),
     ...(m[5] ? { axis: m[5] as 'x' | 'z', layer } : {}),
+    ...(slot === 'ceiling' ? { layer } : {}),
   };
 }
 
@@ -58,7 +67,7 @@ export function posFor(
   gx: number,
   gz: number,
   axis?: 'x' | 'z',
-  layer = 0,
+  layer?: number,
 ): PiecePos {
   const type = pieceDef(kind).type;
   const slot = slotOf(type);
@@ -67,7 +76,9 @@ export function posFor(
     level,
     gx,
     gz,
-    ...(slot === 'edge' ? { axis: axis ?? 'x', layer: type === 'door' ? 0 : layer } : {}),
+    ...(slot === 'edge' ? { axis: axis ?? 'x', layer: type === 'door' ? 0 : (layer ?? 0) } : {}),
+    // Un plafond est posé sur le haut d'un mur : par défaut sur le bloc du haut de l'étage.
+    ...(slot === 'ceiling' ? { layer: layer ?? TOP_LAYER } : {}),
   };
 }
 
@@ -83,6 +94,12 @@ export function edgeState(pieces: Pieces, p: PiecePos): 'door' | 'closed' | 'ope
 /** Peut-on poser cette pièce ici ? (emplacement libre, sans porte ni mur gênant) */
 export function isFree(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
   if (slotOf(pieceDef(kind).type) !== pos.slot) return false;
+  if (pos.slot === 'ceiling') {
+    // Une seule dalle de plafond par case, à n'importe quelle hauteur.
+    for (let l = 0; l < LAYERS_PER_STOREY; l++)
+      if (pieces[pieceKey({ ...pos, layer: l })]) return false;
+    return true;
+  }
   if (pos.slot !== 'edge') return !pieces[pieceKey(pos)];
   if (pieceDef(kind).type === 'door') {
     for (let l = 0; l < LAYERS_PER_STOREY; l++) if (pieces[edgeKey(pos, l)]) return false;
@@ -113,6 +130,12 @@ export function normalizePieces(raw: unknown): Pieces {
   if (typeof raw !== 'object' || raw === null) return result;
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (typeof value !== 'string') continue;
+    const legacyCeiling = LEGACY_CEILING_RE.exec(key);
+    if (legacyCeiling && (isPieceKind(value) || LEGACY[value])) {
+      const kind = isPieceKind(value) ? value : LEGACY[value];
+      if (pieceDef(kind).type === 'ceiling') result[`${key}:${TOP_LAYER}`] = kind;
+      continue;
+    }
     const legacy = LEGACY_EDGE_RE.exec(key);
     if (legacy && LEGACY[value]) {
       // Ancien mur sur tout l'étage -> 5 blocs ; ancienne porte -> porte.
@@ -197,28 +220,35 @@ export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boo
 /** Jusqu'où (en cases) une dalle de plafond peut s'étendre depuis un mur qui la porte. */
 export const MAX_CEILING_SPAN = 3;
 
-/** La case a-t-elle un mur (ou une porte) à son bord, au bloc du haut ? */
-function carriedByWall(pieces: Pieces, level: number, gx: number, gz: number): boolean {
-  const top = LAYERS_PER_STOREY - 1;
-  return (
-    hasBlock(pieces, level, gx, gz, 'x', top) ||
-    hasBlock(pieces, level, gx, gz + 1, 'x', top) ||
-    hasBlock(pieces, level, gx, gz, 'z', top) ||
-    hasBlock(pieces, level, gx + 1, gz, 'z', top)
-  );
+/**
+ * La case a-t-elle, à l'un de ses 4 bords, un mur dont le bloc `layer` est le dernier (le plafond se pose
+ * sur la tranche haute du mur, à la hauteur de ce mur, même s'il ne fait qu'un bloc de haut) ?
+ */
+function carriedByWall(
+  pieces: Pieces,
+  level: number,
+  gx: number,
+  gz: number,
+  layer: number,
+): boolean {
+  const top = (g: number, h: number, axis: 'x' | 'z'): boolean =>
+    hasBlock(pieces, level, g, h, axis, layer) &&
+    (layer === TOP_LAYER || !hasBlock(pieces, level, g, h, axis, layer + 1));
+  return top(gx, gz, 'x') || top(gx, gz + 1, 'x') || top(gx, gz, 'z') || top(gx + 1, gz, 'z');
 }
 
 /**
- * Un plafond s'accroche au haut des murs : la dalle doit toucher un bloc de mur du haut de l'étage, ou
- * prolonger une dalle déjà posée, à moins de `MAX_CEILING_SPAN` cases d'un mur qui la porte.
+ * Un plafond s'accroche à la tranche haute d'un mur, à la hauteur de ce mur, sans autre condition, ou
+ * prolonge une dalle déjà posée à la même hauteur, à moins de `MAX_CEILING_SPAN` cases d'un mur porteur.
  */
 function ceilingSupported(pieces: Pieces, pos: PiecePos): boolean {
+  const layer = pos.layer ?? TOP_LAYER;
   const seen = new Set<string>([`${pos.gx},${pos.gz}`]);
   let frontier: [number, number][] = [[pos.gx, pos.gz]];
   for (let depth = 0; depth <= MAX_CEILING_SPAN; depth++) {
     const next: [number, number][] = [];
     for (const [gx, gz] of frontier) {
-      if (carriedByWall(pieces, pos.level, gx, gz)) return true;
+      if (carriedByWall(pieces, pos.level, gx, gz, layer)) return true;
       for (const [nx, nz] of [
         [gx - 1, gz],
         [gx + 1, gz],
@@ -226,7 +256,8 @@ function ceilingSupported(pieces: Pieces, pos: PiecePos): boolean {
         [gx, gz + 1],
       ]) {
         const k = `${nx},${nz}`;
-        if (seen.has(k) || !pieces[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz })])
+        if (seen.has(k)) continue;
+        if (!pieces[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz, layer })])
           continue;
         seen.add(k);
         next.push([nx, nz]);

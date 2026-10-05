@@ -17,11 +17,13 @@ export function planRect(
   level: number,
   a: { gx: number; gz: number },
   b: { gx: number; gz: number },
+  /** Plafond : bloc de mur sur lequel la dalle est posée (hauteur de la dalle). */
+  layer?: number,
 ): PiecePos[] {
   const out: PiecePos[] = [];
   for (let gx = Math.min(a.gx, b.gx); gx <= Math.max(a.gx, b.gx); gx++) {
     for (let gz = Math.min(a.gz, b.gz); gz <= Math.max(a.gz, b.gz); gz++) {
-      out.push(posFor(kind, level, gx, gz));
+      out.push(posFor(kind, level, gx, gz, undefined, layer));
     }
   }
   return out.sort(

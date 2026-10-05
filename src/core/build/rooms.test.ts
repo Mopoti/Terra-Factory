@@ -21,7 +21,7 @@ function put(
   level = 0,
 ): void {
   const kind = `${type}_${type === 'wall' ? 'stone' : 'wood'}` as PieceKind;
-  const layers = type === 'wall' ? [0, 1, 2, 3, 4] : [0];
+  const layers = type === 'wall' ? [0, 1, 2, 3, 4] : [undefined];
   for (const l of layers) p[pieceKey(posFor(kind, level, gx, gz, axis, l))] = kind;
 }
 

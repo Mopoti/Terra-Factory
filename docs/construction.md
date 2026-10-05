@@ -62,3 +62,7 @@ Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (blo
 ### Tour 20 — viser un plafond depuis la face ou la tranche d'un mur
 
 La visée d'un plafond (`aimCeiling`) suit le rayon dans la bande de hauteur du haut des murs : viser la face ou la tranche du bloc du haut accroche la dalle du côté de l'œil, même si le rayon traverserait le plan du plafond derrière le mur. Sans mur à portée, retombée sur la case du plan du plafond (rouge si elle ne tient pas). Le bloc du haut du mur (bloc 5) doit exister.
+
+### Tour 21 — plafond sur n'importe quelle hauteur de mur
+
+Le plafond n'est plus forcément à 2,50 m : une dalle se pose **sur la tranche haute d'un mur, à la hauteur de ce mur**, même s'il ne fait qu'un bloc de haut (clé `c:étage:gx,gz:bloc`). Seule condition : le bloc visé est le dernier de la colonne (la dalle ne traverse pas un bloc au-dessus). Une dalle par case ; le glisser prolonge dans le même plan (3 cases max depuis un mur). Les pièces fermées demandent un plafond posé sur le bloc du haut (bloc 5). Anciennes sauvegardes : les plafonds sont convertis au bloc du haut.

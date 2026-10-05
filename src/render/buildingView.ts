@@ -39,7 +39,11 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
     return;
   }
   if (def.type === 'ceiling') {
-    mb.box(cx, y0 + STOREY_HEIGHT_M - T, cz, CELL_SIZE_M - gap, T - EPS, CELL_SIZE_M - gap, color);
+    // La dalle est posée sur la tranche haute d'un mur : sa face supérieure est au sommet du bloc `layer`.
+    const layer = pos.layer ?? LAYERS_PER_STOREY - 1;
+    const topY = y0 + (layer + 1) * LAYER_HEIGHT_M;
+    const trim = layer === LAYERS_PER_STOREY - 1 ? EPS : 0;
+    mb.box(cx, topY - T, cz, CELL_SIZE_M - gap, T - trim, CELL_SIZE_M - gap, color);
     return;
   }
   // Bord de case : le centre du mur est sur la ligne du bord ; on déborde de T pour fermer les angles.
@@ -200,7 +204,7 @@ export class BuildingView {
       };
     }
     if (slot === 'ceiling') {
-      const hit = aimCeiling(origin, dir, pieces, kind, level, maxDist);
+      const hit = aimCeiling(origin, dir, pieces, kind, level, maxDist, mode);
       if (!hit) return null;
       return {
         pos: hit.pos,

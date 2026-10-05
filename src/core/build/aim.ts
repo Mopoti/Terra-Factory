@@ -9,6 +9,7 @@ import {
   edgeKeysToRemove,
   isFree,
   isSupported,
+  pieceKey,
   posFor,
   type PiecePos,
   type Pieces,
@@ -93,12 +94,23 @@ export function aimEdge(
   };
 }
 
+/** Case sous le rayon dans un plan horizontal à la hauteur `y`. */
+export function cellOnPlane(origin: Vec, dir: Vec, y: number): { gx: number; gz: number } | null {
+  if (Math.abs(dir.y) < 1e-6) return null;
+  const t = (y - origin.y) / dir.y;
+  if (t < 0 || t > 200) return null;
+  return {
+    gx: Math.floor((origin.x + dir.x * t) / CELL_SIZE_M),
+    gz: Math.floor((origin.z + dir.z * t) / CELL_SIZE_M),
+  };
+}
+
 /**
- * Vise une dalle de plafond. On suit le rayon dans la bande de hauteur du haut des murs (bloc du haut et
- * un peu au-dessus) et on retient la première dalle posable : celle sous le rayon, ou l'une des deux
- * dalles qui touchent le bord de mur visé. Ainsi, viser la face ou la tranche d'un mur suffit pour
- * accrocher la dalle de son côté, même si le rayon traverse le plan du plafond derrière le mur.
- * Sinon on retombe sur la case du plan du plafond sous le rayon (qui s'affichera en rouge si elle ne tient pas).
+ * Vise une dalle de plafond. Elle se pose sur la tranche haute d'un mur, à la hauteur de ce mur (même d'un
+ * seul bloc). On suit le rayon et on retient la première dalle posable : celle sous le rayon ou l'une des
+ * deux dalles qui touchent le bord de mur visé, à la hauteur du bloc visé. Sinon on retombe sur la case
+ * du plan du plafond de l'étage sous le rayon (rouge si elle ne tient pas).
+ * En mode `remove`, on ne vise que les dalles existantes.
  */
 export function aimCeiling(
   origin: Vec,
@@ -107,22 +119,31 @@ export function aimCeiling(
   kind: PieceKind,
   level: number,
   maxDist: number,
+  mode: 'place' | 'remove' = 'place',
 ): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
-  const topY = level * STOREY_HEIGHT_M + STOREY_HEIGHT_M;
-  const bandLow = topY - LAYER_HEIGHT_M;
-  const bandHigh = topY + 0.4;
-  const usable = (gx: number, gz: number): PiecePos | null => {
-    const pos = posFor(kind, level, gx, gz);
+  const y0 = level * STOREY_HEIGHT_M;
+  const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
+  const usable = (gx: number, gz: number, layer: number): PiecePos | null => {
+    const pos = posFor(kind, level, gx, gz, undefined, layer);
+    if (mode === 'remove') return pieces[pieceKey(pos)] ? pos : null;
     return isFree(pieces, kind, pos) && isSupported(pieces, kind, pos) ? pos : null;
   };
   for (let t = 0.3; t <= maxDist; t += STEP_M) {
-    const y = origin.y + dir.y * t;
-    if (y > bandHigh && dir.y > 0) break;
-    if (y < bandLow || y > bandHigh) continue;
+    const y = origin.y + dir.y * t - y0;
+    if (y < 0 || y > top + 0.4) {
+      if (y > top + 0.4 && dir.y > 0) break;
+      continue;
+    }
     const x = origin.x + dir.x * t;
     const z = origin.z + dir.z * t;
     const gx = Math.floor(x / CELL_SIZE_M);
     const gz = Math.floor(z / CELL_SIZE_M);
+    // Hauteurs possibles : le bloc dans lequel est le rayon, ou celui juste en dessous (rayon au-dessus du mur).
+    const layers = [
+      ...new Set([Math.floor(y / LAYER_HEIGHT_M), Math.floor((y - 0.4) / LAYER_HEIGHT_M)]),
+    ]
+      .filter((l) => l >= 0 && l < LAYERS_PER_STOREY)
+      .sort((a, b) => b - a);
     const candidates: [number, number][] = [[gx, gz]];
     const e = nearestEdge(x, z);
     if (e.dist <= SNAP_M) {
@@ -142,15 +163,14 @@ export function aimCeiling(
       pair.sort((a, b) => d(a) - d(b));
       candidates.push(...pair);
     }
-    for (const [cx, cz] of candidates) {
-      const pos = usable(cx, cz);
-      if (pos) return { pos, cell: { gx: cx, gz: cz } };
+    for (const layer of layers) {
+      for (const [cx, cz] of candidates) {
+        const pos = usable(cx, cz, layer);
+        if (pos) return { pos, cell: { gx: cx, gz: cz } };
+      }
     }
   }
-  if (Math.abs(dir.y) < 1e-6) return null;
-  const t = (topY - origin.y) / dir.y;
-  if (t < 0 || t > 200) return null;
-  const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
-  const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
-  return { pos: posFor(kind, level, gx, gz), cell: { gx, gz } };
+  if (mode === 'remove') return null;
+  const cell = cellOnPlane(origin, dir, y0 + top);
+  return cell ? { pos: posFor(kind, level, cell.gx, cell.gz), cell } : null;
 }

@@ -519,3 +519,41 @@ describe('visée des plafonds', () => {
     expect(hit?.pos.slot).toBe('ceiling');
   });
 });
+
+describe('plafond sur un mur bas', () => {
+  it("se pose sur la tranche haute d'un mur d'un seul bloc, à sa hauteur", () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 3, piece_ceiling_wood: 6 } });
+    s.place('wall_stone', posFor('wall_stone', 0, 0, 2, 'x', 0));
+    // Dalle sur le bloc 0 : de chaque côté du mur.
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 0))).toBe('ok');
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 2, undefined, 0))).toBe('ok');
+    // Pas à une autre hauteur, ni deux dalles dans la même case.
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 3))).toBe('occupied');
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 5, 5, undefined, 0))).toBe(
+      'unsupported',
+    );
+  });
+  it('un mur plus haut ne porte pas une dalle posée à mi-hauteur', () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 3, piece_ceiling_wood: 2 } });
+    s.placeMany(
+      'wall_stone',
+      planWall('wall_stone', 0, 'x', 2, { i: 0, layer: 0 }, { i: 0, layer: 1 }),
+    );
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 0))).toBe(
+      'unsupported',
+    );
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 1))).toBe('ok');
+  });
+  it('la visée choisit la hauteur du mur visé', () => {
+    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 2, 'x', 0))]: 'wall_stone' };
+    const hit = aimCeiling(
+      { x: 0.25, y: 0.5, z: -1 },
+      { x: 0, y: 0.05, z: 1 },
+      pieces,
+      'ceiling_wood',
+      0,
+      10,
+    );
+    expect(hit?.pos).toMatchObject({ gz: 1, layer: 0 });
+  });
+});

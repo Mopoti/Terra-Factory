@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
+import { cellOnPlane } from '../core/build/aim';
 import {
   evaluatePlan,
   planRect,
@@ -13,6 +14,7 @@ import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   LAYERS_PER_STOREY,
+  LAYER_HEIGHT_M,
   MATERIALS,
   STOREY_HEIGHT_M,
   PIECE_TYPES,
@@ -251,7 +253,18 @@ export function startGameView(
     const kind = buildKind();
     const start = dragStart ?? aim;
     if (aim.pos.slot !== 'edge') {
-      return planRect(kind, buildLevel, start.cell, aim.cell);
+      if (aim.pos.slot === 'ceiling' && dragStart) {
+        // La dalle reste à la hauteur du mur choisi au départ : on prolonge dans ce plan.
+        const layer = start.pos.layer ?? 0;
+        const end =
+          cellOnPlane(
+            rayOrigin,
+            rayDir,
+            buildLevel * STOREY_HEIGHT_M + (layer + 1) * LAYER_HEIGHT_M,
+          ) ?? aim.cell;
+        return planRect(kind, buildLevel, start.cell, end, layer);
+      }
+      return planRect(kind, buildLevel, start.cell, aim.cell, aim.pos.layer);
     }
     const axis = start.pos.axis ?? 'x';
     const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;
