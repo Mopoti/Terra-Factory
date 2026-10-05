@@ -439,5 +439,6 @@
   "machine.stock": "Mined stock",
   "machine.add": "Add from bag",
   "machine.take": "Take back",
-  "machine.cells": "cells"
+  "machine.cells": "cells",
+  "machine.dragHint": "Drag an item from the bag onto a machine slot (or click the item, then the slot). Drag a machine slot onto the bag to take it back."
 }

@@ -1,9 +1,11 @@
-import { machineDef, smeltRecipe } from '../core/data/machines';
-import { itemById } from '../core/data/items';
-import { footprint, type Factory, type Machine, type Stack } from '../core/factory/factory';
-import type { GameState } from '../core/game/state';
 import { playSfx } from '../audio/sfx';
-import { t, onLocaleChange, type TranslationKey } from '../i18n';
+import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
+import { machineDef, smeltRecipe } from '../core/data/machines';
+import { footprint, type Factory, type Machine, type Stack } from '../core/factory/factory';
+import { totals } from '../core/game/inventory';
+import type { GameState } from '../core/game/state';
+import { onLocaleChange, t, type TranslationKey } from '../i18n';
+import { ITEM_DRAG_TYPE } from './hotbar';
 import './menu.css';
 
 export interface MachineWindow {
@@ -12,6 +14,10 @@ export interface MachineWindow {
   isOpen(): boolean;
   dispose(): void;
 }
+
+type SlotName = 'fuel' | 'input' | 'stock';
+/** Type MIME d'une case de machine que l'on glisse vers le sac pour la reprendre. */
+const MACHINE_SLOT_TYPE = 'text/x-terra-machine-slot';
 
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -29,8 +35,9 @@ const duration = (sec: number): string =>
   sec >= 60 ? `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s` : `${Math.round(sec)} s`;
 
 /**
- * Fenêtre d'une foreuse ou d'un fourneau : case de combustible, minerai à cuire, stock / lingots produits.
- * On y met le contenu du sac et on en reprend.
+ * Fenêtre d'une foreuse ou d'un fourneau. Le sac reste affiché à gauche (à la place de la fabrication) : on y
+ * prend un objet, on le glisse (ou on le clique puis on clique la case) dans une case de la machine ; on
+ * reprend le contenu d'une case en la glissant sur le sac, ou avec le bouton « Reprendre ».
  */
 export function mountMachineWindow(
   root: HTMLElement,
@@ -40,16 +47,54 @@ export function mountMachineWindow(
 ): MachineWindow {
   let current: number | null = null;
   let timer = 0;
+  /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
+  let selected: string | null = null;
+  /** Pendant un glisser-déposer on ne redessine pas (cela l'annulerait). */
+  let dragging = false;
+
+  /** Éléments dont le texte change en continu (on les met à jour sans refaire la fenêtre). */
+  let live: {
+    status?: HTMLElement;
+    fuel?: HTMLElement;
+    ore?: HTMLElement;
+    counts: Map<SlotName, HTMLElement>;
+  } = { counts: new Map() };
+  /** Ce qui, s'il change, oblige à redessiner la fenêtre (sac, présence d'objets dans les cases). */
+  let lastShape = '';
+  const shape = (m: Machine): string =>
+    JSON.stringify([
+      state.inventory,
+      m.fuel?.item ?? null,
+      m.input?.item ?? null,
+      m.stock?.item ?? null,
+      selected,
+    ]);
 
   const machine = (): Machine | null =>
     current === null ? null : (factory.machines.find((m) => m.id === current) ?? null);
 
-  const slotRow = (
+  /** Une case de la machine peut-elle recevoir cet objet ? */
+  const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
+    (slot === 'fuel' && machineDef(m.type).fuel && !!itemById(item).fuelSeconds) ||
+    (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item));
+
+  function drop(m: Machine, slot: SlotName, item: string): void {
+    if (!accepts(m, slot, item)) {
+      playSfx('deny');
+      return;
+    }
+    const max = machineDef(m.type).stockMax ?? 100;
+    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, max) > 0 ? 'pickup' : 'deny');
+    render();
+  }
+
+  function machineSlot(
+    m: Machine,
+    slot: SlotName,
     label: string,
     stack: Stack | null,
-    max: number | null,
-    buttons: { text: string; enabled: boolean; run: () => void }[],
-  ): HTMLElement => {
+  ): HTMLElement {
+    const max = machineDef(m.type).stockMax ?? 100;
     const row = el('div', 'mach-row');
     row.append(el('span', 'mach-label', label));
     const box = el('span', stack ? 'mach-slot' : 'mach-slot empty');
@@ -57,32 +102,137 @@ export function mountMachineWindow(
       box.style.setProperty('--item', itemById(stack.item).color);
       box.append(
         el('span', undefined, itemName(stack.item)),
-        el('strong', undefined, max ? `${stack.count} / ${max}` : String(stack.count)),
+        (() => {
+          const count = el('strong', undefined, `${stack.count} / ${max}`);
+          live.counts.set(slot, count);
+          return count;
+        })(),
       );
-    } else box.textContent = t('factory.empty');
-    row.append(box);
-    for (const b of buttons) {
-      const btn = el('button', undefined, b.text);
-      btn.type = 'button';
-      btn.disabled = !b.enabled;
-      btn.addEventListener('click', () => {
-        b.run();
+      box.draggable = true;
+      box.addEventListener('dragstart', (e) => {
+        dragging = true;
+        e.dataTransfer?.setData(MACHINE_SLOT_TYPE, slot);
+      });
+      box.addEventListener('dragend', () => {
+        dragging = false;
         render();
       });
-      row.append(btn);
+    } else box.textContent = t('factory.empty');
+    if (slot !== 'stock') {
+      box.classList.add('target');
+      box.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+      });
+      box.addEventListener('drop', (e) => {
+        const item = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+        if (!item) return;
+        e.preventDefault();
+        dragging = false;
+        drop(m, slot, item);
+      });
+      box.addEventListener('click', () => {
+        if (selected) drop(m, slot, selected);
+      });
     }
+    row.append(box);
+    const take = el('button', undefined, t('machine.take'));
+    take.type = 'button';
+    take.disabled = stack === null;
+    take.addEventListener('click', () => {
+      if (state.unloadMachine(m, slot) > 0) playSfx('pickup');
+      render();
+    });
+    row.append(take);
     return row;
-  };
+  }
 
-  /** Quel objet du sac ajouter dans cette case ? Celui déjà dedans, sinon le premier qui convient. */
-  const pickFuel = (m: Machine): string | null =>
-    m.fuel?.item ??
-    ['coal', 'wood'].find((id) => (state.inventory[id] ?? 0) > 0 && itemById(id).fuelSeconds) ??
-    null;
-  const pickInput = (m: Machine): string | null =>
-    m.input?.item ??
-    ['iron_ore', 'copper_ore'].find((id) => (state.inventory[id] ?? 0) > 0 && smeltRecipe(id)) ??
-    null;
+  /** Le sac, toujours visible à gauche. */
+  function bagColumn(m: Machine): HTMLElement {
+    const col = el('div', 'inv-bag');
+    const used = totals(state.inventory);
+    col.append(
+      el(
+        'div',
+        'mach-info',
+        `${(used.weightG / 1000).toFixed(1)} / ${BAG_LIMITS.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${BAG_LIMITS.maxVolumeMl / 1000} L`,
+      ),
+    );
+    const slots: { item: string; count: number }[] = [];
+    for (const item of ITEMS) {
+      let left = state.inventory[item.id] ?? 0;
+      while (left > 0) {
+        const n = Math.min(left, BAG_LIMITS.stackMax);
+        slots.push({ item: item.id, count: n });
+        left -= n;
+      }
+    }
+    const grid = el('div', 'slot-grid');
+    for (let i = 0; i < BAG_LIMITS.maxSlots; i++) {
+      const slot = slots[i];
+      const cell = el('button', slot ? 'slot' : 'slot empty');
+      cell.type = 'button';
+      if (slot) {
+        cell.style.setProperty('--item', itemById(slot.item).color);
+        cell.classList.toggle('selected', slot.item === selected);
+        cell.append(
+          el('span', 'slot-name', itemName(slot.item)),
+          el('span', 'slot-count', String(slot.count)),
+        );
+        cell.draggable = true;
+        cell.addEventListener('dragstart', (e) => {
+          dragging = true;
+          e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item);
+        });
+        cell.addEventListener('dragend', () => {
+          dragging = false;
+          render();
+        });
+        cell.addEventListener('click', () => {
+          selected = selected === slot.item ? null : slot.item;
+          render();
+        });
+      } else cell.disabled = true;
+      grid.append(cell);
+    }
+    grid.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes(MACHINE_SLOT_TYPE)) e.preventDefault();
+    });
+    grid.addEventListener('drop', (e) => {
+      const name = e.dataTransfer?.getData(MACHINE_SLOT_TYPE) as SlotName | '' | undefined;
+      if (!name) return;
+      e.preventDefault();
+      dragging = false;
+      if (state.unloadMachine(m, name) > 0) playSfx('pickup');
+      render();
+    });
+    col.append(grid, el('small', 'help', t('machine.dragHint')));
+    return col;
+  }
+
+  const fuelText = (m: Machine): string =>
+    t('factory.fuel', {
+      v: m.fuel ? `${m.fuel.count}` : '0',
+      time: duration(factory.fuelSecondsLeft(m)),
+    });
+
+  /** Mise à jour douce : seuls les nombres qui bougent changent, les éléments ne sont pas remplacés. */
+  function refresh(): void {
+    const m = machine();
+    if (!m) return close();
+    if (shape(m) !== lastShape) return render();
+    const status = factory.status(m);
+    if (live.status) {
+      live.status.className = `st ${status}`;
+      live.status.textContent = t(`factory.status.${status}` as TranslationKey);
+    }
+    if (live.fuel) live.fuel.textContent = fuelText(m);
+    if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
+    const max = machineDef(m.type).stockMax ?? 100;
+    for (const [name, node] of live.counts) {
+      const stack = m[name];
+      if (stack) node.textContent = `${stack.count} / ${max}`;
+    }
+  }
 
   function render(): void {
     const m = machine();
@@ -91,82 +241,50 @@ export function mountMachineWindow(
       return;
     }
     const def = machineDef(m.type);
-    const max = def.stockMax ?? 100;
+    live = { counts: new Map() };
+    lastShape = shape(m);
     const panel = el('div', 'panel machine-window');
     panel.setAttribute('role', 'dialog');
     panel.append(el('h2', undefined, itemName(def.item)));
     const status = factory.status(m);
-    panel.append(el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey)));
+    const statusEl = el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey));
+    live.status = statusEl;
+    panel.append(statusEl);
 
     const rows = el('div', 'mach-rows');
+    rows.append(el('h3', undefined, itemName(def.item)));
     if (def.fuel) {
-      const fuelItem = pickFuel(m);
+      rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
+      const fuelInfo = el('div', 'mach-info', fuelText(m));
+      live.fuel = fuelInfo;
+      rows.append(fuelInfo);
+    }
+    if (m.type === 'furnace') rows.append(machineSlot(m, 'input', t('machine.input'), m.input));
+    if (m.type === 'drill' || m.type === 'furnace') {
       rows.append(
-        slotRow(t('machine.fuel'), m.fuel, max, [
-          {
-            text: t('machine.add'),
-            enabled: fuelItem !== null && (state.inventory[fuelItem] ?? 0) > 0,
-            run: () => {
-              if (fuelItem && state.loadMachine(m, 'fuel', fuelItem, max) > 0) playSfx('pickup');
-            },
-          },
-          {
-            text: t('machine.take'),
-            enabled: m.fuel !== null,
-            run: () => void state.unloadMachine(m, 'fuel'),
-          },
-        ]),
-      );
-      rows.append(
-        el(
-          'div',
-          'mach-info',
-          t('factory.fuel', {
-            v: m.fuel ? `${m.fuel.count}` : '0',
-            time: duration(factory.fuelSecondsLeft(m)),
-          }),
+        machineSlot(
+          m,
+          'stock',
+          t(m.type === 'drill' ? 'machine.stock' : 'machine.output'),
+          m.stock,
         ),
       );
     }
-    if (m.type === 'furnace') {
-      const oreItem = pickInput(m);
-      rows.append(
-        slotRow(t('machine.input'), m.input, max, [
-          {
-            text: t('machine.add'),
-            enabled: oreItem !== null && (state.inventory[oreItem] ?? 0) > 0,
-            run: () => {
-              if (oreItem && state.loadMachine(m, 'input', oreItem, max) > 0) playSfx('pickup');
-            },
-          },
-          {
-            text: t('machine.take'),
-            enabled: m.input !== null,
-            run: () => void state.unloadMachine(m, 'input'),
-          },
-        ]),
-      );
-    }
-    if (m.type === 'drill' || m.type === 'furnace') {
-      rows.append(
-        slotRow(t(m.type === 'drill' ? 'machine.stock' : 'machine.output'), m.stock, max, [
-          {
-            text: t('machine.take'),
-            enabled: m.stock !== null,
-            run: () => {
-              if (state.unloadMachine(m, 'stock') > 0) playSfx('pickup');
-            },
-          },
-        ]),
-      );
-    }
     if (m.type === 'drill') {
-      const ore = factory.oreUnder(m);
-      rows.append(el('div', 'mach-info', t('factory.ore', { n: String(ore.total) })));
+      const ore = el(
+        'div',
+        'mach-info',
+        t('factory.ore', { n: String(factory.oreUnder(m).total) }),
+      );
+      live.ore = ore;
+      rows.append(ore);
     }
-    panel.append(rows);
-    const cells = footprint(m.type, m.gx, m.gz, m.rot);
-    panel.append(el('small', 'help', `${cells.length} ${t('machine.cells')}`));
+    const layout = el('div', 'inv-layout');
+    layout.append(bagColumn(m), rows);
+    panel.append(layout);
+    panel.append(
+      el('small', 'help', `${footprint(m.type, m.gx, m.gz, m.rot).length} ${t('machine.cells')}`),
+    );
     const closeBtn = el('button', 'menu-btn', t('inv.close'));
     closeBtn.type = 'button';
     closeBtn.addEventListener('click', close);
@@ -180,12 +298,16 @@ export function mountMachineWindow(
     root.hidden = false;
     render();
     actions.onOpenChange(true);
-    timer = window.setInterval(render, 500);
+    timer = window.setInterval(() => {
+      if (!dragging) refresh();
+    }, 500);
   }
 
   function close(): void {
     if (current === null) return;
     current = null;
+    selected = null;
+    dragging = false;
     window.clearInterval(timer);
     root.hidden = true;
     root.replaceChildren();

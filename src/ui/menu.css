@@ -1163,7 +1163,17 @@
   color: #ff9f8c;
 }
 .machine-window {
-  width: min(560px, calc(100vw - 48px));
+  width: min(960px, calc(100vw - 48px));
+}
+.mach-slot[draggable='true'] {
+  cursor: grab;
+}
+.mach-slot.target:hover {
+  border-color: var(--accent);
+}
+.mach-rows h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
 }
 .mach-rows {
   display: grid;
@@ -1172,7 +1182,7 @@
 }
 .mach-row {
   display: grid;
-  grid-template-columns: 150px 1fr auto auto;
+  grid-template-columns: 120px 1fr auto;
   gap: 8px;
   align-items: center;
 }

@@ -439,5 +439,6 @@
   "machine.stock": "Stock extrait",
   "machine.add": "Ajouter du sac",
   "machine.take": "Reprendre",
-  "machine.cells": "cases au sol"
+  "machine.cells": "cases au sol",
+  "machine.dragHint": "Glisse un objet du sac sur une case de la machine (ou clique l'objet, puis la case). Glisse une case de la machine sur le sac pour la reprendre."
 }
