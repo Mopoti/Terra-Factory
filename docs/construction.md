@@ -66,3 +66,11 @@ La visée d'un plafond (`aimCeiling`) suit le rayon dans la bande de hauteur du 
 ### Tour 21 — plafond sur n'importe quelle hauteur de mur
 
 Le plafond n'est plus forcément à 2,50 m : une dalle se pose **sur la tranche haute d'un mur, à la hauteur de ce mur**, même s'il ne fait qu'un bloc de haut (clé `c:étage:gx,gz:bloc`). Seule condition : le bloc visé est le dernier de la colonne (la dalle ne traverse pas un bloc au-dessus). Une dalle par case ; le glisser prolonge dans le même plan (3 cases max depuis un mur). Les pièces fermées demandent un plafond posé sur le bloc du haut (bloc 5). Anciennes sauvegardes : les plafonds sont convertis au bloc du haut.
+
+### Tour 22 — saut et marche sur les constructions
+
+- **Saut** (touche « Sauter », Espace par défaut) : apex ≈ 1,1 m, soit 2 blocs de mur de 50 cm. Gravité simple (`core/game/physics.ts`, testé).
+- Le joueur se tient sur le **sol du terrain, une dalle de sol (marche de 10 cm montée sans sauter), la tranche d'un mur ou le dessus d'une dalle de plafond**. Il tombe en quittant un bord. Les murs bloquent à hauteur du corps (un mur de plus de 35 cm ne se monte qu'en sautant), et la tête cogne le dessous d'un plafond.
+- La hauteur des pieds est affichée dans le panneau de debug (`display.showDebug`), la caméra suit, et la hauteur est enregistrée dans la sauvegarde (`PlayerState.y`).
+- Limites actuelles : un mur de 2,5 m ne peut pas être escaladé (il faudra des escaliers/échelles) ; il n'y a pas encore de dégâts de chute ; les arbres et rochers restent infranchissables même en sautant.
+- Rendu : la dalle de plafond dépasse de 5 mm le haut du bloc de mur qui la porte pour éviter que deux faces se confondent à l'écran.

@@ -41,7 +41,8 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
-import { BuildingView, wallBlocks, type BuildAim } from './buildingView';
+import { bodyBlocked, ceilingAbove, groundAt, stepVertical } from '../core/game/physics';
+import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
@@ -117,6 +118,9 @@ export function startGameView(
   player.castShadow = true;
   scene.add(player);
   let playerX = state.x;
+  let playerY = state.y;
+  let velY = 0;
+  let onGround = playerY === 0;
   let playerZ = state.z;
   let facing = 0;
 
@@ -522,14 +526,42 @@ export function startGameView(
   const isBlockedAt = (xM: number, zM: number): boolean =>
     blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`);
   const canStand = (x: number, z: number): boolean => {
+    const pieces = options.state.changes.pieces;
     for (const dx of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
       for (const dz of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
         if (isBlockedAt(x + dx, z + dz)) return false;
-        if (wallBlocks(options.state.changes.pieces, x + dx, z + dz)) return false;
+        if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M)) return false;
       }
     }
     return true;
   };
+  const FOOT_SAMPLES: [number, number][] = [
+    [0, 0],
+    [0.2, 0],
+    [-0.2, 0],
+    [0, 0.2],
+    [0, -0.2],
+  ];
+  /** Saut, gravité, se tenir sur une dalle ou sur la tranche d'un mur. */
+  function stepBody(dt: number): void {
+    const pieces = options.state.changes.pieces;
+    let ground = 0;
+    for (const [dx, dz] of FOOT_SAMPLES) {
+      ground = Math.max(ground, groundAt(pieces, playerX + dx, playerZ + dz, playerY));
+    }
+    const roof = ceilingAbove(pieces, playerX, playerZ, playerY + PLAYER_HEIGHT_M, playerY);
+    const next = stepVertical(
+      { y: playerY, vy: velY, onGround },
+      dt,
+      ground,
+      roof,
+      PLAYER_HEIGHT_M,
+      input.isActionActive('jump'),
+    );
+    playerY = next.y;
+    velY = next.vy;
+    onGround = next.onGround;
+  }
   const obstacleAt = (x: number, y: number, z: number): boolean => {
     const h = obstacles.get(`${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`);
     return h !== undefined && y < h;
@@ -654,7 +686,7 @@ export function startGameView(
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,
       `${t('debug.view')} : ${t(`view.${rig.view}` as TranslationKey)}`,
-      `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m`,
+      `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m · ${t('debug.height')} ${playerY.toFixed(2)} m`,
       `${t('debug.cell')} : ${gx}, ${gz}`,
       `${t('debug.chunk')} : ${Math.floor(gx / CHUNK_CELLS)}, ${Math.floor(gz / CHUNK_CELLS)}`,
       `${t('debug.biome')} : ${t(`biome.${biome}` as TranslationKey)}`,
@@ -679,7 +711,7 @@ export function startGameView(
     const pct = rig.view === 'third' ? views.third.ghostRadius : views.top.ghostRadius;
     camera.updateMatrixWorld();
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-    chest.set(playerX, 1.0, playerZ);
+    chest.set(playerX, playerY + 1.0, playerZ);
     const ndc = chest.clone().project(camera);
     const w = renderer.domElement.width;
     const h = renderer.domElement.height;
@@ -755,6 +787,7 @@ export function startGameView(
       if (repeating('zoomIn', dt)) rig.zoom(1, views);
       if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       motion = step(dt);
+      stepBody(dt);
     }
 
     updateWanted(
@@ -768,10 +801,10 @@ export function startGameView(
       rig.view === 'top' && views.top.edgeScroll && !paused && !isLocked()
         ? edgePan(mouseX, mouseY, window.innerWidth, window.innerHeight)
         : { x: 0, y: 0 };
-    rig.update(dt, { x: playerX, z: playerZ }, motion, views, edge, obstacleAt);
+    rig.update(dt, { x: playerX, y: playerY, z: playerZ }, motion, views, edge, obstacleAt);
 
     player.visible = rig.view !== 'first';
-    player.position.set(playerX, PLAYER_HEIGHT_M / 2, playerZ);
+    player.position.set(playerX, playerY + PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
     hand.visible = rig.view === 'first' && views.first.showHands;
     bodyTool.visible = rig.view !== 'first';
@@ -816,7 +849,7 @@ export function startGameView(
   });
 
   return {
-    getState: () => ({ x: playerX, z: playerZ, ...rig.getState() }),
+    getState: () => ({ x: playerX, y: playerY, z: playerZ, ...rig.getState() }),
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.
       const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;

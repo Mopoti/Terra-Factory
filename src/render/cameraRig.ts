@@ -171,13 +171,14 @@ export class CameraRig {
    */
   update(
     dt: number,
-    player: { x: number; z: number },
+    player: { x: number; y?: number; z: number },
     motion: RigMotion,
     views: Settings['views'],
     edge: { x: number; y: number },
     blockedAt: (x: number, y: number, z: number) => boolean,
   ): void {
     const rate = smoothingRate(views.common.smoothing);
+    const feet = player.y ?? 0;
     const stepMode = this.view === 'top' && views.top.rotation === 'step' && !this.dragging;
     const previousYaw = this.yaw;
     this.yaw = damp(this.yaw, this.yawTarget, stepMode ? STEP_YAW_RATE : rate, dt);
@@ -200,7 +201,7 @@ export class CameraRig {
       const rightZ = -Math.sin(this.yaw);
       desired = new THREE.Vector3(
         player.x + rightX * bobX,
-        EYE_HEIGHT_M + bobY,
+        feet + EYE_HEIGHT_M + bobY,
         player.z + rightZ * bobX,
       );
       const dir = lookDirection(this.yaw, this.lookPitchShown);
@@ -223,7 +224,7 @@ export class CameraRig {
       const rightZ = -Math.sin(this.yaw);
       const pivot = new THREE.Vector3(
         player.x + rightX * shoulder * SHOULDER_OFFSET_M,
-        views.third.height,
+        feet + views.third.height,
         player.z + rightZ * shoulder * SHOULDER_OFFSET_M,
       );
       const unit = orbitOffset(this.yaw, this.orbitPitchShown, 1);
@@ -261,9 +262,9 @@ export class CameraRig {
         views.top.zoomMin,
         Math.max(views.top.zoomMin, views.top.zoomMax),
       );
-      focus = new THREE.Vector3(player.x + this.pan.x, 0, player.z + this.pan.y);
+      focus = new THREE.Vector3(player.x + this.pan.x, feet, player.z + this.pan.y);
       const o = orbitOffset(this.yaw, elevation, zoom);
-      desired = new THREE.Vector3(focus.x + o.x, o.y, focus.z + o.z);
+      desired = new THREE.Vector3(focus.x + o.x, feet + o.y, focus.z + o.z);
       this.settle(desired, rate, dt);
       // Presque à la verticale, « le haut de l'écran » est la direction du regard.
       if (elevation > 1.5) up.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));

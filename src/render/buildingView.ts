@@ -10,6 +10,7 @@ import {
   slotOf,
   type PieceKind,
 } from '../core/data/buildings';
+import { SLAB_LIFT_M } from '../core/game/physics';
 import { aimCeiling, aimEdge } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
@@ -17,8 +18,6 @@ import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
 
 const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
-/** Blocs de mur qui arrêtent le personnage (1,75 m de haut = les 4 premiers blocs). */
-const BODY_LAYERS = 4;
 /** Léger retrait pour éviter que le haut des murs se superpose au plafond (scintillement). */
 const EPS = 0.01;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
@@ -41,9 +40,9 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
   if (def.type === 'ceiling') {
     // La dalle est posée sur la tranche haute d'un mur : sa face supérieure est au sommet du bloc `layer`.
     const layer = pos.layer ?? LAYERS_PER_STOREY - 1;
-    const topY = y0 + (layer + 1) * LAYER_HEIGHT_M;
-    const trim = layer === LAYERS_PER_STOREY - 1 ? EPS : 0;
-    mb.box(cx, topY - T, cz, CELL_SIZE_M - gap, T - trim, CELL_SIZE_M - gap, color);
+    // (5 mm au-dessus du bloc, pour que la dalle et le mur ne se confondent pas à l'écran)
+    const topY = y0 + (layer + 1) * LAYER_HEIGHT_M + SLAB_LIFT_M;
+    mb.box(cx, topY - T, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color);
     return;
   }
   // Bord de case : le centre du mur est sur la ligne du bord ; on déborde de T pour fermer les angles.
@@ -264,22 +263,4 @@ export class BuildingView {
     this.ghost.geometry.dispose();
     this.ghostMaterial.dispose();
   }
-}
-
-/** Un mur bloque-t-il ce point au rez-de-chaussée ? (un bloc de mur à hauteur du corps suffit ; les portes laissent passer) */
-export function wallBlocks(pieces: Pieces, x: number, z: number): boolean {
-  const margin = THICKNESS_M / 2 + 0.02;
-  const solid = (axis: 'x' | 'z', gx: number, gz: number): boolean => {
-    for (let layer = 0; layer < BODY_LAYERS; layer++) {
-      const kind = pieces[pieceKey({ slot: 'edge', level: 0, gx, gz, axis, layer })];
-      if (kind?.startsWith('wall')) return true;
-    }
-    return false;
-  };
-  const gxn = Math.round(x / CELL_SIZE_M);
-  if (Math.abs(x - gxn * CELL_SIZE_M) <= margin && solid('z', gxn, Math.floor(z / CELL_SIZE_M))) {
-    return true;
-  }
-  const gzn = Math.round(z / CELL_SIZE_M);
-  return Math.abs(z - gzn * CELL_SIZE_M) <= margin && solid('x', Math.floor(x / CELL_SIZE_M), gzn);
 }

@@ -18,6 +18,8 @@ export interface PlayerState {
   /** Vue active. */
   view: ViewId;
   /** Inclinaison du regard à la 1ère personne (> 0 = vers le bas). */
+  /** Hauteur des pieds (m) : sur un mur ou une dalle, on retrouve sa place au chargement. */
+  y: number;
   firstPitch: number;
   /** Distance de la caméra en vue du dessus (m). */
   topZoom: number;
@@ -120,6 +122,7 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   pitch: 0.75,
   distance: 9,
   view: 'third',
+  y: 0,
   firstPitch: 0,
   topZoom: 20,
 };
@@ -136,6 +139,7 @@ function normalizePlayer(raw: unknown): PlayerState {
     pitch: isNum(p.pitch) ? p.pitch : d.pitch,
     distance: isNum(p.distance) ? p.distance : d.distance,
     view: VIEW_IDS.find((v) => v === p.view) ?? d.view,
+    y: isNum(p.y) && p.y >= 0 && p.y < 100 ? p.y : d.y,
     firstPitch: isNum(p.firstPitch) ? p.firstPitch : d.firstPitch,
     topZoom: isNum(p.topZoom) ? p.topZoom : d.topZoom,
   };

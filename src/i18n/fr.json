@@ -393,5 +393,6 @@
   "action.layerDown": "Mur : bloc en dessous",
   "build.unsupported": "Un mur ne tient pas dans le vide : pose-le au sol ou contre un mur existant",
   "build.wallHeight": "Hauteur du mur en vue du dessus : {n} bloc(s) ({cm} cm)",
-  "build.unsupportedCeiling": "Un plafond s'accroche en haut des murs : pose-le contre un mur ou prolonge une dalle (3 cases max depuis un mur)"
+  "build.unsupportedCeiling": "Un plafond s'accroche en haut des murs : pose-le contre un mur ou prolonge une dalle (3 cases max depuis un mur)",
+  "debug.height": "haut."
 }
