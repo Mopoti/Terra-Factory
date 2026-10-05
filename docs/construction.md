@@ -78,3 +78,7 @@ Le plafond n'est plus forcément à 2,50 m : une dalle se pose **sur la tranche 
 ### Tour 23 — jointure plafond/mur « d'un seul bloc »
 
 La dalle de plafond recouvre maintenant la tranche du mur qui la porte (elle déborde de la demi-épaisseur du mur, +2 mm, quand la dalle voisine ne recouvre pas l'autre moitié) et ne dépasse le haut du mur que de 3 mm : dessus continu, plus de marche ni de bande de mur visible à côté de la dalle. Le bloc du haut du mur n'est plus rogné de 1 cm.
+
+### Tour 24 — dessous des dalles
+
+Les dalles, blocs de mur et portes sont maintenant fermés par le **dessous** (`MeshBuilder.box(..., bottom)`) : vu d'en bas, un plafond ou un bloc en hauteur n'est plus transparent (on voyait le ciel à travers).

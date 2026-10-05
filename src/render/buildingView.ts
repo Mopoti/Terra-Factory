@@ -42,7 +42,7 @@ export function addPiece(
   // Aperçu : chaque dalle / bloc est un peu rétréci pour qu'on voie les carreaux de 50 cm.
   const gap = tint ? 0.04 : 0;
   if (def.type === 'floor') {
-    mb.box(cx, y0, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color);
+    mb.box(cx, y0, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color, true);
     return;
   }
   if (def.type === 'ceiling') {
@@ -64,7 +64,7 @@ export function addPiece(
     const south = over('x', pos.gx, pos.gz + 1, pos.gx, pos.gz + 1);
     const w = CELL_SIZE_M - gap + west + east;
     const d = CELL_SIZE_M - gap + north + south;
-    mb.box(cx + (east - west) / 2, topY - T, cz + (south - north) / 2, w, T, d, color);
+    mb.box(cx + (east - west) / 2, topY - T, cz + (south - north) / 2, w, T, d, color, true);
     return;
   }
   // Bord de case : le centre du mur est sur la ligne du bord ; on déborde de T pour fermer les angles.
@@ -84,6 +84,7 @@ export function addPiece(
       LAYER_HEIGHT_M - gap,
       sz - (alongX ? 0 : gap),
       color,
+      true,
     );
     return;
   }
@@ -100,6 +101,7 @@ export function addPiece(
       H,
       alongX ? T : side,
       color,
+      true,
     );
   post(-off);
   post(off);
@@ -111,6 +113,7 @@ export function addPiece(
     H - DOOR_HEIGHT_M,
     alongX ? T : DOOR_WIDTH_M,
     color,
+    true,
   );
 }
 

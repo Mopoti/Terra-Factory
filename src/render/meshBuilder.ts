@@ -51,14 +51,25 @@ export class MeshBuilder {
     this.tri(a, c, d, color);
   }
 
-  /** Boîte centrée en (x, z), posée à la hauteur y0 (sans le dessous). */
-  box(x: number, y0: number, z: number, sx: number, sy: number, sz: number, color: Rgb): void {
+  /** Boîte centrée en (x, z), posée à la hauteur y0. Le dessous n'est dessiné que si `bottom` est vrai (objets qu'on peut voir d'en dessous). */
+  box(
+    x: number,
+    y0: number,
+    z: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    color: Rgb,
+    bottom = false,
+  ): void {
     const x0 = x - sx / 2;
     const x1 = x + sx / 2;
     const z0 = z - sz / 2;
     const z1 = z + sz / 2;
     const y1 = y0 + sy;
     this.quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], color);
+    if (bottom)
+      this.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], shade(color, 0.6));
     this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], shade(color, 0.85));
     this.quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], shade(color, 0.85));
     this.quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], shade(color, 0.75));
