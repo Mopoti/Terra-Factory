@@ -609,6 +609,9 @@ export function startGameView(
   const selectedMachine = (): MachineDef | null => machineForItem(options.state.selectedItem());
   let buildingMachine = false;
   let machinePath: Cell[] = [];
+  const pathReached = new Set<string>();
+  const MACHINE_REACH_M = 20;
+  const MAX_BELT_PATH = 150;
   let machineWasDown = false;
   const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
   const machineBlocked = (c: Cell): boolean => {
@@ -632,8 +635,12 @@ export function startGameView(
     }
     const player = { x: playerX, z: playerZ };
     const stock = options.state.inventory[def.item] ?? 0;
-    const within = (cell: Cell): boolean =>
-      Math.hypot(center(cell.gx) - player.x, center(cell.gz) - player.z) <= BUILD_REACH_M + 2;
+    // Portée de pose des machines : large (on bâtit une ligne en marchant), illimitée ou presque en vue du dessus.
+    const reach = rig.view === 'top' ? 80 : MACHINE_REACH_M;
+    const near = (cell: Cell): boolean =>
+      Math.hypot(center(cell.gx) - player.x, center(cell.gz) - player.z) <= reach;
+    // Un tapis accepté quand on le trace le reste, même si l'on s'en éloigne ensuite en marchant.
+    const within = (cell: Cell): boolean => near(cell) || pathReached.has(`${cell.gx},${cell.gz}`);
     const baseRot = buildRot ?? autoRot();
 
     if (def.id !== 'conveyor') {
@@ -674,20 +681,28 @@ export function startGameView(
     // Tapis : en gardant le clic, on trace un chemin case par case ; chaque élément s'oriente vers le suivant.
     if (down) {
       const last = machinePath[machinePath.length - 1];
-      if (!last) machinePath = [c];
-      else if (last.gx !== c.gx || last.gz !== c.gz) {
+      if (!last) {
+        machinePath = [c];
+        pathReached.clear();
+        if (near(c)) pathReached.add(`${c.gx},${c.gz}`);
+      } else if (last.gx !== c.gx || last.gz !== c.gz) {
         const back = machinePath.findIndex((p) => p.gx === c.gx && p.gz === c.gz);
         if (back >= 0) machinePath.length = back + 1;
         else {
           const cur = { ...last };
-          for (let guard = 0; guard < 60 && (cur.gx !== c.gx || cur.gz !== c.gz); guard++) {
+          for (
+            let guard = 0;
+            guard < MAX_BELT_PATH && (cur.gx !== c.gx || cur.gz !== c.gz);
+            guard++
+          ) {
             const dx = c.gx - cur.gx;
             const dz = c.gz - cur.gz;
             if (Math.abs(dx) >= Math.abs(dz)) cur.gx += Math.sign(dx);
             else cur.gz += Math.sign(dz);
             machinePath.push({ ...cur });
+            if (near(cur)) pathReached.add(`${cur.gx},${cur.gz}`);
           }
-          if (machinePath.length > 60) machinePath.length = 60;
+          if (machinePath.length > MAX_BELT_PATH) machinePath.length = MAX_BELT_PATH;
         }
       }
     }
@@ -722,6 +737,7 @@ export function startGameView(
       buildMessage =
         placed === 0 ? (stock > 0 ? t('factory.cannotPlace') : t('build.missing')) : '';
       machinePath = [];
+      pathReached.clear();
       renderBuildHud();
     }
     machineWasDown = down;
@@ -915,11 +931,13 @@ export function startGameView(
     releasingOnPurpose = true;
     document.exitPointerLock();
   }
+  /** Après la fermeture d'une interface avec Échap, le navigateur libère la souris : ce n'est pas une demande de pause. */
+  let ignoreUnlockUntil = 0;
   const onLockChange = (): void => {
     const locked = isLocked();
     if (!locked && releasingOnPurpose) {
       releasingOnPurpose = false;
-    } else if (wasLocked && !locked && !paused) {
+    } else if (wasLocked && !locked && !paused && performance.now() > ignoreUnlockUntil) {
       // Le navigateur a libéré la souris (le joueur a appuyé sur Échap) : on ouvre la pause.
       options.onRequestPause?.();
     }
@@ -1423,7 +1441,10 @@ export function startGameView(
       paused = value;
       if (value) {
         releaseLock();
-      } else requestLock();
+      } else {
+        ignoreUnlockUntil = performance.now() + 600;
+        requestLock();
+      }
     },
     dispose: () => {
       unsubscribe();
