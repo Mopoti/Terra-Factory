@@ -177,3 +177,28 @@ export function stairTops(pieces: Pieces, x: number, z: number, feetY: number): 
   }
   return tops;
 }
+
+/**
+ * Distance jusqu'au premier objet de construction touché par un rayon (mur, dalle, escalier), ou Infinity.
+ * Sert à ne pas viser ni récolter à travers un mur.
+ */
+export function rayHitPiece(
+  pieces: Pieces,
+  origin: { x: number; y: number; z: number },
+  dir: { x: number; y: number; z: number },
+  maxDist: number,
+): number {
+  if (Object.keys(pieces).length === 0) return Infinity;
+  for (let t = 0.1; t <= maxDist; t += 0.05) {
+    const x = origin.x + dir.x * t;
+    const y = origin.y + dir.y * t;
+    const z = origin.z + dir.z * t;
+    if (y < 0) return Infinity;
+    // Épaisseur d'un mur (10 cm) plus une marge : le rayon avance par pas de 5 cm.
+    if (spansAt(pieces, x, z, y, THICKNESS_M / 2 + 0.01).some((s) => y >= s.bottom && y <= s.top)) {
+      return t;
+    }
+    if (stairTops(pieces, x, z, y).some((top) => y <= top && y >= top - LAYER_HEIGHT_M)) return t;
+  }
+  return Infinity;
+}

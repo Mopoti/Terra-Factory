@@ -114,3 +114,8 @@ Règle générale : la pose part du **premier objet que le rayon du curseur touc
 - **Escalier** : une marche touchée → on pose la **marche suivante** de sa volée ; sinon au sol, dans le sens du regard.
 - **Plafond** : sur la tranche haute du mur touché (déjà en place), ou prolongement d'une dalle.
 - Nouveau soutien : un bloc de mur peut reposer sur une dalle de plafond posée juste en dessous.
+
+### Tour 30 — plus de visée à travers un mur
+
+- **Récolte** : le viseur de récolte s'arrête au premier mur, dalle ou escalier touché (`rayHitPiece`) : on ne voit plus le minerai / l'arbre derrière un mur. Pendant la construction (pièce sélectionnée dans la barre), la récolte est coupée.
+- **Escalier** : si le premier objet visé est un mur, l'escalier se pose **au pied du mur, côté œil, et monte vers lui** (sens verrouillable avec R).

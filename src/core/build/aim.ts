@@ -333,6 +333,50 @@ export function aimStairs(
     }
     return null;
   }
+  // Le premier objet touché est un mur : l'escalier se pose au pied, côté œil, et monte vers lui.
+  for (let t = 0.3; t <= maxDist; t += STEP_M) {
+    const x = origin.x + dir.x * t;
+    const y = origin.y + dir.y * t - y0;
+    const z = origin.z + dir.z * t;
+    if (y < 0) break;
+    if (y >= top) continue;
+    const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
+    // Un escalier voisin touché avant le mur : on laisse la logique de volée ci-dessous décider.
+    const gx0 = Math.floor(x / CELL_SIZE_M);
+    const gz0 = Math.floor(z / CELL_SIZE_M);
+    if (
+      [0, 1, 2, 3].some(
+        (r) => pieces[pieceKey({ slot: 'stairs', level, gx: gx0, gz: gz0, layer, rot: r })],
+      )
+    ) {
+      break;
+    }
+    const hits = [nearestEdge(x, z, 'x'), nearestEdge(x, z, 'z')]
+      .filter((h) => h.dist <= SNAP_M && isOccupied(pieces, level, h, layer))
+      .sort((p, q) => p.dist - q.dist);
+    if (hits.length === 0) continue;
+    const h = hits[0];
+    const sides: { gx: number; gz: number; rot: number }[] =
+      h.axis === 'x'
+        ? [
+            { gx: h.gx, gz: h.gz - 1, rot: 0 },
+            { gx: h.gx, gz: h.gz, rot: 2 },
+          ]
+        : [
+            { gx: h.gx - 1, gz: h.gz, rot: 1 },
+            { gx: h.gx, gz: h.gz, rot: 3 },
+          ];
+    const d = (c: { gx: number; gz: number }): number =>
+      Math.hypot((c.gx + 0.5) * CELL_SIZE_M - origin.x, (c.gz + 0.5) * CELL_SIZE_M - origin.z);
+    sides.sort((a, b) => d(a) - d(b));
+    for (const side of sides) {
+      const pos = posFor(kind, level, side.gx, side.gz, undefined, 0, forcedRot ?? side.rot);
+      if (isFree(pieces, kind, pos) && isSupported(pieces, kind, pos)) {
+        return { pos, cell: { gx: side.gx, gz: side.gz } };
+      }
+    }
+    break;
+  }
   // Le premier escalier touché par le rayon : on prolonge sa volée (marche suivante, un bloc plus haut).
   for (let t = 0.3; t <= maxDist; t += STEP_M) {
     const y = origin.y + dir.y * t - y0;

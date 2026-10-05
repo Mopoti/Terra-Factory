@@ -38,7 +38,13 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
-import { bodyBlocked, ceilingAbove, groundAt, stepVertical } from '../core/game/physics';
+import {
+  bodyBlocked,
+  ceilingAbove,
+  groundAt,
+  rayHitPiece,
+  stepVertical,
+} from '../core/game/physics';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 
@@ -152,6 +158,7 @@ export function startGameView(
   const rig = new CameraRig(camera, state);
   const interaction: Interaction = new Interaction(scene, camera, options.state, container, {
     rebuildChunk: (cx, cz) => buildInto(cx, cz),
+    occlusion: (o, d) => rayHitPiece(options.state.changes.pieces, o, d, 80),
   });
 
   // --- Construction ------------------------------------------------------------------------
@@ -849,7 +856,8 @@ export function startGameView(
       dt: realDt,
       player: { x: playerX, z: playerZ },
       active: !paused && !building && input.isActionActive('interact'),
-      paused,
+      // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
+      paused: paused || building,
       aimAtCenter: rig.view === 'first',
       mouse: { x: mouseX, y: mouseY },
       viewport: { w: window.innerWidth, h: window.innerHeight },

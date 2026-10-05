@@ -772,3 +772,29 @@ describe('accrocher au premier objet visé', () => {
     expect(hit?.pos).toMatchObject({ gx: 0, gz: 3, layer: 1, rot: 0 });
   });
 });
+
+describe('escalier contre un mur visé', () => {
+  it('se pose au pied du mur, côté œil, et monte vers lui', () => {
+    const pieces: Pieces = {};
+    for (let l = 0; l < 5; l++)
+      pieces[pieceKey(posFor('wall_stone', 0, 0, 4, 'x', l))] = 'wall_stone'; // z = 2 m
+    const hit = aimStairs(
+      { x: 0.25, y: 1.6, z: -2 },
+      { x: 0, y: -0.15, z: 1 },
+      pieces,
+      'stairs_wood',
+      0,
+      12,
+    );
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3, layer: 0, rot: 0 }); // case devant le mur, monte vers +z
+    const back = aimStairs(
+      { x: 0.25, y: 1.6, z: 6 },
+      { x: 0, y: -0.15, z: -1 },
+      pieces,
+      'stairs_wood',
+      0,
+      12,
+    );
+    expect(back?.pos).toMatchObject({ gx: 0, gz: 4, rot: 2 }); // de l\'autre côté, monte vers -z
+  });
+});

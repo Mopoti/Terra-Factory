@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pieceKey, posFor, type Pieces } from '../build/pieces';
-import { bodyBlocked, groundAt, stairTops, stepVertical, type Body } from './physics';
+import { bodyBlocked, groundAt, rayHitPiece, stairTops, stepVertical, type Body } from './physics';
 
 const wallRow = (layers: number[]): Pieces => {
   const p: Pieces = {};
@@ -69,5 +69,21 @@ describe('escaliers', () => {
   });
   it('par le côté, une marche haute arrête le joueur', () => {
     expect(bodyBlocked(stairs, 0.25, 0.9, 0, 1.75)).toBe(true);
+  });
+});
+
+describe('rayon et constructions', () => {
+  it('un mur arrête le rayon, on ne voit rien derrière', () => {
+    const wall = wallRow([0, 1, 2, 3, 4]); // z = 1 m, x de 0 à 0,5
+    const hit = rayHitPiece(wall, { x: 0.25, y: 1.2, z: -1 }, { x: 0, y: 0, z: 1 }, 50);
+    expect(hit).toBeGreaterThan(1.9);
+    expect(hit).toBeLessThan(2.1);
+    // À côté du mur, rien.
+    expect(rayHitPiece(wall, { x: 2, y: 1.2, z: -1 }, { x: 0, y: 0, z: 1 }, 50)).toBe(Infinity);
+    // Au-dessus d'un mur bas, rien.
+    expect(rayHitPiece(wallRow([0]), { x: 0.25, y: 1.2, z: -1 }, { x: 0, y: 0, z: 1 }, 50)).toBe(
+      Infinity,
+    );
+    expect(rayHitPiece({}, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, 50)).toBe(Infinity);
   });
 });

@@ -41,6 +41,8 @@ type Hit =
 export interface InteractionOptions {
   /** Un chunk doit être redessiné (ressource entamée ou épuisée). */
   rebuildChunk(cx: number, cz: number): void;
+  /** Distance jusqu'au premier mur / dalle sur le rayon : on ne vise rien derrière. */
+  occlusion?(origin: THREE.Vector3, dir: THREE.Vector3): number;
 }
 
 export interface InteractionFrame {
@@ -222,11 +224,12 @@ export class Interaction {
       dir.copy(this.raycaster.ray.direction);
     }
 
+    const limit = this.options.occlusion?.(origin, dir) ?? Infinity;
     let best: Hit | null = null;
     // Ressources : on suit le rayon pas à pas (plus finement près du sol).
     let travelled = 0.2;
     const p = new THREE.Vector3();
-    while (travelled < 80) {
+    while (travelled < Math.min(80, limit)) {
       p.copy(origin).addScaledVector(dir, travelled);
       if (p.y <= 0) {
         // Point d'entrée au sol : vérifier la case touchée.
@@ -235,7 +238,7 @@ export class Interaction {
         const t0 = this.targets.get(
           cellKey(Math.floor(p.x / CELL_SIZE_M), Math.floor(p.z / CELL_SIZE_M)),
         );
-        if (t0) best = { type: 'target', target: t0, distance: back };
+        if (t0 && back < limit) best = { type: 'target', target: t0, distance: back };
         break;
       }
       const target = this.targets.get(
@@ -252,7 +255,7 @@ export class Interaction {
     for (const d of this.state.changes.drops) {
       w.set(d.x, 0.12, d.z).sub(origin);
       const along = w.dot(dir);
-      if (along < 0) continue;
+      if (along < 0 || along > limit) continue;
       const closest = origin.clone().addScaledVector(dir, along);
       if (closest.distanceTo(new THREE.Vector3(d.x, 0.12, d.z)) < DROP_PICK_RADIUS_M) {
         if (!best || along < best.distance) best = { type: 'drop', stack: d, distance: along };
