@@ -858,3 +858,52 @@
 .pickup-feed .loss {
   color: #ffb08a;
 }
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.panel-head h2 {
+  margin: 0;
+}
+.icon-btn.text {
+  width: auto;
+  padding: 0 12px;
+  height: 38px;
+}
+.game-row .icon-btn {
+  height: auto;
+}
+.warning {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid #c0562f;
+  border-radius: 8px;
+  background: #2d1c16;
+  color: #ffd2c4;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.notice {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #1d2a21;
+  border: 1px solid #355a40;
+  color: #bfe8c9;
+  font-size: 13px;
+}
+.help.error {
+  color: #ff9f8c;
+  min-height: 1.3em;
+}
+.modal .menu-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.icon-spacer {
+  width: 46px;
+  flex: none;
+}

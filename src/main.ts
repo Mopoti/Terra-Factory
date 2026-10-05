@@ -1,12 +1,13 @@
 import { watchVisibility } from './audio/audio';
 import {
   DEFAULT_PLAYER_STATE,
-  ProvisionalSaveIndex,
   type GameSummary,
   type PlayerState,
   type SaveSlot,
 } from './core/save/saveIndex';
 import { GameState } from './core/game/state';
+import { SaveLibrary } from './core/save/library';
+import { LocalStorageStorage, openBestStorage } from './core/save/storage';
 import { initLocale, t, type TranslationKey } from './i18n';
 import { startGameView, type GameViewHandle } from './render/gameView';
 import { initKeyboardLayout } from './settings/controls';
@@ -31,7 +32,15 @@ const hudEl = document.getElementById('hud') as HTMLElement;
 const pauseEl = document.getElementById('pause') as HTMLElement;
 const inventoryEl = document.getElementById('inventory') as HTMLElement;
 
-const saves = new ProvisionalSaveIndex();
+/** Stockage définitif (IndexedDB) ; les parties de l'ancien stockage navigateur y sont reprises une fois. */
+const storage = await openBestStorage();
+const saves = await SaveLibrary.open(
+  storage,
+  storage.kind === 'indexeddb' ? new LocalStorageStorage(localStorage) : null,
+);
+// Demande au navigateur de ne pas effacer les parties quand l'espace disque manque.
+void navigator.storage?.persist?.().catch(() => undefined);
+window.addEventListener('pagehide', () => void saves.flush());
 const params = new URLSearchParams(window.location.search);
 const devMode = params.has('dev');
 

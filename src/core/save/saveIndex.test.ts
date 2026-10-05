@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
+import { SaveLibrary } from './library';
+import { MemoryStorage } from './storage';
 import { emptyChanges } from '../game/worldChanges';
 import { defaultWorldParams } from '../world/worldgen';
 import {
   DEFAULT_GAME_OPTIONS,
   DEFAULT_PLAYER_STATE,
-  ProvisionalSaveIndex,
   lastSavedAt,
   latestGame,
   latestSlot,
@@ -13,14 +14,6 @@ import {
   type GameSummary,
 } from './saveIndex';
 
-function memoryStore(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
-  const data = new Map<string, string>();
-  return {
-    getItem: (k) => data.get(k) ?? null,
-    setItem: (k, v) => void data.set(k, v),
-    removeItem: (k) => void data.delete(k),
-  };
-}
 const player = { ...DEFAULT_PLAYER_STATE, x: 12, z: -3 };
 const world = defaultWorldParams('test');
 
@@ -59,13 +52,13 @@ describe('dernière partie / dernière sauvegarde', () => {
 
 describe('enregistrement des sauvegardes', () => {
   it("une partie nouvelle n'a aucune sauvegarde", () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     expect(index.get(g.id)?.saves).toEqual([]);
     expect(index.get(g.id)?.world.seed).toBe('terra');
   });
   it('même nom = la sauvegarde est remplacée', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'Sauvegarde', kind: 'manual', player }, 5, 1000);
     const second = index.saveSlot(
@@ -81,7 +74,7 @@ describe('enregistrement des sauvegardes', () => {
     expect(saves[0].player.x).toBe(99);
   });
   it('un autre nom = une nouvelle sauvegarde à côté', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'Avant le boss', kind: 'manual', player }, 5, 1000);
     const other = index.saveSlot(g.id, { name: 'Après le boss', kind: 'manual', player }, 5, 2000);
@@ -89,7 +82,7 @@ describe('enregistrement des sauvegardes', () => {
     expect(index.get(g.id)?.saves.map((s) => s.name)).toEqual(['Avant le boss', 'Après le boss']);
   });
   it('les sauvegardes automatiques ne remplacent pas les manuelles et sont limitées en nombre', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'Sauvegarde', kind: 'manual', player }, 3, 500);
     for (let i = 1; i <= 6; i++) {
@@ -102,27 +95,27 @@ describe('enregistrement des sauvegardes', () => {
     expect(autos.map((s) => s.savedAt).sort()).toEqual([1004, 1005, 1006]); // les plus récentes
   });
   it('un nom identique mais de type différent ne se remplace pas', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'X', kind: 'auto', player }, 5, 1000);
     index.saveSlot(g.id, { name: 'X', kind: 'manual', player }, 5, 2000);
     expect(index.get(g.id)?.saves).toHaveLength(2);
   });
   it('garde toujours au moins une sauvegarde automatique', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'Auto', kind: 'auto', player }, 0, 1000);
     expect(index.get(g.id)?.saves).toHaveLength(1);
   });
   it('partie inconnue : rien enregistré', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     expect(index.saveSlot('absent', { name: 'x', kind: 'manual', player })).toBeNull();
   });
 });
 
 describe('suppression', () => {
   it('supprime la partie demandée et ses sauvegardes, pas les autres', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const a = index.create('A', 'seed-a');
     const b = index.create('B', 'seed-b');
     index.saveSlot(a.id, { name: 'x', kind: 'manual', player }, 5, 1000);
@@ -131,14 +124,14 @@ describe('suppression', () => {
     expect(index.get(a.id)).toBeUndefined();
   });
   it('partie inconnue : rien ne change', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const a = index.create('A', 'seed-a');
     expect(index.deleteGame('absent')).toBe(false);
     expect(index.list()).toHaveLength(1);
     expect(index.get(a.id)).toBeDefined();
   });
   it('« Continuer » ne propose plus une partie supprimée', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const a = index.create('A', 'seed-a');
     index.deleteGame(a.id);
     expect(latestGame(index.list())).toBeUndefined();
@@ -168,7 +161,7 @@ describe('vue enregistrée', () => {
 
 describe('options et réglages de la partie', () => {
   it('sont enregistrés avec la partie', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra', {
       families: {
         ...defaultWorldParams('x').families,
@@ -185,7 +178,7 @@ describe('options et réglages de la partie', () => {
     });
   });
   it('par défaut : ennemis non agressifs mais qui s’étendent, physique équilibrée', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     expect(g.options).toEqual({
       enemies: { aggressive: false, expand: true },
@@ -211,7 +204,7 @@ describe('options et réglages de la partie', () => {
 
 describe('sac et changements du monde dans les sauvegardes', () => {
   it('une sauvegarde retient le sac et les ressources récoltées', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     const state = new GameState();
     state.harvest('4,6', 4, 'wood', 3);
@@ -223,7 +216,7 @@ describe('sac et changements du monde dans les sauvegardes', () => {
     expect(slot?.changes.drops).toHaveLength(1);
   });
   it('remplacer une sauvegarde remplace aussi son contenu', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(g.id, { name: 'S', kind: 'manual', player, inventory: { wood: 5 } }, 5, 1000);
     index.saveSlot(g.id, { name: 'S', kind: 'manual', player, inventory: { coal: 2 } }, 5, 2000);
@@ -232,7 +225,7 @@ describe('sac et changements du monde dans les sauvegardes', () => {
     expect(saves[0].inventory).toEqual({ coal: 2 });
   });
   it('deux sauvegardes d’une même partie gardent chacune leur propre état', () => {
-    const index = new ProvisionalSaveIndex(memoryStore());
+    const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     index.saveSlot(
       g.id,

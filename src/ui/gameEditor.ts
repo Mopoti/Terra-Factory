@@ -1,9 +1,9 @@
+import type { SaveLibrary } from '../core/save/library';
 import {
   DEFAULT_GAME_OPTIONS,
   REALISM_LEVELS,
   type GameOptions,
   type GameSummary,
-  type ProvisionalSaveIndex,
   type Realism,
 } from '../core/save/saveIndex';
 import { FAMILY_IDS, RESOURCES, type FamilyId } from '../core/data/resources';
@@ -67,7 +67,7 @@ export interface GameEditor {
 }
 
 export interface GameEditorContext {
-  saves: ProvisionalSaveIndex;
+  saves: SaveLibrary;
   defaultName: string;
   onLaunch(game: GameSummary): void;
   onBack(): void;
@@ -228,7 +228,11 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     ctx.onLaunch(ctx.saves.create(name, seed, { families: structuredClone(families), options }));
   };
   for (const input of [nameInput, seedInput]) {
-    input.addEventListener('keydown', (e) => e.key === 'Enter' && launch());
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      launch();
+    });
   }
   const actions = el('div', 'editor-actions');
   actions.append(

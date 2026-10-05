@@ -88,7 +88,7 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - **Sauvegarder** : le nom proposé est celui de la dernière sauvegarde manuelle ; **même nom = remplacement**, **autre nom = nouvelle sauvegarde à côté** (le jeu prévient dans les deux cas).
 - **Une partie = un dossier** contenant ses sauvegardes (manuelles et automatiques), comme dans Space Engineers. « Continuer » reprend la plus récente ; « Charger une partie » liste les parties, puis les sauvegardes de la partie choisie. Une sauvegarde retient pour l'instant la position du joueur et la caméra (le monde se recalcule depuis la seed).
 - **Suppression d'une partie** (tour 10) : icône corbeille à droite de chaque partie dans « Charger une partie », avec fenêtre de confirmation (nom de la partie et nombre de sauvegardes perdues). La confirmation suit le réglage Paramètres > Jeu > « Confirmer avant de supprimer » (activé par défaut).
-- Chantier 6 (à venir) : suppression d'une seule sauvegarde, renommage, duplication, export/import, stockage définitif (IndexedDB).
+- **Chantier 6 (réalisé, tour 14)** : voir §13.
 
 ## 11. Les trois caméras (chantier 4)
 - **Bascule en jeu** : touche « Changer de vue » (V par défaut) en cycle 1ère personne → 3ème personne → vue du dessus, ou touches directes (non assignées par défaut, à configurer dans Touches). Un message rappelle la vue active. La vue choisie est enregistrée dans la sauvegarde.
@@ -116,3 +116,14 @@ Affiché par « Nouvelle partie ». Contenu :
 - « Réinitialiser les réglages du monde » remet tous les curseurs à ×1.
 - La seed, les réglages du monde et les règles sont enregistrés avec la partie (même seed + mêmes réglages = même monde).
 - **Règle (PO, tour 13) : les réglages de génération d'un monde déjà créé ne sont pas modifiables** (seed, curseurs fréquence / taille / densité). Seules des règles qui ne touchent pas à la forme du monde pourront être ajustées plus tard. Retours détaillés du PO attendus quand il y aura plus de contenu à tester.
+
+## 13. Gestion complète des sauvegardes (chantier 6)
+- **Stockage définitif** : IndexedDB (un enregistrement par partie, écritures en arrière-plan dans l'ordre). Les parties de l'ancien stockage du navigateur sont reprises automatiquement une fois, puis retirées de l'ancien. Le jeu demande au navigateur de ne pas effacer les parties quand l'espace manque. Secours : stockage navigateur classique, puis mémoire (dans ce cas un **avertissement** s'affiche, car rien ne sera conservé : navigation privée).
+- **« Charger une partie »** (partie = dossier de sauvegardes) :
+  - par partie : **renommer**, **dupliquer** (partie entière avec toutes ses sauvegardes), **exporter en fichier**, **supprimer** ; en haut : **importer** un fichier ;
+  - par sauvegarde : **charger**, **renommer** (manuelles seulement ; deux sauvegardes manuelles d'une même partie ne peuvent pas avoir le même nom), **dupliquer**, **supprimer** (avec confirmation, selon le réglage « Confirmer avant de supprimer ») ; la seed de la partie est rappelée.
+  - Les sauvegardes automatiques ne se renomment pas (elles sont gérées par le jeu, 5 conservées par défaut).
+  - Si aucune partie n'existe, le menu principal propose « Importer une partie ».
+- **Fichier d'échange** `.terra` : JSON compressé (gzip) contenant la partie entière (seed, réglages du monde, options, sauvegardes avec sac et changements du monde). À l'import : validation et nettoyage des données (multiplicateurs bornés, objets inconnus ignorés), refus des fichiers vides, illisibles, d'un autre format, trop gros (> 80 Mo) ou d'une version plus récente du jeu, et **nouvelle partie toujours créée** (jamais d'écrasement).
+- Noms limités à 40 caractères.
+- Pas encore : stockage sur disque via dossier (option Chrome), synchronisation en ligne, export de toutes les parties d'un coup.

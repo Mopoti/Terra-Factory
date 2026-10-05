@@ -1,6 +1,6 @@
 import { normalizeInventory, type Inventory } from '../game/inventory';
-import { emptyChanges, normalizeChanges, type WorldChanges } from '../game/worldChanges';
-import { normalizeWorldParams, type WorldFamilies, type WorldParams } from '../world/worldgen';
+import { normalizeChanges, type WorldChanges } from '../game/worldChanges';
+import { normalizeWorldParams, type WorldParams } from '../world/worldgen';
 
 export type ViewId = 'first' | 'third' | 'top';
 export const VIEW_IDS: readonly ViewId[] = ['first', 'third', 'top'];
@@ -43,7 +43,7 @@ export const DEFAULT_GAME_OPTIONS: GameOptions = {
   realism: 'balanced',
 };
 
-function normalizeOptions(raw: unknown): GameOptions {
+export function normalizeOptions(raw: unknown): GameOptions {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   const e = (typeof o.enemies === 'object' && o.enemies !== null ? o.enemies : {}) as Record<
     string,
@@ -113,7 +113,6 @@ export function latestGame(games: readonly GameSummary[]): GameSummary | undefin
   );
 }
 
-const STORAGE_KEY = 'terra.dev.games';
 export const DEFAULT_PLAYER_STATE: PlayerState = {
   x: 0,
   z: 0,
@@ -124,8 +123,6 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   firstPitch: 0,
   topZoom: 20,
 };
-
-type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -179,132 +176,4 @@ export function normalizeGame(item: unknown): GameSummary[] {
       saves: Array.isArray(g.saves) ? g.saves.flatMap(normalizeSlot) : [],
     },
   ];
-}
-
-function browserStorage(): Store | null {
-  try {
-    return localStorage;
-  } catch {
-    return null;
-  }
-}
-
-/** Index provisoire (localStorage) en attendant le vrai système de sauvegarde du chantier 6. */
-export class ProvisionalSaveIndex implements SaveIndex {
-  constructor(private readonly store: Store | null = browserStorage()) {}
-
-  list(): GameSummary[] {
-    try {
-      const raw = this.store?.getItem(STORAGE_KEY);
-      const items = raw ? (JSON.parse(raw) as unknown) : [];
-      return Array.isArray(items) ? items.flatMap(normalizeGame) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  get(id: string): GameSummary | undefined {
-    return this.list().find((g) => g.id === id);
-  }
-
-  private write(games: GameSummary[]): void {
-    try {
-      this.store?.setItem(STORAGE_KEY, JSON.stringify(games));
-    } catch {
-      /* stockage plein ou indisponible : ignoré */
-    }
-  }
-
-  /** Crée une partie (sans sauvegarde : la première est créée à la sortie ou par le joueur). */
-  create(
-    name: string,
-    seed: string,
-    extras: { families?: WorldFamilies; options?: GameOptions } = {},
-  ): GameSummary {
-    const now = Date.now();
-    const game: GameSummary = {
-      id: `game-${now}-${Math.floor(Math.random() * 1e6)}`,
-      name,
-      createdAt: now,
-      world: normalizeWorldParams(seed, extras.families),
-      options: normalizeOptions(extras.options),
-      saves: [],
-    };
-    this.write([...this.list(), game]);
-    return game;
-  }
-
-  /**
-   * Enregistre une sauvegarde dans une partie.
-   * - manuelle : une sauvegarde de même nom est remplacée, un autre nom en crée une nouvelle à côté ;
-   * - automatique : une nouvelle est ajoutée, les plus anciennes au-delà de `keepAuto` sont supprimées.
-   */
-  saveSlot(
-    gameId: string,
-    slot: {
-      name: string;
-      kind: SlotKind;
-      player: PlayerState;
-      inventory?: Inventory;
-      changes?: WorldChanges;
-    },
-    keepAuto = 5,
-    now = Date.now(),
-  ): { game: GameSummary; slot: SaveSlot; replaced: boolean } | null {
-    const games = this.list();
-    const game = games.find((g) => g.id === gameId);
-    if (!game) return null;
-    let replaced = false;
-    let saved: SaveSlot | undefined;
-    if (slot.kind === 'manual') {
-      const existing = game.saves.find((s) => s.kind === 'manual' && s.name === slot.name);
-      if (existing) {
-        existing.savedAt = now;
-        existing.player = slot.player;
-        existing.inventory = slot.inventory ?? {};
-        existing.changes = slot.changes ?? emptyChanges();
-        saved = existing;
-        replaced = true;
-      }
-    }
-    if (!saved) {
-      saved = {
-        id: `slot-${now}-${Math.floor(Math.random() * 1e6)}`,
-        name: slot.name,
-        kind: slot.kind,
-        savedAt: now,
-        player: slot.player,
-        inventory: slot.inventory ?? {},
-        changes: slot.changes ?? emptyChanges(),
-      };
-      game.saves.push(saved);
-    }
-    if (slot.kind === 'auto') {
-      const autos = game.saves
-        .filter((s) => s.kind === 'auto')
-        .sort((a, b) => b.savedAt - a.savedAt);
-      const drop = new Set(autos.slice(Math.max(1, keepAuto)).map((s) => s.id));
-      game.saves = game.saves.filter((s) => !drop.has(s.id));
-    }
-    this.write(games);
-    return { game, slot: saved, replaced };
-  }
-
-  /** Supprime une partie et toutes ses sauvegardes. Renvoie false si elle n'existe pas. */
-  deleteGame(id: string): boolean {
-    const games = this.list();
-    const remaining = games.filter((g) => g.id !== id);
-    if (remaining.length === games.length) return false;
-    this.write(remaining);
-    return true;
-  }
-
-  /** Outil de test (mode ?dev=1) : supprime toutes les parties. */
-  clearAll(): void {
-    try {
-      this.store?.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignoré */
-    }
-  }
 }

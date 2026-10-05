@@ -97,7 +97,11 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
       actions.save(name);
       close();
     };
-    input.addEventListener('keydown', (e) => e.key === 'Enter' && confirm());
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      confirm();
+    });
     panel.append(
       field,
       hint,

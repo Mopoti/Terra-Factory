@@ -1,15 +1,23 @@
+import type { SaveLibrary } from '../core/save/library';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import {
   lastSavedAt,
   latestGame,
   latestSlot,
   type GameSummary,
-  type ProvisionalSaveIndex,
   type SaveSlot,
 } from '../core/save/saveIndex';
 import { getSettings } from '../settings/store';
+import {
+  buildExchange,
+  decodeExchange,
+  encodeExchange,
+  exchangeFileName,
+  parseExchange,
+} from '../core/save/exchange';
 import { buildGameEditor } from './gameEditor';
-import { confirmModal } from './modal';
+import { downloadBlob, pickFile } from './files';
+import { confirmModal, infoModal, promptModal } from './modal';
 import { buildSettingsPanel } from './settingsScreen';
 import './menu.css';
 
@@ -18,6 +26,21 @@ type Screen = 'main' | 'newGame' | 'loadGame' | 'settings';
 /** Icône « corbeille ». */
 const TRASH_ICON =
   '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+
+const svg = (paths: string): string =>
+  `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+/** Crayon. */
+const PENCIL_ICON = svg(
+  '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+);
+/** Deux feuilles. */
+const COPY_ICON = svg(
+  '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+);
+/** Flèche vers le bas, vers un plateau. */
+const DOWNLOAD_ICON = svg('<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>');
+/** Flèche vers le haut, depuis un plateau. */
+const UPLOAD_ICON = svg('<path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/>');
 
 /** Faux tant qu'on est dans un navigateur : un site ne peut pas toujours fermer son onglet. */
 function canQuit(): boolean {
@@ -45,7 +68,7 @@ function formatDate(ms: number): string {
 }
 
 export interface MenuOptions {
-  saves: ProvisionalSaveIndex;
+  saves: SaveLibrary;
   devMode: boolean;
   /** Appelé quand le joueur lance une partie (nouvelle, continuée ou chargée). */
   onStartGame: (game: GameSummary, slot?: SaveSlot) => void;
@@ -89,12 +112,15 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   function mainPanel(): HTMLElement {
     const panel = el('div', 'panel');
     panel.append(el('h1', undefined, t('game.title')));
+    const warning = storageWarning();
+    if (warning) panel.append(warning);
 
     const games = saves.list();
     const latest = latestGame(games);
     if (latest) panel.append(continueButton(latest));
     panel.append(button(t('menu.newGame'), () => go('newGame')));
     if (games.length > 0) panel.append(button(t('menu.loadGame'), () => go('loadGame')));
+    else panel.append(button(t('manage.import'), () => void importFromFile()));
     panel.append(button(t('menu.settings'), () => go('settings')));
     if (canQuit()) panel.append(button(t('menu.quit'), () => window.close()));
 
@@ -142,11 +168,153 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     else render();
   }
 
+  /** Message d'alerte si les parties ne sont pas conservées correctement. */
+  function storageWarning(): HTMLElement | null {
+    let key: TranslationKey | null = null;
+    if (saves.storageKind === 'memory') key = 'storage.memory';
+    else if (saves.failedWrites > 0) key = 'storage.failed';
+    else if (saves.storageKind === 'localstorage') key = 'storage.localstorage';
+    if (!key) return null;
+    const box = el('p', 'warning', t(key));
+    box.setAttribute('role', 'alert');
+    return box;
+  }
+
+  function iconButton(
+    icon: string,
+    label: string,
+    onClick: () => void,
+    className = 'icon-btn',
+  ): HTMLButtonElement {
+    const b = button('', onClick, className);
+    b.innerHTML = icon;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    return b;
+  }
+
+  /** Message de retour affiché en haut de l'écran « Charger une partie ». */
+  let notice = '';
+
+  async function importFromFile(): Promise<void> {
+    const file = await pickFile('.terra,.json,application/json,application/gzip');
+    if (!file) return;
+    const reasonKey = {
+      invalid: 'import.error.invalid',
+      format: 'import.error.format',
+      newer: 'import.error.newer',
+      empty: 'import.error.empty',
+      tooBig: 'import.error.tooBig',
+    } as const;
+    const fail = (reason: keyof typeof reasonKey): Promise<void> =>
+      infoModal({
+        title: t('import.error.title'),
+        body: t(reasonKey[reason]),
+        okLabel: t('modal.ok'),
+      });
+    if (file.size > 80 * 1024 * 1024) return fail('tooBig');
+    let text: string;
+    try {
+      text = await decodeExchange(await file.arrayBuffer());
+    } catch {
+      return fail('invalid');
+    }
+    const result = parseExchange(text);
+    if (!result.ok) return fail(result.reason);
+    const imported = saves.importGame(result.game);
+    notice = t('manage.imported', { name: imported.name });
+    if (screen === 'main') go('loadGame');
+    else render();
+  }
+
+  async function exportGame(game: GameSummary): Promise<void> {
+    const blob = await encodeExchange(buildExchange(game));
+    const fileName = exchangeFileName(game);
+    downloadBlob(blob, fileName);
+    notice = t('manage.exported', { file: fileName });
+    render();
+  }
+
+  async function renameGame(game: GameSummary): Promise<void> {
+    const name = await promptModal({
+      title: t('manage.renameGame.title'),
+      label: t('manage.name'),
+      value: game.name,
+      confirmLabel: t('manage.rename.confirm'),
+      cancelLabel: t('modal.cancel'),
+      validate: (v) => (v === '' ? t('manage.nameEmpty') : null),
+    });
+    if (name === null) return;
+    saves.renameGame(game.id, name);
+    render();
+  }
+
+  function duplicateGame(game: GameSummary): void {
+    const copy = saves.duplicateGame(game.id, t('manage.copyName', { name: game.name }));
+    if (copy) notice = t('manage.duplicated', { name: copy.name });
+    render();
+  }
+
+  async function renameSlot(game: GameSummary, slot: SaveSlot): Promise<void> {
+    const name = await promptModal({
+      title: t('manage.renameSlot.title'),
+      label: t('manage.name'),
+      value: slot.name,
+      confirmLabel: t('manage.rename.confirm'),
+      cancelLabel: t('modal.cancel'),
+      validate: (v) => {
+        if (v === '') return t('manage.nameEmpty');
+        const taken = game.saves.some(
+          (s) => s.id !== slot.id && s.kind === 'manual' && s.name === v,
+        );
+        return taken ? t('manage.nameTaken') : null;
+      },
+    });
+    if (name === null) return;
+    saves.renameSlot(game.id, slot.id, name);
+    render();
+  }
+
+  function duplicateSlot(game: GameSummary, slot: SaveSlot): void {
+    const copy = saves.duplicateSlot(game.id, slot.id, t('manage.copyName', { name: slot.name }));
+    if (copy) notice = t('manage.duplicated', { name: copy.name });
+    render();
+  }
+
+  async function deleteSlot(game: GameSummary, slot: SaveSlot): Promise<void> {
+    if (getSettings().game.confirmDelete) {
+      const ok = await confirmModal({
+        title: t('modal.deleteSlot.title'),
+        body: t('modal.deleteSlot.body', { name: slot.name }),
+        confirmLabel: t('modal.deleteGame.confirm'),
+        cancelLabel: t('modal.cancel'),
+      });
+      if (!ok) return;
+    }
+    saves.deleteSlot(game.id, slot.id);
+    render();
+  }
+
   /** « Charger une partie » : d'abord la partie (le « dossier »), puis l'une de ses sauvegardes. */
   function loadGamePanel(): HTMLElement {
     const panel = el('div', 'panel wide');
-    panel.append(el('h2', undefined, t('screen.loadGame.title')));
+    const head = el('div', 'panel-head');
+    head.append(el('h2', undefined, t('screen.loadGame.title')));
     const game = loadingGame ? saves.get(loadingGame.id) : undefined;
+    if (!game) {
+      head.append(
+        iconButton(UPLOAD_ICON, t('manage.import'), () => void importFromFile(), 'icon-btn text'),
+      );
+    }
+    panel.append(head);
+    const warning = storageWarning();
+    if (warning) panel.append(warning);
+    if (notice) {
+      const status = el('p', 'notice', notice);
+      status.setAttribute('role', 'status');
+      panel.append(status);
+      notice = '';
+    }
 
     if (!game) {
       loadingGame = null;
@@ -165,20 +333,39 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
             `${formatDate(lastSavedAt(g))} · ${t('load.count', { n: String(g.saves.length) })}`,
           ),
         );
-        const trash = button('', () => void deleteGame(g), 'icon-btn danger');
-        trash.innerHTML = TRASH_ICON;
-        const label = t('load.delete', { name: g.name });
-        trash.title = label;
-        trash.setAttribute('aria-label', label);
         const row = el('div', 'game-row');
-        row.append(open, trash);
+        row.append(
+          open,
+          iconButton(
+            PENCIL_ICON,
+            t('manage.renameGameLabel', { name: g.name }),
+            () => void renameGame(g),
+          ),
+          iconButton(COPY_ICON, t('manage.duplicateGameLabel', { name: g.name }), () =>
+            duplicateGame(g),
+          ),
+          iconButton(
+            DOWNLOAD_ICON,
+            t('manage.exportLabel', { name: g.name }),
+            () => void exportGame(g),
+          ),
+          iconButton(
+            TRASH_ICON,
+            t('load.delete', { name: g.name }),
+            () => void deleteGame(g),
+            'icon-btn danger',
+          ),
+        );
         panel.append(row);
       }
       panel.append(button(t('common.back'), () => go('main')));
       return panel;
     }
 
-    panel.append(el('p', undefined, t('screen.loadGame.pickSave', { name: game.name })));
+    panel.append(
+      el('p', undefined, t('screen.loadGame.pickSave', { name: game.name })),
+      el('small', 'help', t('manage.seedInfo', { seed: game.world.seed })),
+    );
     const slots = [...game.saves].sort((a, b) => b.savedAt - a.savedAt);
     for (const slot of slots) {
       const b = button('', () => onStartGame(game, slot));
@@ -188,7 +375,32 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
         el('span', `badge ${slot.kind}`, t(`save.kind.${slot.kind}` as TranslationKey)),
       );
       b.append(top, el('small', undefined, formatDate(slot.savedAt)));
-      panel.append(b);
+      const row = el('div', 'game-row');
+      row.append(b);
+      if (slot.kind === 'auto') {
+        // Même largeur que le crayon des sauvegardes manuelles : les icônes restent alignées.
+        row.append(el('span', 'icon-spacer'));
+      } else {
+        row.append(
+          iconButton(
+            PENCIL_ICON,
+            t('manage.renameSlotLabel', { name: slot.name }),
+            () => void renameSlot(game, slot),
+          ),
+        );
+      }
+      row.append(
+        iconButton(COPY_ICON, t('manage.duplicateSlotLabel', { name: slot.name }), () =>
+          duplicateSlot(game, slot),
+        ),
+        iconButton(
+          TRASH_ICON,
+          t('manage.deleteSlot', { name: slot.name }),
+          () => void deleteSlot(game, slot),
+          'icon-btn danger',
+        ),
+      );
+      panel.append(row);
     }
     if (slots.length === 0) panel.append(button(t('load.noSave'), () => onStartGame(game)));
     panel.append(
