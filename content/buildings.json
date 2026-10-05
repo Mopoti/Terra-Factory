@@ -7,6 +7,20 @@
   "maxRoomCells": 400,
   "pieces": [
     {
+      "id": "slab_wood",
+      "type": "slab",
+      "material": "wood",
+      "color": "#b58a5b",
+      "item": "piece_slab_wood"
+    },
+    {
+      "id": "slab_stone",
+      "type": "slab",
+      "material": "stone",
+      "color": "#7d8288",
+      "item": "piece_slab_stone"
+    },
+    {
       "id": "wall_wood",
       "type": "wall",
       "material": "wood",
@@ -25,14 +39,14 @@
       "type": "floor",
       "material": "wood",
       "color": "#b58a5b",
-      "item": "piece_floor_wood"
+      "item": "piece_slab_wood"
     },
     {
       "id": "ceiling_wood",
       "type": "ceiling",
       "material": "wood",
       "color": "#c49a6c",
-      "item": "piece_ceiling_wood"
+      "item": "piece_slab_wood"
     },
     {
       "id": "wall_stone",
@@ -46,14 +60,14 @@
       "type": "floor",
       "material": "stone",
       "color": "#7d8288",
-      "item": "piece_floor_stone"
+      "item": "piece_slab_stone"
     },
     {
       "id": "ceiling_stone",
       "type": "ceiling",
       "material": "stone",
       "color": "#a3a8ad",
-      "item": "piece_ceiling_stone"
+      "item": "piece_slab_stone"
     },
     {
       "id": "stairs_wood",

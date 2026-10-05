@@ -14,6 +14,7 @@ import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   PIECES,
+  resolveKind,
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
   STOREY_HEIGHT_M,
@@ -44,7 +45,9 @@ import {
   groundAt,
   rayHitPiece,
   stepVertical,
+  surfaceMaterialAt,
 } from '../core/game/physics';
+import { playSfx } from '../audio/sfx';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 
@@ -57,6 +60,8 @@ const SPRINT_FACTOR = 1.7;
 const PLAYER_RADIUS_M = 0.25;
 const PLAYER_HEIGHT_M = 1.75;
 const CAMERA_YAW_SPEED = 1.8;
+/** Distance entre deux pas (m). */
+const STRIDE_M = 1.35;
 /** Intervalle de répétition d'une action maintenue (zoom au clavier), en secondes. */
 const REPEAT_S = 0.09;
 /** Temps maximum passé à fabriquer des chunks par image (ms), pour éviter les saccades. */
@@ -175,7 +180,8 @@ export function startGameView(
   let lastPlan: PlanItem[] = [];
   const selectedKind = (): PieceKind | null => {
     const item = options.state.selectedItem();
-    return PIECES.find((p) => p.item === item)?.id ?? null;
+    const matches = PIECES.filter((p) => p.item === item);
+    return (matches.find((p) => p.type === 'slab') ?? matches[0])?.id ?? null;
   };
   const buildKind = (): PieceKind => selectedKind() ?? 'wall_stone';
   const buildType = (): PieceType => pieceDef(buildKind()).type;
@@ -259,11 +265,11 @@ export function startGameView(
 
   /** Pièces visées : une seule, ou toute la surface / le pan de mur tracé en gardant le clic enfoncé. */
   function planFor(aim: BuildAim): PiecePos[] {
-    const kind = buildKind();
     const start = dragStart ?? aim;
-    if (aim.pos.slot === 'stairs') return [aim.pos];
-    if (aim.pos.slot !== 'edge') {
-      if (aim.pos.slot === 'ceiling' && dragStart) {
+    const kind = resolveKind(buildKind(), start.pos.slot);
+    if (start.pos.slot === 'stairs') return [aim.pos];
+    if (start.pos.slot !== 'edge') {
+      if (start.pos.slot === 'ceiling' && dragStart) {
         // La dalle reste à la hauteur du mur choisi au départ : on prolonge dans ce plan.
         const layer = start.pos.layer ?? 0;
         const end =
@@ -306,8 +312,8 @@ export function startGameView(
 
   let removeCooldown = 0;
   function updateBuild(dt: number): void {
-    const kind = buildKind();
     const aim = buildAim();
+    const kind = aim ? resolveKind(buildKind(), (dragStart ?? aim).pos.slot) : buildKind();
     const down = input.isActionActive('interact');
     const player = { x: playerX, z: playerZ };
     if (!aim) {
@@ -332,6 +338,7 @@ export function startGameView(
                 : [];
           if (keys.length > 0) {
             options.state.removeKeys(keys, player);
+            playSfx('demolish');
             removeCooldown = 0.08;
           }
         }
@@ -362,12 +369,22 @@ export function startGameView(
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
       const floating = lastPlan.filter((i) => i.status === 'unsupported').length;
       const placed = options.state.placeMany(kind, ok, buildRot ?? 0);
+      if (placed > 0) {
+        const def = pieceDef(kind);
+        playSfx(
+          def.type === 'stairs'
+            ? 'placeStairs'
+            : def.material === 'stone'
+              ? 'placeStone'
+              : 'placeWood',
+        );
+      } else if (lastPlan.length > 0) playSfx('deny');
       buildMessage =
         placed > 0
           ? ''
           : floating > 0
             ? t(
-                buildType() === 'ceiling'
+                buildType() === 'ceiling' || buildType() === 'slab'
                   ? 'build.unsupportedCeiling'
                   : buildType() === 'stairs'
                     ? 'build.unsupportedStairs'
@@ -574,6 +591,9 @@ export function startGameView(
     [0, 0.2],
     [0, -0.2],
   ];
+  let airTime = 0;
+  /** Distance marchée depuis le dernier pas entendu. */
+  let strideDist = 0;
   /** Saut, gravité, se tenir sur une dalle ou sur la tranche d'un mur. */
   function stepBody(dt: number): void {
     const pieces = options.state.changes.pieces;
@@ -590,9 +610,31 @@ export function startGameView(
       PLAYER_HEIGHT_M,
       input.isActionActive('jump'),
     );
+    if (onGround && !next.onGround && next.vy > 0) playSfx('jump');
+    if (!onGround && next.onGround && airTime > 0.25) {
+      playSfx('land', Math.min(1.4, Math.abs(velY) / 8));
+    }
+    airTime = next.onGround ? 0 : airTime + dt;
     playerY = next.y;
     velY = next.vy;
     onGround = next.onGround;
+  }
+
+  /** Bruit d'un pas selon le sol : construction (bois, pierre) ou terrain du biome. */
+  function footstep(sprinting: boolean): void {
+    const material = surfaceMaterialAt(options.state.changes.pieces, playerX, playerZ, playerY);
+    const biome = generator.biomeAt(playerX, playerZ);
+    const id =
+      material === 'stone'
+        ? 'stepStone'
+        : material === 'wood'
+          ? 'stepWood'
+          : biome === 'desert'
+            ? 'stepSand'
+            : biome === 'tundra'
+              ? 'stepSnow'
+              : 'stepGrass';
+    playSfx(id, sprinting ? 1.25 : 1);
   }
   const obstacleAt = (x: number, y: number, z: number): boolean => {
     const h = obstacles.get(`${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`);
@@ -630,6 +672,13 @@ export function startGameView(
     } else if (canStand(nx, playerZ)) playerX = nx;
     else if (canStand(playerX, nz)) playerZ = nz;
     const moved = Math.hypot(playerX - ox, playerZ - oz);
+    if (onGround) {
+      strideDist += moved;
+      if (strideDist >= STRIDE_M) {
+        strideDist = 0;
+        footstep(input.isActionActive('sprint'));
+      }
+    }
 
     const target = Math.atan2(dirX, dirZ);
     let delta = target - facing;
@@ -789,7 +838,10 @@ export function startGameView(
       }
       // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
       for (let i = 1; i <= 9; i++) {
-        if (pressed(`hotbar${i}` as ActionId)) options.state.selectSlot(i - 1);
+        if (pressed(`hotbar${i}` as ActionId)) {
+          options.state.selectSlot(i - 1);
+          playSfx('select');
+        }
       }
       if (building) {
         if (pressed('rotate')) {

@@ -1,6 +1,6 @@
 import raw from '../../../content/buildings.json';
 
-export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'stairs';
+export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs';
 export type Material = 'wood' | 'stone';
 /** Identifiant d'une pièce : type + matériau, par exemple « wall_stone ». */
 export type PieceKind = `${PieceType}_${Material}`;
@@ -17,7 +17,7 @@ export interface PieceDef {
 }
 
 export const PIECES: PieceDef[] = raw.pieces as PieceDef[];
-export const PIECE_TYPES: PieceType[] = ['wall', 'door', 'floor', 'ceiling', 'stairs'];
+export const PIECE_TYPES: PieceType[] = ['wall', 'door', 'slab', 'stairs'];
 export const MATERIALS: Material[] = ['wood', 'stone'];
 /** Hauteur d'un étage (m) et d'un bloc de mur (m) : 5 blocs par étage. */
 export const STOREY_HEIGHT_M: number = raw.storeyHeightM;
@@ -39,7 +39,18 @@ export function pieceDef(kind: PieceKind): PieceDef {
 export const isPieceKind = (v: unknown): v is PieceKind => PIECES.some((p) => p.id === v);
 
 export const slotOf = (type: PieceType): PieceSlot =>
-  type === 'wall' || type === 'door' ? 'edge' : type;
+  type === 'wall' || type === 'door' ? 'edge' : type === 'slab' ? 'floor' : type;
+
+/**
+ * Une dalle est un seul objet : posée au sol ou entre des murs elle fait un sol, posée sur le haut d'un mur un
+ * plafond. Renvoie la pièce réellement posée (sol ou plafond) pour l'emplacement visé ; les autres pièces
+ * restent telles quelles.
+ */
+export function resolveKind(kind: PieceKind, slot: PieceSlot): PieceKind {
+  const def = pieceDef(kind);
+  if (def.type !== 'slab') return kind;
+  return `${slot === 'ceiling' ? 'ceiling' : 'floor'}_${def.material}` as PieceKind;
+}
 
 /** Direction de montée d'une marche selon son orientation (quarts de tour) : [dx, dz] en cases. */
 export const RISE_DIR: readonly [number, number][] = [

@@ -230,6 +230,8 @@ export function aimCeiling(
   level: number,
   maxDist: number,
   mode: 'place' | 'remove' = 'place',
+  /** Sans dalle posable trouvée, ne pas se rabattre sur le plan du plafond (renvoyer null). */
+  strict = false,
 ): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
   const y0 = level * STOREY_HEIGHT_M;
   const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
@@ -280,7 +282,7 @@ export function aimCeiling(
       }
     }
   }
-  if (mode === 'remove') return null;
+  if (mode === 'remove' || strict) return null;
   const cell = cellOnPlane(origin, dir, y0 + top);
   return cell ? { pos: posFor(kind, level, cell.gx, cell.gz), cell } : null;
 }

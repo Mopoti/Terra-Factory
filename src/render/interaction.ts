@@ -6,6 +6,7 @@ import { distanceToFootprint, isWithinReach } from '../core/game/reach';
 import type { GameState } from '../core/game/state';
 import { cellKey, type DroppedStack } from '../core/game/worldChanges';
 import type { ChunkData } from '../core/world/worldgen';
+import { playSfx } from '../audio/sfx';
 import { t, type TranslationKey } from '../i18n';
 
 /** Temps pour ramasser une pile posée au sol (s). */
@@ -203,7 +204,10 @@ export class Interaction {
   /** Jette des objets du sac au sol. */
   dropItem(item: string, count: number, x: number, z: number): void {
     const stack = this.state.drop(item, count, x, z);
-    if (stack) this.addFeed(item, -stack.count);
+    if (stack) {
+      this.addFeed(item, -stack.count);
+      playSfx('drop');
+    }
   }
 
   // --- Viser -----------------------------------------------------------------------------------
@@ -338,6 +342,14 @@ export class Interaction {
             : this.state.harvest(hit.target.key, hit.target.total, hit.target.item, 1);
         if (result.gained > 0) {
           this.addFeed(item, result.gained);
+          if (hit.type === 'drop') playSfx('pickup');
+          else {
+            const done = result.left === 0;
+            const res = hit.target.resId;
+            if (res === 'tree') playSfx(done ? 'treeFall' : 'woodChop');
+            else if (hit.target.kind === 'ore') playSfx(done ? 'oreBreak' : 'oreHit');
+            else playSfx(done ? 'rockBreak' : 'stoneHit');
+          }
           if (hit.type === 'target') {
             this.options.rebuildChunk(
               Math.floor(hit.target.gx / CHUNK_CELLS),

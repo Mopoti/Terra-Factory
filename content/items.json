@@ -57,46 +57,10 @@
       }
     },
     {
-      "id": "piece_floor_wood",
-      "weightKg": 1.0,
-      "volumeL": 1.0,
-      "color": "#b58a5b",
-      "recipe": {
-        "wood": 1
-      }
-    },
-    {
-      "id": "piece_ceiling_wood",
-      "weightKg": 1.0,
-      "volumeL": 1.0,
-      "color": "#c49a6c",
-      "recipe": {
-        "wood": 1
-      }
-    },
-    {
       "id": "piece_wall_stone",
       "weightKg": 1.0,
       "volumeL": 1.0,
       "color": "#8f949a",
-      "recipe": {
-        "stone": 1
-      }
-    },
-    {
-      "id": "piece_floor_stone",
-      "weightKg": 1.0,
-      "volumeL": 1.0,
-      "color": "#7d8288",
-      "recipe": {
-        "stone": 1
-      }
-    },
-    {
-      "id": "piece_ceiling_stone",
-      "weightKg": 1.0,
-      "volumeL": 1.0,
-      "color": "#a3a8ad",
       "recipe": {
         "stone": 1
       }
@@ -117,6 +81,24 @@
       "color": "#868b91",
       "recipe": {
         "stone": 2
+      }
+    },
+    {
+      "id": "piece_slab_wood",
+      "weightKg": 1.0,
+      "volumeL": 1.0,
+      "color": "#b58a5b",
+      "recipe": {
+        "wood": 1
+      }
+    },
+    {
+      "id": "piece_slab_stone",
+      "weightKg": 1.0,
+      "volumeL": 1.0,
+      "color": "#7d8288",
+      "recipe": {
+        "stone": 1
       }
     }
   ]

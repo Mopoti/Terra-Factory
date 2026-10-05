@@ -1,3 +1,4 @@
+import { playSfx } from '../audio/sfx';
 import { itemById } from '../core/data/items';
 import type { GameState } from '../core/game/state';
 import { HOTBAR_SLOTS } from '../core/game/worldChanges';
@@ -52,7 +53,10 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
       }
       slot.addEventListener('click', () => {
         if (state.carried) state.assignSlot(i, state.carried);
-        else state.selectSlot(i);
+        else {
+          state.selectSlot(i);
+          playSfx('select');
+        }
       });
       slot.addEventListener('contextmenu', (e) => {
         e.preventDefault();

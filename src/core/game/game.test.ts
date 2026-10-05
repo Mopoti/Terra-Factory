@@ -798,3 +798,58 @@ describe('escalier contre un mur visé', () => {
     expect(back?.pos).toMatchObject({ gx: 0, gz: 4, rot: 2 }); // de l\'autre côté, monte vers -z
   });
 });
+
+describe('dalle : un seul objet pour sol et plafond', () => {
+  it('posée au sol elle fait un sol, sur un mur un plafond', () => {
+    const s = new GameState({ inventory: { piece_slab_wood: 3, piece_wall_stone: 5 } });
+    expect(s.place('slab_wood', posFor('floor_wood', 0, 0, 0))).toBe('ok');
+    s.placeMany(
+      'wall_stone',
+      planWall('wall_stone', 0, 'x', 0, { i: 2, layer: 0 }, { i: 2, layer: 4 }),
+    );
+    expect(s.place('slab_wood', posFor('ceiling_wood', 0, 2, 0))).toBe('ok');
+    expect(Object.values(s.changes.pieces)).toContain('floor_wood');
+    expect(Object.values(s.changes.pieces)).toContain('ceiling_wood');
+    expect(s.inventory.piece_slab_wood).toBe(1);
+    // Démolir rend la ressource de fabrication.
+    s.removeKeys([pieceKey(posFor('floor_wood', 0, 0, 0))], { x: 0, z: 0 });
+    expect(s.inventory.wood).toBe(1);
+  });
+  it('les anciens sols et plafonds du sac et de la barre deviennent des dalles', () => {
+    const s = new GameState({
+      inventory: { piece_floor_wood: 2, piece_ceiling_wood: 3, piece_floor_stone: 1 },
+      changes: { hotbar: ['piece_ceiling_wood', 'piece_floor_wood', null] },
+    });
+    expect(s.inventory).toEqual({ piece_slab_wood: 5, piece_slab_stone: 1 });
+    expect(s.changes.hotbar.slice(0, 3)).toEqual(['piece_slab_wood', null, null]);
+  });
+  it("la visée : plafond sur le haut d'un mur, sinon sol", () => {
+    const wall: Pieces = {};
+    for (let l = 0; l < 5; l++)
+      wall[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
+    expect(
+      aimCeiling(
+        { x: 0.25, y: 1.6, z: -1 },
+        { x: 0, y: 0.3, z: 0.954 },
+        wall,
+        'ceiling_wood',
+        0,
+        10,
+        'place',
+        true,
+      )?.pos.slot,
+    ).toBe('ceiling');
+    expect(
+      aimCeiling(
+        { x: 0.25, y: 1.6, z: -1 },
+        { x: 0, y: -0.6, z: 0.8 },
+        {},
+        'ceiling_wood',
+        0,
+        10,
+        'place',
+        true,
+      ),
+    ).toBeNull();
+  });
+});

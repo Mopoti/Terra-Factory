@@ -1,6 +1,6 @@
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
-import { pieceDef, slotOf, type PieceKind } from '../data/buildings';
+import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import { BAG_LIMITS, itemById, type BagLimits } from '../data/items';
 import { add, maxAddable, normalizeInventory, remove, type Inventory } from './inventory';
 import {
@@ -164,12 +164,14 @@ export class GameState {
     rotation = 0,
   ): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
     const def = pieceDef(kind);
-    if (slotOf(def.type) !== pos.slot) return 'invalid';
-    if (!isFree(this.changes.pieces, kind, pos)) return 'occupied';
-    if (!isSupported(this.changes.pieces, kind, pos)) return 'unsupported';
+    // Une dalle devient un sol ou un plafond selon l'emplacement.
+    const placed = resolveKind(kind, pos.slot);
+    if (slotOf(pieceDef(placed).type) !== pos.slot) return 'invalid';
+    if (!isFree(this.changes.pieces, placed, pos)) return 'occupied';
+    if (!isSupported(this.changes.pieces, placed, pos)) return 'unsupported';
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
-    this.changes.pieces[pieceKey(pos)] = kind;
+    this.changes.pieces[pieceKey(pos)] = placed;
     if (rotation % 4 !== 0) this.changes.rotations[pieceKey(pos)] = ((rotation % 4) + 4) % 4;
     this.roomCache = null;
     this.emit({ type: 'build' });

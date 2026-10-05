@@ -62,16 +62,24 @@ export function remove(
 const LEGACY_ITEMS: Record<string, string> = {
   piece_wall: 'piece_wall_stone',
   piece_door: 'piece_door_wood',
-  piece_floor: 'piece_floor_wood',
-  piece_ceiling: 'piece_ceiling_wood',
+  piece_floor: 'piece_slab_wood',
+  piece_ceiling: 'piece_slab_wood',
+  // Sols et plafonds sont devenus un seul objet : la dalle.
+  piece_floor_wood: 'piece_slab_wood',
+  piece_floor_stone: 'piece_slab_stone',
+  piece_ceiling_wood: 'piece_slab_wood',
+  piece_ceiling_stone: 'piece_slab_stone',
 };
+
+/** Identifiant actuel d'un objet enregistré avec un ancien nom. */
+export const migrateItemId = (id: string): string => LEGACY_ITEMS[id] ?? id;
 
 /** Lit un sac enregistré : ignore les objets inconnus et les quantités invalides. */
 export function normalizeInventory(raw: unknown): Inventory {
   const result: Inventory = {};
   if (typeof raw !== 'object' || raw === null) return result;
   for (const [rawId, count] of Object.entries(raw as Record<string, unknown>)) {
-    const id = LEGACY_ITEMS[rawId] ?? rawId;
+    const id = migrateItemId(rawId);
     if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) continue;
     try {
       itemById(id);

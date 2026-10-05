@@ -259,7 +259,41 @@ export class BuildingView {
     /** Escalier : sens de montée imposé (quarts de tour), sinon dans le sens du regard. */
     forcedRot?: number | null,
   ): BuildAim | null {
-    const slot = slotOf(pieceDef(kind).type);
+    const def = pieceDef(kind);
+    if (def.type === 'slab') {
+      // Une dalle : plafond si le curseur touche le haut d'un mur / d'une dalle, sinon sol.
+      const ceiling = aimCeiling(
+        origin,
+        dir,
+        pieces,
+        `ceiling_${def.material}`,
+        level,
+        maxDist,
+        mode,
+        true,
+      );
+      if (ceiling) {
+        return {
+          pos: ceiling.pos,
+          key: pieceKey(ceiling.pos),
+          cell: ceiling.cell,
+          x: (ceiling.pos.gx + 0.5) * CELL_SIZE_M,
+          z: (ceiling.pos.gz + 0.5) * CELL_SIZE_M,
+        };
+      }
+      return this.aim(
+        origin,
+        dir,
+        `floor_${def.material}`,
+        level,
+        pieces,
+        maxDist,
+        mode,
+        lockAxis,
+        forcedRot,
+      );
+    }
+    const slot = slotOf(def.type);
     if (slot === 'edge') {
       const hit = aimEdge(origin, dir, pieces, kind, level, maxDist, mode, lockAxis);
       if (!hit) return null;

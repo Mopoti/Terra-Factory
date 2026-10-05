@@ -382,11 +382,7 @@
   "build.material.stone": "Pierre",
   "item.piece_wall_wood": "Mur en bois",
   "item.piece_door_wood": "Porte en bois",
-  "item.piece_floor_wood": "Sol en bois",
-  "item.piece_ceiling_wood": "Plafond en bois",
   "item.piece_wall_stone": "Mur en pierre",
-  "item.piece_floor_stone": "Sol en pierre",
-  "item.piece_ceiling_stone": "Plafond en pierre",
   "build.plan": "{ok} à poser · {lack} sans stock",
   "action.layerUp": "Mur : bloc au-dessus",
   "action.layerDown": "Mur : bloc en dessous",
@@ -401,5 +397,7 @@
   "build.rotationAuto": "orientation auto (R pour la fixer)",
   "item.piece_stairs_wood": "Escalier en bois",
   "item.piece_stairs_stone": "Escalier en pierre",
-  "build.unsupportedStairs": "Un escalier se pose au sol, sur un sol d'étage, ou dans le prolongement d'un autre escalier (plus haut)"
+  "build.unsupportedStairs": "Un escalier se pose au sol, sur un sol d'étage, ou dans le prolongement d'un autre escalier (plus haut)",
+  "item.piece_slab_wood": "Dalle en bois",
+  "item.piece_slab_stone": "Dalle en pierre"
 }

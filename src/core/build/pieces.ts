@@ -3,6 +3,7 @@ import {
   isPieceKind,
   pieceDef,
   RISE_DIR,
+  resolveKind,
   slotOf,
   type PieceKind,
   type PieceSlot,
@@ -101,7 +102,8 @@ export function edgeState(pieces: Pieces, p: PiecePos): 'door' | 'closed' | 'ope
 }
 
 /** Peut-on poser cette pièce ici ? (emplacement libre, sans porte ni mur gênant) */
-export function isFree(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
+export function isFree(pieces: Pieces, kindIn: PieceKind, pos: PiecePos): boolean {
+  const kind = resolveKind(kindIn, pos.slot);
   if (slotOf(pieceDef(kind).type) !== pos.slot) return false;
   if (pos.slot === 'stairs') {
     // Une seule marche par case et par hauteur, quel que soit son sens.

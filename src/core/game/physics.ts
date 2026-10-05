@@ -7,6 +7,7 @@ import {
   THICKNESS_M,
 } from '../data/buildings';
 import { pieceKey, type Pieces } from '../build/pieces';
+import { pieceDef, type Material } from '../data/buildings';
 
 /** Hauteur de marche : une marche plus basse se monte sans sauter (dalle de sol de 10 cm). */
 export const STEP_UP_M = 0.35;
@@ -201,4 +202,54 @@ export function rayHitPiece(
     if (stairTops(pieces, x, z, y).some((top) => y <= top && y >= top - LAYER_HEIGHT_M)) return t;
   }
   return Infinity;
+}
+
+/**
+ * Matériau de la construction sur laquelle les pieds reposent (pour le bruit des pas), ou null si on est sur le
+ * terrain.
+ */
+export function surfaceMaterialAt(
+  pieces: Pieces,
+  x: number,
+  z: number,
+  feetY: number,
+): Material | null {
+  if (feetY < 0.02) return null;
+  const near = (top: number): boolean => Math.abs(top - feetY) < 0.12;
+  const gx = Math.floor(x / CELL_SIZE_M);
+  const gz = Math.floor(z / CELL_SIZE_M);
+  const fx = x / CELL_SIZE_M - gx;
+  const fz = z / CELL_SIZE_M - gz;
+  const level = Math.floor(feetY / STOREY_HEIGHT_M);
+  const y0 = level * STOREY_HEIGHT_M;
+  const material = (key: string): Material | null => {
+    const kind = pieces[key];
+    return kind ? pieceDef(kind).material : null;
+  };
+  for (let layer = 0; layer < LAYERS_PER_STOREY; layer++) {
+    const top = y0 + (layer + 1) * LAYER_HEIGHT_M;
+    if (near(top + SLAB_LIFT_M)) {
+      const m = material(pieceKey({ slot: 'ceiling', level, gx, gz, layer }));
+      if (m) return m;
+    }
+    if (near(top)) {
+      // Tranche d'un mur : le bord le plus proche du point.
+      const edges: Array<[string, number]> = [
+        [pieceKey({ slot: 'edge', level, gx, gz, axis: 'x', layer }), fz],
+        [pieceKey({ slot: 'edge', level, gx, gz: gz + 1, axis: 'x', layer }), 1 - fz],
+        [pieceKey({ slot: 'edge', level, gx, gz, axis: 'z', layer }), fx],
+        [pieceKey({ slot: 'edge', level, gx: gx + 1, gz, axis: 'z', layer }), 1 - fx],
+      ];
+      for (const [key] of edges.sort((a, b) => a[1] - b[1])) {
+        const m = material(key);
+        if (m) return m;
+      }
+    }
+    for (let rot = 0; rot < 4; rot++) {
+      const m = material(pieceKey({ slot: 'stairs', level, gx, gz, layer, rot }));
+      if (m && near(y0 + (layer + 0.5) * LAYER_HEIGHT_M)) return m;
+    }
+  }
+  if (near(y0 + SLAB_M)) return material(pieceKey({ slot: 'floor', level, gx, gz }));
+  return null;
 }

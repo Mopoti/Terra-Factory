@@ -4,6 +4,7 @@ import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { getSettings } from '../settings/store';
+import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
 import './menu.css';
 
@@ -104,10 +105,13 @@ export function mountInventory(
   function craft(item: string, times: number): void {
     const { made, stopped } = state.craft(item, times);
     if (made === 0) {
+      playSfx('deny');
       message = stopped === 'bag' ? t('inv.craftBagFull') : t('inv.noResources');
     } else if (made < times) {
+      playSfx('craft');
       message = t('inv.craftedPartial', { n: String(made), item: itemName(item) });
     } else {
+      playSfx('craft');
       message = t('inv.crafted', { n: String(made), item: itemName(item) });
     }
     render();

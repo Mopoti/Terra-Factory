@@ -1,5 +1,6 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
 import { itemById } from '../data/items';
+import { migrateItemId } from './inventory';
 import { resourceById } from '../data/resources';
 import type { ChunkData } from '../world/worldgen';
 
@@ -80,11 +81,12 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     }
   }
   if (Array.isArray(r.hotbar)) {
-    r.hotbar.slice(0, HOTBAR_SLOTS).forEach((id, i) => {
-      if (typeof id !== 'string') return;
+    r.hotbar.slice(0, HOTBAR_SLOTS).forEach((rawId, i) => {
+      if (typeof rawId !== 'string') return;
+      const id = migrateItemId(rawId);
       try {
         itemById(id);
-        result.hotbar[i] = id;
+        result.hotbar[i] = result.hotbar.includes(id) ? null : id;
       } catch {
         /* objet inconnu : case vide */
       }

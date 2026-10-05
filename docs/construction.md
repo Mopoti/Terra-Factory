@@ -119,3 +119,8 @@ Règle générale : la pose part du **premier objet que le rayon du curseur touc
 
 - **Récolte** : le viseur de récolte s'arrête au premier mur, dalle ou escalier touché (`rayHitPiece`) : on ne voit plus le minerai / l'arbre derrière un mur. Pendant la construction (pièce sélectionnée dans la barre), la récolte est coupée.
 - **Escalier** : si le premier objet visé est un mur, l'escalier se pose **au pied du mur, côté œil, et monte vers lui** (sens verrouillable avec R).
+
+### Tour 31 — sons et dalle unique
+
+- **Sons** (`src/audio/sfx.ts`, fabriqués par le navigateur, aucun fichier) : pioche sur la pierre et éboulement du rocher à l'épuisement ; coup de hache et chute de l'arbre ; choc métallique et rupture d'un gisement ; ramassage, objet jeté ; pas selon le sol (herbe, sable, neige, pierre, bois — y compris sur les constructions) ; saut et atterrissage ; pose d'un mur / d'une dalle / d'un escalier (bois creux, pierre lourde) ; démolition ; fabrication ; sélection dans la barre ; refus. Ils suivent le curseur « Interactions » des réglages (et le muet).
+- **Dalle unique** : sols et plafonds sont le même objet, la **dalle** (bois ou pierre). Posée au sol / sur une dalle de sol elle fait un sol ; si le curseur touche le haut d'un mur (ou d'une dalle de plafond) elle fait un plafond. En interne le jeu garde la distinction (détection des pièces fermées, masquage du toit), mais le joueur n'a qu'un objet, une case de barre et une recette. Les anciens objets « sol » et « plafond » du sac et de la barre sont convertis en dalles.

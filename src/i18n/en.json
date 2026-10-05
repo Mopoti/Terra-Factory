@@ -382,11 +382,7 @@
   "build.material.stone": "Stone",
   "item.piece_wall_wood": "Wooden wall",
   "item.piece_door_wood": "Wooden door",
-  "item.piece_floor_wood": "Wooden floor",
-  "item.piece_ceiling_wood": "Wooden ceiling",
   "item.piece_wall_stone": "Stone wall",
-  "item.piece_floor_stone": "Stone floor",
-  "item.piece_ceiling_stone": "Stone ceiling",
   "build.plan": "{ok} to place · {lack} missing",
   "action.layerUp": "Wall: block above",
   "action.layerDown": "Wall: block below",
@@ -401,5 +397,7 @@
   "build.rotationAuto": "auto orientation (R to lock it)",
   "item.piece_stairs_wood": "Wooden stairs",
   "item.piece_stairs_stone": "Stone stairs",
-  "build.unsupportedStairs": "Stairs go on the ground, on a floor slab, or continue another flight upward"
+  "build.unsupportedStairs": "Stairs go on the ground, on a floor slab, or continue another flight upward",
+  "item.piece_slab_wood": "Wooden slab",
+  "item.piece_slab_stone": "Stone slab"
 }
