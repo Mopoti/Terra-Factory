@@ -76,3 +76,8 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 ### Visibilité en vue du dessus (et 3ème personne)
 - Joueur dans une pièce/bâtiment : le plafond et **tout ce qui est au-dessus** (étages supérieurs, toit) devient invisible/transparent. Exemple 2 étages : au RDC, plafond RDC + 1er + plafond 1er + 2ème + toit 2ème masqués. Au 1er : le RDC est caché (sol du 1er), plafond 1er, 2ème et toit masqués.
 - **Aura de transparence** quand le joueur est derrière un arbre (ou autre obstacle) : disque autour du joueur, très transparent au bord du personnage, de moins en moins vers l'extérieur jusqu'à redevenir opaque.
+
+## 9. Précisions du PO — murs, sols, plafonds (tour 6)
+- **Murs** : navigateur = uniquement sur les **bords des cases** (extérieur de la case) ; Unity = n'importe où (pas de 10 cm).
+- **Angles** : deux murs d'épaisseur 10 cm qui se rejoignent laissent un petit vide de 10×10 cm à l'extérieur de l'angle. 🔶 À traiter plus tard : pilier d'angle de 10×10×50 cm (préféré si possible), sinon accepter le vide. **À ne pas oublier au chantier de construction.**
+- **Sols et plafonds** : dalles de 50×50 cm, 10 cm d'épaisseur.

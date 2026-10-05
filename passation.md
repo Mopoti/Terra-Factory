@@ -42,7 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : en attente de validation PO pour démarrer le chantier 0.
 
-- Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Questions ouvertes : murs sur bords de cases seulement ? dalles sol/plafond 10 cm ?
+- Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Tranché au §9 (murs sur bords de cases en navigateur, libres sous Unity ; dalles 10 cm ; angles = pilier 10×10×50 à étudier plus tard).
 
 ## Règles d'architecture (pour garder ces portes ouvertes)
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.
