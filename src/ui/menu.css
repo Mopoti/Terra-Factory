@@ -177,4 +177,6 @@
   padding: 3px 10px;
   cursor: pointer;
 }
-[hidden] { display: none !important; }
+[hidden] {
+  display: none !important;
+}

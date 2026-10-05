@@ -15,6 +15,8 @@ const hudEl = document.getElementById('hud') as HTMLElement;
 const saves = new ProvisionalSaveIndex();
 const devMode = new URLSearchParams(window.location.search).has('dev');
 
+const resetMenu = mountMenu(uiEl, { saves, devMode, onStartGame: startGame });
+
 let stopBackground: () => void = () => undefined;
 let stopGame: (() => void) | null = null;
 
@@ -25,14 +27,13 @@ function showMenu(): void {
   bgEl.hidden = false;
   uiEl.hidden = false;
   void mountMenuBackground(bgEl).then((stop) => (stopBackground = stop));
-  mountMenu(uiEl, { saves, devMode, onStartGame: startGame });
+  resetMenu();
 }
 
 function startGame(game: GameSummary): void {
   stopBackground();
   bgEl.hidden = true;
   uiEl.hidden = true;
-  uiEl.replaceChildren();
   stopGame = startGameView(appEl);
 
   const label = document.createElement('div');

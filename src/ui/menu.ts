@@ -49,7 +49,8 @@ export interface MenuOptions {
   onStartGame: (game: GameSummary) => void;
 }
 
-export function mountMenu(root: HTMLElement, options: MenuOptions): void {
+/** Monte le menu une seule fois ; la fonction renvoyée le remet sur l'écran principal. */
+export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   const { saves, devMode, onStartGame } = options;
   let screen: Screen = 'main';
   let settingsTab: SettingsTab = 'display';
@@ -204,5 +205,10 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): void {
   }
 
   onLocaleChange(render);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !root.hidden && screen !== 'main') go('main');
+  });
   render();
+
+  return () => go('main');
 }
