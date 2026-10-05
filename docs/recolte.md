@@ -1,6 +1,6 @@
 # Récolte manuelle et inventaire — proposition (chantier 7)
 
-Statut : PROPOSITION à valider par le PO avant codage. Valeurs de départ réglables dans `content/items.json` (sans toucher au code).
+Statut : VALIDÉ par le PO (tour 14) et IMPLÉMENTÉ au chantier 7. Valeurs de départ réglables dans `content/items.json` (sans toucher au code).
 
 ## 1. Objectif
 Donner au joueur de quoi **faire** dans le monde : aller chercher du bois, de la pierre, du minerai, les ramasser à la main, voir son sac se remplir (poids et taille limités), et retrouver l'effet de ses actions (arbre abattu, tas de minerai qui s'amenuise) après avoir sauvegardé et rechargé. C'est aussi la base des machines et des convoyeurs qui viendront ensuite.
@@ -51,3 +51,18 @@ Objets posés au sol, coffres, fabrication, machines, outils améliorés, repous
 5. **« Jeter » = détruire** pour l'instant ? (reco : oui)
 6. **Pas de repousse** des arbres (ressources épuisables comme tu l'as demandé) ? (reco : oui)
 7. **Ordre des chantiers** : faire ce chantier **avant** la gestion complète des sauvegardes (suppression/renommage d'une sauvegarde, export, IndexedDB), car il donne du contenu à tester ; la gestion complète viendra juste après et protègera des données plus précieuses. (reco : 7 puis 6)
+
+## Décisions du PO (tour 14) et réalisation
+- Cible au curseur / réticule, récolte maintenue avec barre de progression, capacité du sac (50 kg / 60 L) et poids/volumes proposés : **acceptés**.
+- **Sac plein** : non répondu explicitement, recommandation appliquée (on ne ramasse plus, message « Sac plein » affiché, sans ralentissement).
+- **Objets jetés** : le PO demande de les poser **au sol dès maintenant si possible** → fait. « Jeter » (1, 10 ou tout) pose une pile devant le joueur ; on la ramasse en maintenant « Interagir » dessus ; les piles font partie de la sauvegarde.
+- **Arbres** : sans repousse pour l'instant ; **la repousse est une idée à reprendre plus tard** (le format des changements du monde est extensible : on pourra y ajouter la date de récolte).
+- **Ordre** : chantier 7 puis chantier 6, **enchaînés sans attendre de validation intermédiaire**.
+
+### Ce qui a été construit
+- Données : `content/items.json` (objets, sac, portée de 3 m) et champ `harvest` des ressources dans `content/resources.json`.
+- Moteur (`src/core/game/`) : sac limité en poids ET en volume (`inventory.ts`), changements du monde (`worldChanges.ts` : quantités prélevées par case, piles au sol), commandes récolter / jeter / ramasser (`state.ts`), portée (`reach.ts`).
+- Affichage : visée par rayon (`src/render/interaction.ts`), contour de la cible, nom et quantité restante, barre de progression, messages « +4 Bois », piles au sol, redessin du chunk modifié (case de minerai qui s'aplatit puis disparaît).
+- Fenêtre « Sac » (Tab ou I, remappable ; bouton « Sac » dans le jeu) avec jauges de poids et volume (unités du joueur) et boutons « Jeter ». Elle fige le jeu ; Échap la ferme.
+- Les sauvegardes retiennent le sac et les changements du monde : charger une ancienne sauvegarde remet le monde tel qu'il était (arbre debout, minerai non entamé, piles au sol).
+- Correctif trouvé en cours de route : les touches du jeu (Espace, flèches, Tab) étaient bloquées partout, y compris dans les champs de saisie et les menus → impossible de taper une espace dans le nom d'une sauvegarde. Corrigé (`src/input/input.ts`). Les clics sur l'interface ne comptent plus comme des actions de jeu.

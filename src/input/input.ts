@@ -1,6 +1,22 @@
 import { splitBinding, type ActionId } from '../settings/controls';
 import { getSettings } from '../settings/store';
 
+/** Champ de saisie (texte, liste) : les touches y servent à écrire, pas à jouer. */
+function isTextField(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  );
+}
+
+/** Bouton ou fenêtre de l'interface : Tab, Espace, flèches y servent à naviguer. */
+function isInterfaceControl(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    target.closest('button, a, [role="dialog"], [role="tab"], [role="alertdialog"]') !== null
+  );
+}
+
 const MODIFIER_CODES: Record<string, string[]> = {
   Shift: ['ShiftLeft', 'ShiftRight'],
   Control: ['ControlLeft', 'ControlRight'],
@@ -22,15 +38,18 @@ export class Input {
   constructor(private readonly wheelTarget: HTMLElement) {}
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.code === 'Escape') return;
+    if (e.code === 'Escape' || isTextField(e.target)) return;
     this.pressed.add(e.code);
-    // Évite que les touches du jeu fassent défiler la page ou ouvrent des menus du navigateur.
-    if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
+    // Évite que les touches du jeu fassent défiler la page ou déplacent le focus, sauf dans l'interface.
+    const scrollsPage = e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab';
+    if (scrollsPage && !isInterfaceControl(e.target)) e.preventDefault();
   };
   private onKeyUp = (e: KeyboardEvent): void => {
     this.pressed.delete(e.code);
   };
   private onMouseDown = (e: MouseEvent): void => {
+    // Les clics sur l'interface (boutons, fenêtres) ne comptent pas comme des actions de jeu.
+    if (e.target !== this.wheelTarget && !document.pointerLockElement) return;
     this.pressed.add(`Mouse${e.button}`);
   };
   private onMouseUp = (e: MouseEvent): void => {

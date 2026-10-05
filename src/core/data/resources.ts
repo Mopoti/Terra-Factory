@@ -4,6 +4,14 @@ import type { BiomeId } from '../world/biomes';
 export type FamilyId = 'forests' | 'rocks' | 'ores' | 'water' | 'enemies';
 export type BiomeTable = Record<BiomeId, number>;
 
+/** Comment une ressource se récolte à la main. */
+export interface Harvest {
+  /** Objet obtenu (voir content/items.json). */
+  item: string;
+  /** Temps pour obtenir une unité (s). */
+  secondsPerUnit: number;
+}
+
 interface Base {
   id: string;
   family: FamilyId;
@@ -11,6 +19,7 @@ interface Base {
 }
 export interface ObjectResource extends Base {
   kind: 'object';
+  harvest: Harvest;
   /** Quantité récoltable (bois, pierre…). */
   amount: number;
   /** Probabilité qu'un emplacement de 1 m × 1 m contienne cet objet DANS un bosquet / affleurement, par biome. */
@@ -30,6 +39,7 @@ interface PatchBase extends Base {
 }
 export interface DepositResource extends PatchBase {
   kind: 'deposit';
+  harvest: Harvest;
   centerAmount: number;
   edgeRatio: number;
   richness: [number, number];

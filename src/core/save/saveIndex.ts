@@ -1,3 +1,5 @@
+import { normalizeInventory, type Inventory } from '../game/inventory';
+import { emptyChanges, normalizeChanges, type WorldChanges } from '../game/worldChanges';
 import { normalizeWorldParams, type WorldFamilies, type WorldParams } from '../world/worldgen';
 
 export type ViewId = 'first' | 'third' | 'top';
@@ -67,6 +69,10 @@ export interface SaveSlot {
   /** Date/heure de la sauvegarde (ms depuis 1970). */
   savedAt: number;
   player: PlayerState;
+  /** Contenu du sac du joueur. */
+  inventory: Inventory;
+  /** Ce que le joueur a changé dans le monde (ressources récoltées, objets au sol). */
+  changes: WorldChanges;
 }
 
 /** Une partie = un « dossier » contenant ses sauvegardes (manuelles et automatiques). */
@@ -149,6 +155,8 @@ function normalizeSlot(raw: unknown): SaveSlot[] {
       kind: s.kind === 'auto' ? 'auto' : 'manual',
       savedAt: s.savedAt,
       player: normalizePlayer(s.player),
+      inventory: normalizeInventory(s.inventory),
+      changes: normalizeChanges(s.changes),
     },
   ];
 }
@@ -233,7 +241,13 @@ export class ProvisionalSaveIndex implements SaveIndex {
    */
   saveSlot(
     gameId: string,
-    slot: { name: string; kind: SlotKind; player: PlayerState },
+    slot: {
+      name: string;
+      kind: SlotKind;
+      player: PlayerState;
+      inventory?: Inventory;
+      changes?: WorldChanges;
+    },
     keepAuto = 5,
     now = Date.now(),
   ): { game: GameSummary; slot: SaveSlot; replaced: boolean } | null {
@@ -247,6 +261,8 @@ export class ProvisionalSaveIndex implements SaveIndex {
       if (existing) {
         existing.savedAt = now;
         existing.player = slot.player;
+        existing.inventory = slot.inventory ?? {};
+        existing.changes = slot.changes ?? emptyChanges();
         saved = existing;
         replaced = true;
       }
@@ -258,6 +274,8 @@ export class ProvisionalSaveIndex implements SaveIndex {
         kind: slot.kind,
         savedAt: now,
         player: slot.player,
+        inventory: slot.inventory ?? {},
+        changes: slot.changes ?? emptyChanges(),
       };
       game.saves.push(saved);
     }

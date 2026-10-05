@@ -6,11 +6,13 @@ import {
   type PlayerState,
   type SaveSlot,
 } from './core/save/saveIndex';
+import { GameState } from './core/game/state';
 import { initLocale, t, type TranslationKey } from './i18n';
 import { startGameView, type GameViewHandle } from './render/gameView';
 import { initKeyboardLayout } from './settings/controls';
 import { startApplyingSettings } from './settings/apply';
 import { getSettings, loadSettings } from './settings/store';
+import { mountInventory, type InventoryWindow } from './ui/inventory';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
@@ -27,6 +29,7 @@ const uiEl = document.getElementById('ui') as HTMLElement;
 const bgEl = document.getElementById('menu-bg') as HTMLElement;
 const hudEl = document.getElementById('hud') as HTMLElement;
 const pauseEl = document.getElementById('pause') as HTMLElement;
+const inventoryEl = document.getElementById('inventory') as HTMLElement;
 
 const saves = new ProvisionalSaveIndex();
 const params = new URLSearchParams(window.location.search);
@@ -36,6 +39,9 @@ interface Session {
   game: GameSummary;
   view: GameViewHandle;
   pause: PauseMenu;
+  inventory: InventoryWindow;
+  /** Sac et changements du monde de cette session. */
+  state: GameState;
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
   lastManualName: string | null;
   lastAutosaveAt: number;
@@ -63,7 +69,7 @@ function showToast(text: string): void {
 function saveAuto(s: Session): void {
   const result = saves.saveSlot(
     s.game.id,
-    { name: t('save.autoName'), kind: 'auto', player: s.view.getState() },
+    { name: t('save.autoName'), kind: 'auto', player: s.view.getState(), ...s.state.snapshot() },
     getSettings().game.autosaveKeep,
   );
   if (result) s.game = result.game;
@@ -86,6 +92,7 @@ function quitToMenu(): void {
   window.clearInterval(s.timer);
   window.clearTimeout(s.toastTimer);
   s.pause.dispose();
+  s.inventory.dispose();
   s.view.dispose();
   session = null;
   showMenu();
@@ -103,8 +110,13 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       : undefined;
   const start = slot?.player ?? devStart ?? DEFAULT_PLAYER_STATE;
 
+  const state = new GameState(slot);
   const view = startGameView(appEl, game, {
+    state,
     start,
+    onToggleInventory: () => {
+      if (!session?.pause.isOpen()) session?.inventory.toggle();
+    },
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
   });
@@ -112,6 +124,8 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     game,
     view,
     pause: null as unknown as PauseMenu,
+    inventory: null as unknown as InventoryWindow,
+    state,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
     timer: 0,
@@ -119,8 +133,14 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   };
   session = s;
 
+  /** Le jeu est figé tant que le menu pause ou le sac est ouvert. */
+  const syncPaused = (): void => view.setPaused(s.pause.isOpen() || s.inventory.isOpen());
+  s.inventory = mountInventory(inventoryEl, state, {
+    drop: (item, count) => view.dropItem(item, count),
+    onOpenChange: syncPaused,
+  });
   s.pause = mountPauseMenu(pauseEl, {
-    onPausedChange: (paused) => view.setPaused(paused),
+    onPausedChange: syncPaused,
     defaultSaveName: () =>
       s.lastManualName ??
       [...s.game.saves].filter((x) => x.kind === 'manual').sort((a, b) => b.savedAt - a.savedAt)[0]
@@ -128,7 +148,12 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       t('save.defaultName'),
     manualSaveNames: () => s.game.saves.filter((x) => x.kind === 'manual').map((x) => x.name),
     save: (name) => {
-      const result = saves.saveSlot(s.game.id, { name, kind: 'manual', player: view.getState() });
+      const result = saves.saveSlot(s.game.id, {
+        name,
+        kind: 'manual',
+        player: view.getState(),
+        ...s.state.snapshot(),
+      });
       if (!result) return;
       s.game = result.game;
       s.lastManualName = name;
@@ -145,7 +170,11 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   menuButton.type = 'button';
   menuButton.textContent = t('game.hud.menu');
   menuButton.addEventListener('click', () => s.pause.open());
-  label.append(name, menuButton);
+  const bagButton = document.createElement('button');
+  bagButton.type = 'button';
+  bagButton.textContent = t('game.hud.bag');
+  bagButton.addEventListener('click', () => !s.pause.isOpen() && s.inventory.open());
+  label.append(name, bagButton, menuButton);
   hudEl.replaceChildren(label);
 
   // Sauvegarde automatique périodique (réglage « Jeu » ; 0 = désactivée).

@@ -6,6 +6,8 @@ import {
   type PlayerState,
   type ViewId,
 } from '../core/save/saveIndex';
+import type { GameState } from '../core/game/state';
+import { applyChanges } from '../core/game/worldChanges';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
@@ -15,6 +17,7 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
+import { Interaction } from './interaction';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
 const SKY = 0x8fb8d8;
@@ -31,6 +34,10 @@ const REPEAT_S = 0.09;
 const CHUNK_BUDGET_MS = 6;
 
 export interface GameViewOptions {
+  /** Sac et changements du monde (récolte, objets au sol). */
+  state: GameState;
+  /** La touche « Inventaire » a été pressée. */
+  onToggleInventory?: () => void;
   /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
   start?: Partial<PlayerState>;
   /** Appelé quand le joueur change de vue avec le clavier. */
@@ -45,13 +52,15 @@ export interface GameViewHandle {
   getState(): PlayerState;
   /** En pause, le joueur et la caméra ne bougent plus (le monde reste affiché). */
   setPaused(paused: boolean): void;
+  /** Jette des objets du sac au sol, devant le joueur. */
+  dropItem(item: string, count: number): void;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
 export function startGameView(
   container: HTMLElement,
   game: GameSummary,
-  options: GameViewOptions = {},
+  options: GameViewOptions,
 ): GameViewHandle {
   const state: PlayerState = { ...DEFAULT_PLAYER_STATE, ...options.start };
   const initial = getSettings().display;
@@ -112,6 +121,9 @@ export function startGameView(
   player.add(bodyTool);
 
   const rig = new CameraRig(camera, state);
+  const interaction: Interaction = new Interaction(scene, camera, options.state, container, {
+    rebuildChunk: (cx, cz) => buildInto(cx, cz),
+  });
 
   // --- Chunks ------------------------------------------------------------------------------
   const chunks = new Map<string, ChunkMesh>();
@@ -141,22 +153,36 @@ export function startGameView(
         mesh.dispose();
         for (const cell of mesh.blocked) blocked.delete(cell);
         for (const [cell] of mesh.tall) obstacles.delete(cell);
+        interaction.unregisterChunk(k);
         chunks.delete(k);
       }
     }
+  }
+
+  /** Fabrique (ou refabrique) un chunk en tenant compte de ce que le joueur a changé. */
+  function buildInto(cx: number, cz: number): void {
+    const key = `${cx},${cz}`;
+    const old = chunks.get(key);
+    if (old) {
+      scene.remove(old.group);
+      old.dispose();
+      for (const cell of old.blocked) blocked.delete(cell);
+      for (const [cell] of old.tall) obstacles.delete(cell);
+    }
+    const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
+    const mesh = buildChunkMesh(generator, data);
+    scene.add(mesh.group);
+    for (const cell of mesh.blocked) blocked.add(cell);
+    for (const [cell, height] of mesh.tall) obstacles.set(cell, height);
+    chunks.set(key, mesh);
+    interaction.registerChunk(key, data);
   }
 
   function loadMissing(): void {
     const start = performance.now();
     for (const { cx, cz } of wanted) {
       if (performance.now() - start > CHUNK_BUDGET_MS) return;
-      const key = `${cx},${cz}`;
-      if (chunks.has(key)) continue;
-      const mesh = buildChunkMesh(generator, generator.chunk(cx, cz));
-      scene.add(mesh.group);
-      for (const cell of mesh.blocked) blocked.add(cell);
-      for (const [cell, height] of mesh.tall) obstacles.set(cell, height);
-      chunks.set(key, mesh);
+      if (!chunks.has(`${cx},${cz}`)) buildInto(cx, cz);
     }
   }
 
@@ -421,9 +447,12 @@ export function startGameView(
   renderer.setAnimationLoop((now) => {
     if (fpsLimit > 0 && now - lastFrame < 1000 / fpsLimit - 1) return;
     lastFrame = now;
-    const dt = Math.min(0.1, (now - last) / 1000);
+    const realDt = Math.min(0.5, (now - last) / 1000);
+    const dt = Math.min(0.1, realDt);
     last = now;
     const views = getSettings().views;
+
+    if (pressed('inventory')) options.onToggleInventory?.();
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {
@@ -468,6 +497,16 @@ export function startGameView(
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
     updateGhost(views);
+    interaction.update({
+      // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
+      dt: realDt,
+      player: { x: playerX, z: playerZ },
+      active: !paused && input.isActionActive('interact'),
+      paused,
+      aimAtCenter: rig.view === 'first',
+      mouse: { x: mouseX, y: mouseY },
+      viewport: { w: window.innerWidth, h: window.innerHeight },
+    });
 
     renderer.render(scene, camera);
     input.endFrame();
@@ -486,6 +525,17 @@ export function startGameView(
 
   return {
     getState: () => ({ x: playerX, z: playerZ, ...rig.getState() }),
+    dropItem: (item, count) => {
+      // Devant le joueur ; sur place si l'emplacement est bloqué.
+      const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;
+      let x = playerX - Math.sin(heading) * 1.1;
+      let z = playerZ - Math.cos(heading) * 1.1;
+      if (isBlockedAt(x, z)) {
+        x = playerX;
+        z = playerZ;
+      }
+      interaction.dropItem(item, count, x, z);
+    },
     setPaused: (value) => {
       paused = value;
       if (value) {
@@ -494,6 +544,7 @@ export function startGameView(
     },
     dispose: () => {
       unsubscribe();
+      interaction.dispose();
       input.detach();
       renderer.setAnimationLoop(null);
       releaseLock();

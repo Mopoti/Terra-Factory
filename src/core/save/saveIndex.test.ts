@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { GameState } from '../game/state';
+import { emptyChanges } from '../game/worldChanges';
 import { defaultWorldParams } from '../world/worldgen';
 import {
   DEFAULT_GAME_OPTIONS,
@@ -35,6 +37,8 @@ describe('dernière partie / dernière sauvegarde', () => {
       kind: 'manual',
       savedAt: t,
       player,
+      inventory: {},
+      changes: emptyChanges(),
     })),
   });
   it('sans partie : rien', () => {
@@ -202,6 +206,55 @@ describe('options et réglages de la partie', () => {
   it('une ancienne partie reçoit les options par défaut', () => {
     const [g] = normalizeGame({ id: 'old', name: 'Ancienne' });
     expect(g.options).toEqual(DEFAULT_GAME_OPTIONS);
+  });
+});
+
+describe('sac et changements du monde dans les sauvegardes', () => {
+  it('une sauvegarde retient le sac et les ressources récoltées', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const g = index.create('Ma base', 'terra');
+    const state = new GameState();
+    state.harvest('4,6', 4, 'wood', 3);
+    state.drop('wood', 1, 2, 2);
+    index.saveSlot(g.id, { name: 'S', kind: 'manual', player, ...state.snapshot() }, 5, 1000);
+    const slot = index.get(g.id)?.saves[0];
+    expect(slot?.inventory).toEqual({ wood: 2 });
+    expect(slot?.changes.taken['4,6']).toBe(3);
+    expect(slot?.changes.drops).toHaveLength(1);
+  });
+  it('remplacer une sauvegarde remplace aussi son contenu', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const g = index.create('Ma base', 'terra');
+    index.saveSlot(g.id, { name: 'S', kind: 'manual', player, inventory: { wood: 5 } }, 5, 1000);
+    index.saveSlot(g.id, { name: 'S', kind: 'manual', player, inventory: { coal: 2 } }, 5, 2000);
+    const saves = index.get(g.id)?.saves ?? [];
+    expect(saves).toHaveLength(1);
+    expect(saves[0].inventory).toEqual({ coal: 2 });
+  });
+  it('deux sauvegardes d’une même partie gardent chacune leur propre état', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const g = index.create('Ma base', 'terra');
+    index.saveSlot(
+      g.id,
+      { name: 'Avant', kind: 'manual', player, inventory: { wood: 1 } },
+      5,
+      1000,
+    );
+    index.saveSlot(
+      g.id,
+      { name: 'Après', kind: 'manual', player, inventory: { wood: 9 } },
+      5,
+      2000,
+    );
+    const byName = Object.fromEntries(
+      (index.get(g.id)?.saves ?? []).map((s) => [s.name, s.inventory.wood]),
+    );
+    expect(byName).toEqual({ Avant: 1, Après: 9 });
+  });
+  it('une ancienne sauvegarde (sans sac) reprend avec un sac vide et un monde intact', () => {
+    const [g] = normalizeGame({ id: 'a', name: 'b', saves: [{ id: 's', name: 'n', savedAt: 5 }] });
+    expect(g.saves[0].inventory).toEqual({});
+    expect(g.saves[0].changes.taken).toEqual({});
   });
 });
 

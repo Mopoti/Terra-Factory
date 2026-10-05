@@ -1,0 +1,40 @@
+{
+  "_comment": "Objets du jeu et sac du joueur. Poids en kg, volume en litres par unité. Ids stables.",
+  "bag": {
+    "maxWeightKg": 50,
+    "maxVolumeL": 60
+  },
+  "reachM": 3,
+  "items": [
+    {
+      "id": "wood",
+      "weightKg": 0.8,
+      "volumeL": 3,
+      "color": "#8b5a2b"
+    },
+    {
+      "id": "stone",
+      "weightKg": 1.2,
+      "volumeL": 0.6,
+      "color": "#8a8f98"
+    },
+    {
+      "id": "iron_ore",
+      "weightKg": 0.4,
+      "volumeL": 0.3,
+      "color": "#8d6e63"
+    },
+    {
+      "id": "copper_ore",
+      "weightKg": 0.45,
+      "volumeL": 0.3,
+      "color": "#d2793b"
+    },
+    {
+      "id": "coal",
+      "weightKg": 0.25,
+      "volumeL": 0.3,
+      "color": "#2b2b2f"
+    }
+  ]
+}
