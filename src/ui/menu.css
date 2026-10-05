@@ -1,0 +1,19 @@
+#ui { position: fixed; inset: 0; display: flex; align-items: center; justify-content: flex-start;
+  padding-left: clamp(24px, 8vw, 140px); pointer-events: none; }
+.panel { pointer-events: auto; width: min(360px, calc(100vw - 48px)); padding: 28px;
+  background: rgba(16, 20, 25, .82); border: 1px solid #2c3640; border-radius: 12px;
+  backdrop-filter: blur(6px); display: flex; flex-direction: column; gap: 10px; }
+.panel h1 { margin: 0 0 12px; font-size: 28px; letter-spacing: .5px; }
+.panel h2 { margin: 0 0 8px; font-size: 22px; }
+.panel p { margin: 0 0 12px; line-height: 1.45; color: #b9c4cf; }
+.menu-btn { font: inherit; color: inherit; text-align: left; padding: 12px 16px; cursor: pointer;
+  background: #1f2832; border: 1px solid #33414f; border-radius: 8px; }
+.menu-btn:hover, .menu-btn:focus-visible { background: #2a3745; border-color: #d9822b; outline: none; }
+.menu-btn small { display: block; margin-top: 3px; font-size: 12px; color: #9fb0bf; }
+.menu-btn.primary { border-color: #d9822b; }
+.lang { margin-top: 10px; display: flex; gap: 8px; align-items: center; font-size: 13px; color: #9fb0bf; }
+.lang button { font: inherit; color: inherit; background: none; border: 1px solid #33414f;
+  border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.lang button[aria-pressed="true"] { border-color: #d9822b; color: #e8edf2; }
+.dev { margin-top: 6px; font-size: 12px; color: #6f8091; display: flex; gap: 10px; }
+.dev button { font: inherit; color: inherit; background: none; border: 0; text-decoration: underline; cursor: pointer; }

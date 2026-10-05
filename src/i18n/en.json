@@ -1,0 +1,20 @@
+{
+  "game.title": "Terra Factory",
+  "menu.continue": "Continue",
+  "menu.continue.detail": "{name} — {date}",
+  "menu.newGame": "New game",
+  "menu.loadGame": "Load game",
+  "menu.settings": "Settings",
+  "menu.quit": "Quit",
+  "menu.language": "Language",
+  "common.back": "Back",
+  "common.comingSoon": "Coming soon",
+  "screen.newGame.title": "New game",
+  "screen.newGame.body": "The game editing screen (seed, resources, enemies) arrives in work package 5.",
+  "screen.loadGame.title": "Load game",
+  "screen.loadGame.body": "The save manager arrives in work package 6.",
+  "screen.settings.title": "Settings",
+  "screen.settings.body": "Full settings (sound, keys, views, image, units) arrive in work package 2.",
+  "screen.game.title": "Game in progress",
+  "screen.game.body": "The playable world arrives in work packages 3 and 4. Selected game: {name}."
+}

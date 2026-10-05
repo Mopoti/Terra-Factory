@@ -1,0 +1,20 @@
+{
+  "game.title": "Terra Factory",
+  "menu.continue": "Continuer",
+  "menu.continue.detail": "{name} — {date}",
+  "menu.newGame": "Nouvelle partie",
+  "menu.loadGame": "Charger une partie",
+  "menu.settings": "Paramètres",
+  "menu.quit": "Quitter",
+  "menu.language": "Langue",
+  "common.back": "Retour",
+  "common.comingSoon": "Bientôt disponible",
+  "screen.newGame.title": "Nouvelle partie",
+  "screen.newGame.body": "L'écran d'édition de partie (seed, ressources, ennemis) arrive au chantier 5.",
+  "screen.loadGame.title": "Charger une partie",
+  "screen.loadGame.body": "Le gestionnaire de sauvegardes arrive au chantier 6.",
+  "screen.settings.title": "Paramètres",
+  "screen.settings.body": "Les paramètres complets (sons, touches, vues, image, unités) arrivent au chantier 2.",
+  "screen.game.title": "Partie en cours",
+  "screen.game.body": "Le monde jouable arrive aux chantiers 3 et 4. Partie sélectionnée : {name}."
+}
