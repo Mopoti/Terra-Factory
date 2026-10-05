@@ -42,6 +42,15 @@ export function pieceKey(p: PiecePos): string {
 }
 
 const KEY_RE = /^([efcs]):(-?\d+):(-?\d+),(-?\d+)(?::([xz]):(\d+)|:(\d+)(?::(\d))?)?$/;
+/** Clé qui marque une porte comme ouverte (même valeur que la porte) : `o:étage:gx,gz:axe`. */
+export const doorOpenKey = (p: {
+  level: number;
+  gx: number;
+  gz: number;
+  axis?: 'x' | 'z';
+}): string => `o:${p.level}:${p.gx},${p.gz}:${p.axis ?? 'x'}`;
+const OPEN_RE = /^o:(-?\d+):(-?\d+),(-?\d+):([xz])$/;
+
 const LEGACY_CEILING_RE = /^c:(-?\d+):(-?\d+),(-?\d+)$/;
 const LEGACY_EDGE_RE = /^e:(-?\d+):(-?\d+),(-?\d+):([xz])$/;
 const SLOT_OF: Record<string, PieceSlot> = { e: 'edge', f: 'floor', c: 'ceiling', s: 'stairs' };
@@ -176,6 +185,13 @@ export function normalizePieces(raw: unknown): Pieces {
     const kind = isPieceKind(value) ? value : LEGACY[value];
     if (!kind || slotOf(pieceDef(kind).type) !== pos.slot) continue;
     result[key] = kind;
+  }
+  // Portes ouvertes : seulement si la porte existe.
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const m = OPEN_RE.exec(key);
+    if (!m || typeof value !== 'string' || !value.startsWith('door')) continue;
+    const door = `e:${m[1]}:${m[2]},${m[3]}:${m[4]}:0`;
+    if (result[door]?.startsWith('door')) result[key] = result[door];
   }
   return result;
 }

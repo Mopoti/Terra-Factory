@@ -188,6 +188,10 @@ export function startGameView(
     demolish: (id) => demolishStructure(id),
     openStructure: (id) => {
       if (id.startsWith('machine:')) options.onOpenMachine?.(Number(id.slice(8)));
+      else if (id.startsWith('piece:')) {
+        const open = options.state.toggleDoor(id.slice(6));
+        if (open !== null) playSfx(open ? 'doorOpen' : 'doorClose');
+      }
     },
   });
 
@@ -584,6 +588,7 @@ export function startGameView(
       id: `piece:${piece!.key}`,
       name: t(`item.${def.item}` as TranslationKey),
       seconds: def.type === 'door' ? 1 : PIECE_BREAK_S[def.material],
+      usable: def.type === 'door',
       distance: piece!.t,
       box: pieceBox(piece!.key),
     };

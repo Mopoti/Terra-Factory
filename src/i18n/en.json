@@ -455,5 +455,6 @@
   "factory.chest": "Contents: {n} / {max} slots",
   "factory.chestEmpty": "empty",
   "machine.chest": "Chest",
-  "machine.chestHint": "Drag an item from the bag into the chest; click a chest slot (or drag it onto the bag) to take it back."
+  "machine.chestHint": "Drag an item from the bag into the chest; click a chest slot (or drag it onto the bag) to take it back.",
+  "harvest.doorUse": "Left click: open / close · hold right click: demolish"
 }

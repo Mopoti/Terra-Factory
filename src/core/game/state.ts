@@ -127,6 +127,19 @@ export class GameState {
     return { gained, left: stack.count, bagFull: stack.count > 0 };
   }
 
+  /** Ouvre ou ferme une porte (clé du bloc 0 de la porte). Renvoie vrai si elle est ouverte ensuite. */
+  toggleDoor(key: string): boolean | null {
+    const kind = this.changes.pieces[key];
+    const m = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
+    if (!kind?.startsWith('door') || !m) return null;
+    const open = `o:${m[1]}:${m[2]},${m[3]}:${m[4]}`;
+    const nowOpen = !this.changes.pieces[open];
+    if (nowOpen) this.changes.pieces[open] = kind;
+    else delete this.changes.pieces[open];
+    this.emit({ type: 'build' });
+    return nowOpen;
+  }
+
   // --- Barre de raccourcis ---------------------------------------------------------------------
 
   /** Sélectionne la case (ou la désélectionne si elle l'était déjà). Une case vide ne se sélectionne pas. */
@@ -260,6 +273,8 @@ export class GameState {
       if (!kind) continue;
       delete this.changes.pieces[key];
       delete this.changes.rotations[key];
+      const door = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
+      if (door) delete this.changes.pieces[`o:${door[1]}:${door[2]},${door[3]}:${door[4]}`];
       n++;
       // Démolir rend les ressources de fabrication (pierre, bois), pas la pièce elle-même.
       const recipe = itemById(pieceDef(kind).item).recipe ?? { [pieceDef(kind).item]: 1 };

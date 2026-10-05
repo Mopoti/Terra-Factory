@@ -455,5 +455,6 @@
   "factory.chest": "Contenu : {n} / {max} cases",
   "factory.chestEmpty": "vide",
   "machine.chest": "Coffre",
-  "machine.chestHint": "Glisse un objet du sac dans le coffre ; clique une case du coffre (ou glisse-la sur le sac) pour la reprendre."
+  "machine.chestHint": "Glisse un objet du sac dans le coffre ; clique une case du coffre (ou glisse-la sur le sac) pour la reprendre.",
+  "harvest.doorUse": "Clic gauche : ouvrir / fermer · maintenir le clic droit : démolir"
 }

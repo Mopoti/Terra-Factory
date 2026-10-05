@@ -64,6 +64,24 @@ export function spansAt(
         spans.push({ bottom: top - SLAB_M, top });
       }
     }
+    // Une porte fermée barre tout le passage ; ouverte, elle laisse passer.
+    const doors: Array<[boolean, string, string]> = [
+      [
+        nearZ,
+        pieceKey({ slot: 'edge', level, gx: gxn, gz, axis: 'z', layer: 0 }),
+        `o:${level}:${gxn},${gz}:z`,
+      ],
+      [
+        nearX,
+        pieceKey({ slot: 'edge', level, gx, gz: gzn, axis: 'x', layer: 0 }),
+        `o:${level}:${gx},${gzn}:x`,
+      ],
+    ];
+    for (const [near, key, open] of doors) {
+      if (near && pieces[key]?.startsWith('door') && !pieces[open]) {
+        spans.push({ bottom: y0, top: y0 + STOREY_HEIGHT_M });
+      }
+    }
     if (pieces[pieceKey({ slot: 'floor', level, gx, gz })])
       spans.push({ bottom: y0, top: y0 + SLAB_M });
   }

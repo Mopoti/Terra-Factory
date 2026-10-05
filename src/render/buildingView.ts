@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
-import { parseKey, pieceKey, type PiecePos, type Pieces } from '../core/build/pieces';
+import { doorOpenKey, parseKey, pieceKey, type PiecePos, type Pieces } from '../core/build/pieces';
 import {
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
@@ -120,6 +120,35 @@ export function addPiece(
     color,
     true,
   );
+  // Battant : fermé, il remplit le passage ; ouvert, il pivote à angle droit sur son côté gauche.
+  const leafColor = shade(color, 1.18);
+  const open = !!pieces?.[doorOpenKey(pos)];
+  const th = 0.04;
+  if (!open) {
+    mb.box(
+      mx,
+      y0,
+      mz,
+      alongX ? DOOR_WIDTH_M : th,
+      DOOR_HEIGHT_M,
+      alongX ? th : DOOR_WIDTH_M,
+      leafColor,
+      true,
+    );
+  } else {
+    const hinge = -DOOR_WIDTH_M / 2 + th / 2;
+    const across = DOOR_WIDTH_M / 2;
+    mb.box(
+      alongX ? mx + hinge : mx + across,
+      y0,
+      alongX ? mz + across : mz + hinge,
+      alongX ? th : DOOR_WIDTH_M,
+      DOOR_HEIGHT_M,
+      alongX ? DOOR_WIDTH_M : th,
+      leafColor,
+      true,
+    );
+  }
 }
 
 /** Une marche : un coin de 50 cm de haut sur sa case, qui monte dans le sens de son orientation. */

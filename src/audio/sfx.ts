@@ -25,6 +25,8 @@ export type SfxId =
   | 'placeStairs'
   | 'demolish'
   | 'craft'
+  | 'doorOpen'
+  | 'doorClose'
   | 'select'
   | 'deny';
 
@@ -253,6 +255,20 @@ const RECIPES: Record<SfxId, Recipe> = {
       { dur: 0.08, vol: 0.2, freq: 660, wave: 'triangle' },
       { at: 0.08, dur: 0.16, vol: 0.22, freq: 990, wave: 'triangle' },
     ],
+  },
+  // Porte : grincement qui monte à l'ouverture, claquement sourd à la fermeture.
+  doorOpen: {
+    noise: [{ dur: 0.35, vol: 0.12, filter: 'bandpass', freq: 500, freqEnd: 1400, q: 3 }],
+    tones: [{ dur: 0.35, vol: 0.14, freq: 110, freqEnd: 190, wave: 'sawtooth' }],
+    minGap: 0.1,
+  },
+  doorClose: {
+    noise: [{ dur: 0.12, vol: 0.4, filter: 'lowpass', freq: 900 }],
+    tones: [
+      { dur: 0.15, vol: 0.45, freq: 140, freqEnd: 70 },
+      { dur: 0.25, vol: 0.1, freq: 190, freqEnd: 110, wave: 'sawtooth' },
+    ],
+    minGap: 0.1,
   },
   select: { tones: [{ dur: 0.04, vol: 0.12, freq: 880, wave: 'square' }], minGap: 0.03 },
   deny: {

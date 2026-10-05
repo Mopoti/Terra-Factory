@@ -918,3 +918,24 @@ describe('coffre dans la partie', () => {
     expect(s.inventory.wood).toBe(5 + 8); // 2 restants + 3 rangés + 8 de la recette
   });
 });
+
+describe('battant de porte', () => {
+  it("s'ouvre et se ferme, est enregistré, et disparaît avec la porte", () => {
+    const s = new GameState({ inventory: { piece_door_wood: 1 } });
+    const pos = posFor('door_wood', 0, 1, 1, 'z');
+    s.place('door_wood', pos);
+    const key = pieceKey(pos);
+    expect(s.toggleDoor(key)).toBe(true);
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.pieces['o:0:1,1:z']).toBe('door_wood');
+    expect(copy.toggleDoor(key)).toBe(false);
+    expect(copy.changes.pieces['o:0:1,1:z']).toBeUndefined();
+    s.removeKeys([key], { x: 0, z: 0 });
+    expect(Object.keys(s.changes.pieces)).toEqual([]);
+    expect(s.toggleDoor(key)).toBeNull();
+  });
+  it("une marque d'ouverture sans porte est ignorée", () => {
+    const s = new GameState({ changes: { pieces: { 'o:0:5,5:x': 'door_wood' } } });
+    expect(s.changes.pieces).toEqual({});
+  });
+});

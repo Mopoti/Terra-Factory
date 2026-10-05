@@ -87,3 +87,12 @@ describe('rayon et constructions', () => {
     expect(rayHitPiece({}, { x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, 50)).toBe(Infinity);
   });
 });
+
+describe('portes', () => {
+  const door: Pieces = { [pieceKey(posFor('door_wood', 0, 0, 2, 'x'))]: 'door_wood' };
+  it('fermée elle barre le passage, ouverte elle laisse passer', () => {
+    expect(bodyBlocked(door, 0.25, 1.0, 0, 1.7)).toBe(true);
+    const open: Pieces = { ...door, 'o:0:0,2:x': 'door_wood' };
+    expect(bodyBlocked(open, 0.25, 1.0, 0, 1.7)).toBe(false);
+  });
+});

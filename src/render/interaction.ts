@@ -455,7 +455,13 @@ export class Interaction {
     else if (bagFull) status = t('harvest.bagFull');
     else if (hit.type === 'drop') status = t('harvest.pickup');
     else if (hit.type === 'structure') {
-      status = t(hit.structure.usable ? 'harvest.structureUse' : 'harvest.demolish');
+      status = t(
+        hit.structure.usable
+          ? hit.structure.id.startsWith('piece:')
+            ? 'harvest.doorUse'
+            : 'harvest.structureUse'
+          : 'harvest.demolish',
+      );
     } else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
     this.hudDetail.textContent = status;
     this.hudDetail.classList.toggle('warn', !reachable || bagFull);
