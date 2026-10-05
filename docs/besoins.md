@@ -115,4 +115,4 @@ Affiché par « Nouvelle partie ». Contenu :
 - **Aperçu du monde en direct** : carte vue du dessus de 320 m autour du départ (biomes, arbres, rochers, minerais, étangs, nids), recalculée pendant qu'on règle les curseurs ou la seed ; le cercle blanc marque la zone de départ garantie (150 m).
 - « Réinitialiser les réglages du monde » remet tous les curseurs à ×1.
 - La seed, les réglages du monde et les règles sont enregistrés avec la partie (même seed + mêmes réglages = même monde).
-- Pas encore : modification des réglages d'une partie existante (la génération du monde d'origine ne doit pas changer en cours de route ; à discuter si besoin).
+- **Règle (PO, tour 13) : les réglages de génération d'un monde déjà créé ne sont pas modifiables** (seed, curseurs fréquence / taille / densité). Seules des règles qui ne touchent pas à la forme du monde pourront être ajustées plus tard. Retours détaillés du PO attendus quand il y aura plus de contenu à tester.
