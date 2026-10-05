@@ -1,6 +1,6 @@
-import { pieceKey, type PiecePos } from '../build/pieces';
+import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
-import { pieceDef, type PieceKind } from '../data/buildings';
+import { pieceDef, slotOf, type PieceKind } from '../data/buildings';
 import { BAG_LIMITS, itemById, type BagLimits } from '../data/items';
 import { add, maxAddable, normalizeInventory, remove, type Inventory } from './inventory';
 import {
@@ -124,16 +124,22 @@ export class GameState {
   /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
   place(kind: PieceKind, pos: PiecePos): 'ok' | 'occupied' | 'missing' | 'invalid' {
     const def = pieceDef(kind);
-    if (def.slot !== pos.slot) return 'invalid';
-    const key = pieceKey(pos);
-    if (this.changes.pieces[key]) return 'occupied';
+    if (slotOf(def.type) !== pos.slot) return 'invalid';
+    if (!isFree(this.changes.pieces, kind, pos)) return 'occupied';
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
-    this.changes.pieces[key] = kind;
+    this.changes.pieces[pieceKey(pos)] = kind;
     this.roomCache = null;
     this.emit({ type: 'build' });
     this.emit({ type: 'inventory' });
     return 'ok';
+  }
+
+  /** Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock et les emplacements libres). */
+  placeMany(kind: PieceKind, positions: PiecePos[]): number {
+    let n = 0;
+    for (const pos of positions) if (this.place(kind, pos) === 'ok') n++;
+    return n;
   }
 
   /**
@@ -164,29 +170,35 @@ export class GameState {
   }
 
   /**
-   * Démonte une pièce et rend l'objet (s'il ne tient pas dans le sac, il tombe au sol aux coordonnées données).
+   * Démonte des pièces et rend les objets (s'ils ne tiennent pas dans le sac, ils tombent au sol aux
+   * coordonnées données). Renvoie le nombre de pièces démontées.
    */
-  removePiece(pos: PiecePos, drop: { x: number; z: number }): PieceKind | null {
-    const key = pieceKey(pos);
-    const kind = this.changes.pieces[key];
-    if (!kind) return null;
-    delete this.changes.pieces[key];
-    this.roomCache = null;
-    const item = pieceDef(kind).item;
-    if (maxAddable(this.inventory, item, this.limits) >= 1) {
-      this.inventory = add(this.inventory, item, 1);
-    } else {
-      this.changes.drops.push({
-        id: `drop-${this.changes.nextDropId++}`,
-        item,
-        count: 1,
-        x: drop.x,
-        z: drop.z,
-      });
-      this.emit({ type: 'drops' });
+  removeKeys(keys: string[], drop: { x: number; z: number }): number {
+    let n = 0;
+    for (const key of keys) {
+      const kind = this.changes.pieces[key];
+      if (!kind) continue;
+      delete this.changes.pieces[key];
+      n++;
+      const item = pieceDef(kind).item;
+      if (maxAddable(this.inventory, item, this.limits) >= 1) {
+        this.inventory = add(this.inventory, item, 1);
+      } else {
+        this.changes.drops.push({
+          id: `drop-${this.changes.nextDropId++}`,
+          item,
+          count: 1,
+          x: drop.x,
+          z: drop.z,
+        });
+        this.emit({ type: 'drops' });
+      }
     }
-    this.emit({ type: 'build' });
-    this.emit({ type: 'inventory' });
-    return kind;
+    if (n > 0) {
+      this.roomCache = null;
+      this.emit({ type: 'build' });
+      this.emit({ type: 'inventory' });
+    }
+    return n;
   }
 }

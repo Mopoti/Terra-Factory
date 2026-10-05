@@ -79,6 +79,8 @@ export const ACTIONS = [
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
   { id: 'levelUp', category: 'build', defaults: ['PageUp', null] },
   { id: 'levelDown', category: 'build', defaults: ['PageDown', null] },
+  { id: 'layerUp', category: 'build', defaults: ['Home', null] },
+  { id: 'layerDown', category: 'build', defaults: ['End', null] },
   { id: 'remove', category: 'build', defaults: ['L:X', 'Delete'] },
   { id: 'copy', category: 'build', defaults: ['Control+L:C', null] },
   { id: 'paste', category: 'build', defaults: ['Control+L:V', null] },

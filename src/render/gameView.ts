@@ -1,6 +1,18 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
-import { BUILD_REACH_M, PIECE_KINDS, pieceDef, type PieceKind } from '../core/data/buildings';
+import { evaluatePlan, planLine, planRect, posCenter, type PlanItem } from '../core/build/plan';
+import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
+import {
+  BUILD_REACH_M,
+  LAYERS_PER_STOREY,
+  MATERIALS,
+  PIECE_TYPES,
+  kindFor,
+  pieceDef,
+  type Material,
+  type PieceKind,
+  type PieceType,
+} from '../core/data/buildings';
 import {
   DEFAULT_PLAYER_STATE,
   type GameSummary,
@@ -18,7 +30,7 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
-import { BuildingView, wallBlocks } from './buildingView';
+import { BuildingView, wallBlocks, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
@@ -133,8 +145,14 @@ export function startGameView(
   const buildingView = new BuildingView(scene);
   buildingView.rebuild(options.state.changes.pieces);
   let building = false;
-  let buildKind: PieceKind = PIECE_KINDS[0];
+  let buildType: PieceType = 'wall';
+  let buildMaterial: Material = 'stone';
   let buildLevel = 0;
+  /** Bloc de mur visé (0 à 4), ou null = tout l'étage : sert à faire des fenêtres et des trous. */
+  let layerSel: number | null = null;
+  let dragStart: BuildAim | null = null;
+  let lastPlan: PlanItem[] = [];
+  const buildKind = (): PieceKind => kindFor(buildType, buildMaterial);
   const buildHud = document.createElement('div');
   buildHud.className = 'build-hud';
   buildHud.hidden = true;
@@ -144,8 +162,7 @@ export function startGameView(
   const rayDir = new THREE.Vector3();
   let buildMessage = '';
   const itemLabel = (id: string): string => t(`item.${id}` as TranslationKey);
-  const ownedText = (kind: PieceKind): string =>
-    `${itemLabel(pieceDef(kind).item)} : ${options.state.inventory[pieceDef(kind).item] ?? 0}`;
+  const stockOf = (kind: PieceKind): number => options.state.inventory[pieceDef(kind).item] ?? 0;
   function renderBuildHud(): void {
     const rooms = options.state.rooms().length;
     const here = options.state
@@ -157,18 +174,32 @@ export function startGameView(
             `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`,
           ),
       );
-    const pieces = PIECE_KINDS.map((k, i) => {
-      const affordable = options.state.canAfford(k);
-      return `<span class="${k === buildKind ? 'sel' : ''}${affordable ? '' : ' poor'}">${i + 1} ${t(`build.piece.${k}` as TranslationKey)}</span>`;
-    }).join('');
-    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${pieces}</div><div>${t('build.owned', { item: ownedText(buildKind) })}</div><div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
+    const kind = buildKind();
+    const types = PIECE_TYPES.map(
+      (ty, i) =>
+        `<span class="${ty === buildType ? 'sel' : ''}${stockOf(kindFor(ty, buildMaterial)) > 0 ? '' : ' poor'}">${i + 1} ${t(`build.piece.${ty}` as TranslationKey)}</span>`,
+    ).join('');
+    const mats = MATERIALS.map(
+      (m, i) =>
+        `<span class="${pieceDef(kind).material === m ? 'sel' : ''}">${i + 5} ${t(`build.material.${m}` as TranslationKey)}</span>`,
+    ).join('');
+    const layerText =
+      layerSel === null ? t('build.layer.all') : t('build.layer.n', { n: String(layerSel + 1) });
+    const wall =
+      buildType === 'wall' ? `<div>${t('build.layerLabel', { layer: layerText })}</div>` : '';
+    const ok = lastPlan.filter((i) => i.status === 'ok').length;
+    const lack = lastPlan.filter((i) => i.status === 'lack' || i.status === 'far').length;
+    const plan = dragStart
+      ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
+      : '';
+    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${types}</div><div class="pieces">${mats}</div>${wall}<div>${t('build.owned', { item: `${itemLabel(pieceDef(kind).item)} : ${stockOf(kind)}` })}</div>${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
     if (building && (e.type === 'build' || e.type === 'inventory')) renderBuildHud();
   });
 
-  function buildAim(): ReturnType<BuildingView['aim']> {
+  function buildAim(): BuildAim | null {
     if (rig.view === 'first') {
       camera.getWorldPosition(rayOrigin);
       camera.getWorldDirection(rayDir);
@@ -183,23 +214,87 @@ export function startGameView(
       rayOrigin.copy(buildRay.ray.origin);
       rayDir.copy(buildRay.ray.direction);
     }
-    return buildingView.aim(rayOrigin, rayDir, buildKind, buildLevel);
+    return buildingView.aim(rayOrigin, rayDir, buildKind(), buildLevel);
   }
 
-  function updateBuild(): void {
+  /** Pièces visées : une seule, ou toute la surface / la ligne tracée en gardant le clic enfoncé. */
+  function planFor(aim: BuildAim): PiecePos[] {
+    const kind = buildKind();
+    const start = dragStart ?? aim;
+    if (aim.pos.slot !== 'edge') {
+      return planRect(kind, buildLevel, start.cell, aim.cell);
+    }
+    const axis = start.pos.axis ?? 'x';
+    const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;
+    const line = axis === 'x' ? start.pos.gz : start.pos.gx;
+    const i1 = dragStart ? (axis === 'x' ? aim.cell.gx : aim.cell.gz) : i0;
+    return planLine(kind, buildLevel, axis, line, i0, i1, layerSel === null ? null : [layerSel]);
+  }
+
+  let removeCooldown = 0;
+  function updateBuild(dt: number): void {
+    const kind = buildKind();
     const aim = buildAim();
-    const inReach = aim !== null && Math.hypot(aim.x - playerX, aim.z - playerZ) <= BUILD_REACH_M;
-    const free = aim !== null && !options.state.changes.pieces[aim.key];
-    const ok = inReach && free && options.state.canAfford(buildKind);
-    buildingView.showGhost(aim, buildKind, ok);
-    if (!aim) return;
-    if (pressed('interact')) {
-      const result = !inReach ? 'tooFar' : options.state.place(buildKind, aim.pos);
-      buildMessage = result === 'ok' ? '' : t(`build.${result}` as TranslationKey);
+    const down = input.isActionActive('interact');
+    const player = { x: playerX, z: playerZ };
+    if (!aim) {
+      buildingView.hideGhost();
+      if (!down) dragStart = null;
+      return;
+    }
+
+    // Démonter en maintenant la touche : on balaie la zone avec le curseur.
+    if (input.isActionActive('remove')) {
+      buildingView.hideGhost();
+      removeCooldown -= dt;
+      const c = posCenter(aim.pos);
+      if (removeCooldown <= 0 && Math.hypot(c.x - playerX, c.z - playerZ) <= BUILD_REACH_M) {
+        const keys =
+          aim.pos.slot === 'edge'
+            ? edgeKeysToRemove(
+                options.state.changes.pieces,
+                aim.pos,
+                layerSel === null ? null : [layerSel],
+              )
+            : options.state.changes.pieces[aim.key]
+              ? [aim.key]
+              : [];
+        if (keys.length > 0) {
+          options.state.removeKeys(keys, player);
+          removeCooldown = 0.08;
+        }
+      }
+      return;
+    }
+    removeCooldown = 0;
+
+    if (down && !dragStart) dragStart = aim;
+    lastPlan = evaluatePlan(
+      kind,
+      planFor(aim),
+      options.state.changes.pieces,
+      stockOf(kind),
+      player,
+      BUILD_REACH_M,
+    );
+    buildingView.showGhosts(lastPlan, kind);
+    if (!down && dragStart) {
+      // Relâchement : on pose tout ce qui est en vert.
+      const ok = lastPlan.filter((i) => i.status === 'ok').map((i) => i.pos);
+      const lacking = lastPlan.filter((i) => i.status === 'lack').length;
+      const placed = options.state.placeMany(kind, ok);
+      buildMessage =
+        placed > 0
+          ? ''
+          : lacking > 0
+            ? t('build.missing')
+            : lastPlan.length > 0
+              ? t('build.tooFar')
+              : '';
+      dragStart = null;
+      lastPlan = [];
       renderBuildHud();
-    } else if (pressed('remove') && inReach) {
-      options.state.removePiece(aim.pos, { x: playerX, z: playerZ });
-      buildMessage = '';
+    } else if (down) {
       renderBuildHud();
     }
   }
@@ -207,7 +302,9 @@ export function startGameView(
   function setBuilding(value: boolean): void {
     building = value;
     buildHud.hidden = !value;
-    if (!value) buildingView.showGhost(null, buildKind, false);
+    dragStart = null;
+    lastPlan = [];
+    if (!value) buildingView.hideGhost();
     else renderBuildHud();
   }
 
@@ -561,10 +658,16 @@ export function startGameView(
       }
       if (pressed('buildMode')) setBuilding(!building);
       if (building) {
-        PIECE_KINDS.forEach((k, i) => {
+        PIECE_TYPES.forEach((ty, i) => {
           if (pressed(`hotbar${i + 1}` as ActionId)) {
-            buildKind = k;
+            buildType = ty;
             buildMessage = '';
+            renderBuildHud();
+          }
+        });
+        MATERIALS.forEach((m, i) => {
+          if (pressed(`hotbar${i + 5}` as ActionId)) {
+            buildMaterial = m;
             renderBuildHud();
           }
         });
@@ -574,6 +677,17 @@ export function startGameView(
         }
         if (pressed('levelDown')) {
           buildLevel = Math.max(0, buildLevel - 1);
+          renderBuildHud();
+        }
+        // Hauteur du mur : tout l'étage, puis un bloc à la fois (pour les fenêtres et les trous).
+        if (pressed('layerUp')) {
+          layerSel =
+            layerSel === null ? 0 : layerSel + 1 >= LAYERS_PER_STOREY ? null : layerSel + 1;
+          renderBuildHud();
+        }
+        if (pressed('layerDown')) {
+          layerSel =
+            layerSel === null ? LAYERS_PER_STOREY - 1 : layerSel === 0 ? null : layerSel - 1;
           renderBuildHud();
         }
       }
@@ -612,7 +726,7 @@ export function startGameView(
       building ? buildLevel : 0,
       inRoom && !building ? inRoom.level : null,
     );
-    if (building && !paused) updateBuild();
+    if (building && !paused) updateBuild(dt);
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,

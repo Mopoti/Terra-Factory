@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { posFor } from '../build/pieces';
+import { evaluatePlan, planLine, planRect } from '../build/plan';
+import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
@@ -220,53 +221,106 @@ describe('portée de la récolte', () => {
 
 describe('construction', () => {
   it('pose consomme 1 objet, démonter le rend', () => {
-    const s = new GameState({ inventory: { piece_wall: 2 } });
-    const pos = posFor('wall', 0, 1, 1, 'x');
-    expect(s.place('wall', pos)).toBe('ok');
-    expect(s.inventory.piece_wall).toBe(1);
-    expect(s.place('wall', pos)).toBe('occupied');
-    expect(s.place('door', posFor('door', 0, 2, 2, 'x'))).toBe('missing');
-    expect(s.place('wall', posFor('floor', 0, 1, 1))).toBe('invalid');
-    expect(s.removePiece(pos, { x: 0, z: 0 })).toBe('wall');
-    expect(s.inventory.piece_wall).toBe(2);
-    expect(s.removePiece(pos, { x: 0, z: 0 })).toBeNull();
+    const s = new GameState({ inventory: { piece_wall_stone: 2 } });
+    const pos = posFor('wall_stone', 0, 1, 1, 'x', 2);
+    expect(s.place('wall_stone', pos)).toBe('ok');
+    expect(s.inventory.piece_wall_stone).toBe(1);
+    expect(s.place('wall_stone', pos)).toBe('occupied');
+    expect(s.place('door_wood', posFor('door_wood', 0, 2, 2, 'x'))).toBe('missing');
+    expect(s.place('wall_stone', posFor('floor_wood', 0, 1, 1))).toBe('invalid');
+    expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(1);
+    expect(s.inventory.piece_wall_stone).toBe(2);
+    expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(0);
   });
   it('les pièces survivent à la sauvegarde', () => {
-    const s = new GameState({ inventory: { piece_floor: 4 } });
-    s.place('floor', posFor('floor', 0, 0, 0));
+    const s = new GameState({ inventory: { piece_floor_wood: 4 } });
+    s.place('floor_wood', posFor('floor_wood', 0, 0, 0));
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.pieces).toEqual(s.changes.pieces);
   });
+  it('les anciens objets de construction sont convertis', () => {
+    const s = new GameState({ inventory: { piece_wall: 3, piece_door: 1 } });
+    expect(s.inventory).toEqual({ piece_wall_stone: 3, piece_door_wood: 1 });
+  });
   it('les pièces fermées sont recalculées après chaque modification', () => {
     const s = new GameState({
-      inventory: { piece_floor: 2, piece_ceiling: 2, piece_door: 2, piece_wall: 6 },
+      inventory: {
+        piece_floor_wood: 2,
+        piece_ceiling_wood: 2,
+        piece_door_wood: 2,
+        piece_wall_stone: 20,
+      },
     });
-    s.place('floor', posFor('floor', 0, 0, 0));
-    s.place('ceiling', posFor('ceiling', 0, 0, 0));
-    s.place('door', posFor('door', 0, 0, 0, 'x'));
+    s.place('floor_wood', posFor('floor_wood', 0, 0, 0));
+    s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0));
+    s.place('door_wood', posFor('door_wood', 0, 0, 0, 'x'));
     expect(s.rooms()).toHaveLength(0);
-    s.place('wall', posFor('wall', 0, 0, 1, 'x'));
-    s.place('wall', posFor('wall', 0, 0, 0, 'z'));
-    s.place('wall', posFor('wall', 0, 1, 0, 'z'));
+    s.placeMany('wall_stone', planLine('wall_stone', 0, 'x', 1, 0, 0, null));
+    s.placeMany('wall_stone', planLine('wall_stone', 0, 'z', 0, 0, 0, null));
+    s.placeMany('wall_stone', planLine('wall_stone', 0, 'z', 1, 0, 0, null));
     expect(s.rooms()).toHaveLength(1);
-    s.removePiece(posFor('wall', 0, 0, 1, 'x'), { x: 0, z: 0 });
+    s.removeKeys([pieceKey(posFor('wall_stone', 0, 0, 1, 'x', 4))], { x: 0, z: 0 });
     expect(s.rooms()).toHaveLength(0);
+  });
+});
+
+describe('pose par glisser', () => {
+  const at = { x: 0, z: 0 };
+  it("un rectangle de sols : vert tant qu'il y a du stock, rouge ensuite", () => {
+    const plan = planRect('floor_wood', 0, { gx: 0, gz: 0 }, { gx: 2, gz: 1 });
+    expect(plan).toHaveLength(6);
+    const res = evaluatePlan('floor_wood', plan, {}, 4, at, 6);
+    expect(res.map((r) => r.status)).toEqual(['ok', 'ok', 'ok', 'ok', 'lack', 'lack']);
+    expect(res[0].pos).toMatchObject({ gx: 0, gz: 0 }); // on commence près du point de départ
+  });
+  it('les cases occupées et hors de portée ne sont pas comptées', () => {
+    const p: Pieces = { [pieceKey(posFor('floor_wood', 0, 1, 0))]: 'floor_wood' };
+    const res = evaluatePlan(
+      'floor_wood',
+      planRect('floor_wood', 0, { gx: 0, gz: 0 }, { gx: 30, gz: 0 }),
+      p,
+      100,
+      at,
+      3,
+    );
+    expect(res[1].status).toBe('occupied');
+    expect(res.filter((r) => r.status === 'far').length).toBeGreaterThan(20);
+  });
+  it('un mur en ligne : 5 blocs par colonne, ou un seul niveau pour faire fenêtres et trous', () => {
+    expect(planLine('wall_stone', 0, 'x', 3, 2, 5, null)).toHaveLength(20);
+    expect(planLine('wall_stone', 0, 'x', 3, 5, 2, [2])).toHaveLength(4);
+    expect(planLine('door_wood', 0, 'x', 3, 2, 5, null)).toHaveLength(1);
+  });
+  it("placeMany s'arrête faute de stock", () => {
+    const s = new GameState({ inventory: { piece_floor_wood: 3 } });
+    expect(
+      s.placeMany('floor_wood', planRect('floor_wood', 0, { gx: 0, gz: 0 }, { gx: 4, gz: 0 })),
+    ).toBe(3);
+    expect(s.inventory.piece_floor_wood).toBeUndefined();
+  });
+  it("retirer un seul bloc d'un mur fait une fenêtre", () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 5 } });
+    s.placeMany('wall_stone', planLine('wall_stone', 0, 'x', 0, 0, 0, null));
+    const pos = posFor('wall_stone', 0, 0, 0, 'x');
+    expect(edgeKeysToRemove(s.changes.pieces, pos, [2])).toEqual([pieceKey({ ...pos, layer: 2 })]);
+    expect(edgeKeysToRemove(s.changes.pieces, pos, null)).toHaveLength(5);
+    s.removeKeys(edgeKeysToRemove(s.changes.pieces, pos, [2]), at);
+    expect(edgeState(s.changes.pieces, pos)).toBe('open');
   });
 });
 
 describe('fabrication et cases du sac', () => {
   it('fabrique 1 ou 5 unités selon les ressources', () => {
-    const s = new GameState({ inventory: { stone: 20 } });
-    expect(s.craft('piece_wall', 1)).toEqual({ made: 1, stopped: null });
-    expect(s.inventory).toEqual({ stone: 16, piece_wall: 1 });
-    expect(s.craft('piece_wall', 5)).toEqual({ made: 4, stopped: 'resources' }); // 16 pierres = 4 murs
-    expect(s.inventory.stone).toBeUndefined();
-    expect(s.inventory.piece_wall).toBe(5);
+    const s = new GameState({ inventory: { stone: 6 } });
+    expect(s.craft('piece_wall_stone', 1)).toEqual({ made: 1, stopped: null });
+    expect(s.inventory).toEqual({ stone: 5, piece_wall_stone: 1 });
+    expect(s.craft('piece_wall_stone', 8)).toEqual({ made: 5, stopped: 'resources' });
+    expect(s.inventory).toEqual({ piece_wall_stone: 6 });
   });
   it('ne fabrique pas une ressource brute ni sans ingrédients', () => {
     const s = new GameState({ inventory: {} });
     expect(s.craft('stone', 1).made).toBe(0);
-    expect(s.craft('piece_door', 1)).toEqual({ made: 0, stopped: 'resources' });
+    expect(s.craft('piece_door_wood', 1)).toEqual({ made: 0, stopped: 'resources' });
   });
   it('une pile fait 100 au plus et les cases du sac sont limitées', () => {
     const limits = { maxWeightG: 1e9, maxVolumeMl: 1e9, maxSlots: 2, stackMax: 100 };

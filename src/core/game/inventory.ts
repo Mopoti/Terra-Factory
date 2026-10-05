@@ -58,18 +58,27 @@ export function remove(
   return { inventory: next, removed };
 }
 
+/** Anciens objets de construction (avant les matériaux), convertis à la lecture. */
+const LEGACY_ITEMS: Record<string, string> = {
+  piece_wall: 'piece_wall_stone',
+  piece_door: 'piece_door_wood',
+  piece_floor: 'piece_floor_wood',
+  piece_ceiling: 'piece_ceiling_wood',
+};
+
 /** Lit un sac enregistré : ignore les objets inconnus et les quantités invalides. */
 export function normalizeInventory(raw: unknown): Inventory {
   const result: Inventory = {};
   if (typeof raw !== 'object' || raw === null) return result;
-  for (const [id, count] of Object.entries(raw as Record<string, unknown>)) {
+  for (const [rawId, count] of Object.entries(raw as Record<string, unknown>)) {
+    const id = LEGACY_ITEMS[rawId] ?? rawId;
     if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) continue;
     try {
       itemById(id);
     } catch {
       continue;
     }
-    result[id] = Math.floor(count);
+    result[id] = (result[id] ?? 0) + Math.floor(count);
   }
   return result;
 }

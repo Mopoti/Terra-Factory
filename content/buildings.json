@@ -1,33 +1,59 @@
 {
-  "_comment": "Pièces de construction. Dimensions en mètres. Chaque pièce posée consomme 1 objet « piece_* » du sac (fabriqué dans l'inventaire, voir items.json).",
+  "_comment": "Pièces de construction. Un mur est fait de blocs de 50 cm (5 par étage) ; une porte occupe tout l'étage. Chaque pièce posée consomme 1 objet « piece_* » du sac (fabriqué dans l'inventaire, voir items.json).",
   "storeyHeightM": 2.5,
+  "layerHeightM": 0.5,
   "thicknessM": 0.1,
   "reachM": 6,
   "maxRoomCells": 400,
   "pieces": [
     {
-      "kind": "wall",
-      "slot": "edge",
-      "color": "#9aa0a6",
-      "item": "piece_wall"
+      "id": "wall_wood",
+      "type": "wall",
+      "material": "wood",
+      "color": "#a8794a",
+      "item": "piece_wall_wood"
     },
     {
-      "kind": "door",
-      "slot": "edge",
-      "color": "#b07a3c",
-      "item": "piece_door"
+      "id": "door_wood",
+      "type": "door",
+      "material": "wood",
+      "color": "#8b5a2b",
+      "item": "piece_door_wood"
     },
     {
-      "kind": "floor",
-      "slot": "floor",
-      "color": "#a67c52",
-      "item": "piece_floor"
+      "id": "floor_wood",
+      "type": "floor",
+      "material": "wood",
+      "color": "#b58a5b",
+      "item": "piece_floor_wood"
     },
     {
-      "kind": "ceiling",
-      "slot": "ceiling",
-      "color": "#c9c2b6",
-      "item": "piece_ceiling"
+      "id": "ceiling_wood",
+      "type": "ceiling",
+      "material": "wood",
+      "color": "#c49a6c",
+      "item": "piece_ceiling_wood"
+    },
+    {
+      "id": "wall_stone",
+      "type": "wall",
+      "material": "stone",
+      "color": "#8f949a",
+      "item": "piece_wall_stone"
+    },
+    {
+      "id": "floor_stone",
+      "type": "floor",
+      "material": "stone",
+      "color": "#7d8288",
+      "item": "piece_floor_stone"
+    },
+    {
+      "id": "ceiling_stone",
+      "type": "ceiling",
+      "material": "stone",
+      "color": "#a3a8ad",
+      "item": "piece_ceiling_stone"
     }
   ]
 }

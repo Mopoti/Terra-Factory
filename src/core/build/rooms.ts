@@ -1,5 +1,5 @@
 import { MAX_ROOM_CELLS } from '../data/buildings';
-import { parseKey, pieceKey, type Pieces } from './pieces';
+import { edgeState, parseKey, pieceKey, type PiecePos, type Pieces } from './pieces';
 
 /** Une pièce : un espace fermé (murs, portes, sol et plafond complets) avec au moins une porte. */
 export interface Room {
@@ -11,8 +11,13 @@ export interface Room {
   doors: number;
 }
 
-const at = (level: number, gx: number, gz: number, axis: 'x' | 'z'): string =>
-  pieceKey({ slot: 'edge', level, gx, gz, axis });
+const edge = (level: number, gx: number, gz: number, axis: 'x' | 'z'): PiecePos => ({
+  slot: 'edge',
+  level,
+  gx,
+  gz,
+  axis,
+});
 const cellAt = (slot: 'floor' | 'ceiling', level: number, gx: number, gz: number): string =>
   pieceKey({ slot, level, gx, gz });
 
@@ -43,16 +48,16 @@ export function detectRooms(pieces: Pieces): Room[] {
         closed = false;
         break;
       }
-      const sides: [string, number, number][] = [
-        [at(level, gx, gz, 'x'), gx, gz - 1],
-        [at(level, gx, gz + 1, 'x'), gx, gz + 1],
-        [at(level, gx, gz, 'z'), gx - 1, gz],
-        [at(level, gx + 1, gz, 'z'), gx + 1, gz],
+      const sides: [PiecePos, number, number][] = [
+        [edge(level, gx, gz, 'x'), gx, gz - 1],
+        [edge(level, gx, gz + 1, 'x'), gx, gz + 1],
+        [edge(level, gx, gz, 'z'), gx - 1, gz],
+        [edge(level, gx + 1, gz, 'z'), gx + 1, gz],
       ];
-      for (const [edge, nx, nz] of sides) {
-        const piece = pieces[edge];
-        if (piece === 'door') doorEdges.add(edge);
-        if (piece) continue;
+      for (const [side, nx, nz] of sides) {
+        const state = edgeState(pieces, side);
+        if (state === 'door') doorEdges.add(pieceKey(side));
+        if (state !== 'open') continue;
         const nk = `${nx},${nz}`;
         if (visited.has(nk)) continue;
         visited.add(nk);
