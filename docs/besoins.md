@@ -12,7 +12,7 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 ## 2. Édition de partie
 - Seed de la carte (saisie libre, bouton aléatoire).
 - Pour chaque famille de ressources (minerais, forêts, rochers, ennemis…) trois curseurs : **fréquence** (plus/moins souvent), **taille** (plus/moins grand), **densité**.
-- 🔶 Plus tard : mode de jeu (créatif/survie), difficulté, multijoueur on/off, état initial du joueur.
+- 🔶 Plus tard : mode de jeu (créatif/survie), difficulté, multijoueur on/off, état initial du joueur. (Voir §12 pour ce qui est fait.)
 
 ## 3. Paramètres (le plus complet possible)
 - **Sons** : général, musique, ambiance, interactions (noms à retravailler).
@@ -100,3 +100,19 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - **Lissage de la caméra** : réglage commun (0 % = instantané).
 - Provisoire : le personnage est une capsule ; la souris en vue du dessus et à la 3ème personne se contrôle avec le clic droit maintenu.
 - **Correctifs du tour 11** : rotation à la souris en vue du dessus (le mode « par pas de 90° » par défaut l'empêchait ; le défaut est maintenant « libre ») ; l'outil est désormais aussi dans la main du personnage. Les réglages enregistrés par une version antérieure sont migrés (version des réglages passée à 2) : l'ancien défaut « par pas » est abandonné, un choix « par pas » fait ensuite par le joueur est respecté.
+
+## 12. Écran d'édition de partie (chantier 5)
+Affiché par « Nouvelle partie ». Contenu :
+- **Nom de la partie** et **seed** (texte libre) avec l'icône de mélange pour tirer une seed aléatoire.
+- **Ressources du monde** — cinq familles, chacune avec trois curseurs **Fréquence / Taille / Densité** de ×0,25 à ×3 (×1 par défaut), avec un mot qui qualifie la valeur (très faible → très élevé) :
+  - Forêts (arbres) : nombre de bosquets · étendue · arbres par bosquet ;
+  - Rochers : nombre d'affleurements · étendue · rochers par affleurement ;
+  - Minerais : nombre de gisements · étendue des tas · quantité de minerai par case ;
+  - Étangs d'eau douce : nombre d'étangs · surface · chance d'un étang par zone ;
+  - Ennemis (nids) : nombre de nids · **taille des colonies de départ** (emprise des nids de 1 m à 6 m) · chance d'un nid par zone.
+- **Ennemis** : « agressifs » (défaut : non) et « les colonies s'étendent » (défaut : oui). Stockés dans la partie ; leur effet arrivera avec les ennemis.
+- **Réalisme de la physique** : Arcade / Équilibré (défaut) / Réaliste. Stocké dans la partie ; effet quand chaleur, pression et électricité existeront.
+- **Aperçu du monde en direct** : carte vue du dessus de 320 m autour du départ (biomes, arbres, rochers, minerais, étangs, nids), recalculée pendant qu'on règle les curseurs ou la seed ; le cercle blanc marque la zone de départ garantie (150 m).
+- « Réinitialiser les réglages du monde » remet tous les curseurs à ×1.
+- La seed, les réglages du monde et les règles sont enregistrés avec la partie (même seed + mêmes réglages = même monde).
+- Pas encore : modification des réglages d'une partie existante (la génération du monde d'origine ne doit pas changer en cours de route ; à discuter si besoin).

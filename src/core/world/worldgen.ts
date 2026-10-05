@@ -30,11 +30,30 @@ export interface WorldParams {
 
 export const MULTIPLIER_MIN = 0.25;
 export const MULTIPLIER_MAX = 3;
+/** Emprise (en cases, côté) d'un nid : entre 1 m et 6 m. */
+const NEST_MIN_CELLS = 2;
+const NEST_MAX_CELLS = 12;
 
 export function defaultWorldParams(seed: string): WorldParams {
   const families = {} as WorldFamilies;
   for (const id of FAMILY_IDS) families[id] = { frequency: 1, size: 1, density: 1 };
   return { seed, families };
+}
+
+/** Réglages valides : toutes les familles présentes, multiplicateurs dans ×0,25 – ×3. */
+export function normalizeWorldParams(seed: string, families?: Partial<WorldFamilies>): WorldParams {
+  const result = defaultWorldParams(seed);
+  const num = (v: unknown): number =>
+    typeof v === 'number' && Number.isFinite(v) ? clamp(v, MULTIPLIER_MIN, MULTIPLIER_MAX) : 1;
+  for (const id of FAMILY_IDS) {
+    const f = families?.[id];
+    result.families[id] = {
+      frequency: num(f?.frequency),
+      size: num(f?.size),
+      density: num(f?.density),
+    };
+  }
+  return result;
 }
 
 // --- Contenu d'un chunk ----------------------------------------------------------------------
@@ -103,6 +122,8 @@ interface Nest {
   res: NestResource;
   gx: number;
   gz: number;
+  /** Côté de l'emprise, en cases (dépend du réglage « taille » des ennemis). */
+  cells: number;
 }
 
 const cellCenter = (g: number): number => (g + 0.5) * CELL_SIZE_M;
@@ -116,18 +137,7 @@ export class WorldGenerator {
   private readonly salts = new Map<string, number>();
 
   constructor(params: WorldParams) {
-    this.params = {
-      seed: params.seed,
-      families: {} as WorldFamilies,
-    };
-    for (const id of FAMILY_IDS) {
-      const f = params.families[id];
-      this.params.families[id] = {
-        frequency: clamp(f?.frequency ?? 1, MULTIPLIER_MIN, MULTIPLIER_MAX),
-        size: clamp(f?.size ?? 1, MULTIPLIER_MIN, MULTIPLIER_MAX),
-        density: clamp(f?.density ?? 1, MULTIPLIER_MIN, MULTIPLIER_MAX),
-      };
-    }
+    this.params = normalizeWorldParams(params.seed, params.families);
     this.seed = hashSeed(params.seed);
     this.buildStarters();
   }
@@ -277,6 +287,12 @@ export class WorldGenerator {
 
   // --- Nids ---------------------------------------------------------------------------------
 
+  /** Emprise d'un nid : le réglage « taille » des ennemis agrandit ou réduit les colonies de départ. */
+  private nestCells(res: NestResource): number {
+    const size = this.params.families[res.family].size;
+    return clamp(Math.round(res.footprintCells * size), NEST_MIN_CELLS, NEST_MAX_CELLS);
+  }
+
   private nestsIn(
     res: NestResource,
     minGx: number,
@@ -286,7 +302,8 @@ export class WorldGenerator {
   ): Nest[] {
     const s = this.candidateSize(res);
     const saltId = this.salt(res.id);
-    const margin = res.footprintCells;
+    const cells = this.nestCells(res);
+    const margin = NEST_MAX_CELLS;
     const ixMin = Math.floor(((minGx - margin) * CELL_SIZE_M) / s);
     const ixMax = Math.floor(((maxGx + margin) * CELL_SIZE_M) / s);
     const izMin = Math.floor(((minGz - margin) * CELL_SIZE_M) / s);
@@ -300,11 +317,11 @@ export class WorldGenerator {
         const weight = res.biomeWeight[this.biomeAt(xM, zM)];
         if (hash01(this.seed, ix, iz, saltId + 1) >= this.presence(res) * weight) continue;
         // (gx, gz) = coin de l'emprise ; le nid est centré sur le point tiré.
-        const gx = Math.floor(xM / CELL_SIZE_M) - Math.floor(res.footprintCells / 2);
-        const gz = Math.floor(zM / CELL_SIZE_M) - Math.floor(res.footprintCells / 2);
+        const gx = Math.floor(xM / CELL_SIZE_M) - Math.floor(cells / 2);
+        const gz = Math.floor(zM / CELL_SIZE_M) - Math.floor(cells / 2);
         if (gx < minGx - margin || gx > maxGx || gz < minGz - margin || gz > maxGz) continue;
-        if (this.footprintHasResource(gx, gz, res.footprintCells)) continue;
-        result.push({ res, gx, gz });
+        if (this.footprintHasResource(gx, gz, cells)) continue;
+        result.push({ res, gx, gz, cells });
       }
     }
     return result;
@@ -386,11 +403,7 @@ export class WorldGenerator {
     }
     const inNest = (gx: number, gz: number): boolean =>
       nests.some(
-        (nst) =>
-          gx >= nst.gx &&
-          gx < nst.gx + nst.res.footprintCells &&
-          gz >= nst.gz &&
-          gz < nst.gz + nst.res.footprintCells,
+        (nst) => gx >= nst.gx && gx < nst.gx + nst.cells && gz >= nst.gz && gz < nst.gz + nst.cells,
       );
 
     // Arbres, rochers : un emplacement de 1 m × 1 m, au plus un objet.
@@ -450,7 +463,7 @@ export class WorldGenerator {
           id: nst.res.id,
           gx: nst.gx,
           gz: nst.gz,
-          cells: nst.res.footprintCells,
+          cells: nst.cells,
           scale: 1,
           rotation: 0,
           amount: 0,

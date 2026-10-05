@@ -75,3 +75,6 @@ Arbre : 4 bois · Rocher : 20 pierre · Case de minerai : 200 à 1500 · Étang 
 
 ## Ajustement au tour 9 : regroupement des arbres et des rochers
 Retour du PO : « les ressources ne sont pas regroupées par tas mais complètement dispersées ». Mesures : les minerais étaient déjà en tas (7 tas, aucun fragment de moins de 10 cases) ; ce sont les **arbres et rochers** qui étaient éparpillés (jusqu'à 29 % d'objets isolés). Correction : bosquets d'arbres et affleurements de rochers très marqués (`clusterWavelengthM`, `biomeCover`, `outsideFactor` dans `content/resources.json`), plus un **bosquet et un affleurement garantis** près du départ. Après correction : 2 à 10 % d'objets isolés (test automatique < 12 % pour les arbres, < 18 % pour les rochers). Le panneau d'infos de jeu liste les positions des tas, bosquets et étangs garantis près du départ.
+
+## Réglages de partie branchés (chantier 5)
+Les trois curseurs de chaque famille agissent sur la génération comme décrit ci-dessus ; pour les ennemis, « taille » règle l'emprise des nids (4 cases = 2 m à ×1, de 2 à 12 cases). L'aperçu de l'écran d'édition utilise le même générateur que le jeu (`src/core/world/preview.ts`).

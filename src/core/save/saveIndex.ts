@@ -1,4 +1,4 @@
-import { defaultWorldParams, type WorldParams } from '../world/worldgen';
+import { normalizeWorldParams, type WorldFamilies, type WorldParams } from '../world/worldgen';
 
 export type ViewId = 'first' | 'third' | 'top';
 export const VIEW_IDS: readonly ViewId[] = ['first', 'third', 'top'];
@@ -21,6 +21,42 @@ export interface PlayerState {
   topZoom: number;
 }
 
+/** Niveau de réalisme de la physique (chaleur, pression, électricité…) : appliqué quand ces systèmes existeront. */
+export type Realism = 'arcade' | 'balanced' | 'realistic';
+export const REALISM_LEVELS: readonly Realism[] = ['arcade', 'balanced', 'realistic'];
+
+/** Règles de la partie choisies à sa création. */
+export interface GameOptions {
+  enemies: {
+    /** Les ennemis attaquent le joueur et ses installations. Défaut : non. */
+    aggressive: boolean;
+    /** Les colonies grossissent et fondent de nouveaux nids. Défaut : oui. */
+    expand: boolean;
+  };
+  realism: Realism;
+}
+
+export const DEFAULT_GAME_OPTIONS: GameOptions = {
+  enemies: { aggressive: false, expand: true },
+  realism: 'balanced',
+};
+
+function normalizeOptions(raw: unknown): GameOptions {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const e = (typeof o.enemies === 'object' && o.enemies !== null ? o.enemies : {}) as Record<
+    string,
+    unknown
+  >;
+  const d = DEFAULT_GAME_OPTIONS;
+  return {
+    enemies: {
+      aggressive: typeof e.aggressive === 'boolean' ? e.aggressive : d.enemies.aggressive,
+      expand: typeof e.expand === 'boolean' ? e.expand : d.enemies.expand,
+    },
+    realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
+  };
+}
+
 export type SlotKind = 'manual' | 'auto';
 
 /** Une sauvegarde : un instant d'une partie. */
@@ -39,6 +75,8 @@ export interface GameSummary {
   name: string;
   /** Seed et réglages de génération : suffisent à recréer le monde d'origine. */
   world: WorldParams;
+  /** Règles de la partie (ennemis, réalisme). */
+  options: GameOptions;
   createdAt: number;
   saves: SaveSlot[];
 }
@@ -128,10 +166,8 @@ export function normalizeGame(item: unknown): GameSummary[] {
       id: g.id,
       name: g.name,
       createdAt,
-      world: {
-        ...defaultWorldParams(seed),
-        ...(world?.families ? { families: world.families } : {}),
-      },
+      world: normalizeWorldParams(seed, world?.families),
+      options: normalizeOptions(g.options),
       saves: Array.isArray(g.saves) ? g.saves.flatMap(normalizeSlot) : [],
     },
   ];
@@ -172,13 +208,18 @@ export class ProvisionalSaveIndex implements SaveIndex {
   }
 
   /** Crée une partie (sans sauvegarde : la première est créée à la sortie ou par le joueur). */
-  create(name: string, seed: string): GameSummary {
+  create(
+    name: string,
+    seed: string,
+    extras: { families?: WorldFamilies; options?: GameOptions } = {},
+  ): GameSummary {
     const now = Date.now();
     const game: GameSummary = {
       id: `game-${now}-${Math.floor(Math.random() * 1e6)}`,
       name,
       createdAt: now,
-      world: defaultWorldParams(seed),
+      world: normalizeWorldParams(seed, extras.families),
+      options: normalizeOptions(extras.options),
       saves: [],
     };
     this.write([...this.list(), game]);

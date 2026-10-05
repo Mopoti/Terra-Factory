@@ -4,6 +4,14 @@ import { saltOf } from './rng';
 export type BiomeId = 'prairie' | 'forest' | 'desert' | 'tundra';
 export const BIOME_IDS: readonly BiomeId[] = ['prairie', 'forest', 'desert', 'tundra'];
 
+/** Couleur du sol de chaque biome (affichage 3D et carte d'aperçu). */
+export const BIOME_COLORS: Record<BiomeId, string> = {
+  prairie: '#5f9140',
+  forest: '#3e6e35',
+  desert: '#cdb56d',
+  tundra: '#d5dde3',
+};
+
 /** Taille des grandes zones de climat, en mètres. */
 const CLIMATE_WAVELENGTH_M = 500;
 /** Autour du point de départ, le climat est ramené à « prairie » (zone de départ garantie). */

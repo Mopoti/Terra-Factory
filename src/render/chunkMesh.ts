@@ -3,16 +3,13 @@ import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
 import { resourceById } from '../core/data/resources';
 import { valueNoise } from '../core/world/noise';
 import { hash01 } from '../core/world/rng';
-import type { BiomeId } from '../core/world/biomes';
+import { BIOME_COLORS, type BiomeId } from '../core/world/biomes';
 import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
-const GROUND_COLORS: Record<BiomeId, Rgb> = {
-  prairie: hexToRgb('#5f9140'),
-  forest: hexToRgb('#3e6e35'),
-  desert: hexToRgb('#cdb56d'),
-  tundra: hexToRgb('#d5dde3'),
-};
+const GROUND_COLORS = Object.fromEntries(
+  Object.entries(BIOME_COLORS).map(([id, hex]) => [id, hexToRgb(hex)]),
+) as Record<BiomeId, Rgb>;
 const TRUNK = hexToRgb('#6b4a2b');
 /** Épaisseur maximale d'une case de minerai : 10 cm. */
 const ORE_MAX_HEIGHT_M = 0.1;
@@ -168,15 +165,17 @@ function buildProps(
         o.rotation + 1,
       );
     } else if (o.id === 'nest') {
-      b.cone(cxm, 0, czm, 1.0, 0.7, 9, shade(base, 0.9));
+      const radius = o.cells * 0.25;
+      const k = radius; // 1 m de rayon pour l'emprise de départ (4 cases)
+      b.cone(cxm, 0, czm, radius, 0.7 * k, 9, shade(base, 0.9));
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
         b.cone(
-          cxm + Math.cos(a) * 0.65,
-          0.3,
-          czm + Math.sin(a) * 0.65,
-          0.18,
-          0.7,
+          cxm + Math.cos(a) * 0.65 * k,
+          0.3 * k,
+          czm + Math.sin(a) * 0.65 * k,
+          0.18 * k,
+          0.7 * k,
           5,
           shade(base, 1.3),
         );

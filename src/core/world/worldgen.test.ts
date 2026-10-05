@@ -331,6 +331,31 @@ describe('regroupement en tas / bosquets', () => {
   });
 });
 
+describe('ennemis : taille des nids', () => {
+  const nestSizes = (size: number): number[] => {
+    const sizes: number[] = [];
+    for (const c of region(
+      gen('nids-taille', (p) => {
+        p.families.enemies.size = size;
+        p.families.enemies.frequency = 3;
+      }),
+      30,
+    )) {
+      for (const o of c.objects) if (o.id === 'nest') sizes.push(o.cells);
+    }
+    return sizes;
+  };
+  it('le réglage « taille » agrandit ou réduit les nids', () => {
+    const small = nestSizes(0.5);
+    const normal = nestSizes(1);
+    const big = nestSizes(3);
+    expect(small.length).toBeGreaterThan(0);
+    expect(Math.max(...small)).toBeLessThanOrEqual(2);
+    expect(new Set(normal)).toEqual(new Set([4]));
+    expect(Math.min(...big)).toBeGreaterThanOrEqual(12);
+  });
+});
+
 describe('biomes', () => {
   it('les quatre biomes existent, aucun ne domine', () => {
     const seed = hashSeed('biomes');

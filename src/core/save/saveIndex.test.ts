@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultWorldParams } from '../world/worldgen';
 import {
+  DEFAULT_GAME_OPTIONS,
   DEFAULT_PLAYER_STATE,
   ProvisionalSaveIndex,
   lastSavedAt,
@@ -26,6 +27,7 @@ describe('dernière partie / dernière sauvegarde', () => {
     id,
     name: id,
     world,
+    options: DEFAULT_GAME_OPTIONS,
     createdAt,
     saves: saveTimes.map((t, i) => ({
       id: `${id}-${i}`,
@@ -157,6 +159,49 @@ describe('vue enregistrée', () => {
     const [b] = normalizeGame({ id: 'a', name: 'b', saves: [slot('fisheye')] });
     expect(a.saves[0].player.view).toBe('top');
     expect(b.saves[0].player.view).toBe('third');
+  });
+});
+
+describe('options et réglages de la partie', () => {
+  it('sont enregistrés avec la partie', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const g = index.create('Ma base', 'terra', {
+      families: {
+        ...defaultWorldParams('x').families,
+        ores: { frequency: 2, size: 1.5, density: 0.5 },
+      },
+      options: { enemies: { aggressive: true, expand: false }, realism: 'realistic' },
+    });
+    const back = index.get(g.id);
+    expect(back?.world.families.ores).toEqual({ frequency: 2, size: 1.5, density: 0.5 });
+    expect(back?.world.families.forests).toEqual({ frequency: 1, size: 1, density: 1 });
+    expect(back?.options).toEqual({
+      enemies: { aggressive: true, expand: false },
+      realism: 'realistic',
+    });
+  });
+  it('par défaut : ennemis non agressifs mais qui s’étendent, physique équilibrée', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const g = index.create('Ma base', 'terra');
+    expect(g.options).toEqual({
+      enemies: { aggressive: false, expand: true },
+      realism: 'balanced',
+    });
+  });
+  it('les multiplicateurs hors limites ou invalides sont ramenés dans ×0,25 – ×3', () => {
+    const [g] = normalizeGame({
+      id: 'a',
+      name: 'b',
+      world: { seed: 's', families: { ores: { frequency: 99, size: -4, density: 'oops' } } },
+      options: { realism: 'ultra', enemies: { aggressive: 'oui' } },
+    });
+    expect(g.world.families.ores).toEqual({ frequency: 3, size: 0.25, density: 1 });
+    expect(g.options.realism).toBe('balanced');
+    expect(g.options.enemies).toEqual({ aggressive: false, expand: true });
+  });
+  it('une ancienne partie reçoit les options par défaut', () => {
+    const [g] = normalizeGame({ id: 'old', name: 'Ancienne' });
+    expect(g.options).toEqual(DEFAULT_GAME_OPTIONS);
   });
 });
 
