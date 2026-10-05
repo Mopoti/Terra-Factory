@@ -50,5 +50,29 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 
 ## 7. Décisions du PO — grille à deux niveaux
 - Cases logistiques de 50 cm (alignement des réseaux : convoyeurs, tuyaux…) + **placement fin au pas de 10 cm** pour murs (10 cm d'épaisseur), machines et décor.
-- Un écart de moins de 50 cm entre une machine et la case logistique suivante peut consommer un élément de convoyeur : l'ensemble reste aligné sur la base 50 cm. 🔶 Règle exacte à confirmer (voir passation.md).
+- Un écart de moins de 50 cm entre une machine et la case logistique suivante peut consommer un élément de convoyeur : l'ensemble reste aligné sur la base 50 cm. Règle précisée au §8 (le convoyeur se pose sur la case complète, 10 cm dans la machine).
 - Les pièces fermées (chauffage, température d'abri) devront tenir compte des murs de 10 cm.
+
+## 8. Construction, machines, convoyeurs, pièces, visibilité (PO, tour 5)
+### Blocs du monde et constructions
+- Le terrain/les ressources sont en blocs de 50 cm (faciles à retirer). Les bâtiments utilisent des **pièces de construction fines** : mur de 50 cm de haut × 50 cm de long × **10 cm d'épaisseur** ; 🔶 sol et plafond : dalles 50×50 cm de 10 cm d'épaisseur ; portes, escaliers.
+- 🔶 Les murs se posent sur les bords des cases de 50 cm.
+- Une machine peut se coller à un mur : sur la case voisine elle occupe alors 10 cm (ou 40 cm…) et laisse du vide.
+
+### Machines et ports
+- Chaque modèle de machine a un **trou d'entrée** et un **trou de sortie** (ports définis dans les données : position au pas de 10 cm, direction, type entrée/sortie).
+- On connecte les convoyeurs à ces ports. Ajouter/retirer des ressources par un autre côté = **bras robotique**.
+- **Raccordement** : l'objet convoyeur se pose toujours sur la **case complète de 50 cm** ; si la machine laisse un écart, 10 cm du convoyeur se retrouvent dans la machine (pas de tronçon automatique). Tout reste aligné sur la base 50 cm.
+
+### Convoyeurs
+- Objet de 50×50 cm de base, 50 cm de haut. Tapis droit à mi-hauteur : épaisseur de chemin 10 cm, 20 cm libres au-dessus, 20 cm de pied en dessous. Largeur 50 cm, longueur 50 cm.
+- Formes : droit, virage 90° gauche et droite, **diagonale montante et descendante** (style rails Minecraft, mais pas collée au sol). À étudier : pieds/supports pour monter dans les airs ou descendre sous terre.
+
+### Pièces (bâtiments)
+- À la pose d'une **porte**, test automatique : murs fermés + sol complet + plafond complet. Si tout est complet → création d'une **entité « pièce »** (simple à compter, à chauffer, à gérer).
+- Si un des éléments est retiré/modifié → la pièce est défaite.
+- 🔶 Précision de Claude : le test est relancé à chaque modification de mur/sol/plafond/porte autour (pas seulement à la pose de la porte), pour qu'une pièce se crée aussi quand on ferme le dernier trou.
+
+### Visibilité en vue du dessus (et 3ème personne)
+- Joueur dans une pièce/bâtiment : le plafond et **tout ce qui est au-dessus** (étages supérieurs, toit) devient invisible/transparent. Exemple 2 étages : au RDC, plafond RDC + 1er + plafond 1er + 2ème + toit 2ème masqués. Au 1er : le RDC est caché (sol du 1er), plafond 1er, 2ème et toit masqués.
+- **Aura de transparence** quand le joueur est derrière un arbre (ou autre obstacle) : disque autour du joueur, très transparent au bord du personnage, de moins en moins vers l'extérieur jusqu'à redevenir opaque.

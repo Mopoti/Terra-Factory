@@ -39,8 +39,10 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Tour 3 (voir `docs/besoins.md` §6) : tick 20/s, multi 5 joueurs max, bureau plus tard, ennemis configurables (défaut : non agressifs mais s'étendent).
 - Cadrage terminé pour l'essentiel. Prochaine étape : plan d'architecture technique + ordre des chantiers du prototype (à soumettre au PO).
 
-- Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Règle de raccordement machine→convoyeur à confirmer avec le PO.
+- Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : en attente de validation PO pour démarrer le chantier 0.
+
+- Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Questions ouvertes : murs sur bords de cases seulement ? dalles sol/plafond 10 cm ?
 
 ## Règles d'architecture (pour garder ces portes ouvertes)
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.

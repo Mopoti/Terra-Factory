@@ -47,7 +47,13 @@ Outils : TypeScript, Vite, Three.js, Vitest (tests du core), ESLint/Prettier.
 | 6 | **Sauvegardes** : sauvegarde manuelle/auto, dossier par partie, charger/supprimer/renommer, export/import, « Continuer » avec nom+date | Quitter, revenir, reprendre ; revenir à une vieille sauvegarde |
 | 7 | **Récolte manuelle** + inventaire (poids/volume) | Casser un arbre/minerai, voir l'inventaire se remplir |
 
-Après le prototype (hors périmètre, planifié dans l'ordre) : machines sur grille + convoyeurs → combustion/chaleur → fluides/pression → électricité → véhicules → technologies → ennemis/nids/pollution → saisons/biomes → multijoueur.
+Après le prototype (hors périmètre, planifié dans l'ordre) : pièces de construction (murs/sol/plafond/portes) + détection de pièces + masquage des étages/aura de transparence → machines (ports) + convoyeurs (droit/virage/montée/descente) → combustion/chaleur → fluides/pression → électricité → véhicules → technologies → ennemis/nids/pollution → saisons/biomes → multijoueur.
+
+## Ce que le cadrage de construction impose dès le prototype
+- Les objets posés (murs, machines, convoyeurs) ont : position en unités de 10 cm, orientation (pas de 90°), niveau (hauteur), type (id stable) — même si on n'en pose pas encore.
+- Les modèles 3D déclarent des **ports** (machines) et des **points d'ancrage** dans leurs données, pas dans le code.
+- Le rendu prévoit un système de **transparence par shader** (étages masqués, aura autour du joueur) : la caméra et les matériaux sont écrits dès le chantier 4 pour l'accepter.
+- Les « pièces » sont des entités du core (liste de cases/pièces de construction), recalculées localement à chaque modification.
 
 ## Comment le PO verra le jeu
 Option recommandée : **aperçu en ligne** (déploiement automatique, un simple lien, rien à installer). Le chantier 0 mettra cela en place et Claude guidera le PO pas à pas pour toute action de son côté (compte, autorisations).
