@@ -20,6 +20,8 @@ type Vec = { x: number; y: number; z: number };
 /** Distance (m) à partir de laquelle un point est « sur » la ligne d'un bord de case. */
 const SNAP_M = 0.15;
 const STEP_M = 0.08;
+/** Un mur touché moins de 0,8 m après un bloc de sol posable prend le dessus (viser le pied du mur). */
+const ATTACH_BIAS_M = 0.8;
 
 /** Bord de case le plus proche d'un point (x, z), avec sa distance. */
 function nearestEdge(
@@ -41,6 +43,67 @@ function nearestEdge(
   return allowed.reduce((a, b) => (b.dist < a.dist ? b : a));
 }
 
+type EdgeRef = { axis: 'x' | 'z'; gx: number; gz: number };
+
+/** Y a-t-il déjà un bloc de mur (ou une porte, qui occupe tout l'étage) à ce bord et à cette hauteur ? */
+function isOccupied(pieces: Pieces, level: number, e: EdgeRef, layer: number): boolean {
+  const at = (l: number): string =>
+    pieceKey({ slot: 'edge', level, gx: e.gx, gz: e.gz, axis: e.axis, layer: l });
+  return !!pieces[at(layer)] || !!pieces[at(0)]?.startsWith('door');
+}
+
+/**
+ * Pose « contre » le bloc touché par le rayon : selon l'endroit du bloc visé (haut, bas, gauche, droite),
+ * le bloc voisin correspondant ; si l'orientation imposée est perpendiculaire au mur visé, le bloc d'angle
+ * au bout le plus proche. Renvoie le premier emplacement posable, ou null.
+ */
+function attachTo(
+  origin: Vec,
+  pieces: Pieces,
+  kind: PieceKind,
+  level: number,
+  lockAxis: 'x' | 'z' | undefined,
+  hit: EdgeRef,
+  layer: number,
+  x: number,
+  yRel: number,
+  z: number,
+): PiecePos | null {
+  const idx = hit.axis === 'x' ? hit.gx : hit.gz;
+  const u = (hit.axis === 'x' ? x : z) / CELL_SIZE_M - idx;
+  const v = yRel / LAYER_HEIGHT_M - layer;
+  const valid = (pos: PiecePos): boolean =>
+    (pos.layer ?? 0) >= 0 &&
+    (pos.layer ?? 0) < LAYERS_PER_STOREY &&
+    isFree(pieces, kind, pos) &&
+    isSupported(pieces, kind, pos);
+  if (lockAxis && lockAxis !== hit.axis) {
+    // Angle : au bout le plus proche, de l'un ou l'autre côté du mur visé (le plus proche de l'œil d'abord).
+    const end = u < 0.5 ? idx : idx + 1;
+    const sides: PiecePos[] =
+      hit.axis === 'z'
+        ? [hit.gx - 1, hit.gx].map((gx) => posFor(kind, level, gx, end, 'x', layer))
+        : [hit.gz - 1, hit.gz].map((gz) => posFor(kind, level, end, gz, 'z', layer));
+    const dist = (p: PiecePos): number =>
+      p.axis === 'x'
+        ? Math.abs((p.gx + 0.5) * CELL_SIZE_M - origin.x)
+        : Math.abs((p.gz + 0.5) * CELL_SIZE_M - origin.z);
+    sides.sort((a, b) => dist(a) - dist(b));
+    return sides.find(valid) ?? null;
+  }
+  const step = (di: number, dl: number): PiecePos =>
+    hit.axis === 'x'
+      ? posFor(kind, level, hit.gx + di, hit.gz, 'x', layer + dl)
+      : posFor(kind, level, hit.gx, hit.gz + di, 'z', layer + dl);
+  const options = [
+    { d: u, pos: step(-1, 0) },
+    { d: 1 - u, pos: step(1, 0) },
+    { d: v, pos: step(0, -1) },
+    { d: 1 - v, pos: step(0, 1) },
+  ].sort((a, b) => a.d - b.d);
+  return options.find((o) => valid(o.pos))?.pos ?? null;
+}
+
 /**
  * Vise un bloc de mur (ou une porte) avec un rayon. On suit le rayon et on retient le premier bloc
  * qui peut réellement être posé : au sol (bloc du bas) ou accolé à un mur existant. Ainsi on n'a pas à
@@ -60,24 +123,50 @@ export function aimEdge(
 ): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
   const y0 = level * STOREY_HEIGHT_M;
   const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
+  type Found = { pos: PiecePos; cell: { gx: number; gz: number }; t: number };
+  let firstFree: Found | null = null;
+  let firstHit: Found | null = null;
   for (let t = 0.3; t <= maxDist; t += STEP_M) {
     const x = origin.x + dir.x * t;
     const y = origin.y + dir.y * t - y0;
     const z = origin.z + dir.z * t;
     if (y < 0) break;
     if (y >= top) continue;
+    const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
+    const cell = { gx: Math.floor(x / CELL_SIZE_M), gz: Math.floor(z / CELL_SIZE_M) };
+    if (mode === 'place' && !firstHit) {
+      // Le rayon entre dans un bloc déjà posé : on pose contre lui (côté visé), pas derrière.
+      const hits = [nearestEdge(x, z, 'x'), nearestEdge(x, z, 'z')]
+        .filter((h) => h.dist <= SNAP_M && isOccupied(pieces, level, h, layer))
+        .sort((p, q) => p.dist - q.dist);
+      if (hits.length > 0) {
+        const pos = attachTo(origin, pieces, kind, level, lockAxis, hits[0], layer, x, y, z);
+        if (pos) {
+          firstHit = { pos, cell, t };
+          if (!firstFree) break;
+        }
+        continue;
+      }
+    }
+    if (firstFree) continue;
     const e = nearestEdge(x, z, lockAxis);
     if (e.dist > SNAP_M) continue;
-    const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
     const pos = posFor(kind, level, e.gx, e.gz, e.axis, layer);
     const usable =
       mode === 'remove'
         ? edgeKeysToRemove(pieces, pos, [layer]).length > 0
         : isFree(pieces, kind, pos) && isSupported(pieces, kind, pos);
     if (usable) {
-      return { pos, cell: { gx: Math.floor(x / CELL_SIZE_M), gz: Math.floor(z / CELL_SIZE_M) } };
+      firstFree = { pos, cell, t };
+      // En démolition, ou sans mur à portée, on s'arrête au premier bloc trouvé.
+      if (mode === 'remove') break;
     }
   }
+  // Un mur visé juste derrière un bloc posable du sol l'emporte : on voulait poser contre lui.
+  if (firstHit && (!firstFree || firstFree.t > firstHit.t - ATTACH_BIAS_M)) {
+    return { pos: firstHit.pos, cell: firstHit.cell };
+  }
+  if (firstFree) return { pos: firstFree.pos, cell: firstFree.cell };
   if (mode === 'remove') return null;
   // Le rayon touche le sol (ou rien de valide) : bloc du bas du bord le plus proche du point d'impact.
   let x: number;

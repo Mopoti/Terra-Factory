@@ -89,3 +89,7 @@ Les dalles, blocs de mur et portes sont maintenant fermés par le **dessous** (`
 - **Remplir la barre** : fabriquer une pièce la range dans la première case libre ; on peut aussi glisser un objet du sac ou du panneau de fabrication sur une case, ou le choisir dans le sac puis cliquer une case. Clic droit sur une case : la vider. La barre est enregistrée avec la partie (`changes.hotbar`).
 - **Orientation (R)** : tourne la pièce de 90° à chaque pression, pour tous les éléments. Pour un mur ou une porte, orientation paire = le long de x, impaire = le long de z : la visée ne cherche que les bords de cet axe (ce qui évite que le mur « se bloque » sur le mauvais bord). L'orientation (0 à 3) est enregistrée avec la pièce (`changes.rotations`) pour les futurs habillages (sens d'ouverture d'une porte, face d'un mur…).
 - Touches : `buildMode` (B) supprimée ; `rotate` (R), `remove` (X), étage, hauteur de mur inchangées.
+
+### Tour 26 — poser contre le mur visé (3ème personne)
+
+Quand le rayon de visée touche un bloc de mur existant, on pose **contre ce bloc** (et non au sol derrière lui) : le côté visé du bloc décide — haut → bloc au-dessus, bas → en dessous, bords gauche/droite → voisin dans la ligne ; si l'orientation imposée avec R est perpendiculaire au mur visé, un bloc d'angle est posé au bout le plus proche (du côté de l'œil). Un bloc de sol posable juste devant le mur (moins de 0,8 m avant le point touché) ne l'emporte plus sur le mur visé.

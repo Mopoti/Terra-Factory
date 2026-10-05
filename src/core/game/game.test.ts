@@ -602,3 +602,30 @@ describe('barre de raccourcis et orientation', () => {
     expect(aimEdge(eye, down, {}, 'wall_stone', 0, 10, 'place', 'z')?.pos.axis).toBe('z');
   });
 });
+
+describe('pose contre le mur visé', () => {
+  const wall = (): Pieces => {
+    const p: Pieces = {};
+    for (let l = 0; l < 2; l++) p[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
+    return p;
+  };
+  // Mur le long de x à z = 1 m, 2 blocs de haut (1 m), colonne x ∈ [0 ; 0,5].
+  it("viser le haut d'un bloc pose le bloc au-dessus, pas au sol derrière le mur", () => {
+    const eye = { x: 0.25, y: 1.6, z: -2 };
+    // Le rayon descend et touche le mur vers y = 0,9 m (haut du bloc 2).
+    const dir = { x: 0, y: -0.7 / 3, z: 1 };
+    const hit = aimEdge(eye, dir, wall(), 'wall_stone', 0, 12, 'place', 'x');
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 2, axis: 'x', layer: 2 });
+  });
+  it('viser le bord latéral pose le bloc voisin', () => {
+    const eye = { x: 0.45, y: 1.6, z: -2 };
+    const hit = aimEdge(eye, { x: 0, y: -0.45, z: 1 }, wall(), 'wall_stone', 0, 12, 'place', 'x');
+    expect(hit?.pos).toMatchObject({ gx: 1, gz: 2, layer: 0 });
+  });
+  it("orientation perpendiculaire : un bloc d'angle au bout du mur", () => {
+    const eye = { x: 0.45, y: 1.6, z: -2 };
+    const hit = aimEdge(eye, { x: 0, y: -0.45, z: 1 }, wall(), 'wall_stone', 0, 12, 'place', 'z');
+    expect(hit?.pos.axis).toBe('z');
+    expect(hit?.pos.gx).toBe(1);
+  });
+});
