@@ -197,7 +197,9 @@ export function startGameView(
     const wall =
       buildType === 'wall' ? `<div>${t('build.layerLabel', { layer: layerText })}</div>` : '';
     const ok = lastPlan.filter((i) => i.status === 'ok').length;
-    const lack = lastPlan.filter((i) => i.status === 'lack' || i.status === 'far').length;
+    const lack = lastPlan.filter(
+      (i) => i.status === 'lack' || i.status === 'far' || i.status === 'unsupported',
+    ).length;
     const plan = dragStart
       ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
       : '';
@@ -313,17 +315,23 @@ export function startGameView(
     buildingView.showGhosts(lastPlan, kind);
     if (!down && dragStart) {
       // Relâchement : on pose tout ce qui est en vert.
-      const ok = lastPlan.filter((i) => i.status === 'ok').map((i) => i.pos);
+      const ok = lastPlan
+        .filter((i) => i.status === 'ok')
+        .sort((p, q) => (p.seq ?? 0) - (q.seq ?? 0))
+        .map((i) => i.pos);
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
+      const floating = lastPlan.filter((i) => i.status === 'unsupported').length;
       const placed = options.state.placeMany(kind, ok);
       buildMessage =
         placed > 0
           ? ''
-          : lacking > 0
-            ? t('build.missing')
-            : lastPlan.length > 0
-              ? t('build.tooFar')
-              : '';
+          : floating > 0
+            ? t('build.unsupported')
+            : lacking > 0
+              ? t('build.missing')
+              : lastPlan.length > 0
+                ? t('build.tooFar')
+                : '';
       dragStart = null;
       lastPlan = [];
       renderBuildHud();

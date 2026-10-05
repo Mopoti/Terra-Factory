@@ -393,5 +393,6 @@
   "build.layerLabel": "Wall: {layer}",
   "build.plan": "{ok} to place · {lack} missing",
   "action.layerUp": "Wall: block above",
-  "action.layerDown": "Wall: block below"
+  "action.layerDown": "Wall: block below",
+  "build.unsupported": "A wall cannot float: place it on the ground or against an existing wall"
 }

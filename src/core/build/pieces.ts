@@ -140,3 +140,55 @@ export function normalizePieces(raw: unknown): Pieces {
   }
   return result;
 }
+
+const hasBlock = (
+  pieces: Pieces,
+  level: number,
+  gx: number,
+  gz: number,
+  axis: 'x' | 'z',
+  layer: number,
+): boolean => {
+  const base: PiecePos = { slot: 'edge', level, gx, gz, axis };
+  // Une porte occupe tout l'étage.
+  return !!pieces[edgeKey(base, layer)] || !!pieces[edgeKey(base, 0)]?.startsWith('door');
+};
+
+/**
+ * Un mur ne tient pas dans le vide : un bloc de mur doit reposer sur le sol (rez-de-chaussée), sur un sol
+ * posé à l'étage ou sur le mur de l'étage d'en dessous, ou être accolé à un autre bloc (au-dessus, en
+ * dessous, à côté, ou dans l'angle perpendiculaire) pour faire des encadrements.
+ */
+export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
+  if (pos.slot !== 'edge') return true;
+  const { level, gx, gz } = pos;
+  const axis = pos.axis ?? 'x';
+  const layer = pos.layer ?? 0;
+  if (layer === 0) {
+    if (level === 0) return true;
+    const cells =
+      axis === 'x'
+        ? [
+            [gx, gz - 1],
+            [gx, gz],
+          ]
+        : [
+            [gx - 1, gz],
+            [gx, gz],
+          ];
+    if (cells.some(([cx, cz]) => pieces[pieceKey({ slot: 'floor', level, gx: cx, gz: cz })]))
+      return true;
+    if (hasBlock(pieces, level - 1, gx, gz, axis, LAYERS_PER_STOREY - 1)) return true;
+  }
+  if (pieceDef(kind).type === 'door') return false;
+  const has = (g: number, h: number, a: 'x' | 'z', l: number): boolean =>
+    hasBlock(pieces, level, g, h, a, l);
+  if (layer > 0 && has(gx, gz, axis, layer - 1)) return true;
+  if (layer < LAYERS_PER_STOREY - 1 && has(gx, gz, axis, layer + 1)) return true;
+  if (axis === 'x') {
+    if (has(gx - 1, gz, 'x', layer) || has(gx + 1, gz, 'x', layer)) return true;
+    return [gx, gx + 1].some((x) => has(x, gz - 1, 'z', layer) || has(x, gz, 'z', layer));
+  }
+  if (has(gx, gz - 1, 'z', layer) || has(gx, gz + 1, 'z', layer)) return true;
+  return [gz, gz + 1].some((z) => has(gx - 1, z, 'x', layer) || has(gx, z, 'x', layer));
+}

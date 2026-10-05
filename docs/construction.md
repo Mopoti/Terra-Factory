@@ -41,3 +41,7 @@ Escaliers/montée, battant de porte, chauffage des pièces, pilier d'angle optio
 ### Correctif (tour 16) — murs en pan vertical
 
 Le mur se pose comme un sol, mais dans le plan vertical : avant d'appuyer, **un seul bloc** (celui sous le curseur) est en surbrillance ; en gardant le clic, on glisse vers la largeur ET la hauteur, les blocs de 50 cm apparaissent en carreaux séparés (vert = posé, rouge = pas de stock / hors de portée). En **vue du dessus** on ne peut pas viser en hauteur : le clic simple pose un bloc au sol, le glisser pose des colonnes entières. **Début/Fin** fixent une hauteur précise (un seul rang) dans toutes les vues ; X balaie et retire le bloc visé.
+
+### Règle de soutien (tour 17)
+
+Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (bloc du bas au rez-de-chaussée), **sur un sol d'étage** ou sur le mur de l'étage du dessous, ou **accolé à un bloc existant** (au-dessus, en dessous, à côté, ou dans l'angle d'un mur perpendiculaire) — ce qui permet les encadrements de fenêtres. Dans un tracé, un bloc peut s'appuyer sur un autre du même tracé ; les blocs qui flotteraient sont rouges. Retirer un bloc plus tard est libre (c'est ce qui fait les fenêtres) : les blocs restent tant qu'on ne les démonte pas.

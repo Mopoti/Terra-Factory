@@ -1,6 +1,6 @@
 import { CELL_SIZE_M } from '../constants';
 import { LAYERS_PER_STOREY, LAYER_HEIGHT_M, pieceDef, type PieceKind } from '../data/buildings';
-import { isFree, posFor, type PiecePos, type Pieces } from './pieces';
+import { isFree, isSupported, pieceKey, posFor, type PiecePos, type Pieces } from './pieces';
 
 /** Centre d'une position (m), pour mesurer la portée. */
 export function posCenter(pos: PiecePos): { x: number; z: number } {
@@ -60,13 +60,18 @@ export function planLine(
   return out;
 }
 
-export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied';
+export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied' | 'unsupported';
 export interface PlanItem {
   pos: PiecePos;
   status: PlanStatus;
+  /** Ordre de pose des éléments `ok` : un bloc ne se pose qu'une fois celui qui le soutient posé. */
+  seq?: number;
 }
 
-/** Ce qui sera posé (`ok`), ce qui manque de stock (`lack`), est hors de portée ou déjà occupé. */
+/**
+ * Ce qui sera posé (`ok`), ce qui manque de stock (`lack`), est hors de portée (`far`), déjà occupé, ou
+ * flotterait dans le vide (`unsupported`). Un bloc peut s'appuyer sur un autre bloc du même tracé.
+ */
 export function evaluatePlan(
   kind: PieceKind,
   positions: PiecePos[],
@@ -75,15 +80,38 @@ export function evaluatePlan(
   player: { x: number; z: number },
   reachM: number,
 ): PlanItem[] {
+  const result: PlanItem[] = positions.map((pos) => ({ pos, status: 'unsupported' as PlanStatus }));
+  const working: Pieces = { ...pieces };
   let left = stock;
-  return positions.map((pos) => {
-    if (!isFree(pieces, kind, pos)) return { pos, status: 'occupied' as const };
-    const c = posCenter(pos);
-    if (Math.hypot(c.x - player.x, c.z - player.z) > reachM) return { pos, status: 'far' as const };
-    if (left <= 0) return { pos, status: 'lack' as const };
-    left--;
-    return { pos, status: 'ok' as const };
+  let seq = 0;
+  const pending: number[] = [];
+  positions.forEach((pos, i) => {
+    if (!isFree(pieces, kind, pos)) result[i].status = 'occupied';
+    else {
+      const c = posCenter(pos);
+      if (Math.hypot(c.x - player.x, c.z - player.z) > reachM) result[i].status = 'far';
+      else pending.push(i);
+    }
   });
+  let progress = true;
+  while (progress && pending.length > 0) {
+    progress = false;
+    for (let k = 0; k < pending.length; k++) {
+      const i = pending[k];
+      if (!isSupported(working, kind, positions[i])) continue;
+      pending.splice(k--, 1);
+      progress = true;
+      if (left <= 0) {
+        result[i].status = 'lack';
+        continue;
+      }
+      left--;
+      result[i].status = 'ok';
+      result[i].seq = seq++;
+      working[pieceKey(positions[i])] = kind;
+    }
+  }
+  return result;
 }
 
 export interface WallCoord {

@@ -1,4 +1,4 @@
-import { isFree, pieceKey, type PiecePos } from '../build/pieces';
+import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, slotOf, type PieceKind } from '../data/buildings';
 import { BAG_LIMITS, itemById, type BagLimits } from '../data/items';
@@ -122,10 +122,11 @@ export class GameState {
   }
 
   /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
-  place(kind: PieceKind, pos: PiecePos): 'ok' | 'occupied' | 'missing' | 'invalid' {
+  place(kind: PieceKind, pos: PiecePos): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
     const def = pieceDef(kind);
     if (slotOf(def.type) !== pos.slot) return 'invalid';
     if (!isFree(this.changes.pieces, kind, pos)) return 'occupied';
+    if (!isSupported(this.changes.pieces, kind, pos)) return 'unsupported';
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[pieceKey(pos)] = kind;
@@ -135,10 +136,25 @@ export class GameState {
     return 'ok';
   }
 
-  /** Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock et les emplacements libres). */
+  /**
+   * Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock, les emplacements
+   * libres et le soutien : un bloc peut s'appuyer sur un autre posé juste avant).
+   */
   placeMany(kind: PieceKind, positions: PiecePos[]): number {
+    let remaining = positions;
     let n = 0;
-    for (const pos of positions) if (this.place(kind, pos) === 'ok') n++;
+    for (let progress = true; progress && remaining.length > 0;) {
+      progress = false;
+      const next: PiecePos[] = [];
+      for (const pos of remaining) {
+        const r = this.place(kind, pos);
+        if (r === 'ok') {
+          n++;
+          progress = true;
+        } else if (r === 'unsupported') next.push(pos);
+      }
+      remaining = next;
+    }
     return n;
   }
 

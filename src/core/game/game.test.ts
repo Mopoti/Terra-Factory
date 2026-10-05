@@ -222,7 +222,7 @@ describe('portée de la récolte', () => {
 describe('construction', () => {
   it('pose consomme 1 objet, démonter le rend', () => {
     const s = new GameState({ inventory: { piece_wall_stone: 2 } });
-    const pos = posFor('wall_stone', 0, 1, 1, 'x', 2);
+    const pos = posFor('wall_stone', 0, 1, 1, 'x', 0);
     expect(s.place('wall_stone', pos)).toBe('ok');
     expect(s.inventory.piece_wall_stone).toBe(1);
     expect(s.place('wall_stone', pos)).toBe('occupied');
@@ -349,5 +349,42 @@ describe('murs en plan vertical', () => {
     expect(
       rayOnEdgePlane({ x: 0, y: 1.6, z: -0.5 }, { x: 0, y: 0.9, z: 0.4 }, 'x', 3, 0),
     ).toBeNull(); // trop haut
+  });
+});
+
+describe('murs soutenus', () => {
+  it('un bloc ne se pose pas dans le vide, mais au sol ou contre un autre mur', () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 20 } });
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 2))).toBe('unsupported');
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 0))).toBe('ok'); // au sol
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 2))).toBe('unsupported'); // trou entre les deux
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 1))).toBe('ok'); // au-dessus
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 4, 3, 'x', 1))).toBe('ok'); // à côté
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 5, 3, 'z', 1))).toBe('ok'); // dans l'angle
+    expect(s.place('wall_stone', posFor('wall_stone', 0, 9, 9, 'z', 3))).toBe('unsupported');
+  });
+  it("l'aperçu : un pan de mur partant du sol est entièrement posable, un pan en l'air non", () => {
+    const away = { x: 0, z: 0 };
+    const grounded = planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 0 }, { i: 2, layer: 4 });
+    expect(
+      evaluatePlan('wall_stone', grounded, {}, 100, away, 6).every((i) => i.status === 'ok'),
+    ).toBe(true);
+    const floating = planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 2 }, { i: 2, layer: 4 });
+    expect(
+      evaluatePlan('wall_stone', floating, {}, 100, away, 6).every(
+        (i) => i.status === 'unsupported',
+      ),
+    ).toBe(true);
+  });
+  it("un encadrement : un pan en hauteur est posable à côté d'un mur existant", () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 30 } });
+    s.placeMany(
+      'wall_stone',
+      planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 0 }, { i: 0, layer: 4 }),
+    );
+    const frame = planWall('wall_stone', 0, 'x', 1, { i: 1, layer: 3 }, { i: 2, layer: 4 });
+    const plan = evaluatePlan('wall_stone', frame, s.changes.pieces, 30, { x: 0, z: 0 }, 6);
+    expect(plan.every((i) => i.status === 'ok')).toBe(true);
+    expect(s.placeMany('wall_stone', frame)).toBe(4);
   });
 });
