@@ -13,8 +13,14 @@ export interface ObjectResource extends Base {
   kind: 'object';
   /** Quantité récoltable (bois, pierre…). */
   amount: number;
-  /** Probabilité qu'un emplacement de 1 m × 1 m contienne cet objet, par biome. */
+  /** Probabilité qu'un emplacement de 1 m × 1 m contienne cet objet DANS un bosquet / affleurement, par biome. */
   biomeDensity: BiomeTable;
+  /** Part du terrain occupée par des bosquets / affleurements, par biome (×1 = moitié du terrain à fréquence ×1). */
+  biomeCover: BiomeTable;
+  /** Taille des bosquets / affleurements : longueur d'onde du bruit (m). */
+  clusterWavelengthM: number;
+  /** Fraction de la densité hors des bosquets (arbres isolés, 0 = aucun). */
+  outsideFactor: number;
 }
 interface PatchBase extends Base {
   candidateSizeM: number;

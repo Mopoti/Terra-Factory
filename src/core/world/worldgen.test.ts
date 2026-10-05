@@ -298,6 +298,39 @@ describe('zone de départ garantie', () => {
   });
 });
 
+describe('regroupement en tas / bosquets', () => {
+  /** Part d'objets ayant moins de 2 voisins dans un rayon de 5 m. */
+  function isolatedShare(id: string, seed: string): number {
+    const slots = new Set<string>();
+    for (const c of region(gen(seed), 12)) {
+      for (const o of c.objects) if (o.id === id) slots.add(`${o.gx / 2},${o.gz / 2}`);
+    }
+    let isolated = 0;
+    for (const k of slots) {
+      const [x, z] = k.split(',').map(Number);
+      let n = 0;
+      for (let dx = -5; dx <= 5; dx++)
+        for (let dz = -5; dz <= 5; dz++) if ((dx || dz) && slots.has(`${x + dx},${z + dz}`)) n++;
+      if (n < 2) isolated++;
+    }
+    return slots.size === 0 ? 0 : isolated / slots.size;
+  }
+  for (const seed of ['terra', 'AB12CD34', 'K7M2Q9XZ']) {
+    it(`arbres et rochers sont en bosquets / affleurements, pas éparpillés (seed ${seed})`, () => {
+      expect(isolatedShare('tree', seed)).toBeLessThan(0.12);
+      expect(isolatedShare('rock', seed)).toBeLessThan(0.18);
+    });
+  }
+  it('le départ expose un bosquet et un affleurement garantis', () => {
+    const sites = gen('terra')
+      .starterSites()
+      .map((s) => s.id);
+    expect(sites).toEqual(
+      expect.arrayContaining(['tree', 'rock', 'iron_ore', 'copper_ore', 'coal', 'water']),
+    );
+  });
+});
+
 describe('biomes', () => {
   it('les quatre biomes existent, aucun ne domine', () => {
     const seed = hashSeed('biomes');

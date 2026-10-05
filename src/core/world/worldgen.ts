@@ -78,7 +78,6 @@ const SHAPE_REACH = 1.3;
 const SHAPE_NOISE_M = 7;
 const SHAPE_NOISE_AMPLITUDE = 0.6;
 const OBJECT_SLOT_CELLS = 2;
-const GROVE_WAVELENGTH_M = 48;
 const STARTER_MIN_DISTANCE_M = 60;
 const STARTER_DISTANCE_RANGE_M = 50;
 const STARTER_MIN_RADIUS_M = 4;
@@ -93,6 +92,13 @@ interface Patch {
   richness: number;
   noiseSalt: number;
 }
+/** Bosquet / affleurement garanti près du départ, pour ne jamais manquer de bois ni de pierre. */
+interface StarterCluster {
+  res: ObjectResource;
+  xM: number;
+  zM: number;
+  radiusM: number;
+}
 interface Nest {
   res: NestResource;
   gx: number;
@@ -106,6 +112,7 @@ export class WorldGenerator {
   readonly seed: number;
   readonly params: WorldParams;
   private readonly starters: Patch[] = [];
+  private readonly starterClusters: StarterCluster[] = [];
   private readonly salts = new Map<string, number>();
 
   constructor(params: WorldParams) {
@@ -138,6 +145,14 @@ export class WorldGenerator {
     return biomeAt(this.seed, xM, zM);
   }
 
+  /** Positions (m) des tas et bosquets garantis près du départ, par id de ressource. */
+  starterSites(): { id: string; xM: number; zM: number }[] {
+    return [
+      ...this.starters.map((p) => ({ id: p.res.id, xM: p.xM, zM: p.zM })),
+      ...this.starterClusters.map((c) => ({ id: c.res.id, xM: c.xM, zM: c.zM })),
+    ];
+  }
+
   // --- Tas (minerais et étangs) -------------------------------------------------------------
 
   /** Un tas de départ par minerai et par étang, à portée de marche du point d'apparition. */
@@ -146,6 +161,18 @@ export class WorldGenerator {
       (r): r is PatchResource => r.kind === 'deposit' || r.kind === 'pond',
     );
     const base = hash01(this.seed, 0, 0, this.salt('starter.angle')) * Math.PI * 2;
+    const objects = RESOURCES.filter((r): r is ObjectResource => r.kind === 'object');
+    objects.forEach((res, i) => {
+      const angle = base + Math.PI / kinds.length + (i * Math.PI * 2) / objects.length;
+      const distance = 35 + 40 * hash01(this.seed, i, 2, this.salt('starter.cluster'));
+      const size = this.params.families[res.family].size;
+      this.starterClusters.push({
+        res,
+        xM: Math.cos(angle) * distance,
+        zM: Math.sin(angle) * distance,
+        radiusM: Math.max(10 * size, 6),
+      });
+    });
     kinds.forEach((res, i) => {
       const angle = base + (i * Math.PI * 2) / kinds.length;
       const distance =
@@ -390,12 +417,18 @@ export class WorldGenerator {
         for (const res of objectRes) {
           const fam = this.params.families[res.family];
           const saltId = this.salt(res.id);
-          const cover = clamp(0.5 * fam.frequency, 0.05, 1);
+          const cover = clamp(0.5 * fam.frequency * res.biomeCover[biome], 0.03, 1);
           const threshold = 0.5 + (0.5 - cover) * 0.8;
-          const wave = GROVE_WAVELENGTH_M * fam.size;
+          const wave = res.clusterWavelengthM * fam.size;
           const noise = fbm(this.seed, xM / wave, zM / wave, saltId + 7, 2);
-          const factor = 0.15 + 0.85 * smoothstep(threshold - 0.06, threshold + 0.06, noise);
-          const p = res.biomeDensity[biome] * fam.density * factor;
+          const factor =
+            res.outsideFactor +
+            (1 - res.outsideFactor) * smoothstep(threshold - 0.04, threshold + 0.04, noise);
+          let p = res.biomeDensity[biome] * fam.density * factor;
+          const starter = this.starterClusters.some(
+            (c) => c.res === res && Math.hypot(xM - c.xM, zM - c.zM) < c.radiusM,
+          );
+          if (starter) p = Math.max(p, res.biomeDensity.prairie * fam.density);
           if (hash01(this.seed, slotX, slotZ, saltId) < p) {
             objects.push({
               id: res.id,

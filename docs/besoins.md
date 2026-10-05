@@ -81,3 +81,10 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - **Murs** : navigateur = uniquement sur les **bords des cases** (extérieur de la case) ; Unity = n'importe où (pas de 10 cm).
 - **Angles** : deux murs d'épaisseur 10 cm qui se rejoignent laissent un petit vide de 10×10 cm à l'extérieur de l'angle. **Décision PO : on accepte le vide.** Le joueur peut ajouter ou non un pilier de 10×10×50 cm (optionnel, décoratif) ; la pièce compte comme **fermée dans les deux cas**.
 - **Sols et plafonds** : dalles de 50×50 cm, 10 cm d'épaisseur.
+
+## 10. Menu pause et sauvegardes (PO, tour 9)
+- **Échap en partie** ouvre le **menu pause** (le jeu est figé) : Reprendre, Sauvegarder, Paramètres, **Quitter**.
+- **Quitter** = retour au menu principal avec une **sauvegarde automatique** (conservées au nombre réglé dans Paramètres > Jeu). Une sauvegarde automatique périodique existe aussi (intervalle réglable, 0 = désactivée).
+- **Sauvegarder** : le nom proposé est celui de la dernière sauvegarde manuelle ; **même nom = remplacement**, **autre nom = nouvelle sauvegarde à côté** (le jeu prévient dans les deux cas).
+- **Une partie = un dossier** contenant ses sauvegardes (manuelles et automatiques), comme dans Space Engineers. « Continuer » reprend la plus récente ; « Charger une partie » liste les parties, puis les sauvegardes de la partie choisie. Une sauvegarde retient pour l'instant la position du joueur et la caméra (le monde se recalcule depuis la seed).
+- Chantier 6 (à venir) : suppression, renommage, duplication, export/import, stockage définitif (IndexedDB).

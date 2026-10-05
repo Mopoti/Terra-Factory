@@ -1,5 +1,12 @@
-import { getLocale, onLocaleChange, t } from '../i18n';
-import { latestGame, type GameSummary, type ProvisionalSaveIndex } from '../core/save/saveIndex';
+import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
+import {
+  lastSavedAt,
+  latestGame,
+  latestSlot,
+  type GameSummary,
+  type ProvisionalSaveIndex,
+  type SaveSlot,
+} from '../core/save/saveIndex';
 import { getSettings } from '../settings/store';
 import { buildSettingsPanel } from './settingsScreen';
 import './menu.css';
@@ -46,13 +53,15 @@ export interface MenuOptions {
   saves: ProvisionalSaveIndex;
   devMode: boolean;
   /** Appelé quand le joueur lance une partie (nouvelle, continuée ou chargée). */
-  onStartGame: (game: GameSummary) => void;
+  onStartGame: (game: GameSummary, slot?: SaveSlot) => void;
 }
 
 /** Monte le menu une seule fois ; la fonction renvoyée le remet sur l'écran principal. */
 export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   const { saves, devMode, onStartGame } = options;
   let screen: Screen = 'main';
+  /** Partie dont on choisit la sauvegarde dans « Charger une partie ». */
+  let loadingGame: GameSummary | null = null;
 
   function button(label: string, onClick: () => void, className = 'menu-btn'): HTMLButtonElement {
     const b = el('button', className, label);
@@ -66,16 +75,15 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     render();
   }
 
-  function gameButton(game: GameSummary, primaryLabel: string | null): HTMLButtonElement {
-    const b = button('', () => onStartGame(game), primaryLabel ? 'menu-btn primary' : 'menu-btn');
-    b.append(el('span', undefined, primaryLabel ?? game.name));
+  /** Bouton « Continuer » : reprend la dernière sauvegarde de la partie la plus récente. */
+  function continueButton(game: GameSummary): HTMLButtonElement {
+    const b = button('', () => onStartGame(game, latestSlot(game)), 'menu-btn primary');
+    b.append(el('span', undefined, t('menu.continue')));
     b.append(
       el(
         'small',
         undefined,
-        primaryLabel
-          ? t('menu.continue.detail', { name: game.name, date: formatDate(game.lastSavedAt) })
-          : formatDate(game.lastSavedAt),
+        t('menu.continue.detail', { name: game.name, date: formatDate(lastSavedAt(game)) }),
       ),
     );
     return b;
@@ -87,7 +95,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
 
     const games = saves.list();
     const latest = latestGame(games);
-    if (latest) panel.append(gameButton(latest, t('menu.continue')));
+    if (latest) panel.append(continueButton(latest));
     panel.append(button(t('menu.newGame'), () => go('newGame')));
     if (games.length > 0) panel.append(button(t('menu.loadGame'), () => go('loadGame')));
     panel.append(button(t('menu.settings'), () => go('settings')));
@@ -160,15 +168,54 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     return panel;
   }
 
+  /** « Charger une partie » : d'abord la partie (le « dossier »), puis l'une de ses sauvegardes. */
   function loadGamePanel(): HTMLElement {
-    const panel = el('div', 'panel');
+    const panel = el('div', 'panel wide');
+    panel.append(el('h2', undefined, t('screen.loadGame.title')));
+    const game = loadingGame ? saves.get(loadingGame.id) : undefined;
+
+    if (!game) {
+      loadingGame = null;
+      panel.append(el('p', undefined, t('screen.loadGame.pick')));
+      const sorted = [...saves.list()].sort((a, b) => lastSavedAt(b) - lastSavedAt(a));
+      for (const g of sorted) {
+        const b = button('', () => {
+          loadingGame = g;
+          render();
+        });
+        b.append(el('span', undefined, g.name));
+        b.append(
+          el(
+            'small',
+            undefined,
+            `${formatDate(lastSavedAt(g))} · ${t('load.count', { n: String(g.saves.length) })}`,
+          ),
+        );
+        panel.append(b);
+      }
+      panel.append(button(t('common.back'), () => go('main')));
+      return panel;
+    }
+
+    panel.append(el('p', undefined, t('screen.loadGame.pickSave', { name: game.name })));
+    const slots = [...game.saves].sort((a, b) => b.savedAt - a.savedAt);
+    for (const slot of slots) {
+      const b = button('', () => onStartGame(game, slot));
+      const top = el('span', 'slot-meta');
+      top.append(
+        el('span', undefined, slot.name),
+        el('span', `badge ${slot.kind}`, t(`save.kind.${slot.kind}` as TranslationKey)),
+      );
+      b.append(top, el('small', undefined, formatDate(slot.savedAt)));
+      panel.append(b);
+    }
+    if (slots.length === 0) panel.append(button(t('load.noSave'), () => onStartGame(game)));
     panel.append(
-      el('h2', undefined, t('screen.loadGame.title')),
-      el('p', undefined, t('screen.loadGame.pick')),
+      button(t('common.back'), () => {
+        loadingGame = null;
+        render();
+      }),
     );
-    const sorted = [...saves.list()].sort((a, b) => b.lastSavedAt - a.lastSavedAt);
-    for (const game of sorted) panel.append(gameButton(game, null));
-    panel.append(button(t('common.back'), () => go('main')));
     return panel;
   }
 
@@ -198,5 +245,8 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   });
   render();
 
-  return () => go('main');
+  return () => {
+    loadingGame = null;
+    go('main');
+  };
 }

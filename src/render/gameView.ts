@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
-import type { GameSummary } from '../core/save/saveIndex';
+import type { GameSummary, PlayerState } from '../core/save/saveIndex';
 import { WorldGenerator } from '../core/world/worldgen';
 import { Input } from '../input/input';
 import { t, type TranslationKey } from '../i18n';
@@ -28,15 +28,23 @@ interface LoadedChunk {
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur provisoire. */
 export interface GameViewOptions {
-  /** Mode test (?dev=1&at=x,z&dist=d) : position de départ et distance de caméra. */
-  start?: { x: number; z: number; distance?: number };
+  /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
+  start?: Partial<PlayerState>;
+}
+
+export interface GameViewHandle {
+  dispose(): void;
+  /** État actuel du joueur, pour l'enregistrer dans une sauvegarde. */
+  getState(): PlayerState;
+  /** En pause, le joueur et la caméra ne bougent plus (le monde reste affiché). */
+  setPaused(paused: boolean): void;
 }
 
 export function startGameView(
   container: HTMLElement,
   game: GameSummary,
   options: GameViewOptions = {},
-): () => void {
+): GameViewHandle {
   const initial = getSettings().display;
   const renderer = new THREE.WebGLRenderer({ antialias: initial.quality !== 'low' });
   container.appendChild(renderer.domElement);
@@ -55,6 +63,7 @@ export function startGameView(
   scene.add(sun, sun.target);
 
   const generator = new WorldGenerator(game.world);
+  const starterSites = generator.starterSites();
 
   const player = new THREE.Mesh(
     new THREE.CapsuleGeometry(PLAYER_RADIUS_M, PLAYER_HEIGHT_M - 2 * PLAYER_RADIUS_M, 4, 10),
@@ -117,12 +126,13 @@ export function startGameView(
   // --- Entrées et déplacement --------------------------------------------------------------
   const input = new Input(renderer.domElement);
   input.attach();
-  let yaw = Math.PI / 4;
-  let pitch = 0.75;
+  let paused = false;
+  let yaw = options.start?.yaw ?? Math.PI / 4;
+  let pitch = options.start?.pitch ?? 0.75;
   let distance = options.start?.distance ?? 9;
 
   const onMouseMove = (e: MouseEvent): void => {
-    if (!input.isBindingActive('Mouse2')) return;
+    if (paused || !input.isBindingActive('Mouse2')) return;
     const { mouseSensitivity, invertY } = getSettings().views.common;
     const k = 0.005 * (mouseSensitivity / 50);
     yaw -= e.movementX * k;
@@ -233,6 +243,11 @@ export function startGameView(
       `${t('debug.biome')} : ${t(`biome.${biome}` as TranslationKey)}`,
       `${t('debug.chunks')} : ${chunks.size} / ${wanted.length}`,
       `${t('debug.draw')} : ${info.render.calls} · ${t('debug.tris')} : ${info.render.triangles}`,
+      `${t('debug.starter')} :`,
+      ...starterSites.map((site) => {
+        const d = Math.hypot(site.xM - playerX, site.zM - playerZ);
+        return `  ${t(`res.${site.id}` as TranslationKey)} : ${Math.round(site.xM)}, ${Math.round(site.zM)} (${Math.round(d)} m)`;
+      }),
     ];
     debugBox.textContent = lines.join('\n');
   }
@@ -249,7 +264,7 @@ export function startGameView(
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
 
-    step(dt);
+    if (!paused) step(dt);
     updateWanted(
       Math.floor(playerX / CHUNK_SIZE_M),
       Math.floor(playerZ / CHUNK_SIZE_M),
@@ -283,17 +298,23 @@ export function startGameView(
     }
   });
 
-  return () => {
-    unsubscribe();
-    input.detach();
-    renderer.setAnimationLoop(null);
-    window.removeEventListener('resize', resize);
-    window.removeEventListener('mousemove', onMouseMove);
-    for (const loaded of chunks.values()) loaded.mesh.dispose();
-    chunks.clear();
-    renderer.dispose();
-    renderer.domElement.remove();
-    fpsBox.remove();
-    debugBox.remove();
+  return {
+    getState: () => ({ x: playerX, z: playerZ, yaw, pitch, distance }),
+    setPaused: (value) => {
+      paused = value;
+    },
+    dispose: () => {
+      unsubscribe();
+      input.detach();
+      renderer.setAnimationLoop(null);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMouseMove);
+      for (const loaded of chunks.values()) loaded.mesh.dispose();
+      chunks.clear();
+      renderer.dispose();
+      renderer.domElement.remove();
+      fpsBox.remove();
+      debugBox.remove();
+    },
   };
 }

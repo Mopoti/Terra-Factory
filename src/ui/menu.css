@@ -450,3 +450,50 @@
   border-radius: 8px;
   pointer-events: none;
 }
+
+#pause {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: clamp(24px, 8vw, 140px);
+  z-index: 20;
+}
+.pause-dim {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 14, 0.55);
+}
+#pause .panel {
+  position: relative;
+}
+.toast {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(16, 20, 25, 0.88);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-size: 14px;
+  pointer-events: none;
+}
+.slot-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid #44525f;
+  color: #b9c4cf;
+}
+.badge.auto {
+  border-color: var(--accent);
+  color: var(--accent);
+}
