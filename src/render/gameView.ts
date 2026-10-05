@@ -110,8 +110,10 @@ export function startGameView(
     return tool;
   }
   const hand = makeTool();
-  hand.position.set(0.28, -0.26, -0.55);
-  hand.rotation.set(0.15, -0.25, 0);
+  // En main, la tête de la pioche est loin devant (vers -z de la caméra), le manche vers soi.
+  hand.position.set(0.34, -0.36, -0.85);
+  hand.rotation.set(0.5, Math.PI + 0.35, 0);
+  hand.scale.setScalar(0.85);
   camera.add(hand);
   const bodyTool = makeTool();
   bodyTool.scale.setScalar(1.15);

@@ -907,3 +907,18 @@
   width: 46px;
   flex: none;
 }
+
+.panel.load .editor-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.panel.load h3 {
+  margin: 4px 0 8px;
+}
+.menu-btn.selected {
+  border-color: var(--accent);
+  background: #2a3745;
+}
+.panel.load .editor-form,
+.panel.load .editor-side {
+  max-height: calc(88vh - 190px);
+}

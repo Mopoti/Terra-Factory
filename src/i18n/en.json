@@ -1,7 +1,7 @@
 {
   "game.title": "Terra Factory",
   "menu.continue": "Continue",
-  "menu.continue.detail": "{name} — {date}",
+  "menu.continue.detail": "{name} · {save} — {date}",
   "menu.newGame": "New game",
   "menu.loadGame": "Load game",
   "menu.settings": "Settings",
@@ -19,7 +19,7 @@
   "screen.newGame.name": "Game name",
   "screen.newGame.defaultName": "Game {n}",
   "screen.newGame.launch": "Create and start",
-  "screen.loadGame.pick": "Choose the game to load, then the save to resume.",
+  "screen.loadGame.pick": "Choose a game on the left, then the save to resume on the right.",
   "game.hud.menu": "Menu",
   "game.hud.playing": "Game: {name}",
   "settings.tab.game": "Game",
@@ -349,5 +349,7 @@
   "modal.deleteSlot.body": "\"{name}\" will be permanently deleted. This cannot be undone.",
   "storage.memory": "Warning: this browser cannot keep your games (private browsing?). Export them to a file so you do not lose them.",
   "storage.localstorage": "Main storage is unavailable: games are kept in a limited fallback space.",
-  "storage.failed": "A save could not be written (disk full?). Export your game to a file to be safe."
+  "storage.failed": "A save could not be written (disk full?). Export your game to a file to be safe.",
+  "load.games": "Games",
+  "load.savesOf": "Saves of \"{name}\""
 }

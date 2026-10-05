@@ -1,7 +1,7 @@
 {
   "game.title": "Terra Factory",
   "menu.continue": "Continuer",
-  "menu.continue.detail": "{name} — {date}",
+  "menu.continue.detail": "{name} · {save} — {date}",
   "menu.newGame": "Nouvelle partie",
   "menu.loadGame": "Charger une partie",
   "menu.settings": "Paramètres",
@@ -19,7 +19,7 @@
   "screen.newGame.name": "Nom de la partie",
   "screen.newGame.defaultName": "Partie {n}",
   "screen.newGame.launch": "Créer et lancer",
-  "screen.loadGame.pick": "Choisis la partie à charger, puis la sauvegarde à reprendre.",
+  "screen.loadGame.pick": "Choisis une partie à gauche, puis la sauvegarde à reprendre à droite.",
   "game.hud.menu": "Menu",
   "game.hud.playing": "Partie : {name}",
   "settings.tab.game": "Jeu",
@@ -349,5 +349,7 @@
   "modal.deleteSlot.body": "« {name} » sera définitivement supprimée. Cette action est irréversible.",
   "storage.memory": "Attention : ce navigateur ne permet pas de conserver les parties (navigation privée ?). Exporte-les en fichier pour ne rien perdre.",
   "storage.localstorage": "Le stockage principal est indisponible : les parties sont conservées dans un espace de secours limité.",
-  "storage.failed": "Une sauvegarde n'a pas pu être écrite (espace disque plein ?). Exporte ta partie en fichier par précaution."
+  "storage.failed": "Une sauvegarde n'a pas pu être écrite (espace disque plein ?). Exporte ta partie en fichier par précaution.",
+  "load.games": "Parties",
+  "load.savesOf": "Sauvegardes de « {name} »"
 }

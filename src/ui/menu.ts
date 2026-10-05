@@ -79,7 +79,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   const { saves, devMode, onStartGame } = options;
   let screen: Screen = 'main';
   /** Partie dont on choisit la sauvegarde dans « Charger une partie ». */
-  let loadingGame: GameSummary | null = null;
+  let selectedGameId: string | null = null;
   /** Arrête les calculs de l'écran d'édition quand on le quitte. */
   let disposeEditor: () => void = () => undefined;
 
@@ -103,7 +103,11 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       el(
         'small',
         undefined,
-        t('menu.continue.detail', { name: game.name, date: formatDate(lastSavedAt(game)) }),
+        t('menu.continue.detail', {
+          name: game.name,
+          save: latestSlot(game)?.name ?? '',
+          date: formatDate(lastSavedAt(game)),
+        }),
       ),
     );
     return b;
@@ -164,6 +168,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       if (!ok) return;
     }
     saves.deleteGame(game.id);
+    if (selectedGameId === game.id) selectedGameId = null;
     if (saves.list().length === 0) go('main');
     else render();
   }
@@ -222,6 +227,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     const result = parseExchange(text);
     if (!result.ok) return fail(result.reason);
     const imported = saves.importGame(result.game);
+    selectedGameId = imported.id;
     notice = t('manage.imported', { name: imported.name });
     if (screen === 'main') go('loadGame');
     else render();
@@ -295,17 +301,14 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     render();
   }
 
-  /** « Charger une partie » : d'abord la partie (le « dossier »), puis l'une de ses sauvegardes. */
+  /** « Charger une partie » : les parties à gauche, les sauvegardes de la partie choisie à droite. */
   function loadGamePanel(): HTMLElement {
-    const panel = el('div', 'panel wide');
+    const panel = el('div', 'panel editor load');
     const head = el('div', 'panel-head');
     head.append(el('h2', undefined, t('screen.loadGame.title')));
-    const game = loadingGame ? saves.get(loadingGame.id) : undefined;
-    if (!game) {
-      head.append(
-        iconButton(UPLOAD_ICON, t('manage.import'), () => void importFromFile(), 'icon-btn text'),
-      );
-    }
+    head.append(
+      iconButton(UPLOAD_ICON, t('manage.import'), () => void importFromFile(), 'icon-btn text'),
+    );
     panel.append(head);
     const warning = storageWarning();
     if (warning) panel.append(warning);
@@ -316,54 +319,59 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       notice = '';
     }
 
-    if (!game) {
-      loadingGame = null;
-      panel.append(el('p', undefined, t('screen.loadGame.pick')));
-      const sorted = [...saves.list()].sort((a, b) => lastSavedAt(b) - lastSavedAt(a));
-      for (const g of sorted) {
-        const open = button('', () => {
-          loadingGame = g;
-          render();
-        });
-        open.append(el('span', undefined, g.name));
-        open.append(
-          el(
-            'small',
-            undefined,
-            `${formatDate(lastSavedAt(g))} · ${t('load.count', { n: String(g.saves.length) })}`,
-          ),
-        );
-        const row = el('div', 'game-row');
-        row.append(
-          open,
-          iconButton(
-            PENCIL_ICON,
-            t('manage.renameGameLabel', { name: g.name }),
-            () => void renameGame(g),
-          ),
-          iconButton(COPY_ICON, t('manage.duplicateGameLabel', { name: g.name }), () =>
-            duplicateGame(g),
-          ),
-          iconButton(
-            DOWNLOAD_ICON,
-            t('manage.exportLabel', { name: g.name }),
-            () => void exportGame(g),
-          ),
-          iconButton(
-            TRASH_ICON,
-            t('load.delete', { name: g.name }),
-            () => void deleteGame(g),
-            'icon-btn danger',
-          ),
-        );
-        panel.append(row);
-      }
-      panel.append(button(t('common.back'), () => go('main')));
-      return panel;
+    const sorted = [...saves.list()].sort((a, b) => lastSavedAt(b) - lastSavedAt(a));
+    if (sorted.length === 0) return panel;
+    // La partie choisie, ou à défaut la plus récente.
+    const game = sorted.find((g) => g.id === selectedGameId) ?? sorted[0];
+    selectedGameId = game.id;
+
+    const layout = el('div', 'editor-layout');
+    const left = el('div', 'editor-form');
+    left.append(el('h3', undefined, t('load.games')));
+    for (const g of sorted) {
+      const open = button('', () => {
+        selectedGameId = g.id;
+        render();
+      });
+      open.setAttribute('aria-pressed', String(g.id === game.id));
+      open.classList.toggle('selected', g.id === game.id);
+      open.append(el('span', undefined, g.name));
+      open.append(
+        el(
+          'small',
+          undefined,
+          `${formatDate(lastSavedAt(g))} · ${t('load.count', { n: String(g.saves.length) })}`,
+        ),
+      );
+      const row = el('div', 'game-row');
+      row.append(
+        open,
+        iconButton(
+          PENCIL_ICON,
+          t('manage.renameGameLabel', { name: g.name }),
+          () => void renameGame(g),
+        ),
+        iconButton(COPY_ICON, t('manage.duplicateGameLabel', { name: g.name }), () =>
+          duplicateGame(g),
+        ),
+        iconButton(
+          DOWNLOAD_ICON,
+          t('manage.exportLabel', { name: g.name }),
+          () => void exportGame(g),
+        ),
+        iconButton(
+          TRASH_ICON,
+          t('load.delete', { name: g.name }),
+          () => void deleteGame(g),
+          'icon-btn danger',
+        ),
+      );
+      left.append(row);
     }
 
-    panel.append(
-      el('p', undefined, t('screen.loadGame.pickSave', { name: game.name })),
+    const right = el('div', 'editor-side');
+    right.append(
+      el('h3', undefined, t('load.savesOf', { name: game.name })),
       el('small', 'help', t('manage.seedInfo', { seed: game.world.seed })),
     );
     const slots = [...game.saves].sort((a, b) => b.savedAt - a.savedAt);
@@ -400,19 +408,21 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
           'icon-btn danger',
         ),
       );
-      panel.append(row);
+      right.append(row);
     }
-    if (slots.length === 0) panel.append(button(t('load.noSave'), () => onStartGame(game)));
+    if (slots.length === 0) right.append(button(t('load.noSave'), () => onStartGame(game)));
+
+    layout.append(left, right);
     panel.append(
-      button(t('common.back'), () => {
-        loadingGame = null;
-        render();
-      }),
+      layout,
+      button(t('common.back'), () => go('main')),
     );
     return panel;
   }
 
   function render(): void {
+    // Plus aucune partie (la dernière vient d'être supprimée) : retour à l'écran principal.
+    if (screen === 'loadGame' && saves.list().length === 0) screen = 'main';
     disposeEditor();
     disposeEditor = () => undefined;
     root.replaceChildren();
@@ -441,7 +451,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   render();
 
   return () => {
-    loadingGame = null;
+    selectedGameId = null;
     go('main');
   };
 }
