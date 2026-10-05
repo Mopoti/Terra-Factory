@@ -144,10 +144,8 @@ export function startGameView(
   const rayDir = new THREE.Vector3();
   let buildMessage = '';
   const itemLabel = (id: string): string => t(`item.${id}` as TranslationKey);
-  const costText = (kind: PieceKind): string =>
-    Object.entries(pieceDef(kind).cost)
-      .map(([item, n]) => `${n} ${itemLabel(item)}`)
-      .join(', ');
+  const ownedText = (kind: PieceKind): string =>
+    `${itemLabel(pieceDef(kind).item)} : ${options.state.inventory[pieceDef(kind).item] ?? 0}`;
   function renderBuildHud(): void {
     const rooms = options.state.rooms().length;
     const here = options.state
@@ -163,7 +161,7 @@ export function startGameView(
       const affordable = options.state.canAfford(k);
       return `<span class="${k === buildKind ? 'sel' : ''}${affordable ? '' : ' poor'}">${i + 1} ${t(`build.piece.${k}` as TranslationKey)}</span>`;
     }).join('');
-    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${pieces}</div><div>${t('build.cost', { cost: costText(buildKind) })}</div><div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
+    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${pieces}</div><div>${t('build.owned', { item: ownedText(buildKind) })}</div><div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);

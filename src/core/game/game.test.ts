@@ -10,7 +10,12 @@ import { applyChanges, cellKey, emptyChanges, normalizeChanges } from './worldCh
 
 describe('objets et sac', () => {
   it('le sac de départ fait 50 kg et 60 L', () => {
-    expect(BAG_LIMITS).toEqual({ maxWeightG: 50_000, maxVolumeMl: 60_000 });
+    expect(BAG_LIMITS).toEqual({
+      maxWeightG: 50_000,
+      maxVolumeMl: 60_000,
+      maxSlots: 30,
+      stackMax: 100,
+    });
   });
   it('100 minerais de fer tiennent dans le sac (40 kg, 30 L)', () => {
     const inv = add({}, 'iron_ore', 100);
@@ -214,26 +219,28 @@ describe('portée de la récolte', () => {
 });
 
 describe('construction', () => {
-  it('pose consomme des matériaux, démonter les rend', () => {
-    const s = new GameState({ inventory: { stone: 5 } });
+  it('pose consomme 1 objet, démonter le rend', () => {
+    const s = new GameState({ inventory: { piece_wall: 2 } });
     const pos = posFor('wall', 0, 1, 1, 'x');
     expect(s.place('wall', pos)).toBe('ok');
-    expect(s.inventory.stone).toBe(1);
+    expect(s.inventory.piece_wall).toBe(1);
     expect(s.place('wall', pos)).toBe('occupied');
     expect(s.place('door', posFor('door', 0, 2, 2, 'x'))).toBe('missing');
     expect(s.place('wall', posFor('floor', 0, 1, 1))).toBe('invalid');
     expect(s.removePiece(pos, { x: 0, z: 0 })).toBe('wall');
-    expect(s.inventory.stone).toBe(5);
+    expect(s.inventory.piece_wall).toBe(2);
     expect(s.removePiece(pos, { x: 0, z: 0 })).toBeNull();
   });
   it('les pièces survivent à la sauvegarde', () => {
-    const s = new GameState({ inventory: { wood: 4 } });
+    const s = new GameState({ inventory: { piece_floor: 4 } });
     s.place('floor', posFor('floor', 0, 0, 0));
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.pieces).toEqual(s.changes.pieces);
   });
   it('les pièces fermées sont recalculées après chaque modification', () => {
-    const s = new GameState({ inventory: { wood: 20, stone: 40 } });
+    const s = new GameState({
+      inventory: { piece_floor: 2, piece_ceiling: 2, piece_door: 2, piece_wall: 6 },
+    });
     s.place('floor', posFor('floor', 0, 0, 0));
     s.place('ceiling', posFor('ceiling', 0, 0, 0));
     s.place('door', posFor('door', 0, 0, 0, 'x'));
@@ -244,5 +251,27 @@ describe('construction', () => {
     expect(s.rooms()).toHaveLength(1);
     s.removePiece(posFor('wall', 0, 0, 1, 'x'), { x: 0, z: 0 });
     expect(s.rooms()).toHaveLength(0);
+  });
+});
+
+describe('fabrication et cases du sac', () => {
+  it('fabrique 1 ou 5 unités selon les ressources', () => {
+    const s = new GameState({ inventory: { stone: 20 } });
+    expect(s.craft('piece_wall', 1)).toEqual({ made: 1, stopped: null });
+    expect(s.inventory).toEqual({ stone: 16, piece_wall: 1 });
+    expect(s.craft('piece_wall', 5)).toEqual({ made: 4, stopped: 'resources' }); // 16 pierres = 4 murs
+    expect(s.inventory.stone).toBeUndefined();
+    expect(s.inventory.piece_wall).toBe(5);
+  });
+  it('ne fabrique pas une ressource brute ni sans ingrédients', () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.craft('stone', 1).made).toBe(0);
+    expect(s.craft('piece_door', 1)).toEqual({ made: 0, stopped: 'resources' });
+  });
+  it('une pile fait 100 au plus et les cases du sac sont limitées', () => {
+    const limits = { maxWeightG: 1e9, maxVolumeMl: 1e9, maxSlots: 2, stackMax: 100 };
+    expect(maxAddable({}, 'coal', limits)).toBe(200);
+    expect(maxAddable(add({}, 'coal', 150), 'coal', limits)).toBe(50);
+    expect(maxAddable(add({}, 'coal', 150), 'wood', limits)).toBe(0); // les 2 cases sont prises
   });
 });

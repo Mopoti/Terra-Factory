@@ -1,13 +1,33 @@
 {
-  "_comment": "Pièces de construction. Dimensions en mètres, coûts en objets du sac (rendus à 100 % si on démonte).",
+  "_comment": "Pièces de construction. Dimensions en mètres. Chaque pièce posée consomme 1 objet « piece_* » du sac (fabriqué dans l'inventaire, voir items.json).",
   "storeyHeightM": 2.5,
   "thicknessM": 0.1,
   "reachM": 6,
   "maxRoomCells": 400,
   "pieces": [
-    { "kind": "wall", "slot": "edge", "color": "#9aa0a6", "cost": { "stone": 4 } },
-    { "kind": "door", "slot": "edge", "color": "#b07a3c", "cost": { "wood": 3 } },
-    { "kind": "floor", "slot": "floor", "color": "#a67c52", "cost": { "wood": 2 } },
-    { "kind": "ceiling", "slot": "ceiling", "color": "#c9c2b6", "cost": { "wood": 2 } }
+    {
+      "kind": "wall",
+      "slot": "edge",
+      "color": "#9aa0a6",
+      "item": "piece_wall"
+    },
+    {
+      "kind": "door",
+      "slot": "edge",
+      "color": "#b07a3c",
+      "item": "piece_door"
+    },
+    {
+      "kind": "floor",
+      "slot": "floor",
+      "color": "#a67c52",
+      "item": "piece_floor"
+    },
+    {
+      "kind": "ceiling",
+      "slot": "ceiling",
+      "color": "#c9c2b6",
+      "item": "piece_ceiling"
+    }
   ]
 }

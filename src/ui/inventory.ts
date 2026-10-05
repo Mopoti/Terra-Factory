@@ -1,4 +1,4 @@
-import { BAG_LIMITS, ITEMS } from '../core/data/items';
+import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
@@ -51,6 +51,66 @@ export function mountInventory(
   actions: InventoryActions,
 ): InventoryWindow {
   let isOpenNow = false;
+  let selected: string | null = null;
+  let hovered: string | null = null;
+  let message = '';
+  let mouse = { x: 0, y: 0 };
+  const tooltip = el('div', 'inv-tooltip');
+  tooltip.hidden = true;
+
+  const itemName = (id: string): string => t(`item.${id}` as TranslationKey);
+
+  /** Cases du sac : une pile de 100 max par case, dans l'ordre du catalogue. */
+  function slotList(): { item: string; count: number }[] {
+    const slots: { item: string; count: number }[] = [];
+    for (const item of ITEMS) {
+      let left = state.inventory[item.id] ?? 0;
+      while (left > 0) {
+        const n = Math.min(left, BAG_LIMITS.stackMax);
+        slots.push({ item: item.id, count: n });
+        left -= n;
+      }
+    }
+    return slots;
+  }
+
+  function showTooltip(): void {
+    if (!hovered || !isOpenNow) {
+      tooltip.hidden = true;
+      return;
+    }
+    const def = itemById(hovered);
+    tooltip.replaceChildren(el('strong', undefined, itemName(hovered)));
+    if (def.recipe) {
+      tooltip.append(el('div', undefined, t('inv.recipe')));
+      for (const [id, n] of Object.entries(def.recipe)) {
+        const have = state.inventory[id] ?? 0;
+        const line = el('div', have >= n ? 'ok' : 'lack', `${n} × ${itemName(id)} `);
+        line.append(el('small', undefined, t('inv.have', { n: String(have) })));
+        tooltip.append(line);
+      }
+    } else {
+      tooltip.append(el('div', 'note', t('inv.raw')));
+    }
+    tooltip.append(el('small', undefined, `${t('inv.count')} : ${state.inventory[hovered] ?? 0}`));
+    tooltip.hidden = false;
+    const w = tooltip.offsetWidth;
+    const h = tooltip.offsetHeight;
+    tooltip.style.left = `${Math.max(8, Math.min(mouse.x + 16, window.innerWidth - w - 8))}px`;
+    tooltip.style.top = `${Math.max(8, Math.min(mouse.y + 16, window.innerHeight - h - 8))}px`;
+  }
+
+  function craft(item: string, times: number): void {
+    const { made, stopped } = state.craft(item, times);
+    if (made === 0) {
+      message = stopped === 'bag' ? t('inv.craftBagFull') : t('inv.noResources');
+    } else if (made < times) {
+      message = t('inv.craftedPartial', { n: String(made), item: itemName(item) });
+    } else {
+      message = t('inv.crafted', { n: String(made), item: itemName(item) });
+    }
+    render();
+  }
 
   function render(): void {
     const used = totals(state.inventory);
@@ -60,6 +120,7 @@ export function mountInventory(
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', t('inv.title'));
     panel.append(el('h2', undefined, t('inv.title')));
+    const slots = slotList();
     panel.append(
       gauge(
         t('inv.weight'),
@@ -71,55 +132,126 @@ export function mountInventory(
         `${(used.volumeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} / ${(BAG_LIMITS.maxVolumeMl / 1000).toLocaleString(locale)} L`,
         used.volumeMl / BAG_LIMITS.maxVolumeMl,
       ),
+      gauge(
+        t('inv.slots'),
+        `${slots.length} / ${BAG_LIMITS.maxSlots}`,
+        slots.length / BAG_LIMITS.maxSlots,
+      ),
     );
 
-    const rows = ITEMS.filter((item) => (state.inventory[item.id] ?? 0) > 0);
-    if (rows.length === 0) {
-      panel.append(el('p', 'note', t('inv.empty')));
-    } else {
-      const list = el('div', 'inv-list');
-      for (const item of rows) {
-        const count = state.inventory[item.id];
-        const row = el('div', 'inv-row');
-        const chip = el('span', 'chip');
-        chip.style.background = item.color;
-        const name = el('span', 'inv-name', t(`item.${item.id}` as TranslationKey));
-        const qty = el('span', 'inv-qty', `×${count}`);
-        const info = el(
-          'small',
-          'inv-info',
-          `${formatMass((item.weightG * count) / 1000, units, locale)} · ${((item.volumeMl * count) / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} L`,
+    const layout = el('div', 'inv-layout');
+
+    // Gauche : les cases du sac.
+    const bag = el('div', 'inv-bag');
+    const grid = el('div', 'slot-grid');
+    for (let i = 0; i < BAG_LIMITS.maxSlots; i++) {
+      const slot = slots[i];
+      const cell = el('button', slot ? 'slot' : 'slot empty');
+      cell.type = 'button';
+      if (slot) {
+        const def = itemById(slot.item);
+        cell.style.setProperty('--item', def.color);
+        cell.classList.toggle('selected', slot.item === selected);
+        cell.append(
+          el('span', 'slot-name', itemName(slot.item)),
+          el('span', 'slot-count', String(slot.count)),
         );
-        const buttons = el('span', 'inv-actions');
-        const drop = (n: number): void => {
-          actions.drop(item.id, n);
+        cell.addEventListener('click', () => {
+          selected = selected === slot.item ? null : slot.item;
           render();
-        };
-        const label = t(`item.${item.id}` as TranslationKey);
-        for (const [text, n] of [
-          [t('inv.drop1'), 1],
-          [t('inv.drop10'), 10],
-          [t('inv.dropAll'), count],
-        ] as [string, number][]) {
-          const b = el('button', undefined, text);
-          b.type = 'button';
-          b.setAttribute('aria-label', `${text} — ${label}`);
-          b.disabled = n > count;
-          b.addEventListener('click', () => drop(n));
-          buttons.append(b);
-        }
-        row.append(chip, name, qty, info, buttons);
-        list.append(row);
+        });
+        cell.addEventListener('mouseenter', () => {
+          hovered = slot.item;
+          showTooltip();
+        });
+        cell.addEventListener('mouseleave', () => {
+          hovered = null;
+          showTooltip();
+        });
+      } else {
+        cell.disabled = true;
       }
-      panel.append(list);
+      grid.append(cell);
     }
+    bag.append(grid);
+    const count = selected ? (state.inventory[selected] ?? 0) : 0;
+    if (selected && count > 0) {
+      bag.append(
+        el(
+          'div',
+          'inv-selected',
+          t('inv.selected', { item: itemName(selected), n: String(count) }),
+        ),
+      );
+      const buttons = el('span', 'inv-actions');
+      for (const [text, n] of [
+        [t('inv.drop1'), 1],
+        [t('inv.drop10'), 10],
+        [t('inv.dropAll'), count],
+      ] as [string, number][]) {
+        const b = el('button', undefined, text);
+        b.type = 'button';
+        b.disabled = n > count;
+        b.addEventListener('click', () => {
+          actions.drop(selected as string, n);
+          render();
+        });
+        buttons.append(b);
+      }
+      bag.append(buttons);
+    } else {
+      selected = null;
+      bag.append(el('small', 'help', slots.length === 0 ? t('inv.empty') : t('inv.selectHint')));
+    }
+
+    // Droite : tous les objets, à fabriquer.
+    const craftBox = el('div', 'inv-craft');
+    craftBox.append(el('h3', undefined, t('inv.craftTitle')));
+    const catalog = el('div', 'slot-grid craft-grid');
+    for (const def of ITEMS) {
+      const cell = el('button', 'slot craft');
+      cell.type = 'button';
+      cell.style.setProperty('--item', def.color);
+      const canCraft =
+        def.recipe !== null &&
+        Object.entries(def.recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
+      cell.classList.toggle('raw', def.recipe === null);
+      cell.classList.toggle('lack', def.recipe !== null && !canCraft);
+      cell.append(el('span', 'slot-name', itemName(def.id)));
+      cell.addEventListener('click', () => def.recipe && craft(def.id, 1));
+      cell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (def.recipe) craft(def.id, 5);
+      });
+      cell.addEventListener('mouseenter', () => {
+        hovered = def.id;
+        showTooltip();
+      });
+      cell.addEventListener('mouseleave', () => {
+        hovered = null;
+        showTooltip();
+      });
+      catalog.append(cell);
+    }
+    craftBox.append(catalog, el('small', 'help', t('inv.craftHint')));
+    craftBox.append(el('div', 'inv-message', message));
+
+    layout.append(bag, craftBox);
+    panel.append(layout);
     panel.append(el('small', 'help', t('inv.hint')));
     const close = el('button', 'menu-btn', t('inv.close'));
     close.type = 'button';
     close.addEventListener('click', closeWindow);
     panel.append(close);
-    root.replaceChildren(el('div', 'pause-dim'), panel);
+    root.replaceChildren(el('div', 'pause-dim'), panel, tooltip);
+    showTooltip();
   }
+
+  const onMove = (e: MouseEvent): void => {
+    mouse = { x: e.clientX, y: e.clientY };
+    if (hovered) showTooltip();
+  };
+  window.addEventListener('mousemove', onMove);
 
   function openWindow(): void {
     if (isOpenNow) return;
@@ -132,6 +264,8 @@ export function mountInventory(
   function closeWindow(): void {
     if (!isOpenNow) return;
     isOpenNow = false;
+    hovered = null;
+    message = '';
     root.hidden = true;
     root.replaceChildren();
     actions.onOpenChange(false);
@@ -156,6 +290,7 @@ export function mountInventory(
     isOpen: () => isOpenNow,
     dispose: () => {
       window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mousemove', onMove);
       unsubscribeLocale();
       root.hidden = true;
       root.replaceChildren();

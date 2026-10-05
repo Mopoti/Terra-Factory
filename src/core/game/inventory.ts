@@ -14,13 +14,28 @@ export function totals(inv: Inventory): { weightG: number; volumeMl: number } {
   return { weightG, volumeMl };
 }
 
+/** Cases occupées : chaque objet remplit ceil(quantité / taille de pile) cases. */
+export function slotsUsed(inv: Inventory, limits: BagLimits): number {
+  let n = 0;
+  for (const count of Object.values(inv)) n += Math.ceil(count / limits.stackMax);
+  return n;
+}
+
+/** Place restante en nombre de cases, pour cet objet (piles entamées + cases libres). */
+function slotRoom(inv: Inventory, itemId: string, limits: BagLimits): number {
+  const count = inv[itemId] ?? 0;
+  const ownSlots = Math.ceil(count / limits.stackMax);
+  const free = limits.maxSlots - slotsUsed(inv, limits);
+  return ownSlots * limits.stackMax - count + free * limits.stackMax;
+}
+
 /** Combien d'unités de cet objet le sac peut encore recevoir (limité par le poids ET le volume). */
 export function maxAddable(inv: Inventory, itemId: string, limits: BagLimits): number {
   const item = itemById(itemId);
   const used = totals(inv);
   const byWeight = Math.floor((limits.maxWeightG - used.weightG) / item.weightG);
   const byVolume = Math.floor((limits.maxVolumeMl - used.volumeMl) / item.volumeMl);
-  return Math.max(0, Math.min(byWeight, byVolume));
+  return Math.max(0, Math.min(byWeight, byVolume, slotRoom(inv, itemId, limits)));
 }
 
 export function add(inv: Inventory, itemId: string, count: number): Inventory {

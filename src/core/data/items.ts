@@ -7,23 +7,39 @@ export interface ItemDef {
   /** Volume d'une unité, en millilitres. */
   volumeMl: number;
   color: string;
+  /** Fabrication à la main : objet -> quantité nécessaire pour 1 unité. `null` = ressource brute. */
+  recipe: Record<string, number> | null;
 }
 
 export interface BagLimits {
   maxWeightG: number;
   maxVolumeMl: number;
+  /** Nombre de cases du sac et taille maximale d'une pile. */
+  maxSlots: number;
+  stackMax: number;
 }
 
-export const ITEMS: ItemDef[] = raw.items.map((i) => ({
+interface RawItem {
+  id: string;
+  weightKg: number;
+  volumeL: number;
+  color: string;
+  recipe?: Record<string, number>;
+}
+
+export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   id: i.id,
   weightG: Math.round(i.weightKg * 1000),
   volumeMl: Math.round(i.volumeL * 1000),
   color: i.color,
+  recipe: i.recipe ?? null,
 }));
 
 export const BAG_LIMITS: BagLimits = {
   maxWeightG: Math.round(raw.bag.maxWeightKg * 1000),
   maxVolumeMl: Math.round(raw.bag.maxVolumeL * 1000),
+  maxSlots: raw.bag.slots,
+  stackMax: raw.bag.stackMax,
 };
 
 /** Portée de la récolte à la main, en mètres. */

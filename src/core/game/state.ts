@@ -1,7 +1,7 @@
 import { pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, type PieceKind } from '../data/buildings';
-import { BAG_LIMITS, type BagLimits } from '../data/items';
+import { BAG_LIMITS, itemById, type BagLimits } from '../data/items';
 import { add, maxAddable, normalizeInventory, remove, type Inventory } from './inventory';
 import {
   emptyChanges,
@@ -116,23 +116,19 @@ export class GameState {
     return this.roomCache;
   }
 
-  /** Le sac contient-il de quoi fabriquer cette pièce ? */
+  /** Le sac contient-il l'objet nécessaire pour poser cette pièce ? */
   canAfford(kind: PieceKind): boolean {
-    return Object.entries(pieceDef(kind).cost).every(
-      ([item, n]) => (this.inventory[item] ?? 0) >= n,
-    );
+    return (this.inventory[pieceDef(kind).item] ?? 0) >= 1;
   }
 
-  /** Pose une pièce (consomme les matériaux). Refuse si l'emplacement est pris ou si le sac est trop pauvre. */
+  /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
   place(kind: PieceKind, pos: PiecePos): 'ok' | 'occupied' | 'missing' | 'invalid' {
     const def = pieceDef(kind);
     if (def.slot !== pos.slot) return 'invalid';
     const key = pieceKey(pos);
     if (this.changes.pieces[key]) return 'occupied';
     if (!this.canAfford(kind)) return 'missing';
-    for (const [item, n] of Object.entries(def.cost)) {
-      this.inventory = remove(this.inventory, item, n).inventory;
-    }
+    this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[key] = kind;
     this.roomCache = null;
     this.emit({ type: 'build' });
@@ -141,8 +137,34 @@ export class GameState {
   }
 
   /**
-   * Démonte une pièce et rend les matériaux (ce qui ne tient pas dans le sac reste perdu : le sac est
-   * rempli au maximum, le reste tombe au sol aux coordonnées données).
+   * Fabrique à la main jusqu'à `times` unités d'un objet. Ne fabrique que ce que les ressources et la
+   * place dans le sac permettent. Renvoie le nombre fabriqué et la raison de l'arrêt éventuel.
+   */
+  craft(item: string, times: number): { made: number; stopped: 'resources' | 'bag' | null } {
+    const recipe = itemById(item).recipe;
+    if (!recipe) return { made: 0, stopped: 'resources' };
+    let made = 0;
+    let stopped: 'resources' | 'bag' | null = null;
+    while (made < times) {
+      if (!Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)) {
+        stopped = 'resources';
+        break;
+      }
+      let after = this.inventory;
+      for (const [id, n] of Object.entries(recipe)) after = remove(after, id, n).inventory;
+      if (maxAddable(after, item, this.limits) < 1) {
+        stopped = 'bag';
+        break;
+      }
+      this.inventory = add(after, item, 1);
+      made++;
+    }
+    if (made > 0) this.emit({ type: 'inventory' });
+    return { made, stopped };
+  }
+
+  /**
+   * Démonte une pièce et rend l'objet (s'il ne tient pas dans le sac, il tombe au sol aux coordonnées données).
    */
   removePiece(pos: PiecePos, drop: { x: number; z: number }): PieceKind | null {
     const key = pieceKey(pos);
@@ -150,19 +172,18 @@ export class GameState {
     if (!kind) return null;
     delete this.changes.pieces[key];
     this.roomCache = null;
-    for (const [item, n] of Object.entries(pieceDef(kind).cost)) {
-      const fits = Math.min(n, maxAddable(this.inventory, item, this.limits));
-      if (fits > 0) this.inventory = add(this.inventory, item, fits);
-      if (n - fits > 0) {
-        this.changes.drops.push({
-          id: `drop-${this.changes.nextDropId++}`,
-          item,
-          count: n - fits,
-          x: drop.x,
-          z: drop.z,
-        });
-        this.emit({ type: 'drops' });
-      }
+    const item = pieceDef(kind).item;
+    if (maxAddable(this.inventory, item, this.limits) >= 1) {
+      this.inventory = add(this.inventory, item, 1);
+    } else {
+      this.changes.drops.push({
+        id: `drop-${this.changes.nextDropId++}`,
+        item,
+        count: 1,
+        x: drop.x,
+        z: drop.z,
+      });
+      this.emit({ type: 'drops' });
     }
     this.emit({ type: 'build' });
     this.emit({ type: 'inventory' });

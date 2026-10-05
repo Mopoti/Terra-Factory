@@ -5,7 +5,7 @@ import { STOREY_HEIGHT_M, THICKNESS_M, pieceDef, type PieceKind } from '../core/
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb } from './meshBuilder';
 
-const DOOR_WIDTH_M = 0.4;
+const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
 /** Léger retrait pour éviter que le haut des murs se superpose au plafond (scintillement). */
 const EPS = 0.01;

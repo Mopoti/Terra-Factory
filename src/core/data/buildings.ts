@@ -8,7 +8,8 @@ export interface PieceDef {
   kind: PieceKind;
   slot: PieceSlot;
   color: string;
-  cost: Record<string, number>;
+  /** Objet du sac consommé à la pose (1 unité) et rendu au démontage. */
+  item: string;
 }
 
 export const PIECES: PieceDef[] = raw.pieces as unknown as PieceDef[];

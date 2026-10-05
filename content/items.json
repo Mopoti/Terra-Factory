@@ -2,7 +2,9 @@
   "_comment": "Objets du jeu et sac du joueur. Poids en kg, volume en litres par unité. Ids stables.",
   "bag": {
     "maxWeightKg": 50,
-    "maxVolumeL": 60
+    "maxVolumeL": 60,
+    "slots": 30,
+    "stackMax": 100
   },
   "reachM": 3,
   "items": [
@@ -35,6 +37,42 @@
       "weightKg": 0.25,
       "volumeL": 0.3,
       "color": "#2b2b2f"
+    },
+    {
+      "id": "piece_wall",
+      "weightKg": 4,
+      "volumeL": 3,
+      "color": "#9aa0a6",
+      "recipe": {
+        "stone": 4
+      }
+    },
+    {
+      "id": "piece_door",
+      "weightKg": 3,
+      "volumeL": 4,
+      "color": "#b07a3c",
+      "recipe": {
+        "wood": 3
+      }
+    },
+    {
+      "id": "piece_floor",
+      "weightKg": 2,
+      "volumeL": 2.5,
+      "color": "#a67c52",
+      "recipe": {
+        "wood": 2
+      }
+    },
+    {
+      "id": "piece_ceiling",
+      "weightKg": 2,
+      "volumeL": 2.5,
+      "color": "#c9c2b6",
+      "recipe": {
+        "wood": 2
+      }
     }
   ]
 }
