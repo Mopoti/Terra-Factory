@@ -360,7 +360,7 @@
   "build.piece.door": "Door",
   "build.piece.floor": "Floor",
   "build.piece.ceiling": "Ceiling",
-  "build.help": "1-4: piece · 5-6: material · PgUp/PgDn: floor · Home/End: lock wall height · Hold click: area or wall · Hold X: remove · B: exit",
+  "build.help": "1-4: piece · 5-6: material · PgUp/PgDn: floor · Home/End: wall height (top view) · Hold click: area or wall · Hold X: demolish (refunds resources) · B: exit",
   "build.missing": "Item not in the bag: craft it in the inventory",
   "build.occupied": "Spot taken",
   "build.tooFar": "Too far",
@@ -388,11 +388,9 @@
   "item.piece_wall_stone": "Stone wall",
   "item.piece_floor_stone": "Stone floor",
   "item.piece_ceiling_stone": "Stone ceiling",
-  "build.layer.all": "auto (follows the cursor)",
-  "build.layer.n": "block {n}",
-  "build.layerLabel": "Wall: {layer}",
   "build.plan": "{ok} to place · {lack} missing",
   "action.layerUp": "Wall: block above",
   "action.layerDown": "Wall: block below",
-  "build.unsupported": "A wall cannot float: place it on the ground or against an existing wall"
+  "build.unsupported": "A wall cannot float: place it on the ground or against an existing wall",
+  "build.wallHeight": "Wall height in top view: {n} block(s) ({cm} cm)"
 }

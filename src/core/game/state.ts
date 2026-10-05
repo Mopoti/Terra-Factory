@@ -186,8 +186,8 @@ export class GameState {
   }
 
   /**
-   * Démonte des pièces et rend les objets (s'ils ne tiennent pas dans le sac, ils tombent au sol aux
-   * coordonnées données). Renvoie le nombre de pièces démontées.
+   * Démolit des pièces et rend leurs ressources de fabrication (ce qui ne tient pas dans le sac tombe au sol
+   * aux coordonnées données). Renvoie le nombre de pièces démontées.
    */
   removeKeys(keys: string[], drop: { x: number; z: number }): number {
     let n = 0;
@@ -196,18 +196,21 @@ export class GameState {
       if (!kind) continue;
       delete this.changes.pieces[key];
       n++;
-      const item = pieceDef(kind).item;
-      if (maxAddable(this.inventory, item, this.limits) >= 1) {
-        this.inventory = add(this.inventory, item, 1);
-      } else {
-        this.changes.drops.push({
-          id: `drop-${this.changes.nextDropId++}`,
-          item,
-          count: 1,
-          x: drop.x,
-          z: drop.z,
-        });
-        this.emit({ type: 'drops' });
+      // Démolir rend les ressources de fabrication (pierre, bois), pas la pièce elle-même.
+      const recipe = itemById(pieceDef(kind).item).recipe ?? { [pieceDef(kind).item]: 1 };
+      for (const [item, count] of Object.entries(recipe)) {
+        const fits = Math.min(count, maxAddable(this.inventory, item, this.limits));
+        if (fits > 0) this.inventory = add(this.inventory, item, fits);
+        if (count - fits > 0) {
+          this.changes.drops.push({
+            id: `drop-${this.changes.nextDropId++}`,
+            item,
+            count: count - fits,
+            x: drop.x,
+            z: drop.z,
+          });
+          this.emit({ type: 'drops' });
+        }
       }
     }
     if (n > 0) {

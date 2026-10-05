@@ -45,3 +45,11 @@ Le mur se pose comme un sol, mais dans le plan vertical : avant d'appuyer, **un 
 ### Règle de soutien (tour 17)
 
 Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (bloc du bas au rez-de-chaussée), **sur un sol d'étage** ou sur le mur de l'étage du dessous, ou **accolé à un bloc existant** (au-dessus, en dessous, à côté, ou dans l'angle d'un mur perpendiculaire) — ce qui permet les encadrements de fenêtres. Dans un tracé, un bloc peut s'appuyer sur un autre du même tracé ; les blocs qui flotteraient sont rouges. Retirer un bloc plus tard est libre (c'est ce qui fait les fenêtres) : les blocs restent tant qu'on ne les démonte pas.
+
+### Tour 18 — visée, hauteur, jours entre blocs, démolition
+
+- **Visée assistée** (`core/build/aim.ts`) : le curseur suit le rayon et « colle » au premier bloc de mur réellement posable (au sol, ou accolé à un mur existant). Le bloc du bas est toujours calé au niveau du sol ; on n'a plus à viser précisément en l'air. Si rien n'est touché, retombée sur le bloc du bas du bord le plus proche.
+- **Hauteur** : un clic simple = 1 bloc ; en 1ère/3ème personne, glisser trace un pan largeur × hauteur (la hauteur jusqu'au bloc visé) ; si le rayon ne coupe pas le plan du mur, on reste sur la hauteur de départ (plus de mur géant d'un coup). En vue du dessus : **Début / Fin** règlent la hauteur (1 à 5 blocs, 50 cm chacun), 1 par défaut.
+- **Plus de jour** entre les blocs : ils font exactement 50 cm (seul le bloc du haut garde 1 cm de retrait sous le plafond).
+- **Démolition** (X maintenu) : vise les blocs existants un par un et rend les **ressources de fabrication** (pierre, bois), pas la pièce ; ce qui ne tient pas dans le sac tombe au sol.
+- À préciser avec le PO : « blocs de 10 × 10 cm » (pas de 10 cm en hauteur/largeur de mur ?) — voir question posée.

@@ -158,7 +158,7 @@ export function startGameView(
   let buildMaterial: Material = 'stone';
   let buildLevel = 0;
   /** Bloc de mur visé (0 à 4), ou null = tout l'étage : sert à faire des fenêtres et des trous. */
-  let layerSel: number | null = null;
+  let wallHeight = 1;
   let dragStart: BuildAim | null = null;
   let lastPlan: PlanItem[] = [];
   const buildKind = (): PieceKind => kindFor(buildType, buildMaterial);
@@ -192,10 +192,10 @@ export function startGameView(
       (m, i) =>
         `<span class="${pieceDef(kind).material === m ? 'sel' : ''}">${i + 5} ${t(`build.material.${m}` as TranslationKey)}</span>`,
     ).join('');
-    const layerText =
-      layerSel === null ? t('build.layer.all') : t('build.layer.n', { n: String(layerSel + 1) });
     const wall =
-      buildType === 'wall' ? `<div>${t('build.layerLabel', { layer: layerText })}</div>` : '';
+      buildType === 'wall'
+        ? `<div>${t('build.wallHeight', { n: String(wallHeight), cm: String(wallHeight * 50) })}</div>`
+        : '';
     const ok = lastPlan.filter((i) => i.status === 'ok').length;
     const lack = lastPlan.filter(
       (i) => i.status === 'lack' || i.status === 'far' || i.status === 'unsupported',
@@ -210,7 +210,7 @@ export function startGameView(
     if (building && (e.type === 'build' || e.type === 'inventory')) renderBuildHud();
   });
 
-  function buildAim(): BuildAim | null {
+  function buildAim(mode: 'place' | 'remove' = 'place'): BuildAim | null {
     if (rig.view === 'first') {
       camera.getWorldPosition(rayOrigin);
       camera.getWorldDirection(rayDir);
@@ -225,7 +225,15 @@ export function startGameView(
       rayOrigin.copy(buildRay.ray.origin);
       rayDir.copy(buildRay.ray.direction);
     }
-    return buildingView.aim(rayOrigin, rayDir, buildKind(), buildLevel);
+    return buildingView.aim(
+      rayOrigin,
+      rayDir,
+      buildKind(),
+      buildLevel,
+      options.state.changes.pieces,
+      rig.view === 'top' ? 120 : BUILD_REACH_M + 4,
+      mode,
+    );
   }
 
   /** Bloc de mur sous le curseur (hauteur), en 1ère et 3ème personne ; en vue du dessus on ne peut pas viser en hauteur. */
@@ -248,19 +256,20 @@ export function startGameView(
     const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;
     const line = axis === 'x' ? start.pos.gz : start.pos.gx;
     const iGround = axis === 'x' ? aim.cell.gx : aim.cell.gz;
-    const top = LAYERS_PER_STOREY - 1;
     if (!dragStart) {
       // Avant d'appuyer : le seul bloc visé.
-      const layer = layerSel ?? hoverCoord(aim)?.layer ?? 0;
+      const layer = aim.pos.layer ?? 0;
       return planWall(kind, buildLevel, axis, line, { i: i0, layer }, { i: i0, layer });
     }
     const a = { i: i0, layer: dragLayer };
-    if (layerSel !== null)
-      return planWall(kind, buildLevel, axis, line, a, { i: iGround, layer: layerSel });
+    if (rig.view === 'top') {
+      // Vue du dessus : on ne vise pas en hauteur, la hauteur est celle réglée avec Début / Fin.
+      const upTo = Math.min(LAYERS_PER_STOREY - 1, dragLayer + wallHeight - 1);
+      return planWall(kind, buildLevel, axis, line, a, { i: iGround, layer: upTo });
+    }
+    // 1ère / 3ème personne : le pan de mur va du bloc de départ au bloc visé.
     const over = hoverCoord(start);
-    // 1ère / 3ème personne : le pan de mur va du bloc de départ au bloc visé. Vue du dessus : colonnes entières.
-    if (over) return planWall(kind, buildLevel, axis, line, a, over);
-    return planWall(kind, buildLevel, axis, line, { i: i0, layer: 0 }, { i: iGround, layer: top });
+    return planWall(kind, buildLevel, axis, line, a, over ?? { i: iGround, layer: dragLayer });
   }
 
   let removeCooldown = 0;
@@ -275,25 +284,24 @@ export function startGameView(
       return;
     }
 
-    // Démonter en maintenant la touche : on balaie la zone avec le curseur.
+    // Démolir en maintenant la touche : on balaie avec le curseur, bloc par bloc.
     if (input.isActionActive('remove')) {
       buildingView.hideGhost();
       removeCooldown -= dt;
-      const c = posCenter(aim.pos);
-      if (removeCooldown <= 0 && Math.hypot(c.x - playerX, c.z - playerZ) <= BUILD_REACH_M) {
-        const keys =
-          aim.pos.slot === 'edge'
-            ? edgeKeysToRemove(
-                options.state.changes.pieces,
-                aim.pos,
-                layerSel !== null ? [layerSel] : hoverCoord(aim) ? [hoverCoord(aim)!.layer] : null,
-              )
-            : options.state.changes.pieces[aim.key]
-              ? [aim.key]
-              : [];
-        if (keys.length > 0) {
-          options.state.removeKeys(keys, player);
-          removeCooldown = 0.08;
+      const target = buildAim('remove');
+      if (target && removeCooldown <= 0) {
+        const c = posCenter(target.pos);
+        if (Math.hypot(c.x - playerX, c.z - playerZ) <= BUILD_REACH_M) {
+          const keys =
+            target.pos.slot === 'edge'
+              ? edgeKeysToRemove(options.state.changes.pieces, target.pos, [target.pos.layer ?? 0])
+              : options.state.changes.pieces[target.key]
+                ? [target.key]
+                : [];
+          if (keys.length > 0) {
+            options.state.removeKeys(keys, player);
+            removeCooldown = 0.08;
+          }
         }
       }
       return;
@@ -302,7 +310,7 @@ export function startGameView(
 
     if (down && !dragStart) {
       dragStart = aim;
-      dragLayer = layerSel ?? hoverCoord(aim)?.layer ?? 0;
+      dragLayer = aim.pos.layer ?? 0;
     }
     lastPlan = evaluatePlan(
       kind,
@@ -722,13 +730,11 @@ export function startGameView(
         }
         // Hauteur du mur : tout l'étage, puis un bloc à la fois (pour les fenêtres et les trous).
         if (pressed('layerUp')) {
-          layerSel =
-            layerSel === null ? 0 : layerSel + 1 >= LAYERS_PER_STOREY ? null : layerSel + 1;
+          wallHeight = Math.min(LAYERS_PER_STOREY, wallHeight + 1);
           renderBuildHud();
         }
         if (pressed('layerDown')) {
-          layerSel =
-            layerSel === null ? LAYERS_PER_STOREY - 1 : layerSel === 0 ? null : layerSel - 1;
+          wallHeight = Math.max(1, wallHeight - 1);
           renderBuildHud();
         }
       }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { parseKey, pieceKey, posFor, type PiecePos, type Pieces } from '../core/build/pieces';
 import {
+  LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
   STOREY_HEIGHT_M,
   THICKNESS_M,
@@ -9,6 +10,7 @@ import {
   slotOf,
   type PieceKind,
 } from '../core/data/buildings';
+import { aimEdge } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
@@ -54,7 +56,7 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
       y0 + layer * LAYER_HEIGHT_M + gap / 2,
       mz,
       sx - (alongX ? gap : 0),
-      LAYER_HEIGHT_M - EPS - gap,
+      LAYER_HEIGHT_M - (layer === LAYERS_PER_STOREY - 1 ? EPS : 0) - gap,
       sz - (alongX ? 0 : gap),
       color,
     );
@@ -175,41 +177,43 @@ export class BuildingView {
   }
 
   /** Emplacement visé par un rayon, pour poser une pièce de ce type à cet étage. */
-  aim(origin: THREE.Vector3, dir: THREE.Vector3, kind: PieceKind, level: number): BuildAim | null {
+  aim(
+    origin: THREE.Vector3,
+    dir: THREE.Vector3,
+    kind: PieceKind,
+    level: number,
+    pieces: Pieces,
+    maxDist: number,
+    mode: 'place' | 'remove' = 'place',
+  ): BuildAim | null {
     const slot = slotOf(pieceDef(kind).type);
-    const y0 = level * STOREY_HEIGHT_M;
-    const planeY = slot === 'ceiling' ? y0 + STOREY_HEIGHT_M : slot === 'floor' ? y0 : y0 + 1.2;
-    const t = Math.abs(dir.y) < 1e-6 ? -1 : (planeY - origin.y) / dir.y;
-    let x = origin.x + dir.x * t;
-    let z = origin.z + dir.z * t;
-    if (t < 0 || t > 200) {
-      // On regarde au-dessus du plan (mur visé en hauteur) : on prend le point à 3 m devant.
-      if (slot !== 'edge') return null;
-      const flat = Math.hypot(dir.x, dir.z) || 1;
-      x = origin.x + (dir.x / flat) * 3;
-      z = origin.z + (dir.z / flat) * 3;
-    }
-    const gx = Math.floor(x / CELL_SIZE_M);
-    const gz = Math.floor(z / CELL_SIZE_M);
-    let pos: PiecePos;
     if (slot === 'edge') {
-      const fx = x / CELL_SIZE_M - gx;
-      const fz = z / CELL_SIZE_M - gz;
-      const nearest = Math.min(fx, 1 - fx, fz, 1 - fz);
-      if (nearest === fx) pos = posFor(kind, level, gx, gz, 'z');
-      else if (nearest === 1 - fx) pos = posFor(kind, level, gx + 1, gz, 'z');
-      else if (nearest === fz) pos = posFor(kind, level, gx, gz, 'x');
-      else pos = posFor(kind, level, gx, gz + 1, 'x');
-    } else {
-      pos = posFor(kind, level, gx, gz);
+      const hit = aimEdge(origin, dir, pieces, kind, level, maxDist, mode);
+      if (!hit) return null;
+      const alongX = hit.pos.axis === 'x';
+      return {
+        pos: hit.pos,
+        key: pieceKey(hit.pos),
+        cell: hit.cell,
+        x: alongX ? (hit.pos.gx + 0.5) * CELL_SIZE_M : hit.pos.gx * CELL_SIZE_M,
+        z: alongX ? hit.pos.gz * CELL_SIZE_M : (hit.pos.gz + 0.5) * CELL_SIZE_M,
+      };
     }
-    const alongX = pos.axis === 'x';
+    // Sol ou plafond : la case sous le rayon, dans le plan du sol ou du plafond de l'étage.
+    const y0 = level * STOREY_HEIGHT_M;
+    const planeY = slot === 'ceiling' ? y0 + STOREY_HEIGHT_M : y0;
+    if (Math.abs(dir.y) < 1e-6) return null;
+    const t = (planeY - origin.y) / dir.y;
+    if (t < 0 || t > 200) return null;
+    const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
+    const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
+    const pos = posFor(kind, level, gx, gz);
     return {
       pos,
       key: pieceKey(pos),
       cell: { gx, gz },
-      x: slot === 'edge' && !alongX ? pos.gx * CELL_SIZE_M : (pos.gx + 0.5) * CELL_SIZE_M,
-      z: slot === 'edge' && alongX ? pos.gz * CELL_SIZE_M : (pos.gz + 0.5) * CELL_SIZE_M,
+      x: (gx + 0.5) * CELL_SIZE_M,
+      z: (gz + 0.5) * CELL_SIZE_M,
     };
   }
 

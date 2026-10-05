@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { aimEdge } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
@@ -220,7 +221,7 @@ describe('portée de la récolte', () => {
 });
 
 describe('construction', () => {
-  it('pose consomme 1 objet, démonter le rend', () => {
+  it('pose consomme 1 objet, démolir rend les ressources de fabrication', () => {
     const s = new GameState({ inventory: { piece_wall_stone: 2 } });
     const pos = posFor('wall_stone', 0, 1, 1, 'x', 0);
     expect(s.place('wall_stone', pos)).toBe('ok');
@@ -229,7 +230,8 @@ describe('construction', () => {
     expect(s.place('door_wood', posFor('door_wood', 0, 2, 2, 'x'))).toBe('missing');
     expect(s.place('wall_stone', posFor('floor_wood', 0, 1, 1))).toBe('invalid');
     expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(1);
-    expect(s.inventory.piece_wall_stone).toBe(2);
+    // Démolir rend les ressources de fabrication, pas la pièce.
+    expect(s.inventory).toEqual({ piece_wall_stone: 1, stone: 1 });
     expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(0);
   });
   it('les pièces survivent à la sauvegarde', () => {
@@ -386,5 +388,44 @@ describe('murs soutenus', () => {
     const plan = evaluatePlan('wall_stone', frame, s.changes.pieces, 30, { x: 0, z: 0 }, 6);
     expect(plan.every((i) => i.status === 'ok')).toBe(true);
     expect(s.placeMany('wall_stone', frame)).toBe(4);
+  });
+});
+
+describe('visée assistée des murs', () => {
+  const eye = { x: 0.2, y: 1.6, z: -2 };
+  it('regard vers le sol : le bloc du bas du bord le plus proche', () => {
+    const hit = aimEdge(eye, { x: 0, y: -0.5, z: 0.866 }, {}, 'wall_stone', 0, 10);
+    expect(hit?.pos.layer).toBe(0);
+  });
+  it("regard en l'air loin de tout mur : retombe au sol, jamais dans le vide", () => {
+    const hit = aimEdge(eye, { x: 0, y: 0.3, z: 0.95 }, {}, 'wall_stone', 0, 10);
+    expect(hit?.pos.layer).toBe(0);
+  });
+  it('colle à un mur existant : le bloc au-dessus est proposé', () => {
+    const pieces: Pieces = {};
+    for (let l = 0; l < 2; l++)
+      pieces[pieceKey(posFor('wall_stone', 0, 0, 1, 'x', l))] = 'wall_stone';
+    // Regard vers le bord z = 0,5 m à ~1,2 m de haut, juste au-dessus des 2 blocs posés (1 m).
+    const o = { x: 0.25, y: 1.2, z: -1 };
+    const hit = aimEdge(o, { x: 0, y: 0, z: 1 }, pieces, 'wall_stone', 0, 10);
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1, axis: 'x', layer: 2 });
+  });
+  it('en mode démolition, ne vise que ce qui existe', () => {
+    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 1, 'x', 0))]: 'wall_stone' };
+    expect(
+      aimEdge(
+        { ...eye, x: 1.7 },
+        { x: 0, y: -0.5, z: 0.866 },
+        pieces,
+        'wall_stone',
+        0,
+        10,
+        'remove',
+      ),
+    ).toBeNull();
+    const o = { x: 0.25, y: 0.25, z: -1 };
+    expect(aimEdge(o, { x: 0, y: 0, z: 1 }, pieces, 'wall_stone', 0, 10, 'remove')?.pos.layer).toBe(
+      0,
+    );
   });
 });
