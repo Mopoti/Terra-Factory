@@ -1,11 +1,20 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
-import { evaluatePlan, planLine, planRect, posCenter, type PlanItem } from '../core/build/plan';
+import {
+  evaluatePlan,
+  planRect,
+  planWall,
+  posCenter,
+  rayOnEdgePlane,
+  type PlanItem,
+  type WallCoord,
+} from '../core/build/plan';
 import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   LAYERS_PER_STOREY,
   MATERIALS,
+  STOREY_HEIGHT_M,
   PIECE_TYPES,
   kindFor,
   pieceDef,
@@ -217,7 +226,16 @@ export function startGameView(
     return buildingView.aim(rayOrigin, rayDir, buildKind(), buildLevel);
   }
 
-  /** Pièces visées : une seule, ou toute la surface / la ligne tracée en gardant le clic enfoncé. */
+  /** Bloc de mur sous le curseur (hauteur), en 1ère et 3ème personne ; en vue du dessus on ne peut pas viser en hauteur. */
+  function hoverCoord(edge: BuildAim): WallCoord | null {
+    if (rig.view === 'top') return null;
+    const axis = edge.pos.axis ?? 'x';
+    const line = axis === 'x' ? edge.pos.gz : edge.pos.gx;
+    return rayOnEdgePlane(rayOrigin, rayDir, axis, line, buildLevel * STOREY_HEIGHT_M);
+  }
+  let dragLayer = 0;
+
+  /** Pièces visées : une seule, ou toute la surface / le pan de mur tracé en gardant le clic enfoncé. */
   function planFor(aim: BuildAim): PiecePos[] {
     const kind = buildKind();
     const start = dragStart ?? aim;
@@ -227,8 +245,20 @@ export function startGameView(
     const axis = start.pos.axis ?? 'x';
     const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;
     const line = axis === 'x' ? start.pos.gz : start.pos.gx;
-    const i1 = dragStart ? (axis === 'x' ? aim.cell.gx : aim.cell.gz) : i0;
-    return planLine(kind, buildLevel, axis, line, i0, i1, layerSel === null ? null : [layerSel]);
+    const iGround = axis === 'x' ? aim.cell.gx : aim.cell.gz;
+    const top = LAYERS_PER_STOREY - 1;
+    if (!dragStart) {
+      // Avant d'appuyer : le seul bloc visé.
+      const layer = layerSel ?? hoverCoord(aim)?.layer ?? 0;
+      return planWall(kind, buildLevel, axis, line, { i: i0, layer }, { i: i0, layer });
+    }
+    const a = { i: i0, layer: dragLayer };
+    if (layerSel !== null)
+      return planWall(kind, buildLevel, axis, line, a, { i: iGround, layer: layerSel });
+    const over = hoverCoord(start);
+    // 1ère / 3ème personne : le pan de mur va du bloc de départ au bloc visé. Vue du dessus : colonnes entières.
+    if (over) return planWall(kind, buildLevel, axis, line, a, over);
+    return planWall(kind, buildLevel, axis, line, { i: i0, layer: 0 }, { i: iGround, layer: top });
   }
 
   let removeCooldown = 0;
@@ -254,7 +284,7 @@ export function startGameView(
             ? edgeKeysToRemove(
                 options.state.changes.pieces,
                 aim.pos,
-                layerSel === null ? null : [layerSel],
+                layerSel !== null ? [layerSel] : hoverCoord(aim) ? [hoverCoord(aim)!.layer] : null,
               )
             : options.state.changes.pieces[aim.key]
               ? [aim.key]
@@ -268,7 +298,10 @@ export function startGameView(
     }
     removeCooldown = 0;
 
-    if (down && !dragStart) dragStart = aim;
+    if (down && !dragStart) {
+      dragStart = aim;
+      dragLayer = layerSel ?? hoverCoord(aim)?.layer ?? 0;
+    }
     lastPlan = evaluatePlan(
       kind,
       planFor(aim),

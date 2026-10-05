@@ -37,3 +37,7 @@ Escaliers/montée, battant de porte, chauffage des pièces, pilier d'angle optio
 - **Pièces fermées** : un bord compte comme fermé seulement si les 5 blocs sont présents (ou une porte). Une fenêtre sans vitre ouvre donc la pièce (le verre viendra plus tard).
 - **Collision** : un bloc de mur parmi les 4 du bas arrête le joueur (1,75 m).
 - Les anciennes parties sont converties (ancien mur → 5 blocs de pierre, anciens objets → pierre/bois).
+
+### Correctif (tour 16) — murs en pan vertical
+
+Le mur se pose comme un sol, mais dans le plan vertical : avant d'appuyer, **un seul bloc** (celui sous le curseur) est en surbrillance ; en gardant le clic, on glisse vers la largeur ET la hauteur, les blocs de 50 cm apparaissent en carreaux séparés (vert = posé, rouge = pas de stock / hors de portée). En **vue du dessus** on ne peut pas viser en hauteur : le clic simple pose un bloc au sol, le glisser pose des colonnes entières. **Début/Fin** fixent une hauteur précise (un seul rang) dans toutes les vues ; X balaie et retire le bloc visé.

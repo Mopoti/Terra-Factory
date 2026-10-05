@@ -30,12 +30,14 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
   const cx = (pos.gx + 0.5) * CELL_SIZE_M;
   const cz = (pos.gz + 0.5) * CELL_SIZE_M;
   const T = THICKNESS_M;
+  // Aperçu : chaque dalle / bloc est un peu rétréci pour qu'on voie les carreaux de 50 cm.
+  const gap = tint ? 0.04 : 0;
   if (def.type === 'floor') {
-    mb.box(cx, y0, cz, CELL_SIZE_M, T, CELL_SIZE_M, color);
+    mb.box(cx, y0, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color);
     return;
   }
   if (def.type === 'ceiling') {
-    mb.box(cx, y0 + STOREY_HEIGHT_M - T, cz, CELL_SIZE_M, T - EPS, CELL_SIZE_M, color);
+    mb.box(cx, y0 + STOREY_HEIGHT_M - T, cz, CELL_SIZE_M - gap, T - EPS, CELL_SIZE_M - gap, color);
     return;
   }
   // Bord de case : le centre du mur est sur la ligne du bord ; on déborde de T pour fermer les angles.
@@ -47,7 +49,15 @@ export function addPiece(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, tint?:
   if (def.type === 'wall') {
     // Un bloc de 50 cm de haut.
     const layer = pos.layer ?? 0;
-    mb.box(mx, y0 + layer * LAYER_HEIGHT_M, mz, sx, LAYER_HEIGHT_M - EPS, sz, color);
+    mb.box(
+      mx,
+      y0 + layer * LAYER_HEIGHT_M + gap / 2,
+      mz,
+      sx - (alongX ? gap : 0),
+      LAYER_HEIGHT_M - EPS - gap,
+      sz - (alongX ? 0 : gap),
+      color,
+    );
     return;
   }
   // Porte : cadre avec un passage libre de 50 cm au milieu, sur tout l'étage.
@@ -169,11 +179,16 @@ export class BuildingView {
     const slot = slotOf(pieceDef(kind).type);
     const y0 = level * STOREY_HEIGHT_M;
     const planeY = slot === 'ceiling' ? y0 + STOREY_HEIGHT_M : slot === 'floor' ? y0 : y0 + 1.2;
-    if (Math.abs(dir.y) < 1e-6) return null;
-    const t = (planeY - origin.y) / dir.y;
-    if (t < 0 || t > 200) return null;
-    const x = origin.x + dir.x * t;
-    const z = origin.z + dir.z * t;
+    const t = Math.abs(dir.y) < 1e-6 ? -1 : (planeY - origin.y) / dir.y;
+    let x = origin.x + dir.x * t;
+    let z = origin.z + dir.z * t;
+    if (t < 0 || t > 200) {
+      // On regarde au-dessus du plan (mur visé en hauteur) : on prend le point à 3 m devant.
+      if (slot !== 'edge') return null;
+      const flat = Math.hypot(dir.x, dir.z) || 1;
+      x = origin.x + (dir.x / flat) * 3;
+      z = origin.z + (dir.z / flat) * 3;
+    }
     const gx = Math.floor(x / CELL_SIZE_M);
     const gz = Math.floor(z / CELL_SIZE_M);
     let pos: PiecePos;

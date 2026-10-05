@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluatePlan, planLine, planRect } from '../build/plan';
+import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
 import { RESOURCES } from '../data/resources';
@@ -327,5 +327,27 @@ describe('fabrication et cases du sac', () => {
     expect(maxAddable({}, 'coal', limits)).toBe(200);
     expect(maxAddable(add({}, 'coal', 150), 'coal', limits)).toBe(50);
     expect(maxAddable(add({}, 'coal', 150), 'wood', limits)).toBe(0); // les 2 cases sont prises
+  });
+});
+
+describe('murs en plan vertical', () => {
+  it('un rectangle de blocs entre deux coins', () => {
+    const plan = planWall('wall_stone', 0, 'x', 3, { i: 2, layer: 0 }, { i: 4, layer: 1 });
+    expect(plan).toHaveLength(6);
+    expect(plan[0]).toMatchObject({ gx: 2, gz: 3, layer: 0 }); // on part du bloc de départ
+    expect(planWall('door_wood', 0, 'x', 3, { i: 2, layer: 0 }, { i: 5, layer: 4 })).toHaveLength(
+      1,
+    );
+  });
+  it('trouve le bloc visé dans le plan du mur', () => {
+    // Œil à 1,6 m, 2 m devant le mur z = 1,5 m (ligne 3), regard légèrement vers le bas.
+    const hit = rayOnEdgePlane({ x: 0.2, y: 1.6, z: -0.5 }, { x: 0, y: -0.2, z: 0.98 }, 'x', 3, 0);
+    expect(hit).toEqual({ i: 0, layer: 2 });
+    expect(
+      rayOnEdgePlane({ x: 0, y: 1.6, z: -0.5 }, { x: 1, y: 0, z: 0.05 }, 'x', 3, 0),
+    ).toBeNull(); // rasant
+    expect(
+      rayOnEdgePlane({ x: 0, y: 1.6, z: -0.5 }, { x: 0, y: 0.9, z: 0.4 }, 'x', 3, 0),
+    ).toBeNull(); // trop haut
   });
 });
