@@ -1,5 +1,14 @@
 import { getLocale, resetLocale } from '../i18n';
-import { ACTION_IDS, defaultControls, type ActionId, type Binding } from './controls';
+import {
+  ACTION_IDS,
+  KEYBOARD_PRESETS,
+  defaultControls,
+  isValidBinding,
+  presetForLocale,
+  type ActionId,
+  type Binding,
+  type KeyboardPreset,
+} from './controls';
 import { ROW_BY_PATH } from './rows';
 import { defaultSettings, type SectionName, type Settings } from './schema';
 
@@ -44,8 +53,7 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
   for (const id of ACTION_IDS) {
     const pair = raw[id];
     if (Array.isArray(pair) && pair.length === 2) {
-      const ok = (b: unknown): b is Binding =>
-        b === null || (typeof b === 'string' && b.length < 30);
+      const ok = (b: unknown): b is Binding => b === null || isValidBinding(b);
       if (ok(pair[0]) && ok(pair[1])) out[id] = [pair[0], pair[1]];
     }
   }
@@ -54,17 +62,19 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
 }
 
 /** Transforme des données enregistrées (n'importe quelle version) en réglages valides. */
-export function sanitize(raw: unknown, french: boolean): Settings {
-  const defaults = defaultSettings(french);
+export function sanitize(raw: unknown, fallbackPreset: KeyboardPreset): Settings {
   const data = isRecord(raw) && isRecord(raw.data) ? raw.data : {};
+  const preset = KEYBOARD_PRESETS.find((p) => p === data.keyboard) ?? fallbackPreset;
+  const defaults = defaultSettings(preset);
   const merged = merge({ ...defaults, controls: undefined }, { ...data, controls: undefined }, '');
   return {
     ...(merged as Omit<Settings, 'controls'>),
+    keyboard: preset,
     controls: mergeControls(defaults.controls, data.controls),
   };
 }
 
-let current: Settings = defaultSettings(true);
+let current: Settings = defaultSettings('zqsd');
 const listeners = new Set<(s: Settings) => void>();
 
 export function getSettings(): Settings {
@@ -100,7 +110,7 @@ function readStored(): unknown {
 }
 
 export function loadSettings(): Settings {
-  current = sanitize(readStored(), getLocale() === 'fr');
+  current = sanitize(readStored(), presetForLocale(getLocale()));
   return current;
 }
 
@@ -136,16 +146,25 @@ export function setBindings(changes: { action: ActionId; slot: 0 | 1; code: Bind
   commit(next);
 }
 
-/** Remet une section (ou tout) aux valeurs par défaut. */
-export function resetSection(section: SectionName | 'all'): void {
-  const defaults = defaultSettings(getLocale() === 'fr');
+/** Change le type de clavier (ZQSD / WASD) : toutes les touches reprennent les valeurs par défaut de ce type. */
+export function setKeyboardPreset(preset: KeyboardPreset): void {
   const next = structuredClone(current);
-  const names: SectionName[] =
-    section === 'all' ? ['display', 'sound', 'views', 'controls', 'game'] : [section];
-  for (const name of names) (next as unknown as Record<string, unknown>)[name] = defaults[name];
-  if (names.includes('display')) resetLocale();
-  next.controls = names.includes('controls')
-    ? defaultControls(getLocale() === 'fr')
-    : next.controls;
+  next.keyboard = preset;
+  next.controls = defaultControls(preset);
+  commit(next);
+}
+
+/** Remet une section (ou tout) aux valeurs par défaut. Les touches gardent le type de clavier choisi. */
+export function resetSection(section: SectionName | 'all'): void {
+  const next = structuredClone(current);
+  if (section === 'all') {
+    resetLocale();
+    const fresh = defaultSettings(presetForLocale(getLocale()));
+    commit(fresh);
+    return;
+  }
+  const defaults = defaultSettings(current.keyboard);
+  (next as unknown as Record<string, unknown>)[section] = defaults[section];
+  if (section === 'display') resetLocale();
   commit(next);
 }

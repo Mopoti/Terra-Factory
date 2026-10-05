@@ -39,7 +39,7 @@
   "settings.sound.test": "Tester",
   "settings.sound.mute": "Muet",
   "settings.sound.note": "Les vrais sons arrivent plus tard : le bouton « Tester » joue un bip au volume réglé.",
-  "settings.controls.note": "Clique sur une touche, puis appuie sur la nouvelle touche (Échap pour annuler). Deux touches possibles par action.",
+  "settings.controls.note": "Clique sur une touche, puis appuie sur la nouvelle (Échap pour annuler). Pour une combinaison, maintiens une première touche puis appuie sur la seconde (2 touches maximum, ex. Ctrl + C ; la molette et les boutons de souris comptent aussi). Deux emplacements possibles par action.",
   "settings.controls.listening": "Appuie sur une touche…",
   "settings.controls.leftClick": "Clic gauche",
   "settings.controls.clear": "Retirer",
@@ -192,5 +192,15 @@
   "set.game.autosaveMinutes": "Sauvegarde automatique",
   "set.game.autosaveKeep": "Sauvegardes auto conservées",
   "set.game.showTips": "Afficher les conseils et infos-bulles",
-  "set.game.confirmDelete": "Confirmer avant de supprimer"
+  "set.game.confirmDelete": "Confirmer avant de supprimer",
+  "key.meta": "Méta",
+  "action.paste": "Coller",
+  "settings.keyboard": "Type de clavier",
+  "settings.controls.resetKeys": "Réinitialiser les touches",
+  "modal.cancel": "Annuler",
+  "modal.controlsLoss.title": "Perdre vos touches personnalisées ?",
+  "modal.controlsLoss.body": "Vous avez modifié des touches. Cette action les remplace par les touches par défaut du clavier {preset} : vos modifications seront perdues.",
+  "modal.controlsLoss.confirm": "Remplacer par les valeurs par défaut",
+  "modal.resetAll.title": "Tout réinitialiser ?",
+  "modal.resetAll.confirm": "Tout réinitialiser"
 }

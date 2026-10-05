@@ -11,11 +11,15 @@ import { LOCALES, LOCALE_NAMES, getLocale, setLocale, t, type TranslationKey } f
 import {
   ACTIONS,
   ACTION_CATEGORIES,
+  KEYBOARD_PRESETS,
   bindingLabel,
   findConflict,
+  isCustomized,
   isFixed,
+  normalizeBinding,
   type ActionId,
   type Binding,
+  type KeyboardPreset,
 } from '../settings/controls';
 import {
   DISPLAY_SECTION,
@@ -26,7 +30,15 @@ import {
   type Row,
 } from '../settings/rows';
 import type { SectionName } from '../settings/schema';
-import { getAt, getSettings, resetSection, setBindings, setSetting } from '../settings/store';
+import {
+  getAt,
+  getSettings,
+  resetSection,
+  setBindings,
+  setKeyboardPreset,
+  setSetting,
+} from '../settings/store';
+import { confirmModal } from './modal';
 
 type TabId = SectionName;
 const TABS: { id: TabId; label: TranslationKey }[] = [
@@ -227,6 +239,32 @@ function gameTab(): HTMLElement {
   return box;
 }
 
+const PRESET_LABEL: Record<KeyboardPreset, string> = {
+  zqsd: 'ZQSD (AZERTY)',
+  wasd: 'WASD (QWERTY)',
+};
+
+/**
+ * Remplace toutes les touches par celles d'un type de clavier (ou remet celles du type actuel).
+ * Si le joueur a personnalisé des touches, demande confirmation avant de les perdre.
+ * Renvoie true si le changement a eu lieu.
+ */
+async function requestControlsChange(preset: KeyboardPreset): Promise<boolean> {
+  const state = getSettings();
+  if (isCustomized(state.controls, state.keyboard)) {
+    const ok = await confirmModal({
+      title: t('modal.controlsLoss.title'),
+      body: t('modal.controlsLoss.body', { preset: PRESET_LABEL[preset] }),
+      confirmLabel: t('modal.controlsLoss.confirm'),
+      cancelLabel: t('modal.cancel'),
+    });
+    if (!ok) return false;
+  }
+  if (preset === state.keyboard) resetSection('controls');
+  else setKeyboardPreset(preset);
+  return true;
+}
+
 interface Listening {
   action: ActionId;
   slot: 0 | 1;
@@ -244,19 +282,21 @@ function controlsTab(): HTMLElement {
 
   const actionName = (id: ActionId): string => t(`action.${id}` as TranslationKey);
   const codeLabel = (code: Binding): string =>
-    code ? bindingLabel(code, (k) => t(k as TranslationKey), getLocale() === 'fr') : t('key.none');
+    code
+      ? bindingLabel(code, (k) => t(k as TranslationKey), getSettings().keyboard === 'zqsd')
+      : t('key.none');
 
-  function assign(code: string): void {
+  function assign(binding: string): void {
     if (!listening) return;
     const target = listening;
     finish();
-    const conflict = findConflict(getSettings().controls, code, target);
+    const conflict = findConflict(getSettings().controls, binding, target);
     if (conflict) {
-      pending = { ...target, code, other: conflict };
+      pending = { ...target, code: binding, other: conflict };
       redraw();
       return;
     }
-    setBindings([{ action: target.action, slot: target.slot, code }]);
+    setBindings([{ action: target.action, slot: target.slot, code: binding }]);
     redraw();
   }
 
@@ -270,37 +310,55 @@ function controlsTab(): HTMLElement {
     finish();
     pending = null;
     listening = target;
-    const onKey = (e: KeyboardEvent): void => {
+    // Touches actuellement maintenues, dans l'ordre d'appui. Une touche seule est validée
+    // quand on la relâche ; avec une seconde touche (ou souris/molette), c'est une combinaison.
+    const down: string[] = [];
+    const onKeyDown = (e: KeyboardEvent): void => {
       e.preventDefault();
       e.stopImmediatePropagation();
       if (e.repeat || !e.code) return;
       if (e.code === 'Escape') {
         finish();
         redraw();
-      } else assign(e.code);
+        return;
+      }
+      if (!down.includes(e.code)) down.push(e.code);
+      if (down.length >= 2) assign(normalizeBinding([down[0], down[1]]));
     };
+    const onKeyUp = (e: KeyboardEvent): void => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (down.length === 1 && down[0] === e.code) assign(down[0]);
+      else if (down.includes(e.code)) down.splice(down.indexOf(e.code), 1);
+    };
+    const withHeldKey = (pointer: string): string =>
+      down.length === 1 ? normalizeBinding([down[0], pointer]) : pointer;
     const onMouse = (e: MouseEvent): void => {
       if (e.button === 0) {
         if ((e.target as HTMLElement).closest('[data-left-click]')) return;
-        finish();
-        redraw();
-        return;
+        if (down.length === 0) {
+          finish();
+          redraw();
+          return;
+        }
       }
       e.preventDefault();
       e.stopImmediatePropagation();
-      assign(`Mouse${e.button}`);
+      assign(withHeldKey(`Mouse${e.button}`));
     };
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
-      assign(e.deltaY < 0 ? 'WheelUp' : 'WheelDown');
+      assign(withHeldKey(e.deltaY < 0 ? 'WheelUp' : 'WheelDown'));
     };
     const noMenu = (e: Event): void => e.preventDefault();
-    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
     window.addEventListener('mousedown', onMouse, true);
     window.addEventListener('wheel', onWheel, { capture: true, passive: false });
     window.addEventListener('contextmenu', noMenu, true);
     stopListening = () => {
-      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keyup', onKeyUp, true);
       window.removeEventListener('mousedown', onMouse, true);
       window.removeEventListener('wheel', onWheel, true);
       window.removeEventListener('contextmenu', noMenu, true);
@@ -346,8 +404,33 @@ function controlsTab(): HTMLElement {
     return cell;
   }
 
+  function presetRow(): HTMLElement {
+    const row = el('div', 'row');
+    row.append(el('span', 'row-label', t('settings.keyboard')));
+    const control = el('div', 'row-control preset');
+    for (const preset of KEYBOARD_PRESETS) {
+      const b = btn(PRESET_LABEL[preset], () => {
+        if (preset === getSettings().keyboard) return;
+        finish();
+        pending = null;
+        void requestControlsChange(preset).then(redraw);
+      });
+      b.setAttribute('aria-pressed', String(getSettings().keyboard === preset));
+      control.append(b);
+    }
+    control.append(
+      btn(t('settings.controls.resetKeys'), () => {
+        finish();
+        pending = null;
+        void requestControlsChange(getSettings().keyboard).then(redraw);
+      }),
+    );
+    row.append(control);
+    return row;
+  }
+
   function redraw(): void {
-    box.replaceChildren(el('p', 'note', t('settings.controls.note')));
+    box.replaceChildren(presetRow(), el('p', 'note', t('settings.controls.note')));
     if (pending) {
       const p = pending;
       const warn = el('div', 'conflict');

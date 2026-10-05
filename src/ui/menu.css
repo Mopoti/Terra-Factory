@@ -338,3 +338,71 @@
   border-radius: 6px;
   pointer-events: none;
 }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 11, 0.7);
+  padding: 16px;
+}
+.modal {
+  width: min(440px, 100%);
+  padding: 24px;
+  background: #151b22;
+  border: 1px solid #33414f;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.modal h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.modal p {
+  margin: 0 0 6px;
+  line-height: 1.45;
+  color: #c8d2db;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.menu-btn.danger {
+  border-color: #c0562f;
+}
+.menu-btn.danger:hover,
+.menu-btn.danger:focus-visible {
+  background: #4a2418;
+  border-color: #e0703f;
+}
+.preset {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.preset button {
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  background: #1f2832;
+  border: 1px solid #33414f;
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.preset button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: #2a3745;
+}
+.preset button:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}

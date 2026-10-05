@@ -88,3 +88,10 @@ Les réglages s'appliquent immédiatement (pas de bouton « Appliquer »).
 1. Valides-tu cette liste ? Que retires-tu / ajoutes-tu ?
 2. Le sous-onglet **« Jeu »** (sauvegarde auto, conseils) : on le garde ?
 3. Les réglages **qualité/ombres/limite d'images** : on les code dès maintenant (ils n'auront d'effet réel qu'avec le monde 3D) ou on attend ?
+
+## Précisions du PO — touches (tour 7)
+- **Type de clavier** : un choix **ZQSD (AZERTY)** ou **WASD (QWERTY)**, exclusifs, plus un bouton « Réinitialiser les touches ». Défaut : ZQSD si le navigateur est en français, sinon WASD.
+- **Modale d'avertissement** avant de perdre des personnalisations (changement de type de clavier, « Réinitialiser les touches », « Réinitialiser cet onglet » sur Touches). Elle n'apparaît que si le joueur a réellement modifié des touches. « Tout réinitialiser » a toujours sa propre confirmation.
+- **Combinaisons** : 2 entrées maximum, n'importe lesquelles (touche + touche, touche + clic, touche + molette). Exemples par défaut : Copier = Ctrl + C, Coller = Ctrl + V, Annuler = Ctrl + Z, Rétablir = Ctrl + Y. Saisie : maintenir la première touche puis appuyer sur la seconde ; une touche seule est validée au relâchement. Modificateurs (Maj, Ctrl, Alt, Méta) : gauche ou droite indifférent dans une combinaison ; l'ordre n'a pas d'importance.
+- **À prévoir plus tard (contextes de touches)** : une combinaison comme Ctrl + Z ne doit agir qu'en mode construction, sinon elle croise « S'accroupir = Ctrl » + déplacement. Le moteur d'entrées devra donner la priorité à la combinaison la plus précise et activer les actions selon le contexte (marche, construction, menu…).
+- Réglages d'affichage, de sons et de vues : à tester en jeu (chantier 4) ; certains n'ont pas encore d'effet visible.

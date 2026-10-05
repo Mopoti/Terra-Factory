@@ -39,7 +39,7 @@
   "settings.sound.test": "Test",
   "settings.sound.mute": "Mute",
   "settings.sound.note": "Real sounds come later: the \"Test\" button plays a beep at the chosen volume.",
-  "settings.controls.note": "Click a key, then press the new key (Esc to cancel). Two keys per action.",
+  "settings.controls.note": "Click a key, then press the new one (Esc to cancel). For a combination, hold a first key then press the second (2 keys maximum, e.g. Ctrl + C; the mouse wheel and buttons count too). Two slots per action.",
   "settings.controls.listening": "Press a key…",
   "settings.controls.leftClick": "Left click",
   "settings.controls.clear": "Clear",
@@ -192,5 +192,15 @@
   "set.game.autosaveMinutes": "Autosave",
   "set.game.autosaveKeep": "Autosaves kept",
   "set.game.showTips": "Show tips and tooltips",
-  "set.game.confirmDelete": "Confirm before deleting"
+  "set.game.confirmDelete": "Confirm before deleting",
+  "key.meta": "Meta",
+  "action.paste": "Paste",
+  "settings.keyboard": "Keyboard type",
+  "settings.controls.resetKeys": "Reset keys",
+  "modal.cancel": "Cancel",
+  "modal.controlsLoss.title": "Lose your custom keys?",
+  "modal.controlsLoss.body": "You have changed some keys. This replaces them with the default keys for the {preset} keyboard: your changes will be lost.",
+  "modal.controlsLoss.confirm": "Replace with defaults",
+  "modal.resetAll.title": "Reset everything?",
+  "modal.resetAll.confirm": "Reset everything"
 }

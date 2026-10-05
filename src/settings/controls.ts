@@ -3,7 +3,17 @@
  * Les touches sont stockées par POSITION PHYSIQUE (KeyboardEvent.code) : « Z » d'un clavier AZERTY
  * est au même endroit que « W » d'un QWERTY. Seul l'affichage dépend de la disposition du clavier.
  * Entrées spéciales : "Mouse0/1/2" (boutons), "WheelUp"/"WheelDown" (molette).
+ * Combinaison : 2 entrées maximum reliées par « + », par exemple "Control+KeyC" ou "Shift+WheelUp".
+ * Dans une combinaison, les modificateurs sont génériques (Shift, Control, Alt, Meta : gauche ou droite)
+ * et l'ordre n'a pas d'importance : "KeyC+Control" = "Control+KeyC".
  */
+
+export type KeyboardPreset = 'zqsd' | 'wasd';
+export const KEYBOARD_PRESETS: readonly KeyboardPreset[] = ['zqsd', 'wasd'];
+/** ZQSD (AZERTY) pour un navigateur en français, WASD (QWERTY) sinon. */
+export function presetForLocale(locale: string): KeyboardPreset {
+  return locale === 'fr' ? 'zqsd' : 'wasd';
+}
 
 export type Binding = string | null;
 export type BindingPair = [Binding, Binding];
@@ -57,9 +67,10 @@ export const ACTIONS = [
   { id: 'buildMode', category: 'build', defaults: ['L:B', null] },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
   { id: 'remove', category: 'build', defaults: ['L:X', 'Delete'] },
-  { id: 'copy', category: 'build', defaults: ['L:C', null] },
-  { id: 'undo', category: 'build', defaults: ['L:U', null] },
-  { id: 'redo', category: 'build', defaults: ['L:J', null] },
+  { id: 'copy', category: 'build', defaults: ['Control+L:C', null] },
+  { id: 'paste', category: 'build', defaults: ['Control+L:V', null] },
+  { id: 'undo', category: 'build', defaults: ['Control+L:Z', null] },
+  { id: 'redo', category: 'build', defaults: ['Control+L:Y', null] },
   { id: 'zoomIn', category: 'camera', defaults: ['WheelUp', 'Equal'] },
   { id: 'zoomOut', category: 'camera', defaults: ['WheelDown', 'Minus'] },
   { id: 'rotateLeft', category: 'camera', defaults: ['ArrowLeft', null] },
@@ -136,19 +147,73 @@ function letterToCode(letter: string, assumeAzerty: boolean): string {
   return `Key${letter}`;
 }
 
-/** Touches par défaut. `french` : le joueur est en français (ZQSD plutôt que WASD). */
-export function defaultControls(french: boolean): ControlsSettings {
-  const resolve = (token: string | null): Binding => {
-    if (token === null) return null;
+/** Touches par défaut pour un type de clavier. */
+export function defaultControls(preset: KeyboardPreset): ControlsSettings {
+  const french = preset === 'zqsd';
+  const resolvePart = (token: string): string => {
     if (!token.startsWith('L:')) return token;
     let letter = token.slice(2);
     if (letter === 'MOVE_UP') letter = french ? 'Z' : 'W';
     if (letter === 'MOVE_LEFT') letter = french ? 'Q' : 'A';
     return letterToCode(letter, french);
   };
+  const resolve = (token: string | null): Binding =>
+    token === null ? null : normalizeBinding(token.split('+').map(resolvePart));
   const result = {} as ControlsSettings;
   for (const a of ACTIONS) result[a.id] = [resolve(a.defaults[0]), resolve(a.defaults[1])];
   return result;
+}
+
+/** Vrai si les touches ne sont plus celles du préréglage (le joueur a personnalisé quelque chose). */
+export function isCustomized(controls: ControlsSettings, preset: KeyboardPreset): boolean {
+  const defaults = defaultControls(preset);
+  return ACTION_IDS.some((id) => controls[id].some((b, i) => b !== defaults[id][i]));
+}
+
+// --- Combinaisons --------------------------------------------------------------------------
+
+const MODIFIERS: Record<string, string> = {
+  ShiftLeft: 'Shift',
+  ShiftRight: 'Shift',
+  ControlLeft: 'Control',
+  ControlRight: 'Control',
+  AltLeft: 'Alt',
+  AltRight: 'Alt',
+  MetaLeft: 'Meta',
+  MetaRight: 'Meta',
+};
+const GENERIC_MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta']);
+
+export const MAX_COMBO_PARTS = 2;
+
+function partRank(part: string): number {
+  if (GENERIC_MODIFIERS.has(part)) return 0;
+  return part.startsWith('Mouse') || part.startsWith('Wheel') ? 2 : 1;
+}
+
+/** Forme unique d'une touche ou combinaison (pour comparer, enregistrer, détecter les conflits). */
+export function normalizeBinding(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? '';
+  return parts
+    .slice(0, MAX_COMBO_PARTS)
+    .map((p) => MODIFIERS[p] ?? p)
+    .sort((a, b) => partRank(a) - partRank(b) || a.localeCompare(b))
+    .join('+');
+}
+
+export function splitBinding(binding: string): string[] {
+  return binding.split('+');
+}
+
+/** Valide une valeur lue dans le stockage : 1 ou 2 parties, caractères simples, forme normalisée. */
+export function isValidBinding(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 60) return false;
+  const parts = value.split('+');
+  return (
+    parts.length <= MAX_COMBO_PARTS &&
+    parts.every((p) => /^[A-Za-z0-9]{1,24}$/.test(p)) &&
+    normalizeBinding(parts) === value
+  );
 }
 
 export function isFixed(id: ActionId): boolean {
@@ -170,12 +235,18 @@ export function findConflict(
   return null;
 }
 
-/** Texte lisible d'une touche. `t` fournit les noms traduits ; `assumeAzerty` sert si la disposition est inconnue. */
+/** Texte lisible d'une touche ou combinaison. `t` fournit les noms traduits ; `assumeAzerty` sert si la disposition est inconnue. */
 export function bindingLabel(
-  code: string,
+  binding: string,
   t: (key: string) => string,
   assumeAzerty = false,
 ): string {
+  return splitBinding(binding)
+    .map((part) => partLabel(part, t, assumeAzerty))
+    .join(' + ');
+}
+
+function partLabel(code: string, t: (key: string) => string, assumeAzerty: boolean): string {
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return `Num ${code.slice(6)}`;
   const known: Record<string, string> = {
@@ -187,16 +258,23 @@ export function bindingLabel(
     Space: 'key.space',
     ShiftLeft: 'key.shift',
     ShiftRight: 'key.shift',
+    Shift: 'key.shift',
     ControlLeft: 'key.ctrl',
     ControlRight: 'key.ctrl',
+    Control: 'key.ctrl',
     AltLeft: 'key.alt',
     AltRight: 'key.alt',
+    Alt: 'key.alt',
+    MetaLeft: 'key.meta',
+    MetaRight: 'key.meta',
+    Meta: 'key.meta',
     Tab: 'key.tab',
     Escape: 'key.escape',
     Delete: 'key.delete',
     Backspace: 'key.backspace',
     Enter: 'key.enter',
   };
+  if (known[code]) return t(known[code]);
   const arrows: Record<string, string> = {
     ArrowLeft: '←',
     ArrowRight: '→',
@@ -204,7 +282,6 @@ export function bindingLabel(
     ArrowDown: '↓',
   };
   if (arrows[code]) return arrows[code];
-  if (known[code]) return t(known[code]);
   if (currentLayout) {
     const label = new Map(currentLayout.entries()).get(code);
     if (label && label.length === 1) return label.toUpperCase();

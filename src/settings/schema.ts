@@ -1,5 +1,5 @@
 import type { UnitPrefs } from '../core/units';
-import { defaultControls, type ControlsSettings } from './controls';
+import { defaultControls, type ControlsSettings, type KeyboardPreset } from './controls';
 
 export type Quality = 'low' | 'medium' | 'high';
 export type ShadowQuality = 'off' | 'normal' | 'detailed';
@@ -76,6 +76,8 @@ export interface Settings {
       ghostRadius: number;
     };
   };
+  /** Type de clavier choisi : détermine ZQSD ou WASD et la lecture des lettres des touches. */
+  keyboard: KeyboardPreset;
   controls: ControlsSettings;
   game: {
     /** Minutes entre deux sauvegardes automatiques ; 0 = désactivée. */
@@ -88,8 +90,8 @@ export interface Settings {
 
 export type SectionName = 'display' | 'sound' | 'views' | 'controls' | 'game';
 
-/** Valeurs par défaut. `french` choisit ZQSD plutôt que WASD. */
-export function defaultSettings(french: boolean): Settings {
+/** Valeurs par défaut pour un type de clavier (ZQSD ou WASD). */
+export function defaultSettings(preset: KeyboardPreset): Settings {
   return {
     display: {
       gamma: 1,
@@ -155,7 +157,8 @@ export function defaultSettings(french: boolean): Settings {
         ghostRadius: 50,
       },
     },
-    controls: defaultControls(french),
+    keyboard: preset,
+    controls: defaultControls(preset),
     game: { autosaveMinutes: 10, autosaveKeep: 5, showTips: true, confirmDelete: true },
   };
 }
