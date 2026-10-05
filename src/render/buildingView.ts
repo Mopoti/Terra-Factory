@@ -10,7 +10,7 @@ import {
   slotOf,
   type PieceKind,
 } from '../core/data/buildings';
-import { aimEdge } from '../core/build/aim';
+import { aimCeiling, aimEdge } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
@@ -199,9 +199,20 @@ export class BuildingView {
         z: alongX ? hit.pos.gz * CELL_SIZE_M : (hit.pos.gz + 0.5) * CELL_SIZE_M,
       };
     }
-    // Sol ou plafond : la case sous le rayon, dans le plan du sol ou du plafond de l'étage.
+    if (slot === 'ceiling') {
+      const hit = aimCeiling(origin, dir, pieces, kind, level, maxDist);
+      if (!hit) return null;
+      return {
+        pos: hit.pos,
+        key: pieceKey(hit.pos),
+        cell: hit.cell,
+        x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
+        z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
+      };
+    }
+    // Sol : la case sous le rayon, dans le plan du sol de l'étage.
     const y0 = level * STOREY_HEIGHT_M;
-    const planeY = slot === 'ceiling' ? y0 + STOREY_HEIGHT_M : y0;
+    const planeY = y0;
     if (Math.abs(dir.y) < 1e-6) return null;
     const t = (planeY - origin.y) / dir.y;
     if (t < 0 || t > 200) return null;

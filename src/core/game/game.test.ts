@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { aimEdge } from '../build/aim';
+import { aimCeiling, aimEdge } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
-import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
+import {
+  edgeKeysToRemove,
+  edgeState,
+  isSupported,
+  pieceKey,
+  posFor,
+  type Pieces,
+} from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
@@ -483,5 +490,32 @@ describe('plafonds accrochés aux murs', () => {
     const status = plan.map((p) => p.status);
     expect(status.slice(0, 4)).toEqual(['ok', 'ok', 'ok', 'ok']);
     expect(status[9]).toBe('unsupported');
+  });
+});
+
+describe('visée des plafonds', () => {
+  const wall = (): Pieces => {
+    const p: Pieces = {};
+    for (let l = 0; l < 5; l++) p[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
+    return p;
+  };
+  it('viser la face du mur, près du haut, accroche la dalle de son côté', () => {
+    // Œil à 1,6 m, 2 m devant le mur (z = 1 m), qui monte à 2,5 m : regard vers le haut du mur.
+    const o = { x: 0.25, y: 1.6, z: -1 };
+    const d = { x: 0, y: 0.3, z: 0.954 }; // coupe z=1 m à y ≈ 2,4 m
+    const hit = aimCeiling(o, d, wall(), 'ceiling_wood', 0, 10);
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1 }); // la dalle côté œil, contre le mur
+    expect(isSupported(wall(), 'ceiling_wood', hit!.pos)).toBe(true);
+  });
+  it('sans mur à portée : retombe sur la case du plan du plafond', () => {
+    const hit = aimCeiling(
+      { x: 0, y: 1.6, z: 0 },
+      { x: 0, y: 0.5, z: 0.866 },
+      {},
+      'ceiling_wood',
+      0,
+      10,
+    );
+    expect(hit?.pos.slot).toBe('ceiling');
   });
 });

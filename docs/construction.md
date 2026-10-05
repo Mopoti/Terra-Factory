@@ -58,3 +58,7 @@ Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (blo
 
 - **Plafonds** : même geste que les sols (glisser un rectangle, vert/rouge), mais une dalle doit **s'accrocher au bloc du haut d'un mur** (ou d'une porte) sur l'un de ses 4 bords, ou **prolonger une dalle déjà posée**, sans dépasser **3 cases** d'un mur porteur (`MAX_CEILING_SPAN`). Les dalles hors de ces limites sont rouges ; un mur trop bas ne porte rien.
 - **Bande grise près des murs** : c'étaient des ombres en escalier que les blocs projetaient sur eux-mêmes ; les blocs ne reçoivent plus d'ombre et le biais d'ombre du soleil est augmenté (`normalBias`). Les blocs continuent de projeter leur ombre au sol.
+
+### Tour 20 — viser un plafond depuis la face ou la tranche d'un mur
+
+La visée d'un plafond (`aimCeiling`) suit le rayon dans la bande de hauteur du haut des murs : viser la face ou la tranche du bloc du haut accroche la dalle du côté de l'œil, même si le rayon traverserait le plan du plafond derrière le mur. Sans mur à portée, retombée sur la case du plan du plafond (rouge si elle ne tient pas). Le bloc du haut du mur (bloc 5) doit exister.
