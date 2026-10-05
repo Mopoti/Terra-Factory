@@ -351,5 +351,20 @@
   "storage.localstorage": "Main storage is unavailable: games are kept in a limited fallback space.",
   "storage.failed": "A save could not be written (disk full?). Export your game to a file to be safe.",
   "load.games": "Games",
-  "load.savesOf": "Saves of \"{name}\""
+  "load.savesOf": "Saves of \"{name}\"",
+  "action.levelUp": "Floor above",
+  "action.levelDown": "Floor below",
+  "build.title": "Building",
+  "build.level": "Floor {n}",
+  "build.piece.wall": "Wall",
+  "build.piece.door": "Door",
+  "build.piece.floor": "Floor",
+  "build.piece.ceiling": "Ceiling",
+  "build.help": "1-4: piece · PgUp/PgDn: floor · Click: place · X: remove · B: exit",
+  "build.cost": "Cost: {cost}",
+  "build.missing": "Missing materials",
+  "build.occupied": "Spot taken",
+  "build.tooFar": "Too far",
+  "build.rooms": "Closed rooms: {n}",
+  "build.inRoom": "You are inside a closed room"
 }

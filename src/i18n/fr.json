@@ -351,5 +351,20 @@
   "storage.localstorage": "Le stockage principal est indisponible : les parties sont conservées dans un espace de secours limité.",
   "storage.failed": "Une sauvegarde n'a pas pu être écrite (espace disque plein ?). Exporte ta partie en fichier par précaution.",
   "load.games": "Parties",
-  "load.savesOf": "Sauvegardes de « {name} »"
+  "load.savesOf": "Sauvegardes de « {name} »",
+  "action.levelUp": "Étage au-dessus",
+  "action.levelDown": "Étage en dessous",
+  "build.title": "Construction",
+  "build.level": "Étage {n}",
+  "build.piece.wall": "Mur",
+  "build.piece.door": "Porte",
+  "build.piece.floor": "Sol",
+  "build.piece.ceiling": "Plafond",
+  "build.help": "1-4 : pièce · Page↑/↓ : étage · Clic : poser · X : démonter · B : quitter",
+  "build.cost": "Coût : {cost}",
+  "build.missing": "Matériaux manquants",
+  "build.occupied": "Emplacement occupé",
+  "build.tooFar": "Trop loin",
+  "build.rooms": "Pièces fermées : {n}",
+  "build.inRoom": "Vous êtes dans une pièce fermée"
 }

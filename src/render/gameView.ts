@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
+import { BUILD_REACH_M, PIECE_KINDS, pieceDef, type PieceKind } from '../core/data/buildings';
 import {
   DEFAULT_PLAYER_STATE,
   type GameSummary,
@@ -17,6 +18,7 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
+import { BuildingView, wallBlocks } from './buildingView';
 import { Interaction } from './interaction';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
@@ -126,6 +128,90 @@ export function startGameView(
   const interaction: Interaction = new Interaction(scene, camera, options.state, container, {
     rebuildChunk: (cx, cz) => buildInto(cx, cz),
   });
+
+  // --- Construction ------------------------------------------------------------------------
+  const buildingView = new BuildingView(scene);
+  buildingView.rebuild(options.state.changes.pieces);
+  let building = false;
+  let buildKind: PieceKind = PIECE_KINDS[0];
+  let buildLevel = 0;
+  const buildHud = document.createElement('div');
+  buildHud.className = 'build-hud';
+  buildHud.hidden = true;
+  container.appendChild(buildHud);
+  const buildRay = new THREE.Raycaster();
+  const rayOrigin = new THREE.Vector3();
+  const rayDir = new THREE.Vector3();
+  let buildMessage = '';
+  const itemLabel = (id: string): string => t(`item.${id}` as TranslationKey);
+  const costText = (kind: PieceKind): string =>
+    Object.entries(pieceDef(kind).cost)
+      .map(([item, n]) => `${n} ${itemLabel(item)}`)
+      .join(', ');
+  function renderBuildHud(): void {
+    const rooms = options.state.rooms().length;
+    const here = options.state
+      .rooms()
+      .some(
+        (r) =>
+          r.level === 0 &&
+          r.cells.includes(
+            `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`,
+          ),
+      );
+    const pieces = PIECE_KINDS.map((k, i) => {
+      const affordable = options.state.canAfford(k);
+      return `<span class="${k === buildKind ? 'sel' : ''}${affordable ? '' : ' poor'}">${i + 1} ${t(`build.piece.${k}` as TranslationKey)}</span>`;
+    }).join('');
+    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${pieces}</div><div>${t('build.cost', { cost: costText(buildKind) })}</div><div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
+  }
+  const unsubscribeBuild = options.state.onChange((e) => {
+    if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
+    if (building && (e.type === 'build' || e.type === 'inventory')) renderBuildHud();
+  });
+
+  function buildAim(): ReturnType<BuildingView['aim']> {
+    if (rig.view === 'first') {
+      camera.getWorldPosition(rayOrigin);
+      camera.getWorldDirection(rayDir);
+    } else {
+      buildRay.setFromCamera(
+        new THREE.Vector2(
+          (mouseX / window.innerWidth) * 2 - 1,
+          -(mouseY / window.innerHeight) * 2 + 1,
+        ),
+        camera,
+      );
+      rayOrigin.copy(buildRay.ray.origin);
+      rayDir.copy(buildRay.ray.direction);
+    }
+    return buildingView.aim(rayOrigin, rayDir, buildKind, buildLevel);
+  }
+
+  function updateBuild(): void {
+    const aim = buildAim();
+    const inReach = aim !== null && Math.hypot(aim.x - playerX, aim.z - playerZ) <= BUILD_REACH_M;
+    const free = aim !== null && !options.state.changes.pieces[aim.key];
+    const ok = inReach && free && options.state.canAfford(buildKind);
+    buildingView.showGhost(aim, buildKind, ok);
+    if (!aim) return;
+    if (pressed('interact')) {
+      const result = !inReach ? 'tooFar' : options.state.place(buildKind, aim.pos);
+      buildMessage = result === 'ok' ? '' : t(`build.${result}` as TranslationKey);
+      renderBuildHud();
+    } else if (pressed('remove') && inReach) {
+      options.state.removePiece(aim.pos, { x: playerX, z: playerZ });
+      buildMessage = '';
+      renderBuildHud();
+    }
+  }
+
+  function setBuilding(value: boolean): void {
+    building = value;
+    buildHud.hidden = !value;
+    if (!value) buildingView.showGhost(null, buildKind, false);
+    else renderBuildHud();
+  }
 
   // --- Chunks ------------------------------------------------------------------------------
   const chunks = new Map<string, ChunkMesh>();
@@ -277,11 +363,15 @@ export function startGameView(
 
   const isBlockedAt = (xM: number, zM: number): boolean =>
     blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`);
-  const canStand = (x: number, z: number): boolean =>
-    !isBlockedAt(x - PLAYER_RADIUS_M, z - PLAYER_RADIUS_M) &&
-    !isBlockedAt(x + PLAYER_RADIUS_M, z - PLAYER_RADIUS_M) &&
-    !isBlockedAt(x - PLAYER_RADIUS_M, z + PLAYER_RADIUS_M) &&
-    !isBlockedAt(x + PLAYER_RADIUS_M, z + PLAYER_RADIUS_M);
+  const canStand = (x: number, z: number): boolean => {
+    for (const dx of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
+      for (const dz of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
+        if (isBlockedAt(x + dx, z + dz)) return false;
+        if (wallBlocks(options.state.changes.pieces, x + dx, z + dz)) return false;
+      }
+    }
+    return true;
+  };
   const obstacleAt = (x: number, y: number, z: number): boolean => {
     const h = obstacles.get(`${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`);
     return h !== undefined && y < h;
@@ -471,6 +561,24 @@ export function startGameView(
         if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
         if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
       }
+      if (pressed('buildMode')) setBuilding(!building);
+      if (building) {
+        PIECE_KINDS.forEach((k, i) => {
+          if (pressed(`hotbar${i + 1}` as ActionId)) {
+            buildKind = k;
+            buildMessage = '';
+            renderBuildHud();
+          }
+        });
+        if (pressed('levelUp')) {
+          buildLevel = Math.min(9, buildLevel + 1);
+          renderBuildHud();
+        }
+        if (pressed('levelDown')) {
+          buildLevel = Math.max(0, buildLevel - 1);
+          renderBuildHud();
+        }
+      }
       if (repeating('zoomIn', dt)) rig.zoom(1, views);
       if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       motion = step(dt);
@@ -499,11 +607,19 @@ export function startGameView(
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
     updateGhost(views);
+    // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
+    const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
+    const inRoom = options.state.rooms().find((r) => r.level === 0 && r.cells.includes(pcell));
+    buildingView.setVisibility(
+      building ? buildLevel : 0,
+      inRoom && !building ? inRoom.level : null,
+    );
+    if (building && !paused) updateBuild();
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,
       player: { x: playerX, z: playerZ },
-      active: !paused && input.isActionActive('interact'),
+      active: !paused && !building && input.isActionActive('interact'),
       paused,
       aimAtCenter: rig.view === 'first',
       mouse: { x: mouseX, y: mouseY },
@@ -522,6 +638,7 @@ export function startGameView(
     if (now - debugSince >= 250) {
       debugSince = now;
       updateDebug();
+      if (building) renderBuildHud();
     }
   });
 
@@ -547,6 +664,9 @@ export function startGameView(
     dispose: () => {
       unsubscribe();
       interaction.dispose();
+      unsubscribeBuild();
+      buildingView.dispose();
+      buildHud.remove();
       input.detach();
       renderer.setAnimationLoop(null);
       releaseLock();

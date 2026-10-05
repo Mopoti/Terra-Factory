@@ -1,3 +1,4 @@
+import { normalizePieces, type Pieces } from '../build/pieces';
 import { resourceById } from '../data/resources';
 import type { ChunkData } from '../world/worldgen';
 
@@ -19,12 +20,14 @@ export interface WorldChanges {
   taken: Record<string, number>;
   drops: DroppedStack[];
   nextDropId: number;
+  /** Pièces de construction posées (voir `core/build/pieces.ts`). */
+  pieces: Pieces;
 }
 
 export const cellKey = (gx: number, gz: number): string => `${gx},${gz}`;
 
 export function emptyChanges(): WorldChanges {
-  return { taken: {}, drops: [], nextDropId: 1 };
+  return { taken: {}, drops: [], nextDropId: 1, pieces: {} };
 }
 
 /** Applique les changements du joueur à un chunk fraîchement généré. */
@@ -56,6 +59,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       if (/^-?\d+,-?\d+$/.test(key) && isNum(v) && v > 0) result.taken[key] = v;
     }
   }
+  result.pieces = normalizePieces(r.pieces);
   if (Array.isArray(r.drops)) {
     for (const d of r.drops) {
       if (typeof d !== 'object' || d === null) continue;

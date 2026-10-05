@@ -77,6 +77,8 @@ export const ACTIONS = [
   { id: 'pause', category: 'ui', defaults: ['Escape', null], fixed: true },
   { id: 'buildMode', category: 'build', defaults: ['L:B', null] },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
+  { id: 'levelUp', category: 'build', defaults: ['PageUp', null] },
+  { id: 'levelDown', category: 'build', defaults: ['PageDown', null] },
   { id: 'remove', category: 'build', defaults: ['L:X', 'Delete'] },
   { id: 'copy', category: 'build', defaults: ['Control+L:C', null] },
   { id: 'paste', category: 'build', defaults: ['Control+L:V', null] },

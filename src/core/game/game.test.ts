@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { posFor } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
@@ -209,5 +210,39 @@ describe('portée de la récolte', () => {
   });
   it('un nid ou un grand objet est mesuré à son bord', () => {
     expect(distanceToFootprint({ x: 0, z: 10 }, -2, -2, 4)).toBeCloseTo(9, 6);
+  });
+});
+
+describe('construction', () => {
+  it('pose consomme des matériaux, démonter les rend', () => {
+    const s = new GameState({ inventory: { stone: 5 } });
+    const pos = posFor('wall', 0, 1, 1, 'x');
+    expect(s.place('wall', pos)).toBe('ok');
+    expect(s.inventory.stone).toBe(1);
+    expect(s.place('wall', pos)).toBe('occupied');
+    expect(s.place('door', posFor('door', 0, 2, 2, 'x'))).toBe('missing');
+    expect(s.place('wall', posFor('floor', 0, 1, 1))).toBe('invalid');
+    expect(s.removePiece(pos, { x: 0, z: 0 })).toBe('wall');
+    expect(s.inventory.stone).toBe(5);
+    expect(s.removePiece(pos, { x: 0, z: 0 })).toBeNull();
+  });
+  it('les pièces survivent à la sauvegarde', () => {
+    const s = new GameState({ inventory: { wood: 4 } });
+    s.place('floor', posFor('floor', 0, 0, 0));
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.pieces).toEqual(s.changes.pieces);
+  });
+  it('les pièces fermées sont recalculées après chaque modification', () => {
+    const s = new GameState({ inventory: { wood: 20, stone: 40 } });
+    s.place('floor', posFor('floor', 0, 0, 0));
+    s.place('ceiling', posFor('ceiling', 0, 0, 0));
+    s.place('door', posFor('door', 0, 0, 0, 'x'));
+    expect(s.rooms()).toHaveLength(0);
+    s.place('wall', posFor('wall', 0, 0, 1, 'x'));
+    s.place('wall', posFor('wall', 0, 0, 0, 'z'));
+    s.place('wall', posFor('wall', 0, 1, 0, 'z'));
+    expect(s.rooms()).toHaveLength(1);
+    s.removePiece(posFor('wall', 0, 0, 1, 'x'), { x: 0, z: 0 });
+    expect(s.rooms()).toHaveLength(0);
   });
 });

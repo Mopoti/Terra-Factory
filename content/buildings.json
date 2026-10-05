@@ -1,0 +1,13 @@
+{
+  "_comment": "Pièces de construction. Dimensions en mètres, coûts en objets du sac (rendus à 100 % si on démonte).",
+  "storeyHeightM": 2.5,
+  "thicknessM": 0.1,
+  "reachM": 6,
+  "maxRoomCells": 400,
+  "pieces": [
+    { "kind": "wall", "slot": "edge", "color": "#9aa0a6", "cost": { "stone": 4 } },
+    { "kind": "door", "slot": "edge", "color": "#b07a3c", "cost": { "wood": 3 } },
+    { "kind": "floor", "slot": "floor", "color": "#a67c52", "cost": { "wood": 2 } },
+    { "kind": "ceiling", "slot": "ceiling", "color": "#c9c2b6", "cost": { "wood": 2 } }
+  ]
+}

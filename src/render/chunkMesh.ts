@@ -39,7 +39,7 @@ export const ghostUniforms = {
 };
 
 const groundMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
-const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
+export const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 propsMaterial.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, ghostUniforms);
   shader.fragmentShader = shader.fragmentShader

@@ -922,3 +922,42 @@
 .panel.load .editor-side {
   max-height: calc(88vh - 190px);
 }
+
+.build-hud {
+  position: absolute;
+  left: 16px;
+  top: 64px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(10, 14, 20, 0.78);
+  color: #e8edf2;
+  font-size: 0.9rem;
+  pointer-events: none;
+  max-width: 340px;
+}
+.build-hud .pieces {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.build-hud .pieces span {
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #3a4655;
+}
+.build-hud .pieces span.sel {
+  border-color: #e08a2c;
+  background: rgba(224, 138, 44, 0.25);
+}
+.build-hud .pieces span.poor {
+  opacity: 0.55;
+}
+.build-hud .msg {
+  color: #ff8d7f;
+  min-height: 1.1em;
+}
+.build-hud small {
+  color: #9fb0c2;
+}
