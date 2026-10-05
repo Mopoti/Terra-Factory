@@ -51,6 +51,18 @@ export function setLocale(locale: Locale): void {
   listeners.forEach((fn) => fn());
 }
 
+/** Oublie le choix de langue : retour à la langue du navigateur. */
+export function resetLocale(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignoré */
+  }
+  current = detectLocale(navigator.languages?.length ? navigator.languages : [navigator.language]);
+  document.documentElement.lang = current;
+  listeners.forEach((fn) => fn());
+}
+
 export function onLocaleChange(fn: () => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);

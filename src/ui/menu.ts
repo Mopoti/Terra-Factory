@@ -1,24 +1,10 @@
-import {
-  LOCALES,
-  LOCALE_NAMES,
-  getLocale,
-  onLocaleChange,
-  setLocale,
-  t,
-  type TranslationKey,
-} from '../i18n';
+import { getLocale, onLocaleChange, t } from '../i18n';
 import { latestGame, type GameSummary, type ProvisionalSaveIndex } from '../core/save/saveIndex';
+import { getSettings } from '../settings/store';
+import { buildSettingsPanel } from './settingsScreen';
 import './menu.css';
 
 type Screen = 'main' | 'newGame' | 'loadGame' | 'settings';
-type SettingsTab = 'display' | 'sound' | 'views' | 'controls';
-
-const SETTINGS_TABS: { id: SettingsTab; label: TranslationKey }[] = [
-  { id: 'display', label: 'settings.tab.display' },
-  { id: 'sound', label: 'settings.tab.sound' },
-  { id: 'views', label: 'settings.tab.views' },
-  { id: 'controls', label: 'settings.tab.controls' },
-];
 
 /** Faux tant qu'on est dans un navigateur : un site ne peut pas toujours fermer son onglet. */
 function canQuit(): boolean {
@@ -37,9 +23,12 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 function formatDate(ms: number): string {
-  return new Intl.DateTimeFormat(getLocale(), { dateStyle: 'short', timeStyle: 'short' }).format(
-    new Date(ms),
-  );
+  const format = getSettings().display.timeFormat;
+  return new Intl.DateTimeFormat(getLocale(), {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    ...(format === 'auto' ? {} : { hour12: format === '12h' }),
+  }).format(new Date(ms));
 }
 
 export interface MenuOptions {
@@ -53,7 +42,6 @@ export interface MenuOptions {
 export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   const { saves, devMode, onStartGame } = options;
   let screen: Screen = 'main';
-  let settingsTab: SettingsTab = 'display';
 
   function button(label: string, onClick: () => void, className = 'menu-btn'): HTMLButtonElement {
     const b = el('button', className, label);
@@ -147,43 +135,6 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     return panel;
   }
 
-  function settingsPanel(): HTMLElement {
-    const panel = el('div', 'panel wide');
-    panel.append(el('h2', undefined, t('screen.settings.title')));
-
-    const tabs = el('div', 'tabs');
-    tabs.setAttribute('role', 'tablist');
-    for (const tab of SETTINGS_TABS) {
-      const b = button(
-        t(tab.label),
-        () => {
-          settingsTab = tab.id;
-          render();
-        },
-        '',
-      );
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-selected', String(settingsTab === tab.id));
-      tabs.append(b);
-    }
-    panel.append(tabs);
-
-    if (settingsTab === 'display') {
-      const box = el('div', 'lang');
-      box.append(el('span', undefined, t('settings.display.language')));
-      for (const locale of LOCALES) {
-        const b = button(LOCALE_NAMES[locale], () => setLocale(locale), '');
-        b.setAttribute('aria-pressed', String(getLocale() === locale));
-        box.append(b);
-      }
-      panel.append(box);
-    } else {
-      panel.append(el('p', undefined, t('common.comingSoon')));
-    }
-    panel.append(button(t('common.back'), () => go('main')));
-    return panel;
-  }
-
   function render(): void {
     root.replaceChildren();
     switch (screen) {
@@ -197,7 +148,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
         root.append(loadGamePanel());
         break;
       case 'settings':
-        root.append(settingsPanel());
+        root.append(buildSettingsPanel(() => go('main'), render));
         break;
     }
     const first = screen === 'newGame' ? root.querySelector('input') : root.querySelector('button');

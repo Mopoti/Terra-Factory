@@ -1,6 +1,6 @@
 # Paramètres du joueur — proposition (chantier 2)
 
-Statut : PROPOSITION à valider par le PO avant codage. Les valeurs par défaut sont des suggestions.
+Statut : VALIDÉ par le PO (liste, onglet Jeu et réglages graphiques inclus) et IMPLÉMENTÉ au chantier 2. Seuls les réglages d'affichage (gamma, luminosité, taille de l'interface, daltonisme, qualité, ombres, limite d'images/s, distance, FPS), de son (test), d'unités, de format d'heure et de touches ont un effet réel pour l'instant ; les réglages de vues et de jeu sont enregistrés et seront appliqués aux chantiers 4 et 6. Les valeurs par défaut sont des suggestions.
 Stockage : navigateur (localStorage), par appareil. Bouton « Réinitialiser » par onglet + « Tout réinitialiser ». 🔶 Plus tard : export/import des paramètres.
 Les réglages s'appliquent immédiatement (pas de bouton « Appliquer »).
 
@@ -65,7 +65,7 @@ Les réglages s'appliquent immédiatement (pas de bouton « Appliquer »).
 - Liste d'actions, chacune avec **deux touches possibles** (principale + alternative), clic puis appui sur la touche pour la changer, « Échap » pour annuler.
 - **Détection de conflits** : si la touche est déjà prise, on prévient et on propose d'échanger.
 - Souris (clic gauche/droit/molette) et touches spéciales (Shift, Ctrl, Alt, espace) supportées. 🔶 Manette plus tard.
-- Défaut selon la langue du navigateur : français → ZQSD, sinon WASD. (Les touches sont retenues par position physique sur le clavier : si tu changes de disposition de clavier, elles restent aux mêmes endroits.)
+- Défaut selon la langue du navigateur : français → ZQSD, sinon WASD. Les touches sont retenues par **position physique** (Z d'un AZERTY = W d'un QWERTY) ; les touches à lettre mnémotechnique (E, M, B…) sont posées à l'endroit où la lettre est écrite sur le clavier du joueur (disposition lue via le navigateur si possible — Chrome/Edge —, sinon supposée AZERTY en français). **Échap est réservé** au menu et ne peut pas être réassigné. Clic gauche réassignable via le bouton « Clic gauche » affiché pendant l'écoute.
 
 | Catégorie | Actions |
 |---|---|

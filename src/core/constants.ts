@@ -14,3 +14,7 @@ export const CELL_SIZE_M = FINE_STEP_M * FINE_PER_CELL;
 export function fineToMeters(fine: number): number {
   return fine * FINE_STEP_M;
 }
+
+/** Un chunk fait 16 × 16 cases de 50 cm, soit 8 m de côté. */
+export const CHUNK_CELLS = 16;
+export const CHUNK_SIZE_M = CHUNK_CELLS * CELL_SIZE_M;

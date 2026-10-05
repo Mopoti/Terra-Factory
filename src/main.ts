@@ -1,10 +1,18 @@
+import { watchVisibility } from './audio/audio';
 import { initLocale, t } from './i18n';
+import { initKeyboardLayout } from './settings/controls';
+import { startApplyingSettings } from './settings/apply';
+import { loadSettings } from './settings/store';
 import { startGameView } from './render/gameView';
 import { ProvisionalSaveIndex, type GameSummary } from './core/save/saveIndex';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 
 initLocale();
+await initKeyboardLayout();
+loadSettings();
+startApplyingSettings();
+watchVisibility();
 document.title = t('game.title');
 
 const appEl = document.getElementById('app') as HTMLElement;
