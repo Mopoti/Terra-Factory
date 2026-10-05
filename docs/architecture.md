@@ -9,7 +9,7 @@ Statut : PROPOSITION, à valider par le PO avant tout code.
 
 ## Principes (issus du cadrage)
 1. **Séparation stricte** : `core` (règles du jeu, sans aucun affichage) / `render` (Three.js) / `ui` (menus). Le `core` ne connaît ni le navigateur ni Three.js → réutilisable en serveur (multi) et porté plus tard vers Unity.
-2. **Monde = données** : grille 3D de cases de 50 cm, découpée en chunks. Une seule couche utile pour l'instant ; les couches du dessous existent déjà dans la structure (terrain creusable plus tard).
+2. **Monde = données** : grille 3D à **deux niveaux**, découpée en chunks. Niveau « logistique » = cases de 50 cm (convoyeurs, tuyaux, rails, câbles, alignement général). Niveau « fin » = pas de 10 cm (murs 10 cm d'épaisseur, machines, décor, placement fin). Positions stockées en **entiers en unités de 10 cm** (déterministe, sans erreur d'arrondi). Le niveau fin est creux (on ne stocke que ce qui est posé). Une seule couche utile pour l'instant ; les couches du dessous existent déjà dans la structure (terrain creusable plus tard).
 3. **Commandes** : toute action (construire, récolter…) est une commande envoyée au core. Base du multijoueur (5 joueurs max), des sauvegardes et de l'annulation.
 4. **Simulation déterministe à pas fixe** : 20 ticks/s, PRNG seedé, jamais de `Math.random()` dans le core.
 5. **Contenu en fichiers de données** (objets, ressources, recettes, combustibles, biomes) avec **ids texte stables**. Rien d'équilibrage en dur dans le code.

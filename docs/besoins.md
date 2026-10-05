@@ -47,3 +47,8 @@ Statut : EN DISCUSSION. Les points marqués 🔶 sont des propositions de Claude
 - **Multijoueur** : 5 joueurs maximum en simultané.
 - **Version bureau** : plus tard.
 - **Ennemis** : options dans l'écran d'édition de partie : agressifs oui/non, expansion (création de nouveaux nids) oui/non. **Par défaut : non agressifs mais s'étendent.**
+
+## 7. Décisions du PO — grille à deux niveaux
+- Cases logistiques de 50 cm (alignement des réseaux : convoyeurs, tuyaux…) + **placement fin au pas de 10 cm** pour murs (10 cm d'épaisseur), machines et décor.
+- Un écart de moins de 50 cm entre une machine et la case logistique suivante peut consommer un élément de convoyeur : l'ensemble reste aligné sur la base 50 cm. 🔶 Règle exacte à confirmer (voir passation.md).
+- Les pièces fermées (chauffage, température d'abri) devront tenir compte des murs de 10 cm.
