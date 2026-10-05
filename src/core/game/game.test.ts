@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Factory } from '../factory/factory';
 import { aimCeiling, aimEdge, aimFloor, aimStairs, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import {
@@ -851,5 +852,51 @@ describe('dalle : un seul objet pour sol et plafond', () => {
         true,
       ),
     ).toBeNull();
+  });
+});
+
+describe('machines et tapis dans la partie', () => {
+  const none = (): boolean => false;
+  const noWorld = { oreAt: () => null, mineOre: () => 0 };
+  it("poser consomme l'objet, démolir rend les ressources de fabrication et le contenu", () => {
+    const s = new GameState({ inventory: { machine_furnace: 1, coal: 2, iron_ore: 3 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'furnace', 4, 4, 0, none)).toBe('ok');
+    expect(s.placeMachine(f, 'furnace', 8, 8, 0, none)).toBe('missing');
+    const m = s.changes.machines[0];
+    expect(s.loadMachine(m, 'fuel', 'coal', 5)).toBe(2);
+    expect(s.loadMachine(m, 'input', 'iron_ore', 3)).toBe(3);
+    expect(s.loadMachine(m, 'input', 'coal', 1)).toBe(0); // le charbon ne se cuit pas
+    expect(s.inventory).toEqual({});
+    expect(s.removeMachine(f, m.id, { x: 0, z: 0 })).toBe(true);
+    // 5 pierres (recette) + 2 charbon + 3 minerais
+    expect(s.inventory).toEqual({ stone: 5, coal: 2, iron_ore: 3 });
+    expect(s.changes.machines).toHaveLength(0);
+  });
+  it('on ne pose pas deux machines au même endroit ; reprendre le stock', () => {
+    const s = new GameState({ inventory: { machine_conveyor: 2 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 0, none)).toBe('ok');
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 2, none)).toBe('blocked');
+    const m = s.changes.machines[0];
+    m.stock = { item: 'iron_ingot', count: 4 };
+    expect(s.unloadMachine(m, 'stock')).toBe(4);
+    expect(s.inventory.iron_ingot).toBe(4);
+    expect(m.stock).toBeNull();
+  });
+  it('les machines sont enregistrées avec la partie', () => {
+    const s = new GameState({ inventory: { machine_drill: 1 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    s.placeMachine(f, 'drill', 0, 0, 1, none);
+    s.changes.machines[0].fuel = { item: 'coal', count: 3 };
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.machines).toEqual(s.changes.machines);
+    expect(copy.changes.nextMachineId).toBe(2);
+  });
+  it("l'usine épuise vraiment les cases du monde", () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.takeFromWorld('3,4', 5, 2)).toBe(2);
+    expect(s.takeFromWorld('3,4', 5, 9)).toBe(3);
+    expect(s.takeFromWorld('3,4', 5, 1)).toBe(0);
   });
 });

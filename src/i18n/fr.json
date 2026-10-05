@@ -399,5 +399,10 @@
   "item.piece_stairs_stone": "Escalier en pierre",
   "build.unsupportedStairs": "Un escalier se pose au sol, sur un sol d'étage, ou dans le prolongement d'un autre escalier (plus haut)",
   "item.piece_slab_wood": "Dalle en bois",
-  "item.piece_slab_stone": "Dalle en pierre"
+  "item.piece_slab_stone": "Dalle en pierre",
+  "item.iron_ingot": "Lingot de fer",
+  "item.copper_ingot": "Lingot de cuivre",
+  "item.machine_drill": "Foreuse",
+  "item.machine_furnace": "Fourneau",
+  "item.machine_conveyor": "Tapis roulant"
 }

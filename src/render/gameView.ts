@@ -58,7 +58,7 @@ const SKY = 0x8fb8d8;
 const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
 const PLAYER_RADIUS_M = 0.25;
-const PLAYER_HEIGHT_M = 1.75;
+const PLAYER_HEIGHT_M = 1.7;
 const CAMERA_YAW_SPEED = 1.8;
 /** Distance entre deux pas (m). */
 const STRIDE_M = 1.35;

@@ -1,3 +1,11 @@
+import {
+  emptyMachine,
+  type Cell,
+  type Factory,
+  type Machine,
+  type Stack,
+} from '../factory/factory';
+import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
@@ -15,7 +23,8 @@ export type StateEvent =
   | { type: 'drops' }
   | { type: 'inventory' }
   | { type: 'build' }
-  | { type: 'hotbar' };
+  | { type: 'hotbar' }
+  | { type: 'factory' };
 
 export interface HarvestResult {
   /** Unités réellement ajoutées au sac. */
@@ -272,6 +281,100 @@ export class GameState {
       this.emit({ type: 'build' });
       this.emit({ type: 'inventory' });
     }
+    return n;
+  }
+
+  // --- Machines ------------------------------------------------------------------------------------
+
+  /** Pose une machine ou un élément de tapis (consomme l'objet du sac). */
+  placeMachine(
+    factory: Factory,
+    type: MachineType,
+    gx: number,
+    gz: number,
+    rot: number,
+    blocked: (c: Cell) => boolean,
+  ): 'ok' | 'missing' | 'blocked' {
+    const def = machineDef(type);
+    if ((this.inventory[def.item] ?? 0) < 1) return 'missing';
+    if (!factory.canPlace(type, gx, gz, rot, blocked)) return 'blocked';
+    this.inventory = remove(this.inventory, def.item, 1).inventory;
+    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot));
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Remet dans le sac (ou au sol si plein) un tas qui sort d'une machine ou d'une démolition. */
+  private giveBack(item: string, count: number, at: { x: number; z: number }): void {
+    if (count <= 0) return;
+    const fits = Math.min(count, maxAddable(this.inventory, item, this.limits));
+    if (fits > 0) this.inventory = add(this.inventory, item, fits);
+    if (count - fits > 0) {
+      this.changes.drops.push({
+        id: `drop-${this.changes.nextDropId++}`,
+        item,
+        count: count - fits,
+        x: at.x,
+        z: at.z,
+      });
+      this.emit({ type: 'drops' });
+    }
+  }
+
+  /** Démolit une machine : ressources de fabrication et contenu reviennent au joueur. */
+  removeMachine(factory: Factory, id: number, at: { x: number; z: number }): boolean {
+    const m = factory.remove(id);
+    if (!m) return false;
+    const recipe = itemById(machineDef(m.type).item).recipe ?? {};
+    for (const [item, n] of Object.entries(recipe)) this.giveBack(item, n, at);
+    for (const stack of [m.fuel, m.input, m.stock])
+      if (stack) this.giveBack(stack.item, stack.count, at);
+    for (const b of m.belt) this.giveBack(b.item, 1, at);
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /**
+   * Met des objets du sac dans la case de combustible ou d'entrée d'une machine (un seul type par case).
+   * Renvoie la quantité déplacée.
+   */
+  loadMachine(m: Machine, slot: 'fuel' | 'input', item: string, count: number): number {
+    const max = machineDef(m.type).stockMax ?? 100;
+    if (slot === 'fuel' && (!machineDef(m.type).fuel || !itemById(item).fuelSeconds)) return 0;
+    if (slot === 'input' && (m.type !== 'furnace' || !smeltRecipe(item))) return 0;
+    const current: Stack | null = slot === 'fuel' ? m.fuel : m.input;
+    if (current && current.item !== item) return 0;
+    const moved = Math.min(count, this.inventory[item] ?? 0, max - (current?.count ?? 0));
+    if (moved <= 0) return 0;
+    this.inventory = remove(this.inventory, item, moved).inventory;
+    const next = { item, count: (current?.count ?? 0) + moved };
+    if (slot === 'fuel') m.fuel = next;
+    else m.input = next;
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return moved;
+  }
+
+  /** Reprend dans le sac le contenu d'une case de machine (tout ce qui tient). Renvoie la quantité. */
+  unloadMachine(m: Machine, slot: 'fuel' | 'input' | 'stock'): number {
+    const stack = m[slot];
+    if (!stack) return 0;
+    const moved = Math.min(stack.count, maxAddable(this.inventory, stack.item, this.limits));
+    if (moved <= 0) return 0;
+    this.inventory = add(this.inventory, stack.item, moved);
+    stack.count -= moved;
+    if (stack.count <= 0) m[slot] = null;
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return moved;
+  }
+
+  /** Retire du monde du minerai (l'usine épuise vraiment les cases) ; renvoie la quantité retirée. */
+  takeFromWorld(key: string, total: number, units: number): number {
+    const n = Math.max(0, Math.min(units, this.remaining(key, total)));
+    if (n > 0) this.changes.taken[key] = (this.changes.taken[key] ?? 0) + n;
     return n;
   }
 }

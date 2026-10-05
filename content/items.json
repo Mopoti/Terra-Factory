@@ -12,7 +12,8 @@
       "id": "wood",
       "weightKg": 0.8,
       "volumeL": 3,
-      "color": "#8b5a2b"
+      "color": "#8b5a2b",
+      "fuelSeconds": 20
     },
     {
       "id": "stone",
@@ -36,7 +37,8 @@
       "id": "coal",
       "weightKg": 0.25,
       "volumeL": 0.3,
-      "color": "#2b2b2f"
+      "color": "#2b2b2f",
+      "fuelSeconds": 100
     },
     {
       "id": "piece_wall_wood",
@@ -99,6 +101,46 @@
       "color": "#7d8288",
       "recipe": {
         "stone": 1
+      }
+    },
+    {
+      "id": "iron_ingot",
+      "weightKg": 0.35,
+      "volumeL": 0.15,
+      "color": "#c3c8cf"
+    },
+    {
+      "id": "copper_ingot",
+      "weightKg": 0.4,
+      "volumeL": 0.15,
+      "color": "#e08a4a"
+    },
+    {
+      "id": "machine_drill",
+      "weightKg": 20,
+      "volumeL": 40,
+      "color": "#c98a2d",
+      "recipe": {
+        "iron_ingot": 3,
+        "stone": 3
+      }
+    },
+    {
+      "id": "machine_furnace",
+      "weightKg": 15,
+      "volumeL": 25,
+      "color": "#7a6a63",
+      "recipe": {
+        "stone": 5
+      }
+    },
+    {
+      "id": "machine_conveyor",
+      "weightKg": 0.5,
+      "volumeL": 1,
+      "color": "#3f4a55",
+      "recipe": {
+        "iron_ingot": 1
       }
     }
   ]

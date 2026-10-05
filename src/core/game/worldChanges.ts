@@ -1,4 +1,5 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
+import { normalizeMachines, type Machine } from '../factory/factory';
 import { itemById } from '../data/items';
 import { migrateItemId } from './inventory';
 import { resourceById } from '../data/resources';
@@ -28,6 +29,9 @@ export interface WorldChanges {
   rotations: Record<string, number>;
   /** Barre de raccourcis du joueur (rangée avec le reste de la partie) : objet par case, ou null. */
   hotbar: (string | null)[];
+  /** Machines et tapis posés (voir `core/factory`). */
+  machines: Machine[];
+  nextMachineId: number;
 }
 
 export const HOTBAR_SLOTS = 9;
@@ -42,6 +46,8 @@ export function emptyChanges(): WorldChanges {
     pieces: {},
     rotations: {},
     hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
+    machines: [],
+    nextMachineId: 1,
   };
 }
 
@@ -75,6 +81,12 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     }
   }
   result.pieces = normalizePieces(r.pieces);
+  result.machines = normalizeMachines(r.machines);
+  const maxMachine = result.machines.reduce((m, x) => Math.max(m, x.id), 0);
+  result.nextMachineId = Math.max(
+    isNum(r.nextMachineId) ? Math.floor(r.nextMachineId) : 1,
+    maxMachine + 1,
+  );
   if (typeof r.rotations === 'object' && r.rotations !== null) {
     for (const [key, v] of Object.entries(r.rotations as Record<string, unknown>)) {
       if (result.pieces[key] && isNum(v) && v >= 1 && v <= 3) result.rotations[key] = Math.floor(v);

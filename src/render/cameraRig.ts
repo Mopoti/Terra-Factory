@@ -13,7 +13,7 @@ import {
   zoomFactor,
 } from './cameraMath';
 
-export const EYE_HEIGHT_M = 1.6;
+export const EYE_HEIGHT_M = 1.55;
 const TOP_FOV = 40;
 const PAN_SPEED_M_S = 14;
 const PAN_MAX_M = 16;

@@ -9,6 +9,8 @@ export interface ItemDef {
   color: string;
   /** Fabrication à la main : objet -> quantité nécessaire pour 1 unité. `null` = ressource brute. */
   recipe: Record<string, number> | null;
+  /** Combustible : secondes de fonctionnement d'une machine pour 1 unité (absent = n'est pas un combustible). */
+  fuelSeconds: number | null;
 }
 
 export interface BagLimits {
@@ -25,6 +27,7 @@ interface RawItem {
   volumeL: number;
   color: string;
   recipe?: Record<string, number>;
+  fuelSeconds?: number;
 }
 
 export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
@@ -33,6 +36,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   volumeMl: Math.round(i.volumeL * 1000),
   color: i.color,
   recipe: i.recipe ?? null,
+  fuelSeconds: i.fuelSeconds ?? null,
 }));
 
 export const BAG_LIMITS: BagLimits = {

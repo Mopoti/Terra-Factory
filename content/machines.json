@@ -1,0 +1,48 @@
+{
+  "_comment": "Machines et tapis. Taille en cases de 50 cm (largeur x profondeur, orientation 0). Vitesses en secondes. Combustible : voir « fuelSeconds » dans items.json.",
+  "machines": [
+    {
+      "id": "drill",
+      "w": 3,
+      "d": 3,
+      "item": "machine_drill",
+      "color": "#c98a2d",
+      "fuel": true,
+      "mineSeconds": 1,
+      "burnPerSecond": 1,
+      "stockMax": 100
+    },
+    {
+      "id": "furnace",
+      "w": 2,
+      "d": 2,
+      "item": "machine_furnace",
+      "color": "#7a6a63",
+      "fuel": true,
+      "burnPerSecond": 1,
+      "stockMax": 100
+    },
+    {
+      "id": "conveyor",
+      "w": 1,
+      "d": 1,
+      "item": "machine_conveyor",
+      "color": "#3f4a55",
+      "fuel": false,
+      "cellsPerSecond": 1.5,
+      "capacity": 3
+    }
+  ],
+  "smelting": [
+    {
+      "in": "iron_ore",
+      "out": "iron_ingot",
+      "seconds": 3
+    },
+    {
+      "in": "copper_ore",
+      "out": "copper_ingot",
+      "seconds": 3
+    }
+  ]
+}
