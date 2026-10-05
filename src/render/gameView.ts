@@ -188,9 +188,21 @@ export function startGameView(
   };
   renderer.domElement.addEventListener('click', requestLock);
   let wasLocked = false;
+  /** Vrai quand c'est le jeu qui libère la souris (changement de vue, pause) : ce n'est pas un Échap. */
+  let releasingOnPurpose = false;
+  function releaseLock(): void {
+    if (!isLocked()) return;
+    releasingOnPurpose = true;
+    document.exitPointerLock();
+  }
   const onLockChange = (): void => {
     const locked = isLocked();
-    if (wasLocked && !locked && !paused) options.onRequestPause?.();
+    if (!locked && releasingOnPurpose) {
+      releasingOnPurpose = false;
+    } else if (wasLocked && !locked && !paused) {
+      // Le navigateur a libéré la souris (le joueur a appuyé sur Échap) : on ouvre la pause.
+      options.onRequestPause?.();
+    }
     wasLocked = locked;
   };
   document.addEventListener('pointerlockchange', onLockChange);
@@ -230,7 +242,7 @@ export function startGameView(
     if (view === 'cycle') rig.cycleView(views);
     else rig.setView(view, views);
     if (rig.view === before) return;
-    if (rig.view !== 'first' && isLocked()) document.exitPointerLock();
+    if (rig.view !== 'first') releaseLock();
     if (rig.view === 'first') requestLock();
     options.onViewChange?.(rig.view);
   }
@@ -477,14 +489,14 @@ export function startGameView(
     setPaused: (value) => {
       paused = value;
       if (value) {
-        if (isLocked()) document.exitPointerLock();
+        releaseLock();
       } else requestLock();
     },
     dispose: () => {
       unsubscribe();
       input.detach();
       renderer.setAnimationLoop(null);
-      if (isLocked()) document.exitPointerLock();
+      releaseLock();
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
