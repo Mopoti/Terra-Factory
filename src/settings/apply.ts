@@ -20,7 +20,7 @@ function apply(s: Settings): void {
     if (el) el.style.filter = filter;
   }
   const scale = String(s.display.uiScale / 100);
-  for (const id of ['ui', 'hud', 'pause', 'inventory']) {
+  for (const id of ['ui', 'hud', 'pause', 'inventory', 'machine']) {
     const el = document.getElementById(id);
     if (el) el.style.setProperty('zoom', scale);
   }

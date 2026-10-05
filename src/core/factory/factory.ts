@@ -1,3 +1,4 @@
+import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { itemById } from '../data/items';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
@@ -380,4 +381,23 @@ export class Factory {
       if (target && target !== m && this.deliver(target, m, front.item)) m.belt.shift();
     }
   }
+}
+
+/** Première machine ou tapis touché par un rayon (distance en mètres le long du rayon). */
+export function pickMachine(
+  factory: Factory,
+  origin: { x: number; y: number; z: number },
+  dir: { x: number; y: number; z: number },
+  maxDist: number,
+): { machine: Machine; t: number } | null {
+  if (factory.machines.length === 0) return null;
+  for (let t = 0.1; t <= maxDist; t += 0.05) {
+    const y = origin.y + dir.y * t;
+    if (y < 0) return null;
+    const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
+    const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
+    const m = factory.machineAt(gx, gz);
+    if (m && y <= machineDef(m.type).height) return { machine: m, t };
+  }
+  return null;
 }

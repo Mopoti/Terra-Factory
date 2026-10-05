@@ -14,6 +14,7 @@ import { initKeyboardLayout } from './settings/controls';
 import { startApplyingSettings } from './settings/apply';
 import { getSettings, loadSettings } from './settings/store';
 import { mountHotbar, type Hotbar } from './ui/hotbar';
+import { mountMachineWindow, type MachineWindow } from './ui/machineWindow';
 import { mountInventory, type InventoryWindow } from './ui/inventory';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
@@ -32,6 +33,7 @@ const bgEl = document.getElementById('menu-bg') as HTMLElement;
 const hudEl = document.getElementById('hud') as HTMLElement;
 const pauseEl = document.getElementById('pause') as HTMLElement;
 const inventoryEl = document.getElementById('inventory') as HTMLElement;
+const machineEl = document.getElementById('machine') as HTMLElement;
 
 /** Stockage définitif (IndexedDB) ; les parties de l'ancien stockage navigateur y sont reprises une fois. */
 const storage = await openBestStorage();
@@ -51,6 +53,7 @@ interface Session {
   pause: PauseMenu;
   inventory: InventoryWindow;
   hotbar: Hotbar;
+  machine: MachineWindow;
   /** Sac et changements du monde de cette session. */
   state: GameState;
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
@@ -105,6 +108,7 @@ function quitToMenu(): void {
   s.pause.dispose();
   s.inventory.dispose();
   s.hotbar.dispose();
+  s.machine.dispose();
   s.view.dispose();
   session = null;
   showMenu();
@@ -131,6 +135,9 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     },
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
+    onOpenMachine: (id) => {
+      if (!session?.pause.isOpen() && !session?.inventory.isOpen()) session?.machine.open(id);
+    },
   });
   const s: Session = {
     game,
@@ -138,6 +145,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     pause: null as unknown as PauseMenu,
     inventory: null as unknown as InventoryWindow,
     hotbar: mountHotbar(document.body, state),
+    machine: null as unknown as MachineWindow,
     state,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
@@ -147,7 +155,9 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   session = s;
 
   /** Le jeu est figé tant que le menu pause ou le sac est ouvert. */
-  const syncPaused = (): void => view.setPaused(s.pause.isOpen() || s.inventory.isOpen());
+  const syncPaused = (): void =>
+    view.setPaused(s.pause.isOpen() || s.inventory.isOpen() || s.machine.isOpen());
+  s.machine = mountMachineWindow(machineEl, state, view.factory, { onOpenChange: syncPaused });
   s.inventory = mountInventory(inventoryEl, state, {
     drop: (item, count) => view.dropItem(item, count),
     onOpenChange: syncPaused,

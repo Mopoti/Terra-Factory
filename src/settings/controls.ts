@@ -68,6 +68,7 @@ export const ACTIONS = [
   { id: 'viewThird', category: 'views', defaults: [null, null] },
   { id: 'viewTop', category: 'views', defaults: [null, null] },
   { id: 'interact', category: 'interaction', defaults: ['Mouse0', 'L:E'] },
+  { id: 'use', category: 'interaction', defaults: ['L:F', null] },
   { id: 'secondary', category: 'interaction', defaults: ['Mouse2', null] },
   { id: 'drop', category: 'interaction', defaults: ['L:G', null] },
   { id: 'inventory', category: 'ui', defaults: ['Tab', 'L:I'] },

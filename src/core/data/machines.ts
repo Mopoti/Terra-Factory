@@ -10,6 +10,8 @@ export interface MachineDef {
   /** Objet du sac consommé à la pose et rendu (en ressources de fabrication) à la démolition. */
   item: string;
   color: string;
+  /** Hauteur (m), pour viser la machine. */
+  height: number;
   /** Brûle du combustible pour fonctionner. */
   fuel: boolean;
   burnPerSecond?: number;

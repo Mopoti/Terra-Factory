@@ -117,8 +117,8 @@
     },
     {
       "id": "machine_drill",
-      "weightKg": 20,
-      "volumeL": 40,
+      "weightKg": 8,
+      "volumeL": 15,
       "color": "#c98a2d",
       "recipe": {
         "iron_ingot": 3,
@@ -127,8 +127,8 @@
     },
     {
       "id": "machine_furnace",
-      "weightKg": 15,
-      "volumeL": 25,
+      "weightKg": 10,
+      "volumeL": 12,
       "color": "#7a6a63",
       "recipe": {
         "stone": 5
@@ -136,8 +136,8 @@
     },
     {
       "id": "machine_conveyor",
-      "weightKg": 0.5,
-      "volumeL": 1,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
       "color": "#3f4a55",
       "recipe": {
         "iron_ingot": 1

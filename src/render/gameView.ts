@@ -10,7 +10,7 @@ import {
   type PlanItem,
   type WallCoord,
 } from '../core/build/plan';
-import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
+import { edgeKeysToRemove, parseKey, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   PIECES,
@@ -43,11 +43,28 @@ import {
   bodyBlocked,
   ceilingAbove,
   groundAt,
-  rayHitPiece,
   stepVertical,
   surfaceMaterialAt,
 } from '../core/game/physics';
 import { playSfx } from '../audio/sfx';
+import { pickPiece } from '../core/build/pick';
+import { riseFromDirection } from '../core/build/aim';
+import { RISE_DIR } from '../core/data/buildings';
+import { machineDef, machineForItem, type MachineDef } from '../core/data/machines';
+import {
+  Factory,
+  dims,
+  emptyMachine,
+  outputCell,
+  pickMachine,
+  type Cell,
+  type FactoryWorld,
+  type Machine,
+} from '../core/factory/factory';
+import { cellKey } from '../core/game/worldChanges';
+import { resourceById, type DepositResource } from '../core/data/resources';
+import { FactoryView } from './factoryView';
+import type { Structure } from './interaction';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 
@@ -78,6 +95,8 @@ export interface GameViewOptions {
   onViewChange?: (view: ViewId) => void;
   /** Appelé quand le navigateur libère la souris (Échap en 1ère personne) : ouvrir la pause. */
   onRequestPause?: () => void;
+  /** Le joueur veut ouvrir l'interface de la machine visée (touche « Utiliser »). */
+  onOpenMachine?: (id: number) => void;
 }
 
 export interface GameViewHandle {
@@ -88,6 +107,8 @@ export interface GameViewHandle {
   setPaused(paused: boolean): void;
   /** Jette des objets du sac au sol, devant le joueur. */
   dropItem(item: string, count: number): void;
+  /** L'usine (machines et tapis) de la partie, pour l'interface des machines. */
+  factory: Factory;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -163,8 +184,47 @@ export function startGameView(
   const rig = new CameraRig(camera, state);
   const interaction: Interaction = new Interaction(scene, camera, options.state, container, {
     rebuildChunk: (cx, cz) => buildInto(cx, cz),
-    occlusion: (o, d) => rayHitPiece(options.state.changes.pieces, o, d, 80),
+    pickStructure: (o, d) => structureAt(o, d),
+    demolish: (id) => demolishStructure(id),
   });
+
+  // --- Usine : monde des minerais, simulation, affichage ---------------------------------------
+  const oreCache = new Map<string, Map<string, { id: string; amount: number }>>();
+  const oreCellAt = (gx: number, gz: number): { id: string; amount: number } | null => {
+    const cx = Math.floor(gx / CHUNK_CELLS);
+    const cz = Math.floor(gz / CHUNK_CELLS);
+    const key = `${cx},${cz}`;
+    let cells = oreCache.get(key);
+    if (!cells) {
+      cells = new Map(generator.chunk(cx, cz).ore.map((o) => [cellKey(o.gx, o.gz), o]));
+      oreCache.set(key, cells);
+    }
+    return cells.get(cellKey(gx, gz)) ?? null;
+  };
+  const dirtyChunks = new Set<string>();
+  const factoryWorld: FactoryWorld = {
+    oreAt: (gx, gz) => {
+      const ore = oreCellAt(gx, gz);
+      if (!ore) return null;
+      const left = ore.amount - (options.state.changes.taken[cellKey(gx, gz)] ?? 0);
+      return left > 0
+        ? { id: ore.id, item: (resourceById(ore.id) as DepositResource).harvest.item, amount: left }
+        : null;
+    },
+    mineOre: (gx, gz, units) => {
+      const ore = oreCellAt(gx, gz);
+      if (!ore) return 0;
+      const n = options.state.takeFromWorld(cellKey(gx, gz), ore.amount, units);
+      if (n > 0) dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+      return n;
+    },
+  };
+  const factory = new Factory(options.state.changes.machines, factoryWorld);
+  const factoryView = new FactoryView(scene, factory);
+  let simAcc = 0;
+  let itemsTimer = 0;
+  let chunkTimer = 0;
+  let panelTimer = 0;
 
   // --- Construction ------------------------------------------------------------------------
   const buildingView = new BuildingView(scene);
@@ -195,7 +255,19 @@ export function startGameView(
   let buildMessage = '';
   const itemLabel = (id: string): string => t(`item.${id}` as TranslationKey);
   const stockOf = (kind: PieceKind): number => options.state.inventory[pieceDef(kind).item] ?? 0;
+  const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
   function renderBuildHud(): void {
+    if (buildingMachine) {
+      const def = selectedMachine();
+      if (!def) return;
+      const n = options.state.inventory[def.item] ?? 0;
+      const rot =
+        buildRot === null
+          ? t('build.rotationAuto')
+          : t('build.rotation', { deg: String(buildRot * 90) });
+      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(def.id === 'conveyor' ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
+      return;
+    }
     const rooms = options.state.rooms().length;
     const here = options.state
       .rooms()
@@ -223,10 +295,12 @@ export function startGameView(
   const unsubscribeBuild = options.state.onChange((e) => {
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
     if (e.type === 'hotbar') syncBuilding();
+    if (e.type === 'factory') factoryView.rebuild();
     if (building && (e.type === 'build' || e.type === 'inventory')) renderBuildHud();
   });
 
-  function buildAim(mode: 'place' | 'remove' = 'place'): BuildAim | null {
+  /** Calcule le rayon de visée (au centre de l'écran en 1ère personne, sinon sous le curseur). */
+  function computeRay(): void {
     if (rig.view === 'first') {
       camera.getWorldPosition(rayOrigin);
       camera.getWorldDirection(rayDir);
@@ -241,6 +315,10 @@ export function startGameView(
       rayOrigin.copy(buildRay.ray.origin);
       rayDir.copy(buildRay.ray.direction);
     }
+  }
+
+  function buildAim(mode: 'place' | 'remove' = 'place'): BuildAim | null {
+    computeRay();
     return buildingView.aim(
       rayOrigin,
       rayDir,
@@ -312,6 +390,10 @@ export function startGameView(
 
   let removeCooldown = 0;
   function updateBuild(dt: number): void {
+    if (buildingMachine) {
+      updateMachineBuild();
+      return;
+    }
     const aim = buildAim();
     const kind = aim ? resolveKind(buildKind(), (dragStart ?? aim).pos.slot) : buildKind();
     const down = input.isActionActive('interact');
@@ -405,21 +487,308 @@ export function startGameView(
 
   /** Active ou coupe la construction selon la case sélectionnée dans la barre de raccourcis. */
   function syncBuilding(): void {
-    const value = selectedKind() !== null;
+    const machine = selectedMachine() !== null;
+    const value = selectedKind() !== null || machine;
     const item = options.state.selectedItem();
     if (item !== lastBuildItem) {
       lastBuildItem = item;
       buildRot = null; // une autre pièce : retour à l'orientation automatique
     }
-    if (value !== building) {
+    if (value !== building || machine !== buildingMachine) {
       building = value;
+      buildingMachine = machine;
       dragStart = null;
       lastPlan = [];
+      machinePath = [];
       buildMessage = '';
-      if (!value) buildingView.hideGhost();
+      buildingView.hideGhost();
+      factoryView.hideGhost();
     }
     buildHud.hidden = !building;
     if (building) renderBuildHud();
+  }
+
+  // --- Viser une construction ou une machine ---------------------------------------------------
+  const PIECE_BREAK_S = { wood: 0.5, stone: 0.8 } as const;
+
+  /** Boîte englobante d'une pièce de construction (pour la mise en évidence). */
+  function pieceBox(key: string): Structure['box'] {
+    const pos = parseKey(key);
+    const half = CELL_SIZE_M / 2;
+    if (!pos) return { x: 0, y: 0, z: 0, sx: 0.5, sy: 0.5, sz: 0.5 };
+    const y0 = pos.level * STOREY_HEIGHT_M;
+    if (pos.slot === 'edge') {
+      const alongX = pos.axis === 'x';
+      const door = options.state.changes.pieces[key]?.startsWith('door');
+      const layer = pos.layer ?? 0;
+      return {
+        x: alongX ? pos.gx * CELL_SIZE_M + half : pos.gx * CELL_SIZE_M,
+        y: door ? y0 + STOREY_HEIGHT_M / 2 : y0 + (layer + 0.5) * LAYER_HEIGHT_M,
+        z: alongX ? pos.gz * CELL_SIZE_M : pos.gz * CELL_SIZE_M + half,
+        sx: alongX ? CELL_SIZE_M + 0.1 : 0.1,
+        sy: door ? STOREY_HEIGHT_M : LAYER_HEIGHT_M,
+        sz: alongX ? 0.1 : CELL_SIZE_M + 0.1,
+      };
+    }
+    const base = {
+      x: pos.gx * CELL_SIZE_M + half,
+      z: pos.gz * CELL_SIZE_M + half,
+      sx: CELL_SIZE_M,
+      sz: CELL_SIZE_M,
+    };
+    if (pos.slot === 'floor') return { ...base, y: y0 + 0.05, sy: 0.1 };
+    if (pos.slot === 'ceiling') {
+      return { ...base, y: y0 + ((pos.layer ?? 0) + 1) * LAYER_HEIGHT_M - 0.05, sy: 0.1 };
+    }
+    return { ...base, y: y0 + ((pos.layer ?? 0) + 0.5) * LAYER_HEIGHT_M, sy: LAYER_HEIGHT_M };
+  }
+
+  function machineBox(m: Machine): Structure['box'] {
+    const { w, d } = dims(m.type, m.rot);
+    const h = machineDef(m.type).height;
+    return {
+      x: (m.gx + w / 2) * CELL_SIZE_M,
+      y: h / 2,
+      z: (m.gz + d / 2) * CELL_SIZE_M,
+      sx: w * CELL_SIZE_M,
+      sy: h,
+      sz: d * CELL_SIZE_M,
+    };
+  }
+
+  /** Le premier objet construit (pièce ou machine) que le rayon touche. */
+  function structureAt(o: THREE.Vector3, d: THREE.Vector3): Structure | null {
+    const piece = pickPiece(options.state.changes.pieces, o, d, 80);
+    const hitM = pickMachine(factory, o, d, 80);
+    if (!piece && !hitM) return null;
+    if (hitM && (!piece || hitM.t < piece.t)) {
+      const m = hitM.machine;
+      return {
+        id: `machine:${m.id}`,
+        name: t(`item.${machineDef(m.type).item}` as TranslationKey),
+        seconds: m.type === 'conveyor' ? 0.4 : 1.2,
+        distance: hitM.t,
+        box: machineBox(m),
+      };
+    }
+    const kind = options.state.changes.pieces[piece!.key];
+    const def = pieceDef(kind);
+    return {
+      id: `piece:${piece!.key}`,
+      name: t(`item.${def.item}` as TranslationKey),
+      seconds: def.type === 'door' ? 1 : PIECE_BREAK_S[def.material],
+      distance: piece!.t,
+      box: pieceBox(piece!.key),
+    };
+  }
+
+  /** Démolit ce que le joueur vient de frapper : les ressources de fabrication lui reviennent. */
+  function demolishStructure(id: string): void {
+    const at = { x: playerX, z: playerZ };
+    if (id.startsWith('piece:')) {
+      options.state.removeKeys([id.slice(6)], at);
+    } else if (id.startsWith('machine:')) {
+      options.state.removeMachine(factory, Number(id.slice(8)), at);
+    }
+    playSfx('demolish');
+  }
+
+  // --- Poser machines et tapis -----------------------------------------------------------------
+  const selectedMachine = (): MachineDef | null => machineForItem(options.state.selectedItem());
+  let buildingMachine = false;
+  let machinePath: Cell[] = [];
+  let machineWasDown = false;
+  const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
+  const machineBlocked = (c: Cell): boolean => {
+    if (blocked.has(`${c.gx},${c.gz}`)) return true;
+    const pieces = options.state.changes.pieces;
+    if (pieces[`f:0:${c.gx},${c.gz}`]) return true;
+    return [0, 1, 2, 3].some((r) => pieces[`s:0:${c.gx},${c.gz}:0:${r}`]);
+  };
+  const dirIndex = (from: Cell, to: Cell): number =>
+    RISE_DIR.findIndex(([dx, dz]) => dx === to.gx - from.gx && dz === to.gz - from.gz);
+
+  function updateMachineBuild(): void {
+    const def = selectedMachine();
+    if (!def) return;
+    computeRay();
+    const c = cellOnPlane(rayOrigin, rayDir, 0);
+    const down = input.isActionActive('interact');
+    if (!c) {
+      factoryView.hideGhost();
+      return;
+    }
+    const player = { x: playerX, z: playerZ };
+    const stock = options.state.inventory[def.item] ?? 0;
+    const within = (cell: Cell): boolean =>
+      Math.hypot(center(cell.gx) - player.x, center(cell.gz) - player.z) <= BUILD_REACH_M + 2;
+    const baseRot = buildRot ?? autoRot();
+
+    if (def.id !== 'conveyor') {
+      const { w, d } = dims(def.id, baseRot);
+      const gx = c.gx - Math.floor(w / 2);
+      const gz = c.gz - Math.floor(d / 2);
+      let ok =
+        stock > 0 &&
+        within({ gx: gx + Math.floor(w / 2), gz: gz + Math.floor(d / 2) }) &&
+        factory.canPlace(def.id, gx, gz, baseRot, machineBlocked);
+      let why = stock > 0 ? '' : t('build.missing');
+      if (
+        ok &&
+        def.id === 'drill' &&
+        factory.oreUnder(emptyMachine(0, 'drill', gx, gz, baseRot)).total === 0
+      ) {
+        ok = false;
+        why = t('factory.needOre');
+      } else if (!ok && stock > 0) why = t('factory.cannotPlace');
+      factoryView.showGhost([{ type: def.id, gx, gz, rot: baseRot, ok }]);
+      if (down && !machineWasDown) {
+        if (
+          ok &&
+          options.state.placeMachine(factory, def.id, gx, gz, baseRot, machineBlocked) === 'ok'
+        ) {
+          playSfx('placeStone');
+          buildMessage = '';
+        } else {
+          playSfx('deny');
+          buildMessage = why;
+        }
+        renderBuildHud();
+      }
+      machineWasDown = down;
+      return;
+    }
+
+    // Tapis : en gardant le clic, on trace un chemin case par case ; chaque élément s'oriente vers le suivant.
+    if (down) {
+      const last = machinePath[machinePath.length - 1];
+      if (!last) machinePath = [c];
+      else if (last.gx !== c.gx || last.gz !== c.gz) {
+        const back = machinePath.findIndex((p) => p.gx === c.gx && p.gz === c.gz);
+        if (back >= 0) machinePath.length = back + 1;
+        else {
+          const cur = { ...last };
+          for (let guard = 0; guard < 60 && (cur.gx !== c.gx || cur.gz !== c.gz); guard++) {
+            const dx = c.gx - cur.gx;
+            const dz = c.gz - cur.gz;
+            if (Math.abs(dx) >= Math.abs(dz)) cur.gx += Math.sign(dx);
+            else cur.gz += Math.sign(dz);
+            machinePath.push({ ...cur });
+          }
+          if (machinePath.length > 60) machinePath.length = 60;
+        }
+      }
+    }
+    const path = machinePath.length > 0 ? machinePath : [c];
+    let left = stock;
+    const ghosts = path.map((cell, i) => {
+      const rot =
+        i < path.length - 1
+          ? dirIndex(cell, path[i + 1])
+          : path.length > 1
+            ? dirIndex(path[i - 1], cell)
+            : baseRot;
+      const free =
+        factory.canPlace('conveyor', cell.gx, cell.gz, rot, machineBlocked) && within(cell);
+      const ok = free && left > 0;
+      if (ok) left--;
+      return { type: 'conveyor' as const, gx: cell.gx, gz: cell.gz, rot, ok };
+    });
+    factoryView.showGhost(ghosts);
+    if (!down && machinePath.length > 0) {
+      let placed = 0;
+      for (const g of ghosts) {
+        if (
+          g.ok &&
+          options.state.placeMachine(factory, 'conveyor', g.gx, g.gz, g.rot, machineBlocked) ===
+            'ok'
+        )
+          placed++;
+      }
+      if (placed > 0) playSfx('placeWood');
+      else playSfx('deny');
+      buildMessage =
+        placed === 0 ? (stock > 0 ? t('factory.cannotPlace') : t('build.missing')) : '';
+      machinePath = [];
+      renderBuildHud();
+    }
+    machineWasDown = down;
+  }
+
+  // --- Panneau d'informations de la machine visée ----------------------------------------------
+  const machinePanel = document.createElement('div');
+  machinePanel.className = 'machine-panel';
+  machinePanel.hidden = true;
+  container.appendChild(machinePanel);
+  let aimedMachine: Machine | null = null;
+
+  const stackText = (stack: { item: string; count: number } | null, max?: number): string =>
+    stack
+      ? `${stack.count}${max ? ` / ${max}` : ''} × ${t(`item.${stack.item}` as TranslationKey)}`
+      : t('factory.empty');
+  const duration = (sec: number): string =>
+    sec >= 60 ? `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s` : `${Math.round(sec)} s`;
+
+  function refreshMachinePanel(): void {
+    const m = aimedMachine;
+    if (!m || building) {
+      machinePanel.hidden = true;
+      return;
+    }
+    const def = machineDef(m.type);
+    const status = factory.status(m);
+    const rows: string[] = [];
+    rows.push(`<strong>${t(`item.${def.item}` as TranslationKey)}</strong>`);
+    rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
+    if (m.type === 'drill') {
+      const ore = factory.oreUnder(m);
+      rows.push(
+        `<div>${t('factory.production', { rate: t('factory.rateDrill', { n: String(1 / (def.mineSeconds ?? 1)) }) })}</div>`,
+      );
+      rows.push(`<div>${t('factory.ore', { n: String(ore.total) })}</div>`);
+      for (const [item, n] of Object.entries(ore.byItem)) {
+        rows.push(`<div class="sub">${t(`item.${item}` as TranslationKey)} : ${n}</div>`);
+      }
+      rows.push(`<div>${t('factory.stock', { v: stackText(m.stock, def.stockMax) })}</div>`);
+    } else if (m.type === 'furnace') {
+      rows.push(
+        `<div>${t('factory.production', { rate: t('factory.rateFurnace', { s: '3' }) })}</div>`,
+      );
+      rows.push(`<div>${t('factory.input', { v: stackText(m.input, def.stockMax) })}</div>`);
+      rows.push(`<div>${t('factory.output', { v: stackText(m.stock, def.stockMax) })}</div>`);
+    } else {
+      rows.push(
+        `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
+      );
+      rows.push(`<div>${t('factory.speed', { n: String(def.cellsPerSecond ?? 1) })}</div>`);
+    }
+    if (def.fuel) {
+      const secs = factory.fuelSecondsLeft(m);
+      rows.push(
+        `<div>${t('factory.fuel', { v: stackText(m.fuel, def.stockMax), time: duration(secs) })}</div>`,
+      );
+    }
+    rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
+    if (m.type !== 'conveyor') {
+      const out = outputCell(m.type, m.gx, m.gz, m.rot);
+      const target = factory.machineAt(out.gx, out.gz);
+      rows.push(
+        `<div class="sub">${t('factory.outputTo', { v: target ? t(`item.${machineDef(target.type).item}` as TranslationKey) : t('factory.nothing') })}</div>`,
+      );
+      rows.push(`<small>${t('factory.useHint')}</small>`);
+    }
+    machinePanel.innerHTML = rows.join('');
+    machinePanel.hidden = false;
+  }
+
+  /** Les machines et tapis à proximité du viseur (le panneau suit ce qu'on regarde). */
+  function updateAimedMachine(): void {
+    computeRay();
+    const hit = structureAt(rayOrigin, rayDir);
+    const id = hit?.id.startsWith('machine:') ? Number(hit.id.slice(8)) : null;
+    const m = id === null ? null : (factory.machines.find((x) => x.id === id) ?? null);
+    const near = m && Math.hypot(hit!.box.x - playerX, hit!.box.z - playerZ) <= 12;
+    aimedMachine = near ? m : null;
   }
 
   // --- Chunks ------------------------------------------------------------------------------
@@ -903,6 +1272,37 @@ export function startGameView(
       inRoom && !building ? inRoom.level : null,
     );
     if (building && !paused) updateBuild(dt);
+    // Usine : 20 pas de simulation par seconde, affichage des objets sur les tapis 10 fois par seconde.
+    if (!paused) {
+      simAcc = Math.min(simAcc + dt, 0.5);
+      while (simAcc >= 0.05) {
+        factory.tick(0.05);
+        simAcc -= 0.05;
+      }
+    }
+    itemsTimer += realDt;
+    if (itemsTimer >= 0.1) {
+      itemsTimer = 0;
+      factoryView.updateItems();
+    }
+    chunkTimer += realDt;
+    if (chunkTimer >= 0.6 && dirtyChunks.size > 0) {
+      chunkTimer = 0;
+      for (const k of dirtyChunks) {
+        const [cx, cz] = k.split(',').map(Number);
+        if (chunks.has(k)) buildInto(cx, cz);
+      }
+      dirtyChunks.clear();
+    }
+    panelTimer += realDt;
+    if (panelTimer >= 0.2) {
+      panelTimer = 0;
+      if (paused || building) aimedMachine = null;
+      else updateAimedMachine();
+      refreshMachinePanel();
+    }
+    if (!paused && !building && pressed('use') && aimedMachine)
+      options.onOpenMachine?.(aimedMachine.id);
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,
@@ -933,6 +1333,7 @@ export function startGameView(
 
   return {
     getState: () => ({ x: playerX, y: playerY, z: playerZ, ...rig.getState() }),
+    factory,
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.
       const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;
@@ -955,6 +1356,8 @@ export function startGameView(
       interaction.dispose();
       unsubscribeBuild();
       buildingView.dispose();
+      factoryView.dispose();
+      machinePanel.remove();
       buildHud.remove();
       input.detach();
       renderer.setAnimationLoop(null);

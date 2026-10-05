@@ -16,6 +16,8 @@ const ORE_HEIGHT_M = 0.1;
 const TREE_HEIGHT_M = 2.6;
 const ROCK_HEIGHT_M = 0.8;
 const DROP_PICK_RADIUS_M = 0.5;
+/** Portée pour frapper une construction (m). */
+const STRUCTURE_REACH_M = 4;
 
 /** Une ressource que le joueur peut récolter à la main. */
 export interface Target {
@@ -35,15 +37,30 @@ export interface Target {
   secondsPerUnit: number;
 }
 
+/** Une construction ou une machine que l'on peut frapper pour la démolir et récupérer ses ressources. */
+export interface Structure {
+  id: string;
+  name: string;
+  /** Temps pour la démolir en la frappant (s). */
+  seconds: number;
+  /** Distance le long du rayon (m). */
+  distance: number;
+  /** Boîte englobante (m), pour la mise en évidence et la portée. */
+  box: { x: number; y: number; z: number; sx: number; sy: number; sz: number };
+}
+
 type Hit =
   | { type: 'target'; target: Target; distance: number }
-  | { type: 'drop'; stack: DroppedStack; distance: number };
+  | { type: 'drop'; stack: DroppedStack; distance: number }
+  | { type: 'structure'; structure: Structure; distance: number };
 
 export interface InteractionOptions {
   /** Un chunk doit être redessiné (ressource entamée ou épuisée). */
   rebuildChunk(cx: number, cz: number): void;
-  /** Distance jusqu'au premier mur / dalle sur le rayon : on ne vise rien derrière. */
-  occlusion?(origin: THREE.Vector3, dir: THREE.Vector3): number;
+  /** Première construction ou machine touchée par le rayon : on ne vise rien derrière. */
+  pickStructure?(origin: THREE.Vector3, dir: THREE.Vector3): Structure | null;
+  /** La construction a été démolie (le joueur l'a frappée assez longtemps). */
+  demolish?(id: string): void;
 }
 
 export interface InteractionFrame {
@@ -228,7 +245,8 @@ export class Interaction {
       dir.copy(this.raycaster.ray.direction);
     }
 
-    const limit = this.options.occlusion?.(origin, dir) ?? Infinity;
+    const structure = this.options.pickStructure?.(origin, dir) ?? null;
+    const limit = structure?.distance ?? Infinity;
     let best: Hit | null = null;
     // Ressources : on suit le rayon pas à pas (plus finement près du sol).
     let travelled = 0.2;
@@ -265,11 +283,16 @@ export class Interaction {
         if (!best || along < best.distance) best = { type: 'drop', stack: d, distance: along };
       }
     }
+    if (!best && structure) best = { type: 'structure', structure, distance: structure.distance };
     return best;
   }
 
   private reach(hit: Hit, player: { x: number; z: number }): number {
     if (hit.type === 'drop') return Math.hypot(hit.stack.x - player.x, hit.stack.z - player.z);
+    if (hit.type === 'structure') {
+      const b = hit.structure.box;
+      return Math.max(0, Math.hypot(b.x - player.x, b.z - player.z) - Math.max(b.sx, b.sz) / 2);
+    }
     return distanceToFootprint(player, hit.target.gx, hit.target.gz, hit.target.cells);
   }
 
@@ -280,7 +303,11 @@ export class Interaction {
     }
     this.highlight.visible = true;
     (this.highlight.material as THREE.LineBasicMaterial).color.set(inReach ? 0xffffff : 0xff6a55);
-    if (hit.type === 'drop') {
+    if (hit.type === 'structure') {
+      const b = hit.structure.box;
+      this.highlight.scale.set(b.sx + 0.06, b.sy + 0.06, b.sz + 0.06);
+      this.highlight.position.set(b.x, b.y, b.z);
+    } else if (hit.type === 'drop') {
       this.highlight.scale.set(0.5, 0.4, 0.5);
       this.highlight.position.set(hit.stack.x, 0.2, hit.stack.z);
     } else {
@@ -314,7 +341,12 @@ export class Interaction {
     }
 
     const hit = this.pick(frame);
-    const reachable = hit !== null && isWithinReach(this.reach(hit, frame.player), REACH_M);
+    const reachable =
+      hit !== null &&
+      isWithinReach(
+        this.reach(hit, frame.player),
+        hit.type === 'structure' ? STRUCTURE_REACH_M : REACH_M,
+      );
     this.showHighlight(hit, reachable);
 
     if (!hit) {
@@ -323,9 +355,20 @@ export class Interaction {
       return;
     }
 
-    const id = hit.type === 'drop' ? hit.stack.id : hit.target.key;
-    const item = hit.type === 'drop' ? hit.stack.item : hit.target.item;
-    const seconds = hit.type === 'drop' ? PICKUP_SECONDS : hit.target.secondsPerUnit;
+    const id =
+      hit.type === 'drop'
+        ? hit.stack.id
+        : hit.type === 'structure'
+          ? hit.structure.id
+          : hit.target.key;
+    const item =
+      hit.type === 'drop' ? hit.stack.item : hit.type === 'structure' ? '' : hit.target.item;
+    const seconds =
+      hit.type === 'drop'
+        ? PICKUP_SECONDS
+        : hit.type === 'structure'
+          ? hit.structure.seconds
+          : hit.target.secondsPerUnit;
     let bagFull = false;
 
     if (reachable && frame.active) {
@@ -334,7 +377,14 @@ export class Interaction {
         this.holdingTime = 0;
       }
       this.holdingTime += frame.dt;
-      while (this.holdingTime >= seconds) {
+      while (hit.type === 'structure' && this.holdingTime >= seconds) {
+        // Frappée assez longtemps : la construction est démolie et ses ressources reviennent.
+        this.holdingTime = 0;
+        this.holdingId = null;
+        this.options.demolish?.(hit.structure.id);
+        break;
+      }
+      while (hit.type !== 'structure' && this.holdingTime >= seconds) {
         this.holdingTime -= seconds;
         const result =
           hit.type === 'drop'
@@ -377,13 +427,16 @@ export class Interaction {
     const name =
       hit.type === 'drop'
         ? `${itemName(hit.stack.item)} ×${hit.stack.count}`
-        : t(`target.${hit.target.resId}` as TranslationKey);
+        : hit.type === 'structure'
+          ? hit.structure.name
+          : t(`target.${hit.target.resId}` as TranslationKey);
     this.hudName.textContent = name;
-    if (!bagFull && !this.state.hasRoomFor(item)) bagFull = true;
+    if (item && !bagFull && !this.state.hasRoomFor(item)) bagFull = true;
     let status: string;
     if (!reachable) status = t('harvest.tooFar');
     else if (bagFull) status = t('harvest.bagFull');
     else if (hit.type === 'drop') status = t('harvest.pickup');
+    else if (hit.type === 'structure') status = t('harvest.demolish');
     else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
     this.hudDetail.textContent = status;
     this.hudDetail.classList.toggle('warn', !reachable || bagFull);
