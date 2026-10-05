@@ -246,5 +246,9 @@
   "save.autoName": "Autosave",
   "load.count": "{n} save(s)",
   "load.noSave": "Start (no save yet)",
-  "screen.loadGame.pickSave": "Choose a save of \"{name}\"."
+  "screen.loadGame.pickSave": "Choose a save of \"{name}\".",
+  "load.delete": "Delete the game \"{name}\"",
+  "modal.deleteGame.title": "Delete this game?",
+  "modal.deleteGame.body": "\"{name}\" and its {n} save(s) will be permanently deleted. This cannot be undone.",
+  "modal.deleteGame.confirm": "Delete"
 }

@@ -497,3 +497,26 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.game-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.game-row .menu-btn {
+  flex: 1;
+  min-width: 0;
+}
+.game-row .icon-btn {
+  width: 46px;
+  flex: none;
+}
+.icon-btn.danger {
+  color: #e0a090;
+}
+.icon-btn.danger:hover,
+.icon-btn.danger:focus-visible {
+  border-color: #e0703f;
+  background: #4a2418;
+  color: #ffd2c4;
+}

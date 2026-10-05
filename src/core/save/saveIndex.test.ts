@@ -114,6 +114,31 @@ describe('enregistrement des sauvegardes', () => {
   });
 });
 
+describe('suppression', () => {
+  it('supprime la partie demandée et ses sauvegardes, pas les autres', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const a = index.create('A', 'seed-a');
+    const b = index.create('B', 'seed-b');
+    index.saveSlot(a.id, { name: 'x', kind: 'manual', player }, 5, 1000);
+    expect(index.deleteGame(a.id)).toBe(true);
+    expect(index.list().map((g) => g.id)).toEqual([b.id]);
+    expect(index.get(a.id)).toBeUndefined();
+  });
+  it('partie inconnue : rien ne change', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const a = index.create('A', 'seed-a');
+    expect(index.deleteGame('absent')).toBe(false);
+    expect(index.list()).toHaveLength(1);
+    expect(index.get(a.id)).toBeDefined();
+  });
+  it('« Continuer » ne propose plus une partie supprimée', () => {
+    const index = new ProvisionalSaveIndex(memoryStore());
+    const a = index.create('A', 'seed-a');
+    index.deleteGame(a.id);
+    expect(latestGame(index.list())).toBeUndefined();
+  });
+});
+
 describe('lecture des anciens formats', () => {
   it('une ancienne partie (sans sauvegardes ni seed) reste utilisable', () => {
     const [g] = normalizeGame({ id: 'old', name: 'Ancienne', lastSavedAt: 777 });

@@ -213,6 +213,15 @@ export class ProvisionalSaveIndex implements SaveIndex {
     return { game, slot: saved, replaced };
   }
 
+  /** Supprime une partie et toutes ses sauvegardes. Renvoie false si elle n'existe pas. */
+  deleteGame(id: string): boolean {
+    const games = this.list();
+    const remaining = games.filter((g) => g.id !== id);
+    if (remaining.length === games.length) return false;
+    this.write(remaining);
+    return true;
+  }
+
   /** Outil de test (mode ?dev=1) : supprime toutes les parties. */
   clearAll(): void {
     try {

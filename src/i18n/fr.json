@@ -246,5 +246,9 @@
   "save.autoName": "Sauvegarde auto",
   "load.count": "{n} sauvegarde(s)",
   "load.noSave": "Départ (aucune sauvegarde)",
-  "screen.loadGame.pickSave": "Choisis la sauvegarde de « {name} »."
+  "screen.loadGame.pickSave": "Choisis la sauvegarde de « {name} ».",
+  "load.delete": "Supprimer la partie « {name} »",
+  "modal.deleteGame.title": "Supprimer cette partie ?",
+  "modal.deleteGame.body": "« {name} » et ses {n} sauvegarde(s) seront définitivement supprimées. Cette action est irréversible.",
+  "modal.deleteGame.confirm": "Supprimer"
 }
