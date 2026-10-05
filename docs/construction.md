@@ -97,3 +97,10 @@ Quand le rayon de visée touche un bloc de mur existant, on pose **contre ce blo
 ### Tour 27 — orientation automatique par défaut
 
 Par défaut l'orientation est **automatique** (le bord le plus proche, contre le mur visé, quel que soit son sens — vu de face aussi). **R** la verrouille (0°, puis +90° à chaque appui) ; changer de pièce dans la barre revient en automatique.
+
+### Tour 28 — escaliers
+
+- **Escalier** (`stairs_wood` / `stairs_stone`, 2 bois / 2 pierres, objet `piece_stairs_*`) : une marche = un coin de 50 cm de haut sur une case, qui **monte dans le sens du regard** (ou dans celui fixé avec R : 0°, 90°, 180°, 270°). Clé `s:étage:gx,gz:bloc:sens`.
+- **Pose** : au sol, sur un sol d'étage, ou **dans le prolongement d'une volée** (case située après le haut d'une marche, un bloc plus haut et dans le même sens ; le curseur le propose tout seul). Une volée de 5 marches monte un étage (2,50 m) sur 2,50 m de long. Démolition avec X comme le reste.
+- **Marcher** : la hauteur du sol suit la pente (à pied, sans sauter) ; vu de côté, une marche haute arrête le joueur. La tolérance de montée tient compte de la distance parcourue à chaque image, pour que la montée marche aussi à faible nombre d'images par seconde.
+- À faire : escalier tournant, rampes de chargement, garde-corps ; battant de porte.

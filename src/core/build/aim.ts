@@ -2,6 +2,7 @@ import { CELL_SIZE_M } from '../constants';
 import {
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
+  RISE_DIR,
   STOREY_HEIGHT_M,
   type PieceKind,
 } from '../data/buildings';
@@ -266,4 +267,75 @@ export function aimCeiling(
   if (mode === 'remove') return null;
   const cell = cellOnPlane(origin, dir, y0 + top);
   return cell ? { pos: posFor(kind, level, cell.gx, cell.gz), cell } : null;
+}
+
+/** Sens de montée (0 à 3) le plus proche d'une direction horizontale. */
+export function riseFromDirection(dx: number, dz: number): number {
+  let best = 0;
+  let bestDot = -Infinity;
+  RISE_DIR.forEach(([rx, rz], i) => {
+    const dot = rx * dx + rz * dz;
+    if (dot > bestDot) {
+      bestDot = dot;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/**
+ * Vise une marche d'escalier. Pose : la case où le rayon touche le sol, et si elle prolonge une volée
+ * existante (case juste après le haut d'une marche), la marche suivante, un bloc plus haut et dans le même
+ * sens. Sans orientation imposée, la marche monte dans le sens du regard. Démolition : la marche touchée.
+ */
+export function aimStairs(
+  origin: Vec,
+  dir: Vec,
+  pieces: Pieces,
+  kind: PieceKind,
+  level: number,
+  maxDist: number,
+  mode: 'place' | 'remove' = 'place',
+  forcedRot?: number | null,
+): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
+  const y0 = level * STOREY_HEIGHT_M;
+  const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
+  const look = riseFromDirection(dir.x, dir.z);
+  const rot = forcedRot ?? look;
+  if (mode === 'remove') {
+    for (let t = 0.3; t <= maxDist; t += STEP_M) {
+      const y = origin.y + dir.y * t - y0;
+      if (y < 0) break;
+      if (y >= top) continue;
+      const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
+      const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
+      const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
+      for (let r = 0; r < 4; r++) {
+        const pos = posFor(kind, level, gx, gz, undefined, layer, r);
+        if (pieces[pieceKey(pos)]) return { pos, cell: { gx, gz } };
+      }
+    }
+    return null;
+  }
+  const cell = cellOnPlane(origin, dir, y0);
+  if (!cell) return null;
+  // Prolonger une volée : une marche voisine dont le haut touche cette case.
+  for (let r = 0; r < 4; r++) {
+    const [dx, dz] = RISE_DIR[r];
+    for (let layer = 0; layer < LAYERS_PER_STOREY - 1; layer++) {
+      const below = pieceKey({
+        slot: 'stairs',
+        level,
+        gx: cell.gx - dx,
+        gz: cell.gz - dz,
+        layer,
+        rot: r,
+      });
+      if (pieces[below]) {
+        const next = posFor(kind, level, cell.gx, cell.gz, undefined, layer + 1, r);
+        if (isFree(pieces, kind, next)) return { pos: next, cell };
+      }
+    }
+  }
+  return { pos: posFor(kind, level, cell.gx, cell.gz, undefined, 0, rot), cell };
 }

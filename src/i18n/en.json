@@ -398,5 +398,8 @@
   "build.stock": "In bag: {n}",
   "hotbar.hint": "Shortcut bar: drag an item from the bag onto a slot, or select it in the bag then click a slot. Right-click a slot to empty it.",
   "hotbar.empty": "Empty slot",
-  "build.rotationAuto": "auto orientation (R to lock it)"
+  "build.rotationAuto": "auto orientation (R to lock it)",
+  "item.piece_stairs_wood": "Wooden stairs",
+  "item.piece_stairs_stone": "Stone stairs",
+  "build.unsupportedStairs": "Stairs go on the ground, on a floor slab, or continue another flight upward"
 }

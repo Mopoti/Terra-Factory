@@ -1,5 +1,11 @@
 import { CELL_SIZE_M } from '../constants';
-import { LAYERS_PER_STOREY, LAYER_HEIGHT_M, STOREY_HEIGHT_M, THICKNESS_M } from '../data/buildings';
+import {
+  RISE_DIR,
+  LAYERS_PER_STOREY,
+  LAYER_HEIGHT_M,
+  STOREY_HEIGHT_M,
+  THICKNESS_M,
+} from '../data/buildings';
 import { pieceKey, type Pieces } from '../build/pieces';
 
 /** Hauteur de marche : une marche plus basse se monte sans sauter (dalle de sol de 10 cm). */
@@ -70,9 +76,13 @@ export function bodyBlocked(
   z: number,
   feetY: number,
   height: number,
+  /** Distance parcourue pendant ce pas : sur une pente à 45°, on monte autant qu'on avance. */
+  slack = 0,
 ): boolean {
-  return spansAt(pieces, x, z, feetY, THICKNESS_M / 2 + 0.02).some(
-    (s) => s.top > feetY + STEP_UP_M && s.bottom < feetY + height,
+  return (
+    spansAt(pieces, x, z, feetY, THICKNESS_M / 2 + 0.02).some(
+      (s) => s.top > feetY + STEP_UP_M && s.bottom < feetY + height,
+    ) || stairTops(pieces, x, z, feetY).some((top) => top > feetY + STEP_UP_M + slack)
   );
 }
 
@@ -80,10 +90,20 @@ export function bodyBlocked(
  * Hauteur du sol sous un point : le dessus le plus haut qu'on peut atteindre (au plus `STEP_UP_M` au-dessus
  * des pieds), sinon le terrain (0). On est plus indulgent pour se tenir sur la tranche d'un mur fin.
  */
-export function groundAt(pieces: Pieces, x: number, z: number, feetY: number): number {
+export function groundAt(
+  pieces: Pieces,
+  x: number,
+  z: number,
+  feetY: number,
+  /** Distance parcourue pendant ce pas (voir `bodyBlocked`). */
+  slack = 0,
+): number {
   let ground = 0;
   for (const s of spansAt(pieces, x, z, feetY, 0.2)) {
     if (s.top <= feetY + STEP_UP_M && s.top > ground) ground = s.top;
+  }
+  for (const top of stairTops(pieces, x, z, feetY)) {
+    if (top <= feetY + STEP_UP_M + slack && top > ground) ground = top;
   }
   return ground;
 }
@@ -131,4 +151,29 @@ export function stepVertical(
   }
   if (y <= ground) return { y: ground, vy: 0, onGround: true };
   return { y, vy, onGround: false };
+}
+
+/**
+ * Hauteurs de dessus des escaliers sous le point (x, z) pour des pieds à `feetY` : chaque marche monte de
+ * 50 cm sur sa case, dans le sens de son orientation.
+ */
+export function stairTops(pieces: Pieces, x: number, z: number, feetY: number): number[] {
+  const tops: number[] = [];
+  const gx = Math.floor(x / CELL_SIZE_M);
+  const gz = Math.floor(z / CELL_SIZE_M);
+  const fx = x / CELL_SIZE_M - gx;
+  const fz = z / CELL_SIZE_M - gz;
+  const level0 = Math.floor(feetY / STOREY_HEIGHT_M);
+  for (let level = Math.max(0, level0 - 1); level <= level0 + 1; level++) {
+    for (let layer = 0; layer < LAYERS_PER_STOREY; layer++) {
+      for (let rot = 0; rot < 4; rot++) {
+        if (!pieces[pieceKey({ slot: 'stairs', level, gx, gz, layer, rot })]) continue;
+        const [dx, dz] = RISE_DIR[rot];
+        // Avancement 0 (bas) à 1 (haut) le long de la montée.
+        const along = dx !== 0 ? (dx > 0 ? fx : 1 - fx) : dz > 0 ? fz : 1 - fz;
+        tops.push(level * STOREY_HEIGHT_M + (layer + along) * LAYER_HEIGHT_M);
+      }
+    }
+  }
+  return tops;
 }

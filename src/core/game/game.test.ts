@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aimCeiling, aimEdge } from '../build/aim';
+import { aimCeiling, aimEdge, aimStairs, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import {
   edgeKeysToRemove,
@@ -645,5 +645,72 @@ describe('orientation automatique', () => {
       12,
     );
     expect(hit?.pos).toMatchObject({ gx: 2, gz: 0, axis: 'z', layer: 2 });
+  });
+});
+
+describe('escaliers', () => {
+  it('une marche se pose au sol ; la suivante, dans son prolongement un bloc plus haut', () => {
+    const s = new GameState({ inventory: { piece_stairs_wood: 5 } });
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 0, undefined, 0, 0))).toBe('ok');
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 3, 3, undefined, 1, 0))).toBe(
+      'unsupported',
+    ); // dans le vide
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 1, undefined, 1, 0))).toBe('ok'); // suite de la volée
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 1, undefined, 1, 0))).toBe(
+      'occupied',
+    );
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 1, 1, undefined, 1, 0))).toBe(
+      'unsupported',
+    ); // pas dans l\'axe
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 2, undefined, 2, 2))).toBe(
+      'unsupported',
+    ); // sens contraire
+  });
+  it('les marches se sauvegardent avec leur sens', () => {
+    const s = new GameState({ inventory: { piece_stairs_stone: 1 } });
+    s.place('stairs_stone', posFor('stairs_stone', 0, 2, 2, undefined, 0, 3));
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(Object.keys(copy.changes.pieces)).toEqual(['s:0:2,2:0:3']);
+  });
+  it('la visée : sens du regard, prolongement de la volée, démolition', () => {
+    expect(riseFromDirection(0, 1)).toBe(0);
+    expect(riseFromDirection(-1, 0.1)).toBe(3);
+    const eye = { x: 0.25, y: 1.6, z: -2 };
+    const down = { x: 0, y: -0.5, z: 1 };
+    const first = aimStairs(eye, down, {}, 'stairs_wood', 0, 10);
+    expect(first?.pos).toMatchObject({ layer: 0, rot: 0 });
+    const flight: Pieces = { [pieceKey(first!.pos)]: 'stairs_wood' };
+    // Un regard qui tombe juste après le haut de la marche prolonge la volée.
+    const next = aimStairs(
+      { x: first!.pos.gx * 0.5 + 0.25, y: 1.6, z: (first!.pos.gz + 1.5) * 0.5 - 3.2 },
+      { x: 0, y: -0.5, z: 1 },
+      flight,
+      'stairs_wood',
+      0,
+      10,
+    );
+    expect(next?.pos).toMatchObject({ gz: first!.pos.gz + 1, layer: 1, rot: 0 });
+    // En démolition, on vise la marche touchée (et seulement elle).
+    const removed = aimStairs(
+      { x: 0.25, y: 0.2, z: -1 },
+      { x: 0, y: 0, z: 1 },
+      flight,
+      'stairs_wood',
+      0,
+      10,
+      'remove',
+    );
+    expect(removed?.pos).toMatchObject(first!.pos);
+    expect(
+      aimStairs(
+        { x: 3.25, y: 0.2, z: -1 },
+        { x: 0, y: 0, z: 1 },
+        flight,
+        'stairs_wood',
+        0,
+        10,
+        'remove',
+      ),
+    ).toBeNull();
   });
 });

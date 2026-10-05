@@ -4,6 +4,7 @@ import { parseKey, pieceKey, posFor, type PiecePos, type Pieces } from '../core/
 import {
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
+  RISE_DIR,
   STOREY_HEIGHT_M,
   THICKNESS_M,
   pieceDef,
@@ -11,10 +12,10 @@ import {
   type PieceKind,
 } from '../core/data/buildings';
 import { SLAB_LIFT_M } from '../core/game/physics';
-import { aimCeiling, aimEdge } from '../core/build/aim';
+import { aimCeiling, aimEdge, aimStairs } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
-import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
+import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
 const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
@@ -41,6 +42,10 @@ export function addPiece(
   const T = THICKNESS_M;
   // Aperçu : chaque dalle / bloc est un peu rétréci pour qu'on voie les carreaux de 50 cm.
   const gap = tint ? 0.04 : 0;
+  if (def.type === 'stairs') {
+    addStairs(mb, pos, color, gap);
+    return;
+  }
   if (def.type === 'floor') {
     mb.box(cx, y0, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color, true);
     return;
@@ -115,6 +120,43 @@ export function addPiece(
     color,
     true,
   );
+}
+
+/** Une marche : un coin de 50 cm de haut sur sa case, qui monte dans le sens de son orientation. */
+function addStairs(mb: MeshBuilder, pos: PiecePos, color: Rgb, gap: number): void {
+  const [dx, dz] = RISE_DIR[pos.rot ?? 0];
+  const h = LAYER_HEIGHT_M;
+  const half = CELL_SIZE_M / 2 - gap / 2;
+  const cx = (pos.gx + 0.5) * CELL_SIZE_M;
+  const cz = (pos.gz + 0.5) * CELL_SIZE_M;
+  const y0 = pos.level * STOREY_HEIGHT_M + (pos.layer ?? 0) * h;
+  // a : le long de la montée (-1 bas, +1 haut), b : en travers. Sommets en mètres.
+  const pt = (a: number, b: number, up: number): [number, number, number] => [
+    cx + (dx * a - dz * b) * half,
+    y0 + up,
+    cz + (dz * a + dx * b) * half,
+  ];
+  const center: [number, number, number] = [cx, y0 + h / 2, cz];
+  /** Face dont les sommets sont ordonnés de façon à ce que sa normale regarde vers l'extérieur. */
+  const face = (pts: [number, number, number][], shadeBy: number): void => {
+    const [p0, p1, p2] = pts;
+    const n = [
+      (p1[1] - p0[1]) * (p2[2] - p0[2]) - (p1[2] - p0[2]) * (p2[1] - p0[1]),
+      (p1[2] - p0[2]) * (p2[0] - p0[0]) - (p1[0] - p0[0]) * (p2[2] - p0[2]),
+      (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]),
+    ];
+    const out =
+      (p0[0] - center[0]) * n[0] + (p0[1] - center[1]) * n[1] + (p0[2] - center[2]) * n[2];
+    const ordered = out >= 0 ? pts : [...pts].reverse();
+    const c = shade(color, shadeBy);
+    if (ordered.length === 3) mb.tri(ordered[0], ordered[1], ordered[2], c);
+    else mb.quad(ordered[0], ordered[1], ordered[2], ordered[3], c);
+  };
+  face([pt(-1, -1, 0), pt(-1, 1, 0), pt(1, 1, h), pt(1, -1, h)], 1); // pente
+  face([pt(1, -1, 0), pt(1, 1, 0), pt(1, 1, h), pt(1, -1, h)], 0.85); // dos (côté haut)
+  face([pt(-1, -1, 0), pt(1, -1, 0), pt(1, -1, h)], 0.75); // flanc
+  face([pt(-1, 1, 0), pt(1, 1, 0), pt(1, 1, h)], 0.75); // flanc
+  face([pt(-1, -1, 0), pt(-1, 1, 0), pt(1, 1, 0), pt(1, -1, 0)], 0.6); // dessous
 }
 
 function geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
@@ -214,6 +256,8 @@ export class BuildingView {
     maxDist: number,
     mode: 'place' | 'remove' = 'place',
     lockAxis?: 'x' | 'z',
+    /** Escalier : sens de montée imposé (quarts de tour), sinon dans le sens du regard. */
+    forcedRot?: number | null,
   ): BuildAim | null {
     const slot = slotOf(pieceDef(kind).type);
     if (slot === 'edge') {
@@ -226,6 +270,17 @@ export class BuildingView {
         cell: hit.cell,
         x: alongX ? (hit.pos.gx + 0.5) * CELL_SIZE_M : hit.pos.gx * CELL_SIZE_M,
         z: alongX ? hit.pos.gz * CELL_SIZE_M : (hit.pos.gz + 0.5) * CELL_SIZE_M,
+      };
+    }
+    if (slot === 'stairs') {
+      const hit = aimStairs(origin, dir, pieces, kind, level, maxDist, mode, forcedRot);
+      if (!hit) return null;
+      return {
+        pos: hit.pos,
+        key: pieceKey(hit.pos),
+        cell: hit.cell,
+        x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
+        z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
       };
     }
     if (slot === 'ceiling') {

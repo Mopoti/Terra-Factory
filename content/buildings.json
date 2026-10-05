@@ -54,6 +54,20 @@
       "material": "stone",
       "color": "#a3a8ad",
       "item": "piece_ceiling_stone"
+    },
+    {
+      "id": "stairs_wood",
+      "type": "stairs",
+      "material": "wood",
+      "color": "#9a6b3c",
+      "item": "piece_stairs_wood"
+    },
+    {
+      "id": "stairs_stone",
+      "type": "stairs",
+      "material": "stone",
+      "color": "#868b91",
+      "item": "piece_stairs_stone"
     }
   ]
 }

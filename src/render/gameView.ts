@@ -237,6 +237,7 @@ export function startGameView(
       rig.view === 'top' ? 120 : BUILD_REACH_M + 4,
       mode,
       buildRot === null ? undefined : buildRot % 2 === 0 ? 'x' : 'z',
+      buildRot,
     );
   }
 
@@ -253,6 +254,7 @@ export function startGameView(
   function planFor(aim: BuildAim): PiecePos[] {
     const kind = buildKind();
     const start = dragStart ?? aim;
+    if (aim.pos.slot === 'stairs') return [aim.pos];
     if (aim.pos.slot !== 'edge') {
       if (aim.pos.slot === 'ceiling' && dragStart) {
         // La dalle reste à la hauteur du mur choisi au départ : on prolonge dans ce plan.
@@ -349,7 +351,13 @@ export function startGameView(
         placed > 0
           ? ''
           : floating > 0
-            ? t(buildType() === 'ceiling' ? 'build.unsupportedCeiling' : 'build.unsupported')
+            ? t(
+                buildType() === 'ceiling'
+                  ? 'build.unsupportedCeiling'
+                  : buildType() === 'stairs'
+                    ? 'build.unsupportedStairs'
+                    : 'build.unsupported',
+              )
             : lacking > 0
               ? t('build.missing')
               : lastPlan.length > 0
@@ -532,12 +540,14 @@ export function startGameView(
 
   const isBlockedAt = (xM: number, zM: number): boolean =>
     blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`);
+  /** Distance parcourue au dernier pas : une pente d'escalier se monte même à faible nombre d'images/s. */
+  let stepSlack = 0;
   const canStand = (x: number, z: number): boolean => {
     const pieces = options.state.changes.pieces;
     for (const dx of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
       for (const dz of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
         if (isBlockedAt(x + dx, z + dz)) return false;
-        if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M)) return false;
+        if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M, stepSlack)) return false;
       }
     }
     return true;
@@ -554,7 +564,7 @@ export function startGameView(
     const pieces = options.state.changes.pieces;
     let ground = 0;
     for (const [dx, dz] of FOOT_SAMPLES) {
-      ground = Math.max(ground, groundAt(pieces, playerX + dx, playerZ + dz, playerY));
+      ground = Math.max(ground, groundAt(pieces, playerX + dx, playerZ + dz, playerY, stepSlack));
     }
     const roof = ceilingAbove(pieces, playerX, playerZ, playerY + PLAYER_HEIGHT_M, playerY);
     const next = stepVertical(
@@ -583,7 +593,10 @@ export function startGameView(
     if (input.isActionActive('backward')) forward -= 1;
     if (input.isActionActive('right')) right += 1;
     if (input.isActionActive('left')) right -= 1;
-    if (forward === 0 && right === 0) return { speed: 0, strafe: 0 };
+    if (forward === 0 && right === 0) {
+      stepSlack = 0;
+      return { speed: 0, strafe: 0 };
+    }
 
     const len = Math.hypot(forward, right);
     const speed = WALK_SPEED_M_S * (input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
@@ -591,6 +604,7 @@ export function startGameView(
     // « Avant » = la direction vers laquelle regarde la caméra.
     const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
     const dirZ = (-Math.cos(yaw) * forward - Math.sin(yaw) * right) / len;
+    stepSlack = speed * dt;
     const nx = playerX + dirX * speed * dt;
     const nz = playerZ + dirZ * speed * dt;
     const ox = playerX;

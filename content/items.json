@@ -100,6 +100,24 @@
       "recipe": {
         "stone": 1
       }
+    },
+    {
+      "id": "piece_stairs_wood",
+      "weightKg": 1.5,
+      "volumeL": 1.5,
+      "color": "#9a6b3c",
+      "recipe": {
+        "wood": 2
+      }
+    },
+    {
+      "id": "piece_stairs_stone",
+      "weightKg": 1.5,
+      "volumeL": 1.5,
+      "color": "#868b91",
+      "recipe": {
+        "stone": 2
+      }
     }
   ]
 }

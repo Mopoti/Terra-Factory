@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pieceKey, posFor, type Pieces } from '../build/pieces';
-import { bodyBlocked, groundAt, stepVertical, type Body } from './physics';
+import { bodyBlocked, groundAt, stairTops, stepVertical, type Body } from './physics';
 
 const wallRow = (layers: number[]): Pieces => {
   const p: Pieces = {};
@@ -43,5 +43,31 @@ describe('physique du joueur', () => {
     const bump = stepVertical({ y: 0.4, vy: 5, onGround: false }, 0.1, 0, 2.2, 1.75, false);
     expect(bump.y + 1.75).toBeLessThanOrEqual(2.2 + 1e-9);
     expect(bump.vy).toBe(0);
+  });
+});
+
+describe('escaliers', () => {
+  // Deux marches qui montent vers +z (orientation 0) : cases (0,0) puis (0,1).
+  const stairs: Pieces = {
+    [pieceKey(posFor('stairs_wood', 0, 0, 0, undefined, 0, 0))]: 'stairs_wood',
+    [pieceKey(posFor('stairs_wood', 0, 0, 1, undefined, 1, 0))]: 'stairs_wood',
+  };
+  it('la hauteur monte régulièrement le long des marches', () => {
+    expect(stairTops(stairs, 0.25, 0.0, 0)[0]).toBeCloseTo(0);
+    expect(stairTops(stairs, 0.25, 0.25, 0)[0]).toBeCloseTo(0.25);
+    expect(stairTops(stairs, 0.25, 0.5, 0.4)[0]).toBeCloseTo(0.5);
+    expect(stairTops(stairs, 0.25, 0.75, 0.5)[0]).toBeCloseTo(0.75);
+    expect(stairTops(stairs, 0.25, 0.99, 0.9)[0]).toBeCloseTo(1.0, 1);
+  });
+  it('on les monte à pied, sans sauter', () => {
+    let y = 0;
+    for (let z = 0.02; z < 1.0; z += 0.05) {
+      expect(bodyBlocked(stairs, 0.25, z, y, 1.75)).toBe(false);
+      y = Math.max(y, groundAt(stairs, 0.25, z, y));
+    }
+    expect(y).toBeGreaterThan(0.9);
+  });
+  it('par le côté, une marche haute arrête le joueur', () => {
+    expect(bodyBlocked(stairs, 0.25, 0.9, 0, 1.75)).toBe(true);
   });
 });

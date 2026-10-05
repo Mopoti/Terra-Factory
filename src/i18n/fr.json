@@ -398,5 +398,8 @@
   "build.stock": "Dans le sac : {n}",
   "hotbar.hint": "Barre de raccourcis : glisse un objet du sac sur une case, ou sélectionne-le dans le sac puis clique une case. Clic droit sur une case : la vider.",
   "hotbar.empty": "Case vide",
-  "build.rotationAuto": "orientation auto (R pour la fixer)"
+  "build.rotationAuto": "orientation auto (R pour la fixer)",
+  "item.piece_stairs_wood": "Escalier en bois",
+  "item.piece_stairs_stone": "Escalier en pierre",
+  "build.unsupportedStairs": "Un escalier se pose au sol, sur un sol d'étage, ou dans le prolongement d'un autre escalier (plus haut)"
 }
