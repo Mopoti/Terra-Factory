@@ -456,5 +456,16 @@
   "factory.chestEmpty": "vide",
   "machine.chest": "Coffre",
   "machine.chestHint": "Glisse un objet du sac dans le coffre ; clique une case du coffre (ou glisse-la sur le sac) pour la reprendre.",
-  "harvest.doorUse": "Clic gauche : ouvrir / fermer · maintenir le clic droit : démolir"
+  "harvest.doorUse": "Clic gauche : ouvrir / fermer · maintenir le clic droit : démolir",
+  "item.machine_generator": "Générateur à combustible",
+  "item.machine_pole": "Poteau électrique",
+  "item.machine_drill_electric": "Foreuse électrique",
+  "factory.status.noPower": "Pas de courant",
+  "factory.power.line": "Consommation électrique : {v}",
+  "factory.power.consumer": "{kw} kW (réseau : {demand} / {cap} kW)",
+  "factory.power.none": "non raccordé : poser un poteau à moins de {m} m",
+  "factory.power.producer": "Production : {kw} kW max · charge {load} %",
+  "factory.power.pole": "Réseau : {n} machine(s) · production {cap} kW · demande {demand} kW",
+  "factory.power.generatorOff": "à l'arrêt",
+  "factory.power.unlinked": "Poteau sans machine"
 }

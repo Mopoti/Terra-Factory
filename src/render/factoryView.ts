@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
-import { isChest, machineDef, type MachineType } from '../core/data/machines';
+import { hasOutput, isChest, isDrill, machineDef, type MachineType } from '../core/data/machines';
 import { dims, outputCell, type Factory, type Machine } from '../core/factory/factory';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -67,6 +67,10 @@ export class FactoryView {
   private readonly root = new THREE.Group();
   private bodies = new THREE.Mesh();
   private items = new THREE.Mesh();
+  private readonly wires = new THREE.LineSegments(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: 0x1b1b1f }),
+  );
   private readonly ghost = new THREE.Mesh();
   private readonly ghostMaterial = new THREE.MeshBasicMaterial({
     vertexColors: true,
@@ -88,7 +92,7 @@ export class FactoryView {
     this.ghost.renderOrder = 6;
     this.bodies.castShadow = true;
     this.items.castShadow = false;
-    this.root.add(this.bodies, this.items);
+    this.root.add(this.bodies, this.items, this.wires);
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
@@ -107,6 +111,27 @@ export class FactoryView {
     }
     this.bodies.geometry.dispose();
     this.bodies.geometry = geometryOf(mb);
+    // Fils électriques : du haut d'un poteau au poteau voisin ou à la machine raccordée.
+    const pts: number[] = [];
+    const top = (m: Machine): [number, number, number] => {
+      const { w, d } = dims(m.type, m.rot);
+      const h = m.type === 'pole' ? 2.1 : machineDef(m.type).height;
+      return [(m.gx + w / 2) * CELL_SIZE_M, h, (m.gz + d / 2) * CELL_SIZE_M];
+    };
+    for (const { from, to } of this.factory.wires) {
+      const a = top(from);
+      const b = top(to);
+      // Un fil qui pend un peu : deux segments avec un point bas au milieu.
+      const mid: [number, number, number] = [
+        (a[0] + b[0]) / 2,
+        Math.min(a[1], b[1]) - 0.25,
+        (a[2] + b[2]) / 2,
+      ];
+      pts.push(...a, ...mid, ...mid, ...b);
+    }
+    this.wires.geometry.dispose();
+    this.wires.geometry = new THREE.BufferGeometry();
+    this.wires.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     this.updateItems();
   }
 
@@ -159,7 +184,7 @@ export class FactoryView {
         else
           mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
         // Flèche de sortie (un coffre n'en a pas : il se remplit par les tapis).
-        if (!isChest(g.type)) {
+        if (hasOutput(g.type)) {
           const out = outputCell(g.type, g.gx, g.gz, g.rot);
           mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
         }
@@ -179,6 +204,8 @@ export class FactoryView {
     this.scene.remove(this.root, this.ghost);
     this.bodies.geometry.dispose();
     this.items.geometry.dispose();
+    this.wires.geometry.dispose();
+    (this.wires.material as THREE.Material).dispose();
     this.ghost.geometry.dispose();
     this.ghostMaterial.dispose();
   }
@@ -255,7 +282,23 @@ function addMachineBody(
     mb.box(x, 0.3, z - 0.24, 0.1, 0.12, 0.03, hexToRgb('#d9c15a'), true);
     return;
   }
-  if (type === 'drill') {
+  if (type === 'pole') {
+    // Poteau : mât, bras, deux isolateurs.
+    mb.box(x, 0, z, 0.12, 2.2, 0.12, color, true);
+    mb.box(x, 2.0, z, 0.7, 0.07, 0.1, shade(color, 0.8), true);
+    mb.box(x - 0.3, 2.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+    mb.box(x + 0.3, 2.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+    return;
+  }
+  if (type === 'generator') {
+    // Générateur : caisson, bloc moteur, échappement.
+    mb.box(x, 0, z, sx, 0.7, sz, color, true);
+    mb.box(x - 0.1, 0.7, z, sx - 0.5, 0.3, sz - 0.3, shade(color, 1.3), true);
+    mb.box(x + 0.3, 0.7, z + 0.3, 0.18, 0.55, 0.18, hexToRgb('#3d3a38'), true);
+    mb.box(x - 0.3, 0.2, z - sz / 2 - 0.01, 0.2, 0.2, 0.03, hexToRgb('#e6c84a'), true);
+    return;
+  }
+  if (isDrill(type)) {
     mb.box(x, 0, z, sx, 0.5, sz, hexToRgb('#4b4f55'), true);
     mb.box(x, 0.5, z, sx - 0.5, 0.45, sz - 0.5, color, true);
     mb.cone(x, 0.95, z, 0.3, 0.35, 8, hexToRgb('#8a9099'), 0.1);

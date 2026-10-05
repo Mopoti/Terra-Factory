@@ -160,6 +160,37 @@
       "recipe": {
         "iron_ingot": 8
       }
+    },
+    {
+      "id": "machine_generator",
+      "weightKg": 12,
+      "volumeL": 20,
+      "color": "#5f7a5a",
+      "recipe": {
+        "iron_ingot": 6,
+        "stone": 6
+      }
+    },
+    {
+      "id": "machine_pole",
+      "weightKg": 2,
+      "volumeL": 6,
+      "color": "#7a5b3a",
+      "recipe": {
+        "iron_ingot": 1,
+        "wood": 2
+      }
+    },
+    {
+      "id": "machine_drill_electric",
+      "weightKg": 9,
+      "volumeL": 15,
+      "color": "#4a86a8",
+      "recipe": {
+        "iron_ingot": 6,
+        "copper_ingot": 4,
+        "stone": 2
+      }
     }
   ]
 }

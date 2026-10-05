@@ -1,7 +1,14 @@
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { itemById } from '../data/items';
-import { isChest, machineDef, smeltRecipe, type MachineType } from '../data/machines';
+import {
+  hasOutput,
+  isChest,
+  isDrill,
+  machineDef,
+  smeltRecipe,
+  type MachineType,
+} from '../data/machines';
 
 /** Une pile dans une case de machine : un seul type d'objet. */
 export interface Stack {
@@ -76,7 +83,20 @@ export interface FactoryWorld {
   mineOre(gx: number, gz: number, units: number): number;
 }
 
-export type MachineStatus = 'running' | 'idle' | 'noFuel' | 'noOre' | 'full' | 'blocked';
+export type MachineStatus =
+  'running' | 'idle' | 'noFuel' | 'noOre' | 'full' | 'blocked' | 'noPower';
+
+/** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
+export interface GridInfo {
+  id: number;
+  machines: number;
+  /** Puissance que les générateurs en état de marche peuvent fournir (kW). */
+  capacityKw: number;
+  /** Puissance demandée par les machines qui veulent travailler (kW). */
+  demandKw: number;
+  /** Part de la demande satisfaite (0 à 1). */
+  satisfaction: number;
+}
 
 export interface Cell {
   gx: number;
@@ -159,9 +179,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (typeof r !== 'object' || r === null) continue;
     const m = r as Record<string, unknown>;
     if (!isNum(m.id) || seen.has(m.id) || !isNum(m.gx) || !isNum(m.gz) || !isNum(m.rot)) continue;
-    if (!['drill', 'furnace', 'conveyor', 'chest_wood', 'chest_iron'].includes(m.type as string)) {
-      continue;
-    }
+    if (!MACHINE_TYPES.includes(m.type as MachineType)) continue;
     seen.add(m.id);
     const machine = emptyMachine(
       m.id,
@@ -201,9 +219,31 @@ export function normalizeMachines(raw: unknown): Machine[] {
   return out;
 }
 
+const MACHINE_TYPES: MachineType[] = [
+  'drill',
+  'drill_electric',
+  'furnace',
+  'conveyor',
+  'chest_wood',
+  'chest_iron',
+  'generator',
+  'pole',
+];
+
+/** Centre d'une machine (m). */
+export function centerOf(m: Machine): { x: number; z: number } {
+  const { w, d } = dims(m.type, m.rot);
+  return { x: (m.gx + w / 2) * CELL_SIZE_M, z: (m.gz + d / 2) * CELL_SIZE_M };
+}
+
 /** L'usine : simule foreuses, fourneaux et tapis, 20 fois par seconde. */
 export class Factory {
   private cells = new Map<string, Machine>();
+  /** Réseau électrique de chaque machine raccordée (identifiant de réseau). */
+  private gridOf = new Map<number, number>();
+  private grids = new Map<number, GridInfo>();
+  /** Fils à dessiner : de poteau à poteau et de poteau à machine. */
+  wires: Array<{ from: Machine; to: Machine }> = [];
 
   constructor(
     readonly machines: Machine[],
@@ -217,6 +257,72 @@ export class Factory {
     for (const m of this.machines) {
       for (const c of footprint(m.type, m.gx, m.gz, m.rot)) this.cells.set(`${c.gx},${c.gz}`, m);
     }
+    this.buildGrids();
+  }
+
+  /** Relie les poteaux entre eux (fil de 8 m) et les machines électriques au poteau le plus proche (4 m). */
+  private buildGrids(): void {
+    this.gridOf.clear();
+    this.wires = [];
+    const poles = this.machines.filter((m) => m.type === 'pole');
+    const parent = new Map<number, number>(poles.map((p) => [p.id, p.id]));
+    const find = (id: number): number => {
+      let r = id;
+      while (parent.get(r) !== r) r = parent.get(r) as number;
+      return r;
+    };
+    const wire = machineDef('pole').wireReachM ?? 8;
+    const link = machineDef('pole').linkReachM ?? 4;
+    for (let i = 0; i < poles.length; i++) {
+      for (let j = i + 1; j < poles.length; j++) {
+        const a = centerOf(poles[i]);
+        const b = centerOf(poles[j]);
+        if (Math.hypot(a.x - b.x, a.z - b.z) <= wire) {
+          parent.set(find(poles[i].id), find(poles[j].id));
+          this.wires.push({ from: poles[i], to: poles[j] });
+        }
+      }
+    }
+    const members = new Map<number, number>();
+    for (const m of this.machines) {
+      const def = machineDef(m.type);
+      if (m.type === 'pole' || (!def.consumesKw && !def.producesKw)) continue;
+      const c = centerOf(m);
+      const reach = link + (Math.max(...Object.values(dims(m.type, m.rot))) * CELL_SIZE_M) / 2;
+      let best: Machine | null = null;
+      let bestD = Infinity;
+      for (const p of poles) {
+        const pc = centerOf(p);
+        const dist = Math.hypot(pc.x - c.x, pc.z - c.z);
+        if (dist <= reach && dist < bestD) {
+          best = p;
+          bestD = dist;
+        }
+      }
+      if (!best) continue;
+      const grid = find(best.id);
+      this.gridOf.set(m.id, grid);
+      this.wires.push({ from: best, to: m });
+      members.set(grid, (members.get(grid) ?? 0) + 1);
+    }
+    for (const p of poles) this.gridOf.set(p.id, find(p.id));
+    this.grids = new Map(
+      [...new Set(this.gridOf.values())].map((id) => [
+        id,
+        { id, machines: members.get(id) ?? 0, capacityKw: 0, demandKw: 0, satisfaction: 1 },
+      ]),
+    );
+  }
+
+  /** Le réseau de cette machine (ou null si elle n'est reliée à aucun poteau). */
+  gridInfo(m: Machine): GridInfo | null {
+    const id = this.gridOf.get(m.id);
+    return id === undefined ? null : (this.grids.get(id) ?? null);
+  }
+
+  /** Fraction de sa pleine puissance dont dispose une machine électrique (0 si non raccordée). */
+  powerFactor(m: Machine): number {
+    return this.gridInfo(m)?.satisfaction ?? 0;
   }
 
   machineAt(gx: number, gz: number): Machine | null {
@@ -285,9 +391,15 @@ export class Factory {
           ? 'running'
           : 'idle';
     const max = def.stockMax ?? 100;
-    if (m.type === 'drill') {
+    if (m.type === 'pole') return (this.gridInfo(m)?.machines ?? 0) > 0 ? 'running' : 'idle';
+    if (m.type === 'generator') {
+      if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
+      return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
+    }
+    if (isDrill(m.type)) {
       if (this.oreUnder(m).total === 0) return 'noOre';
       if (m.stock && m.stock.count >= max) return 'full';
+      if (def.consumesKw && this.powerFactor(m) <= 0) return 'noPower';
     } else {
       if (!m.input || !smeltRecipe(m.input.item)) return 'idle';
       const out = smeltRecipe(m.input.item)?.out;
@@ -300,15 +412,51 @@ export class Factory {
   // --- Simulation ----------------------------------------------------------------------------------
 
   tick(dt: number): void {
+    this.updateGrids();
     for (const m of this.machines) {
-      if (isChest(m.type)) continue;
       if (m.type === 'conveyor') this.tickBelt(m, dt);
-      else {
+      else if (m.type === 'generator') this.tickGenerator(m, dt);
+      else if (hasOutput(m.type)) {
         this.pushOutput(m);
-        if (m.type === 'drill') this.tickDrill(m, dt);
+        if (isDrill(m.type)) this.tickDrill(m, dt);
         else this.tickFurnace(m, dt);
       }
     }
+  }
+
+  /** Une machine électrique a-t-elle quelque chose à faire (donc demande du courant) ? */
+  private wantsToWork(m: Machine): boolean {
+    if (!isDrill(m.type)) return false;
+    const max = machineDef(m.type).stockMax ?? 100;
+    return !(m.stock && m.stock.count >= max) && this.pickOreCell(m) !== null;
+  }
+
+  /** Puissance disponible et demandée sur chaque réseau, puis part satisfaite. */
+  private updateGrids(): void {
+    for (const g of this.grids.values()) {
+      g.capacityKw = 0;
+      g.demandKw = 0;
+    }
+    for (const m of this.machines) {
+      const g = this.gridInfo(m);
+      if (!g) continue;
+      const def = machineDef(m.type);
+      if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
+      if (def.producesKw && (m.fuelLeft > 0 || (m.fuel && m.fuel.count > 0))) {
+        g.capacityKw += def.producesKw;
+      }
+    }
+    for (const g of this.grids.values()) {
+      g.satisfaction = g.demandKw <= 0 ? 1 : Math.min(1, g.capacityKw / g.demandKw);
+    }
+  }
+
+  /** Un générateur ne brûle que ce qu'il faut pour la demande du réseau. */
+  private tickGenerator(m: Machine, dt: number): void {
+    const g = this.gridInfo(m);
+    if (!g || g.demandKw <= 0 || g.capacityKw <= 0) return;
+    if (!this.fire(m)) return;
+    this.burn(m, dt * Math.min(1, g.demandKw / g.capacityKw));
   }
 
   /** Allume une unité de combustible si besoin ; renvoie vrai s'il y a de quoi brûler. */
@@ -326,13 +474,21 @@ export class Factory {
   }
 
   private tickDrill(m: Machine, dt: number): void {
-    const def = machineDef('drill');
+    const def = machineDef(m.type);
     const max = def.stockMax ?? 100;
     if (m.stock && m.stock.count >= max) return;
     const cell = this.pickOreCell(m);
-    if (!cell || !this.fire(m)) return;
-    this.burn(m, dt);
-    m.progress += dt;
+    if (!cell) return;
+    // Foreuse à combustible : elle brûle ; foreuse électrique : elle avance au rythme du courant reçu.
+    let speed = 1;
+    if (def.consumesKw) {
+      speed = this.powerFactor(m);
+      if (speed <= 0) return;
+    } else {
+      if (!this.fire(m)) return;
+      this.burn(m, dt);
+    }
+    m.progress += dt * speed;
     const every = def.mineSeconds ?? 1;
     while (m.progress >= every) {
       m.progress -= every;

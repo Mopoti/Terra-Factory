@@ -1,6 +1,14 @@
 import raw from '../../../content/machines.json';
 
-export type MachineType = 'drill' | 'furnace' | 'conveyor' | 'chest_wood' | 'chest_iron';
+export type MachineType =
+  | 'drill'
+  | 'drill_electric'
+  | 'furnace'
+  | 'conveyor'
+  | 'chest_wood'
+  | 'chest_iron'
+  | 'generator'
+  | 'pole';
 
 export interface MachineDef {
   id: MachineType;
@@ -19,6 +27,13 @@ export interface MachineDef {
   mineSeconds?: number;
   /** Capacité de la case de stockage. */
   stockMax?: number;
+  /** Puissance consommée (kW) quand la machine travaille. */
+  consumesKw?: number;
+  /** Puissance produite (kW) à pleine charge. */
+  producesKw?: number;
+  /** Poteau : portée du fil vers un autre poteau (m) et vers une machine (m, bord de la machine). */
+  wireReachM?: number;
+  linkReachM?: number;
   /** Coffre : nombre de cases (une pile de 100 au plus par case). */
   slots?: number;
   /** Tapis : cases par seconde et nombre d'objets portés par case. */
@@ -31,6 +46,12 @@ export interface SmeltRecipe {
   out: string;
   seconds: number;
 }
+
+export const isDrill = (type: MachineType): boolean =>
+  type === 'drill' || type === 'drill_electric';
+
+/** A une case de sortie (pousse son stock devant elle). */
+export const hasOutput = (type: MachineType): boolean => isDrill(type) || type === 'furnace';
 
 export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';

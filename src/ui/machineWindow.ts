@@ -1,6 +1,6 @@
 import { playSfx } from '../audio/sfx';
 import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
-import { isChest, machineDef, smeltRecipe } from '../core/data/machines';
+import { isChest, isDrill, machineDef, smeltRecipe } from '../core/data/machines';
 import { footprint, type Factory, type Machine, type Stack } from '../core/factory/factory';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
@@ -321,17 +321,12 @@ export function mountMachineWindow(
       rows.append(fuelInfo);
     }
     if (m.type === 'furnace') rows.append(machineSlot(m, 'input', t('machine.input'), m.input));
-    if (m.type === 'drill' || m.type === 'furnace') {
+    if (isDrill(m.type) || m.type === 'furnace') {
       rows.append(
-        machineSlot(
-          m,
-          'stock',
-          t(m.type === 'drill' ? 'machine.stock' : 'machine.output'),
-          m.stock,
-        ),
+        machineSlot(m, 'stock', t(isDrill(m.type) ? 'machine.stock' : 'machine.output'), m.stock),
       );
     }
-    if (m.type === 'drill') {
+    if (isDrill(m.type)) {
       const ore = el(
         'div',
         'mach-info',

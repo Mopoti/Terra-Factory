@@ -456,5 +456,16 @@
   "factory.chestEmpty": "empty",
   "machine.chest": "Chest",
   "machine.chestHint": "Drag an item from the bag into the chest; click a chest slot (or drag it onto the bag) to take it back.",
-  "harvest.doorUse": "Left click: open / close · hold right click: demolish"
+  "harvest.doorUse": "Left click: open / close · hold right click: demolish",
+  "item.machine_generator": "Fuel generator",
+  "item.machine_pole": "Power pole",
+  "item.machine_drill_electric": "Electric drill",
+  "factory.status.noPower": "No power",
+  "factory.power.line": "Electric consumption: {v}",
+  "factory.power.consumer": "{kw} kW (grid: {demand} / {cap} kW)",
+  "factory.power.none": "not connected: place a pole within {m} m",
+  "factory.power.producer": "Production: {kw} kW max · load {load} %",
+  "factory.power.pole": "Grid: {n} machine(s) · production {cap} kW · demand {demand} kW",
+  "factory.power.generatorOff": "stopped",
+  "factory.power.unlinked": "Pole without machines"
 }

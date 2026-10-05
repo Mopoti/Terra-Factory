@@ -50,7 +50,14 @@ import { playSfx } from '../audio/sfx';
 import { pickPiece } from '../core/build/pick';
 import { riseFromDirection } from '../core/build/aim';
 import { RISE_DIR } from '../core/data/buildings';
-import { isChest, machineDef, machineForItem, type MachineDef } from '../core/data/machines';
+import {
+  hasOutput,
+  isChest,
+  isDrill,
+  machineDef,
+  machineForItem,
+  type MachineDef,
+} from '../core/data/machines';
 import {
   Factory,
   dims,
@@ -654,8 +661,8 @@ export function startGameView(
       let why = stock > 0 ? '' : t('build.missing');
       if (
         ok &&
-        def.id === 'drill' &&
-        factory.oreUnder(emptyMachine(0, 'drill', gx, gz, baseRot)).total === 0
+        isDrill(def.id) &&
+        factory.oreUnder(emptyMachine(0, def.id, gx, gz, baseRot)).total === 0
       ) {
         ok = false;
         why = t('factory.needOre');
@@ -768,10 +775,10 @@ export function startGameView(
     const rows: string[] = [];
     rows.push(`<strong>${t(`item.${def.item}` as TranslationKey)}</strong>`);
     rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
-    if (m.type === 'drill') {
+    if (isDrill(m.type)) {
       const ore = factory.oreUnder(m);
       rows.push(
-        `<div>${t('factory.production', { rate: t('factory.rateDrill', { n: String(1 / (def.mineSeconds ?? 1)) }) })}</div>`,
+        `<div>${t('factory.production', { rate: t('factory.rateDrill', { n: String(Math.round(10 / (def.mineSeconds ?? 1)) / 10) }) })}</div>`,
       );
       rows.push(`<div>${t('factory.ore', { n: String(ore.total) })}</div>`);
       for (const [item, n] of Object.entries(ore.byItem)) {
@@ -795,6 +802,24 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (m.type === 'pole') {
+      const g = factory.gridInfo(m);
+      rows.push(
+        g && g.machines > 0
+          ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(g.capacityKw), demand: String(g.demandKw) })}</div>`
+          : `<div class="sub">${t('factory.power.unlinked')}</div>`,
+      );
+    } else if (m.type === 'generator') {
+      const g = factory.gridInfo(m);
+      const load =
+        g && g.capacityKw > 0 ? Math.min(100, Math.round((g.demandKw / g.capacityKw) * 100)) : 0;
+      rows.push(
+        `<div>${
+          g && load > 0
+            ? t('factory.power.producer', { kw: String(def.producesKw ?? 0), load: String(load) })
+            : t('factory.power.generatorOff')
+        }</div>`,
+      );
     } else {
       rows.push(
         `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
@@ -807,9 +832,25 @@ export function startGameView(
         `<div>${t('factory.fuel', { v: stackText(m.fuel, def.stockMax), time: duration(secs) })}</div>`,
       );
     }
-    rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
+    if (def.consumesKw) {
+      const g = factory.gridInfo(m);
+      rows.push(
+        `<div>${t('factory.power.line', {
+          v: g
+            ? t('factory.power.consumer', {
+                kw: String(def.consumesKw),
+                demand: String(g.demandKw),
+                cap: String(g.capacityKw),
+              })
+            : t('factory.power.none', { m: String(machineDef('pole').linkReachM ?? 4) }),
+        })}</div>`,
+      );
+    } else if (!def.producesKw && m.type !== 'pole') {
+      rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
+    }
     if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);
-    if (m.type !== 'conveyor' && !isChest(m.type)) {
+    if (m.type === 'generator') rows.push(`<small>${t('factory.useHint')}</small>`);
+    if (hasOutput(m.type)) {
       const out = outputCell(m.type, m.gx, m.gz, m.rot);
       const target = factory.machineAt(out.gx, out.gz);
       rows.push(
