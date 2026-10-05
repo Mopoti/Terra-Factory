@@ -1,57 +1,67 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
-import type { GameSummary, PlayerState } from '../core/save/saveIndex';
+import {
+  DEFAULT_PLAYER_STATE,
+  type GameSummary,
+  type PlayerState,
+  type ViewId,
+} from '../core/save/saveIndex';
 import { WorldGenerator } from '../core/world/worldgen';
-import { Input } from '../input/input';
 import { t, type TranslationKey } from '../i18n';
+import { Input } from '../input/input';
+import type { ActionId } from '../settings/controls';
 import type { Settings } from '../settings/schema';
 import { getSettings, onSettingsChange } from '../settings/store';
-import { buildChunkMesh, type ChunkMesh } from './chunkMesh';
+import { edgePan, ghostRadiusPx } from './cameraMath';
+import { CameraRig } from './cameraRig';
+import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
 const SKY = 0x8fb8d8;
 
-// Déplacement provisoire (les vraies caméras et le vrai personnage arrivent au chantier 4).
+// Déplacement provisoire (le vrai personnage arrive plus tard).
 const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
 const PLAYER_RADIUS_M = 0.25;
 const PLAYER_HEIGHT_M = 1.75;
 const CAMERA_YAW_SPEED = 1.8;
-const ZOOM_MIN_M = 3;
-const ZOOM_MAX_M = 30;
+/** Intervalle de répétition d'une action maintenue (zoom au clavier), en secondes. */
+const REPEAT_S = 0.09;
 /** Temps maximum passé à fabriquer des chunks par image (ms), pour éviter les saccades. */
 const CHUNK_BUDGET_MS = 6;
 
-interface LoadedChunk {
-  mesh: ChunkMesh;
-}
-
-/** Vue 3D d'une partie : monde infini généré autour d'un joueur provisoire. */
 export interface GameViewOptions {
   /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
   start?: Partial<PlayerState>;
+  /** Appelé quand le joueur change de vue avec le clavier. */
+  onViewChange?: (view: ViewId) => void;
+  /** Appelé quand le navigateur libère la souris (Échap en 1ère personne) : ouvrir la pause. */
+  onRequestPause?: () => void;
 }
 
 export interface GameViewHandle {
   dispose(): void;
-  /** État actuel du joueur, pour l'enregistrer dans une sauvegarde. */
+  /** État actuel du joueur et de la caméra, pour l'enregistrer dans une sauvegarde. */
   getState(): PlayerState;
   /** En pause, le joueur et la caméra ne bougent plus (le monde reste affiché). */
   setPaused(paused: boolean): void;
 }
 
+/** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
 export function startGameView(
   container: HTMLElement,
   game: GameSummary,
   options: GameViewOptions = {},
 ): GameViewHandle {
+  const state: PlayerState = { ...DEFAULT_PLAYER_STATE, ...options.start };
   const initial = getSettings().display;
   const renderer = new THREE.WebGLRenderer({ antialias: initial.quality !== 'low' });
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY);
-  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 500);
+  scene.add(camera);
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x556655, 1.1));
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
@@ -71,19 +81,27 @@ export function startGameView(
   );
   player.castShadow = true;
   scene.add(player);
-  let playerX = options.start?.x ?? 0;
-  let playerZ = options.start?.z ?? 0;
+  let playerX = state.x;
+  let playerZ = state.z;
   let facing = 0;
 
+  // Outil tenu en main (1ère personne), fixé à la caméra.
+  const hand = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.1, 0.45),
+    new THREE.MeshStandardMaterial({ color: 0xb06a22 }),
+  );
+  hand.position.set(0.28, -0.24, -0.5);
+  hand.rotation.set(0.1, -0.2, 0);
+  camera.add(hand);
+
+  const rig = new CameraRig(camera, state);
+
   // --- Chunks ------------------------------------------------------------------------------
-  const chunks = new Map<string, LoadedChunk>();
+  const chunks = new Map<string, ChunkMesh>();
   const blocked = new Set<string>();
+  const obstacles = new Map<string, number>();
   let wanted: { cx: number; cz: number }[] = [];
   let wantedKey = '';
-
-  function chunkKey(cx: number, cz: number): string {
-    return `${cx},${cz}`;
-  }
 
   function updateWanted(pcx: number, pcz: number, radius: number): void {
     const key = `${pcx},${pcz},${radius}`;
@@ -99,12 +117,13 @@ export function startGameView(
       (a, b) => (a.cx - pcx) ** 2 + (a.cz - pcz) ** 2 - ((b.cx - pcx) ** 2 + (b.cz - pcz) ** 2),
     );
     const keep = (radius + 1.5) ** 2;
-    for (const [k, loaded] of chunks) {
+    for (const [k, mesh] of chunks) {
       const [cx, cz] = k.split(',').map(Number);
       if ((cx - pcx) ** 2 + (cz - pcz) ** 2 > keep) {
-        scene.remove(loaded.mesh.group);
-        loaded.mesh.dispose();
-        for (const cell of loaded.mesh.blocked) blocked.delete(cell);
+        scene.remove(mesh.group);
+        mesh.dispose();
+        for (const cell of mesh.blocked) blocked.delete(cell);
+        for (const [cell] of mesh.tall) obstacles.delete(cell);
         chunks.delete(k);
       }
     }
@@ -114,31 +133,87 @@ export function startGameView(
     const start = performance.now();
     for (const { cx, cz } of wanted) {
       if (performance.now() - start > CHUNK_BUDGET_MS) return;
-      const key = chunkKey(cx, cz);
+      const key = `${cx},${cz}`;
       if (chunks.has(key)) continue;
       const mesh = buildChunkMesh(generator, generator.chunk(cx, cz));
       scene.add(mesh.group);
       for (const cell of mesh.blocked) blocked.add(cell);
-      chunks.set(key, { mesh });
+      for (const [cell, height] of mesh.tall) obstacles.set(cell, height);
+      chunks.set(key, mesh);
     }
   }
 
-  // --- Entrées et déplacement --------------------------------------------------------------
+  // --- Entrées -----------------------------------------------------------------------------
   const input = new Input(renderer.domElement);
   input.attach();
   let paused = false;
-  let yaw = options.start?.yaw ?? Math.PI / 4;
-  let pitch = options.start?.pitch ?? 0.75;
-  let distance = options.start?.distance ?? 9;
+  let mouseX = window.innerWidth / 2;
+  let mouseY = window.innerHeight / 2;
+
+  const isLocked = (): boolean => document.pointerLockElement === renderer.domElement;
 
   const onMouseMove = (e: MouseEvent): void => {
-    if (paused || !input.isBindingActive('Mouse2')) return;
-    const { mouseSensitivity, invertY } = getSettings().views.common;
-    const k = 0.005 * (mouseSensitivity / 50);
-    yaw -= e.movementX * k;
-    pitch = Math.min(1.35, Math.max(0.25, pitch + e.movementY * k * (invertY ? -1 : 1)));
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    if (paused) return;
+    if (isLocked() || input.isBindingActive('Mouse2')) {
+      rig.look(e.movementX, e.movementY, getSettings().views);
+    }
   };
   window.addEventListener('mousemove', onMouseMove);
+
+  const requestLock = (): void => {
+    if (paused || rig.view !== 'first' || isLocked()) return;
+    void Promise.resolve(renderer.domElement.requestPointerLock()).catch(() => undefined);
+  };
+  renderer.domElement.addEventListener('click', requestLock);
+  let wasLocked = false;
+  const onLockChange = (): void => {
+    const locked = isLocked();
+    if (wasLocked && !locked && !paused) options.onRequestPause?.();
+    wasLocked = locked;
+  };
+  document.addEventListener('pointerlockchange', onLockChange);
+
+  const previouslyActive = new Set<ActionId>();
+  /** Vrai à l'appui sur la touche (une seule fois par appui). */
+  function pressed(action: ActionId): boolean {
+    const now = input.isActionActive(action);
+    const was = previouslyActive.has(action);
+    if (now) previouslyActive.add(action);
+    else previouslyActive.delete(action);
+    return now && !was;
+  }
+  const repeatTimers = new Map<ActionId, number>();
+  /** Vrai à l'appui puis à intervalle régulier tant que la touche est maintenue. */
+  function repeating(action: ActionId, dt: number): boolean {
+    if (!input.isActionActive(action)) {
+      repeatTimers.delete(action);
+      return false;
+    }
+    const left = repeatTimers.get(action);
+    if (left === undefined) {
+      repeatTimers.set(action, REPEAT_S);
+      return true;
+    }
+    if (left - dt <= 0) {
+      repeatTimers.set(action, REPEAT_S);
+      return true;
+    }
+    repeatTimers.set(action, left - dt);
+    return false;
+  }
+
+  function switchView(view: ViewId | 'cycle'): void {
+    const views = getSettings().views;
+    const before = rig.view;
+    if (view === 'cycle') rig.cycleView(views);
+    else rig.setView(view, views);
+    if (rig.view === before) return;
+    if (rig.view !== 'first' && isLocked()) document.exitPointerLock();
+    if (rig.view === 'first') requestLock();
+    options.onViewChange?.(rig.view);
+  }
 
   const isBlockedAt = (xM: number, zM: number): boolean =>
     blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`);
@@ -147,41 +222,56 @@ export function startGameView(
     !isBlockedAt(x + PLAYER_RADIUS_M, z - PLAYER_RADIUS_M) &&
     !isBlockedAt(x - PLAYER_RADIUS_M, z + PLAYER_RADIUS_M) &&
     !isBlockedAt(x + PLAYER_RADIUS_M, z + PLAYER_RADIUS_M);
+  const obstacleAt = (x: number, y: number, z: number): boolean => {
+    const h = obstacles.get(`${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`);
+    return h !== undefined && y < h;
+  };
 
-  function step(dt: number): void {
-    if (input.isActionActive('rotateLeft')) yaw += CAMERA_YAW_SPEED * dt;
-    if (input.isActionActive('rotateRight')) yaw -= CAMERA_YAW_SPEED * dt;
-    if (input.isActionActive('zoomIn')) distance *= 0.9;
-    if (input.isActionActive('zoomOut')) distance *= 1.1;
-    distance = Math.min(ZOOM_MAX_M, Math.max(ZOOM_MIN_M, distance));
-
+  /** Déplace le joueur ; renvoie sa vitesse (m/s) et son mouvement latéral. */
+  function step(dt: number): { speed: number; strafe: number } {
+    const views = getSettings().views;
     let forward = 0;
     let right = 0;
     if (input.isActionActive('forward')) forward += 1;
     if (input.isActionActive('backward')) forward -= 1;
     if (input.isActionActive('right')) right += 1;
     if (input.isActionActive('left')) right -= 1;
-    if (forward !== 0 || right !== 0) {
-      const len = Math.hypot(forward, right);
-      const speed = WALK_SPEED_M_S * (input.isActionActive('sprint') ? SPRINT_FACTOR : 1) * dt;
-      // « Avant » = s'éloigner de la caméra.
-      const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
-      const dirZ = (-Math.cos(yaw) * forward - Math.sin(yaw) * right) / len;
-      const nx = playerX + dirX * speed;
-      const nz = playerZ + dirZ * speed;
-      if (canStand(nx, nz)) {
-        playerX = nx;
-        playerZ = nz;
-      } else if (canStand(nx, playerZ)) playerX = nx;
-      else if (canStand(playerX, nz)) playerZ = nz;
-      const target = Math.atan2(dirX, dirZ);
-      let delta = target - facing;
-      delta = Math.atan2(Math.sin(delta), Math.cos(delta));
-      facing += delta * Math.min(1, dt * 14);
-    }
+    if (forward === 0 && right === 0) return { speed: 0, strafe: 0 };
+
+    const len = Math.hypot(forward, right);
+    const speed = WALK_SPEED_M_S * (input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
+    const yaw = rig.yaw;
+    // « Avant » = la direction vers laquelle regarde la caméra.
+    const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
+    const dirZ = (-Math.cos(yaw) * forward - Math.sin(yaw) * right) / len;
+    const nx = playerX + dirX * speed * dt;
+    const nz = playerZ + dirZ * speed * dt;
+    const ox = playerX;
+    const oz = playerZ;
+    if (canStand(nx, nz)) {
+      playerX = nx;
+      playerZ = nz;
+    } else if (canStand(nx, playerZ)) playerX = nx;
+    else if (canStand(playerX, nz)) playerZ = nz;
+    const moved = Math.hypot(playerX - ox, playerZ - oz);
+
+    const target = Math.atan2(dirX, dirZ);
+    let delta = target - facing;
+    delta = Math.atan2(Math.sin(delta), Math.cos(delta));
+    facing += delta * Math.min(1, dt * 14);
+    if (rig.view === 'third' && views.third.autoRotate && moved > 0)
+      rig.followHeading(dirX, dirZ, dt);
+    return { speed: dt > 0 ? moved / dt : 0, strafe: right / len };
   }
 
-  // --- Réglages, FPS, infos ----------------------------------------------------------------
+  // --- Réticule, indice, réglages, FPS, infos ----------------------------------------------
+  const crosshair = document.createElement('div');
+  crosshair.className = 'crosshair';
+  container.appendChild(crosshair);
+  const hint = document.createElement('div');
+  hint.className = 'look-hint';
+  hint.textContent = t('hint.mouseLook');
+  container.appendChild(hint);
   const fpsBox = document.createElement('div');
   fpsBox.className = 'fps-counter';
   container.appendChild(fpsBox);
@@ -191,6 +281,22 @@ export function startGameView(
   let shadowsWereOn = initial.shadows !== 'off';
   let fpsLimit = initial.fpsLimit;
   let viewDistance = initial.viewDistance;
+
+  const CROSSHAIR_COLORS = {
+    white: '#ffffff',
+    orange: '#ff9d3a',
+    green: '#5fe06a',
+    red: '#ff5a4d',
+    cyan: '#55e0ff',
+  } as const;
+
+  function applyCrosshair(s: Settings): void {
+    const c = s.views.first;
+    crosshair.dataset.style = c.crosshairStyle;
+    const size = 8 + (36 * (c.crosshairSize - 10)) / 90;
+    crosshair.style.setProperty('--size', `${size}px`);
+    crosshair.style.setProperty('--color', CROSSHAIR_COLORS[c.crosshairColor]);
+  }
 
   function applySettings(s: Settings): void {
     const d = s.display;
@@ -218,6 +324,8 @@ export function startGameView(
         if (o instanceof THREE.Mesh) o.material.needsUpdate = true;
       });
     }
+    rig.applyViewSettings(s.views);
+    applyCrosshair(s);
   }
 
   function resize(): void {
@@ -237,6 +345,7 @@ export function startGameView(
     const info = renderer.info;
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,
+      `${t('debug.view')} : ${t(`view.${rig.view}` as TranslationKey)}`,
       `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m`,
       `${t('debug.cell')} : ${gx}, ${gz}`,
       `${t('debug.chunk')} : ${Math.floor(gx / CHUNK_CELLS)}, ${Math.floor(gz / CHUNK_CELLS)}`,
@@ -252,6 +361,25 @@ export function startGameView(
     debugBox.textContent = lines.join('\n');
   }
 
+  /** Aura de transparence autour du joueur (3ème personne et vue du dessus). */
+  const chest = new THREE.Vector3();
+  function updateGhost(views: Settings['views']): void {
+    const on =
+      rig.view === 'third' ? views.third.ghost : rig.view === 'top' ? views.top.ghost : false;
+    ghostUniforms.uGhostOn.value = on ? 1 : 0;
+    if (!on) return;
+    const pct = rig.view === 'third' ? views.third.ghostRadius : views.top.ghostRadius;
+    camera.updateMatrixWorld();
+    camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    chest.set(playerX, 1.0, playerZ);
+    const ndc = chest.clone().project(camera);
+    const w = renderer.domElement.width;
+    const h = renderer.domElement.height;
+    ghostUniforms.uGhostCenter.value.set((ndc.x * 0.5 + 0.5) * w, (ndc.y * 0.5 + 0.5) * h);
+    ghostUniforms.uGhostDepth.value = -chest.applyMatrix4(camera.matrixWorldInverse).z;
+    ghostUniforms.uGhostRadius.value = Math.max(1, ghostRadiusPx(pct, h));
+  }
+
   // --- Boucle ------------------------------------------------------------------------------
   let last = 0;
   let lastFrame = 0;
@@ -263,8 +391,28 @@ export function startGameView(
     lastFrame = now;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
+    const views = getSettings().views;
 
-    if (!paused) step(dt);
+    let motion = { speed: 0, strafe: 0 };
+    if (!paused) {
+      if (pressed('cycleView')) switchView('cycle');
+      if (pressed('viewFirst')) switchView('first');
+      if (pressed('viewThird')) switchView('third');
+      if (pressed('viewTop')) switchView('top');
+
+      const stepRotation = rig.view === 'top' && views.top.rotation === 'step';
+      if (stepRotation) {
+        if (pressed('rotateLeft')) rig.rotateStep(-1, views);
+        if (pressed('rotateRight')) rig.rotateStep(1, views);
+      } else {
+        if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
+        if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
+      }
+      if (repeating('zoomIn', dt)) rig.zoom(1, views);
+      if (repeating('zoomOut', dt)) rig.zoom(-1, views);
+      motion = step(dt);
+    }
+
     updateWanted(
       Math.floor(playerX / CHUNK_SIZE_M),
       Math.floor(playerZ / CHUNK_SIZE_M),
@@ -272,16 +420,21 @@ export function startGameView(
     );
     loadMissing();
 
+    const edge =
+      rig.view === 'top' && views.top.edgeScroll && !paused && !isLocked()
+        ? edgePan(mouseX, mouseY, window.innerWidth, window.innerHeight)
+        : { x: 0, y: 0 };
+    rig.update(dt, { x: playerX, z: playerZ }, motion, views, edge, obstacleAt);
+
+    player.visible = rig.view !== 'first';
     player.position.set(playerX, PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
-    camera.position.set(
-      playerX + Math.sin(yaw) * Math.cos(pitch) * distance,
-      1 + Math.sin(pitch) * distance,
-      playerZ + Math.cos(yaw) * Math.cos(pitch) * distance,
-    );
-    camera.lookAt(playerX, 1, playerZ);
+    hand.visible = rig.view === 'first' && views.first.showHands;
+    crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';
+    hint.hidden = !(rig.view === 'first' && !paused && !isLocked());
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
+    updateGhost(views);
 
     renderer.render(scene, camera);
     input.endFrame();
@@ -299,20 +452,29 @@ export function startGameView(
   });
 
   return {
-    getState: () => ({ x: playerX, z: playerZ, yaw, pitch, distance }),
+    getState: () => ({ x: playerX, z: playerZ, ...rig.getState() }),
     setPaused: (value) => {
       paused = value;
+      if (value) {
+        if (isLocked()) document.exitPointerLock();
+      } else requestLock();
     },
     dispose: () => {
       unsubscribe();
       input.detach();
       renderer.setAnimationLoop(null);
+      if (isLocked()) document.exitPointerLock();
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMouseMove);
-      for (const loaded of chunks.values()) loaded.mesh.dispose();
+      document.removeEventListener('pointerlockchange', onLockChange);
+      renderer.domElement.removeEventListener('click', requestLock);
+      ghostUniforms.uGhostOn.value = 0;
+      for (const mesh of chunks.values()) mesh.dispose();
       chunks.clear();
       renderer.dispose();
       renderer.domElement.remove();
+      crosshair.remove();
+      hint.remove();
       fpsBox.remove();
       debugBox.remove();
     },

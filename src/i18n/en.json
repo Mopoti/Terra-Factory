@@ -250,5 +250,11 @@
   "load.delete": "Delete the game \"{name}\"",
   "modal.deleteGame.title": "Delete this game?",
   "modal.deleteGame.body": "\"{name}\" and its {n} save(s) will be permanently deleted. This cannot be undone.",
-  "modal.deleteGame.confirm": "Delete"
+  "modal.deleteGame.confirm": "Delete",
+  "view.first": "First person",
+  "view.third": "Third person",
+  "view.top": "Top view",
+  "debug.view": "View",
+  "hint.mouseLook": "Click to capture the mouse (Esc to release)",
+  "view.changed": "View: {view}"
 }

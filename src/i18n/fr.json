@@ -250,5 +250,11 @@
   "load.delete": "Supprimer la partie « {name} »",
   "modal.deleteGame.title": "Supprimer cette partie ?",
   "modal.deleteGame.body": "« {name} » et ses {n} sauvegarde(s) seront définitivement supprimées. Cette action est irréversible.",
-  "modal.deleteGame.confirm": "Supprimer"
+  "modal.deleteGame.confirm": "Supprimer",
+  "view.first": "1ère personne",
+  "view.third": "3ème personne",
+  "view.top": "Vue du dessus",
+  "debug.view": "Vue",
+  "hint.mouseLook": "Clique pour contrôler la souris (Échap pour la libérer)",
+  "view.changed": "Vue : {view}"
 }

@@ -6,7 +6,7 @@ import {
   type PlayerState,
   type SaveSlot,
 } from './core/save/saveIndex';
-import { initLocale, t } from './i18n';
+import { initLocale, t, type TranslationKey } from './i18n';
 import { startGameView, type GameViewHandle } from './render/gameView';
 import { initKeyboardLayout } from './settings/controls';
 import { startApplyingSettings } from './settings/apply';
@@ -103,7 +103,11 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       : undefined;
   const start = slot?.player ?? devStart ?? DEFAULT_PLAYER_STATE;
 
-  const view = startGameView(appEl, game, { start });
+  const view = startGameView(appEl, game, {
+    start,
+    onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
+    onRequestPause: () => session?.pause.open(),
+  });
   const s: Session = {
     game,
     view,

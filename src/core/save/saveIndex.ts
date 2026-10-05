@@ -1,12 +1,24 @@
 import { defaultWorldParams, type WorldParams } from '../world/worldgen';
 
+export type ViewId = 'first' | 'third' | 'top';
+export const VIEW_IDS: readonly ViewId[] = ['first', 'third', 'top'];
+
 /** État du joueur enregistré dans une sauvegarde (le monde lui-même se recalcule depuis la seed). */
 export interface PlayerState {
   x: number;
   z: number;
+  /** Orientation du joueur / de la caméra autour de la verticale. */
   yaw: number;
+  /** Inclinaison de la caméra à la 3ème personne. */
   pitch: number;
+  /** Distance de la caméra à la 3ème personne (m). */
   distance: number;
+  /** Vue active. */
+  view: ViewId;
+  /** Inclinaison du regard à la 1ère personne (> 0 = vers le bas). */
+  firstPitch: number;
+  /** Distance de la caméra en vue du dessus (m). */
+  topZoom: number;
 }
 
 export type SlotKind = 'manual' | 'auto';
@@ -64,6 +76,9 @@ export const DEFAULT_PLAYER_STATE: PlayerState = {
   yaw: Math.PI / 4,
   pitch: 0.75,
   distance: 9,
+  view: 'third',
+  firstPitch: 0,
+  topZoom: 20,
 };
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -79,6 +94,9 @@ function normalizePlayer(raw: unknown): PlayerState {
     yaw: isNum(p.yaw) ? p.yaw : d.yaw,
     pitch: isNum(p.pitch) ? p.pitch : d.pitch,
     distance: isNum(p.distance) ? p.distance : d.distance,
+    view: VIEW_IDS.find((v) => v === p.view) ?? d.view,
+    firstPitch: isNum(p.firstPitch) ? p.firstPitch : d.firstPitch,
+    topZoom: isNum(p.topZoom) ? p.topZoom : d.topZoom,
   };
 }
 

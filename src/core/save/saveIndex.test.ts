@@ -139,6 +139,27 @@ describe('suppression', () => {
   });
 });
 
+describe('vue enregistrée', () => {
+  it('une ancienne sauvegarde (sans vue) reprend en 3ème personne', () => {
+    const [g] = normalizeGame({
+      id: 'a',
+      name: 'b',
+      saves: [
+        { id: 's', name: 'n', savedAt: 5, player: { x: 4, z: 5, yaw: 1, pitch: 1, distance: 6 } },
+      ],
+    });
+    expect(g.saves[0].player.view).toBe('third');
+    expect(g.saves[0].player.topZoom).toBe(DEFAULT_PLAYER_STATE.topZoom);
+  });
+  it('conserve la vue choisie et ignore une vue inconnue', () => {
+    const slot = (view: unknown) => ({ id: 's', name: 'n', savedAt: 5, player: { view } });
+    const [a] = normalizeGame({ id: 'a', name: 'b', saves: [slot('top')] });
+    const [b] = normalizeGame({ id: 'a', name: 'b', saves: [slot('fisheye')] });
+    expect(a.saves[0].player.view).toBe('top');
+    expect(b.saves[0].player.view).toBe('third');
+  });
+});
+
 describe('lecture des anciens formats', () => {
   it('une ancienne partie (sans sauvegardes ni seed) reste utilisable', () => {
     const [g] = normalizeGame({ id: 'old', name: 'Ancienne', lastSavedAt: 777 });

@@ -24,11 +24,47 @@ export interface ChunkMesh {
   group: THREE.Group;
   /** Cases bloquantes (arbres, rochers, nids, eau) sous la forme « gx,gz ». */
   blocked: string[];
+  /** Obstacles solides pour la caméra (rochers, nids) : case « gx,gz » et hauteur en m. */
+  tall: [string, number][];
   dispose(): void;
 }
 
+/**
+ * Aura de transparence : les éléments du décor placés entre la caméra et le joueur deviennent
+ * très transparents autour du joueur, puis de moins en moins en s'éloignant, jusqu'à être opaques.
+ * Valeurs mises à jour à chaque image par la vue de jeu.
+ */
+export const ghostUniforms = {
+  uGhostOn: { value: 0 },
+  uGhostCenter: { value: new THREE.Vector2() },
+  uGhostDepth: { value: 0 },
+  uGhostRadius: { value: 100 },
+};
+
 const groundMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
+propsMaterial.onBeforeCompile = (shader) => {
+  Object.assign(shader.uniforms, ghostUniforms);
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+uniform float uGhostOn;
+uniform vec2 uGhostCenter;
+uniform float uGhostDepth;
+uniform float uGhostRadius;`,
+    )
+    .replace(
+      '#include <clipping_planes_fragment>',
+      `#include <clipping_planes_fragment>
+if (uGhostOn > 0.5 && -vViewPosition.z < uGhostDepth - 0.35) {
+  float t = clamp(distance(gl_FragCoord.xy, uGhostCenter) / uGhostRadius, 0.0, 1.0);
+  float opacity = 0.08 + 0.92 * (t * t * (3.0 - 2.0 * t));
+  float noise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  if (opacity < noise) discard;
+}`,
+    );
+};
 
 function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry {
   const n = CHUNK_CELLS;
@@ -74,7 +110,11 @@ function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry
   return geometry;
 }
 
-function buildProps(data: ChunkData, blocked: string[]): THREE.BufferGeometry | null {
+function buildProps(
+  data: ChunkData,
+  blocked: string[],
+  tall: [string, number][],
+): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
   const ox = data.cx * CHUNK_SIZE_M;
   const oz = data.cz * CHUNK_SIZE_M;
@@ -90,6 +130,13 @@ function buildProps(data: ChunkData, blocked: string[]): THREE.BufferGeometry | 
     const cxm = (o.gx + o.cells / 2) * CELL_SIZE_M - ox;
     const czm = (o.gz + o.cells / 2) * CELL_SIZE_M - oz;
     markBlocked(o.gx, o.gz, o.cells);
+    // La caméra traverse le feuillage (l'aura de transparence gère la visibilité) ; elle ne traverse
+    // pas les obstacles solides (rochers, nids, et plus tard les murs).
+    if (o.id !== 'tree') {
+      for (let dx = 0; dx < o.cells; dx++) {
+        for (let dz = 0; dz < o.cells; dz++) tall.push([`${o.gx + dx},${o.gz + dz}`, 0.9]);
+      }
+    }
     if (o.id === 'tree') {
       const x = cxm + Math.cos(o.rotation) * 0.2;
       const z = czm + Math.sin(o.rotation) * 0.2;
@@ -178,13 +225,14 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   const group = new THREE.Group();
   group.position.set(data.cx * CHUNK_SIZE_M, 0, data.cz * CHUNK_SIZE_M);
   const blocked: string[] = [];
+  const tall: [string, number][] = [];
 
   const groundGeometry = buildGround(gen, data);
   const ground = new THREE.Mesh(groundGeometry, groundMaterial);
   ground.receiveShadow = true;
   group.add(ground);
 
-  const propsGeometry = buildProps(data, blocked);
+  const propsGeometry = buildProps(data, blocked, tall);
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
     props.castShadow = true;
@@ -194,6 +242,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   return {
     group,
     blocked,
+    tall,
     dispose: () => {
       groundGeometry.dispose();
       propsGeometry?.dispose();

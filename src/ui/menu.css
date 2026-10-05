@@ -520,3 +520,60 @@
   background: #4a2418;
   color: #ffd2c4;
 }
+
+.crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: var(--size, 20px);
+  height: var(--size, 20px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: var(--color, #fff);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+}
+.crosshair[data-style='cross']::before,
+.crosshair[data-style='cross']::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.crosshair[data-style='cross']::before {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+.crosshair[data-style='cross']::after {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+.crosshair[data-style='dot']::before {
+  content: '';
+  position: absolute;
+  inset: 35%;
+  border-radius: 50%;
+  background: currentColor;
+}
+.crosshair[data-style='circle']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+}
+.look-hint {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  background: rgba(16, 20, 25, 0.8);
+  border-radius: 8px;
+  font-size: 13px;
+  pointer-events: none;
+}

@@ -1,6 +1,6 @@
 # Paramètres du joueur — proposition (chantier 2)
 
-Statut : VALIDÉ par le PO (liste, onglet Jeu et réglages graphiques inclus) et IMPLÉMENTÉ au chantier 2. Seuls les réglages d'affichage (gamma, luminosité, taille de l'interface, daltonisme, qualité, ombres, limite d'images/s, distance, FPS), de son (test), d'unités, de format d'heure et de touches ont un effet réel pour l'instant ; les réglages de vues et de jeu sont enregistrés et seront appliqués aux chantiers 4 et 6. Les valeurs par défaut sont des suggestions.
+Statut : VALIDÉ par le PO (liste, onglet Jeu et réglages graphiques inclus) et IMPLÉMENTÉ au chantier 2. Seuls les réglages d'affichage (gamma, luminosité, taille de l'interface, daltonisme, qualité, ombres, limite d'images/s, distance, FPS), de son (test), d'unités, de format d'heure et de touches ont un effet réel pour l'instant ; les réglages de vues sont appliqués depuis le chantier 4 (sauf le masquage des étages, qui attend les bâtiments) ; les réglages de jeu (sauvegarde automatique, confirmations) sont appliqués depuis le tour 9. Les valeurs par défaut sont des suggestions.
 Stockage : navigateur (localStorage), par appareil. Bouton « Réinitialiser » par onglet + « Tout réinitialiser ». 🔶 Plus tard : export/import des paramètres.
 Les réglages s'appliquent immédiatement (pas de bouton « Appliquer »).
 
