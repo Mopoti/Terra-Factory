@@ -629,3 +629,21 @@ describe('pose contre le mur visé', () => {
     expect(hit?.pos.gx).toBe(1);
   });
 });
+
+describe('orientation automatique', () => {
+  it('vu de face, un mur le long de z reçoit le bloc au-dessus même sans orientation choisie', () => {
+    const pieces: Pieces = {};
+    for (let l = 0; l < 2; l++)
+      pieces[pieceKey(posFor('wall_stone', 0, 2, 0, 'z', l))] = 'wall_stone';
+    // Mur à x = 1 m, colonne z ∈ [0 ; 0,5], vu depuis x = -2 (de face), haut du bloc 2.
+    const hit = aimEdge(
+      { x: -2, y: 1.6, z: 0.25 },
+      { x: 1, y: -0.23, z: 0 },
+      pieces,
+      'wall_stone',
+      0,
+      12,
+    );
+    expect(hit?.pos).toMatchObject({ gx: 2, gz: 0, axis: 'z', layer: 2 });
+  });
+});

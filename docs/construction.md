@@ -93,3 +93,7 @@ Les dalles, blocs de mur et portes sont maintenant fermés par le **dessous** (`
 ### Tour 26 — poser contre le mur visé (3ème personne)
 
 Quand le rayon de visée touche un bloc de mur existant, on pose **contre ce bloc** (et non au sol derrière lui) : le côté visé du bloc décide — haut → bloc au-dessus, bas → en dessous, bords gauche/droite → voisin dans la ligne ; si l'orientation imposée avec R est perpendiculaire au mur visé, un bloc d'angle est posé au bout le plus proche (du côté de l'œil). Un bloc de sol posable juste devant le mur (moins de 0,8 m avant le point touché) ne l'emporte plus sur le mur visé.
+
+### Tour 27 — orientation automatique par défaut
+
+Par défaut l'orientation est **automatique** (le bord le plus proche, contre le mur visé, quel que soit son sens — vu de face aussi). **R** la verrouille (0°, puis +90° à chaque appui) ; changer de pièce dans la barre revient en automatique.

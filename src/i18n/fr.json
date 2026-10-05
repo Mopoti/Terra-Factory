@@ -359,7 +359,7 @@
   "build.piece.door": "Porte",
   "build.piece.floor": "Sol",
   "build.piece.ceiling": "Plafond",
-  "build.help": "R : pivoter · Page↑/↓ : étage · Début/Fin : hauteur du mur (vue du dessus) · Clic maintenu : surface ou pan de mur · X maintenu : démolir · même case : ranger",
+  "build.help": "R : fixer / pivoter de 90° · Page↑/↓ : étage · Début/Fin : hauteur du mur (vue du dessus) · Clic maintenu : surface ou pan de mur · X maintenu : démolir · même case : ranger",
   "build.missing": "Objet absent du sac : fabrique-le dans l'inventaire",
   "build.occupied": "Emplacement occupé",
   "build.tooFar": "Trop loin",
@@ -397,5 +397,6 @@
   "build.rotation": "orientation {deg}°",
   "build.stock": "Dans le sac : {n}",
   "hotbar.hint": "Barre de raccourcis : glisse un objet du sac sur une case, ou sélectionne-le dans le sac puis clique une case. Clic droit sur une case : la vider.",
-  "hotbar.empty": "Case vide"
+  "hotbar.empty": "Case vide",
+  "build.rotationAuto": "orientation auto (R pour la fixer)"
 }

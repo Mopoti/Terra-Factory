@@ -160,8 +160,9 @@ export function startGameView(
   /** On construit tant qu'une case de la barre de raccourcis contenant une pièce est sélectionnée. */
   let building = false;
   let buildLevel = 0;
-  /** Orientation en quarts de tour (touche R). Pour un mur : pair = le long de x, impair = le long de z. */
-  let buildRot = 0;
+  /** Orientation en quarts de tour (touche R), `null` = automatique (le bord le plus proche, contre le mur visé). Pour un mur : pair = le long de x, impair = le long de z. */
+  let buildRot: number | null = null;
+  let lastBuildItem: string | null = null;
   let wallHeight = 1;
   let dragStart: BuildAim | null = null;
   let lastPlan: PlanItem[] = [];
@@ -204,7 +205,7 @@ export function startGameView(
     const plan = dragStart
       ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
       : '';
-    buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
+    buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${buildRot === null ? t('build.rotationAuto') : t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
@@ -235,7 +236,7 @@ export function startGameView(
       options.state.changes.pieces,
       rig.view === 'top' ? 120 : BUILD_REACH_M + 4,
       mode,
-      buildRot % 2 === 0 ? 'x' : 'z',
+      buildRot === null ? undefined : buildRot % 2 === 0 ? 'x' : 'z',
     );
   }
 
@@ -343,7 +344,7 @@ export function startGameView(
         .map((i) => i.pos);
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
       const floating = lastPlan.filter((i) => i.status === 'unsupported').length;
-      const placed = options.state.placeMany(kind, ok, buildRot);
+      const placed = options.state.placeMany(kind, ok, buildRot ?? 0);
       buildMessage =
         placed > 0
           ? ''
@@ -365,6 +366,11 @@ export function startGameView(
   /** Active ou coupe la construction selon la case sélectionnée dans la barre de raccourcis. */
   function syncBuilding(): void {
     const value = selectedKind() !== null;
+    const item = options.state.selectedItem();
+    if (item !== lastBuildItem) {
+      lastBuildItem = item;
+      buildRot = null; // une autre pièce : retour à l'orientation automatique
+    }
     if (value !== building) {
       building = value;
       dragStart = null;
@@ -758,7 +764,7 @@ export function startGameView(
       }
       if (building) {
         if (pressed('rotate')) {
-          buildRot = (buildRot + 1) % 4;
+          buildRot = buildRot === null ? 0 : (buildRot + 1) % 4;
           renderBuildHud();
         }
         if (pressed('levelUp')) {

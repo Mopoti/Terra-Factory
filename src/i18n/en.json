@@ -359,7 +359,7 @@
   "build.piece.door": "Door",
   "build.piece.floor": "Floor",
   "build.piece.ceiling": "Ceiling",
-  "build.help": "R: rotate · PgUp/PgDn: floor · Home/End: wall height (top view) · Hold click: area or wall · Hold X: demolish · same slot: put away",
+  "build.help": "R: lock / rotate 90° · PgUp/PgDn: floor · Home/End: wall height (top view) · Hold click: area or wall · Hold X: demolish · same slot: put away",
   "build.missing": "Item not in the bag: craft it in the inventory",
   "build.occupied": "Spot taken",
   "build.tooFar": "Too far",
@@ -397,5 +397,6 @@
   "build.rotation": "rotation {deg}°",
   "build.stock": "In bag: {n}",
   "hotbar.hint": "Shortcut bar: drag an item from the bag onto a slot, or select it in the bag then click a slot. Right-click a slot to empty it.",
-  "hotbar.empty": "Empty slot"
+  "hotbar.empty": "Empty slot",
+  "build.rotationAuto": "auto orientation (R to lock it)"
 }
