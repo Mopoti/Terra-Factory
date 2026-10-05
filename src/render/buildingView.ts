@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
-import { parseKey, pieceKey, posFor, type PiecePos, type Pieces } from '../core/build/pieces';
+import { parseKey, pieceKey, type PiecePos, type Pieces } from '../core/build/pieces';
 import {
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
@@ -12,7 +12,7 @@ import {
   type PieceKind,
 } from '../core/data/buildings';
 import { SLAB_LIFT_M } from '../core/game/physics';
-import { aimCeiling, aimEdge, aimStairs } from '../core/build/aim';
+import { aimCeiling, aimEdge, aimFloor, aimStairs } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -294,21 +294,15 @@ export class BuildingView {
         z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
       };
     }
-    // Sol : la case sous le rayon, dans le plan du sol de l'étage.
-    const y0 = level * STOREY_HEIGHT_M;
-    const planeY = y0;
-    if (Math.abs(dir.y) < 1e-6) return null;
-    const t = (planeY - origin.y) / dir.y;
-    if (t < 0 || t > 200) return null;
-    const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
-    const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
-    const pos = posFor(kind, level, gx, gz);
+    // Sol : s'accroche au premier objet touché (dalle, mur) ou au sol sous le curseur.
+    const hit = aimFloor(origin, dir, pieces, kind, level, maxDist, mode);
+    if (!hit) return null;
     return {
-      pos,
-      key: pieceKey(pos),
-      cell: { gx, gz },
-      x: (gx + 0.5) * CELL_SIZE_M,
-      z: (gz + 0.5) * CELL_SIZE_M,
+      pos: hit.pos,
+      key: pieceKey(hit.pos),
+      cell: hit.cell,
+      x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
+      z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
     };
   }
 

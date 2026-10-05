@@ -135,6 +135,22 @@ export function aimEdge(
     if (y >= top) continue;
     const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
     const cell = { gx: Math.floor(x / CELL_SIZE_M), gz: Math.floor(z / CELL_SIZE_M) };
+    if (mode === 'place' && !firstHit && !firstFree) {
+      // Le rayon touche le dessus d'une dalle de plafond : le mur se pose dessus, sur le bord le plus proche.
+      for (let l = 0; l < LAYERS_PER_STOREY - 1; l++) {
+        const slabTop = (l + 1) * LAYER_HEIGHT_M + 0.003;
+        if (y > slabTop || y < slabTop - 0.1) continue;
+        if (!pieces[pieceKey({ slot: 'ceiling', level, gx: cell.gx, gz: cell.gz, layer: l })])
+          continue;
+        const e2 = nearestEdge(x, z, lockAxis);
+        const pos = posFor(kind, level, e2.gx, e2.gz, e2.axis, l + 1);
+        if (isFree(pieces, kind, pos) && isSupported(pieces, kind, pos)) {
+          firstHit = { pos, cell, t };
+          break;
+        }
+      }
+      if (firstHit) break;
+    }
     if (mode === 'place' && !firstHit) {
       // Le rayon entre dans un bloc déjà posé : on pose contre lui (côté visé), pas derrière.
       const hits = [nearestEdge(x, z, 'x'), nearestEdge(x, z, 'z')]
@@ -317,6 +333,22 @@ export function aimStairs(
     }
     return null;
   }
+  // Le premier escalier touché par le rayon : on prolonge sa volée (marche suivante, un bloc plus haut).
+  for (let t = 0.3; t <= maxDist; t += STEP_M) {
+    const y = origin.y + dir.y * t - y0;
+    if (y < 0) break;
+    if (y >= top) continue;
+    const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
+    const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
+    const layer = Math.floor(y / LAYER_HEIGHT_M);
+    for (let r = 0; r < 4; r++) {
+      if (!pieces[pieceKey({ slot: 'stairs', level, gx, gz, layer, rot: r })]) continue;
+      const [dx, dz] = RISE_DIR[r];
+      if (layer + 1 >= LAYERS_PER_STOREY) break;
+      const next = posFor(kind, level, gx + dx, gz + dz, undefined, layer + 1, r);
+      if (isFree(pieces, kind, next)) return { pos: next, cell: { gx: gx + dx, gz: gz + dz } };
+    }
+  }
   const cell = cellOnPlane(origin, dir, y0);
   if (!cell) return null;
   // Prolonger une volée : une marche voisine dont le haut touche cette case.
@@ -338,4 +370,84 @@ export function aimStairs(
     }
   }
   return { pos: posFor(kind, level, cell.gx, cell.gz, undefined, 0, rot), cell };
+}
+
+/**
+ * Vise une dalle de sol. Elle s'accroche au premier objet touché par le rayon : une dalle de sol existante
+ * (on la prolonge, du côté visé), un mur (la dalle se pose contre lui, côté œil), sinon le sol sous le curseur.
+ * `cell` reste la case du sol sous le curseur (pour étendre un rectangle en glissant).
+ */
+export function aimFloor(
+  origin: Vec,
+  dir: Vec,
+  pieces: Pieces,
+  kind: PieceKind,
+  level: number,
+  maxDist: number,
+  mode: 'place' | 'remove' = 'place',
+): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
+  const y0 = level * STOREY_HEIGHT_M;
+  const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
+  const ground = cellOnPlane(origin, dir, y0 + 0.1);
+  const cellAt = (gx: number, gz: number): PiecePos => posFor(kind, level, gx, gz);
+  const free = (gx: number, gz: number): boolean => isFree(pieces, kind, cellAt(gx, gz));
+  let wallHit: { x: number; z: number } | null = null;
+  for (let t = 0.3; t <= maxDist; t += STEP_M) {
+    const x = origin.x + dir.x * t;
+    const y = origin.y + dir.y * t - y0;
+    const z = origin.z + dir.z * t;
+    if (y < 0.1) break;
+    if (y >= top) continue;
+    const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
+    const hits = [nearestEdge(x, z, 'x'), nearestEdge(x, z, 'z')]
+      .filter((h) => h.dist <= SNAP_M && isOccupied(pieces, level, h, layer))
+      .sort((p, q) => p.dist - q.dist);
+    if (hits.length > 0) {
+      wallHit = { x, z };
+      break;
+    }
+  }
+  if (mode === 'remove') {
+    const cell = ground ?? null;
+    return cell && pieces[pieceKey(cellAt(cell.gx, cell.gz))]
+      ? { pos: cellAt(cell.gx, cell.gz), cell }
+      : null;
+  }
+  if (wallHit) {
+    // Contre le mur : la dalle posée du côté de l'œil.
+    const e = nearestEdge(wallHit.x, wallHit.z);
+    const sides: [number, number][] =
+      e.axis === 'x'
+        ? [
+            [e.gx, e.gz - 1],
+            [e.gx, e.gz],
+          ]
+        : [
+            [e.gx - 1, e.gz],
+            [e.gx, e.gz],
+          ];
+    const d = ([gx, gz]: [number, number]): number =>
+      Math.hypot((gx + 0.5) * CELL_SIZE_M - origin.x, (gz + 0.5) * CELL_SIZE_M - origin.z);
+    sides.sort((a, b) => d(a) - d(b));
+    const side = sides.find(([gx, gz]) => free(gx, gz));
+    if (side)
+      return { pos: cellAt(side[0], side[1]), cell: ground ?? { gx: side[0], gz: side[1] } };
+  }
+  if (!ground) return null;
+  if (!free(ground.gx, ground.gz)) {
+    // Sur une dalle déjà posée : on la prolonge du côté de la case visé le plus proche d'un bord.
+    const t = (y0 + 0.1 - origin.y) / dir.y;
+    const fx = (origin.x + dir.x * t) / CELL_SIZE_M - ground.gx;
+    const fz = (origin.z + dir.z * t) / CELL_SIZE_M - ground.gz;
+    const options: { d: number; gx: number; gz: number }[] = [
+      { d: fx, gx: ground.gx - 1, gz: ground.gz },
+      { d: 1 - fx, gx: ground.gx + 1, gz: ground.gz },
+      { d: fz, gx: ground.gx, gz: ground.gz - 1 },
+      { d: 1 - fz, gx: ground.gx, gz: ground.gz + 1 },
+    ];
+    options.sort((a, b) => a.d - b.d);
+    const next = options.find((o) => free(o.gx, o.gz));
+    if (next) return { pos: cellAt(next.gx, next.gz), cell: ground };
+  }
+  return { pos: cellAt(ground.gx, ground.gz), cell: ground };
 }

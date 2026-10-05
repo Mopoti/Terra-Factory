@@ -104,3 +104,13 @@ Par défaut l'orientation est **automatique** (le bord le plus proche, contre le
 - **Pose** : au sol, sur un sol d'étage, ou **dans le prolongement d'une volée** (case située après le haut d'une marche, un bloc plus haut et dans le même sens ; le curseur le propose tout seul). Une volée de 5 marches monte un étage (2,50 m) sur 2,50 m de long. Démolition avec X comme le reste.
 - **Marcher** : la hauteur du sol suit la pente (à pied, sans sauter) ; vu de côté, une marche haute arrête le joueur. La tolérance de montée tient compte de la distance parcourue à chaque image, pour que la montée marche aussi à faible nombre d'images par seconde.
 - À faire : escalier tournant, rampes de chargement, garde-corps ; battant de porte.
+
+### Tour 29 — tout s'accroche au premier objet visé
+
+Règle générale : la pose part du **premier objet que le rayon du curseur touche**, pas de ce qu'il y a derrière.
+
+- **Mur** : contre un bloc de mur touché (haut/bas/côtés/angle) ; sur le **dessus d'une dalle de plafond** touchée (bloc posé dessus, sur le bord le plus proche) ; sinon au sol.
+- **Sol** : sur une dalle de sol touchée, on la **prolonge** du côté visé ; contre un mur touché, la dalle est posée **du côté de l'œil** ; sinon la case sous le curseur. En glissant, le rectangle va de la dalle de départ à la case sous le curseur.
+- **Escalier** : une marche touchée → on pose la **marche suivante** de sa volée ; sinon au sol, dans le sens du regard.
+- **Plafond** : sur la tranche haute du mur touché (déjà en place), ou prolongement d'une dalle.
+- Nouveau soutien : un bloc de mur peut reposer sur une dalle de plafond posée juste en dessous.

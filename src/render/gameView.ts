@@ -267,7 +267,15 @@ export function startGameView(
           ) ?? aim.cell;
         return planRect(kind, buildLevel, start.cell, end, layer);
       }
-      return planRect(kind, buildLevel, start.cell, aim.cell, aim.pos.layer);
+      // Un seul sol : là où le curseur s'accroche ; en glissant, un rectangle jusqu'à la case sous le curseur.
+      if (!dragStart) return [aim.pos];
+      return planRect(
+        kind,
+        buildLevel,
+        { gx: start.pos.gx, gz: start.pos.gz },
+        aim.cell,
+        aim.pos.layer,
+      );
     }
     const axis = start.pos.axis ?? 'x';
     const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;

@@ -219,6 +219,27 @@ export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boo
       return true;
     if (hasBlock(pieces, level - 1, gx, gz, axis, LAYERS_PER_STOREY - 1)) return true;
   }
+  if (layer > 0) {
+    // Un mur peut aussi reposer sur une dalle de plafond posée juste en dessous, d'un côté ou de l'autre.
+    const cells =
+      axis === 'x'
+        ? [
+            [gx, gz - 1],
+            [gx, gz],
+          ]
+        : [
+            [gx - 1, gz],
+            [gx, gz],
+          ];
+    if (
+      cells.some(
+        ([cx, cz]) =>
+          pieces[pieceKey({ slot: 'ceiling', level, gx: cx, gz: cz, layer: layer - 1 })],
+      )
+    ) {
+      return true;
+    }
+  }
   if (pieceDef(kind).type === 'door') return false;
   const has = (g: number, h: number, a: 'x' | 'z', l: number): boolean =>
     hasBlock(pieces, level, g, h, a, l);

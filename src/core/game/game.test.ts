@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aimCeiling, aimEdge, aimStairs, riseFromDirection } from '../build/aim';
+import { aimCeiling, aimEdge, aimFloor, aimStairs, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import {
   edgeKeysToRemove,
@@ -712,5 +712,63 @@ describe('escaliers', () => {
         'remove',
       ),
     ).toBeNull();
+  });
+});
+
+describe('accrocher au premier objet visé', () => {
+  const down = { x: 0, y: -0.5, z: 1 };
+  it('sol : sur le terrain, la case sous le curseur', () => {
+    const hit = aimFloor({ x: 0.25, y: 1.6, z: -2 }, down, {}, 'floor_wood', 0, 12);
+    expect(hit?.pos).toMatchObject({ slot: 'floor', gx: 0, gz: 2 });
+  });
+  it('sol : sur une dalle existante, on la prolonge du côté visé', () => {
+    const pieces: Pieces = { [pieceKey(posFor('floor_wood', 0, 0, 2))]: 'floor_wood' };
+    // Le rayon tombe tout près du bord z = 1,5 m de la case (0,2) : on prolonge vers la case (0,3).
+    const hit = aimFloor({ x: 0.25, y: 1.6, z: -1.6 }, down, pieces, 'floor_wood', 0, 12);
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3 });
+  });
+  it("sol : contre un mur visé, du côté de l'œil, pas derrière", () => {
+    const pieces: Pieces = {};
+    for (let l = 0; l < 5; l++)
+      pieces[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
+    // Rayon quasi horizontal qui touche le mur (z = 1 m) à 1,4 m de haut.
+    const hit = aimFloor(
+      { x: 0.25, y: 1.6, z: -2 },
+      { x: 0, y: -0.07, z: 1 },
+      pieces,
+      'floor_wood',
+      0,
+      12,
+    );
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1 }); // case devant le mur (z de 0,5 à 1 m)
+  });
+  it('mur : sur une dalle de plafond touchée, le bloc se pose dessus', () => {
+    const pieces: Pieces = {};
+    pieces[pieceKey(posFor('ceiling_wood', 0, 5, 4, undefined, 1))] = 'ceiling_wood';
+    // Rayon qui descend sur le dessus de la dalle (haut à 1,003 m), cellule (5, 4) : x 2,5-3, z 2-2,5.
+    const hit = aimEdge(
+      { x: 2.75, y: 2.2, z: 1.0 },
+      { x: 0, y: -1.2, z: 1 },
+      pieces,
+      'wall_stone',
+      0,
+      12,
+    );
+    expect(hit?.pos.layer).toBe(2);
+  });
+  it('escalier : viser une marche prolonge la volée', () => {
+    const pieces: Pieces = {
+      [pieceKey(posFor('stairs_wood', 0, 0, 2, undefined, 0, 0))]: 'stairs_wood',
+    };
+    // Œil à 0,3 m de haut, regard horizontal sur la marche (z 1-1,5 m).
+    const hit = aimStairs(
+      { x: 0.25, y: 0.3, z: -1 },
+      { x: 0, y: 0, z: 1 },
+      pieces,
+      'stairs_wood',
+      0,
+      12,
+    );
+    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3, layer: 1, rot: 0 });
   });
 });
