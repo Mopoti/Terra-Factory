@@ -41,7 +41,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
-- **Chantier 0 (socle) : code écrit** (Vite+TS+Three, lint, tests, build OK, page de test avec cube 50 cm). Reste : mise en ligne d'un aperçu (action PO probable).
+- **Chantier 0 (socle) : code écrit** (Vite+TS+Three, lint, tests, build OK, page de test avec cube 50 cm). Aperçu en ligne : projet Vercel `terra-factory` (équipe « Quentin's projects », id team_xrjDzT2k477SH2HSx2Sjp6VW, projet prj_hutwADsGr53rJXwE8FRSrlykZTyB) relié à GitHub ; branche de production = la branche de travail `claude/sleepy-bell-vvkepj` ; URL https://terra-factory.vercel.app (protégée par connexion Vercel par défaut). Déploiement automatique à chaque push. En attente : validation visuelle du PO.
 
 - Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Tranché au §9 (murs sur bords de cases en navigateur, libres sous Unity ; dalles 10 cm ; angles = pilier 10×10×50 à étudier plus tard).
 
