@@ -32,18 +32,20 @@ export class ProvisionalSaveIndex implements SaveIndex {
     }
   }
 
-  /** Outil de test (mode ?dev=1) : ajoute une partie factice. */
-  addFake(name: string): void {
-    const games = this.list();
-    games.push({ id: `dev-${Date.now()}`, name, lastSavedAt: Date.now() });
+  /** Ajoute une partie (provisoire : seul le nom et la date sont retenus). */
+  create(name: string): GameSummary {
+    const game: GameSummary = { id: `game-${Date.now()}`, name, lastSavedAt: Date.now() };
+    const games = [...this.list(), game];
     try {
       localStorage.setItem(DEV_KEY, JSON.stringify(games));
     } catch {
       /* ignoré */
     }
+    return game;
   }
 
-  clearFakes(): void {
+  /** Outil de test (mode ?dev=1) : supprime toutes les parties. */
+  clearAll(): void {
     try {
       localStorage.removeItem(DEV_KEY);
     } catch {

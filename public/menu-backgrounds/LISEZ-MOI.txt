@@ -1,0 +1,17 @@
+Fonds du menu d'accueil
+=======================
+1. Déposer ici des images (.jpg, .png, .webp) ou de courtes vidéos (.mp4, .webm).
+2. Les ajouter dans manifest.json, par exemple :
+
+{
+  "intervalSeconds": 8,
+  "items": [
+    { "type": "image", "file": "usine-1.jpg" },
+    { "type": "video", "file": "convoyeurs.mp4" }
+  ]
+}
+
+- Les images défilent en fondu toutes les "intervalSeconds" secondes.
+- Les vidéos sont jouées sans son, en boucle.
+- Liste vide = fond sombre animé par défaut.
+- Conseil : images 1920x1080, vidéos courtes (< 10 Mo) pour un chargement rapide.
