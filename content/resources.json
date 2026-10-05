@@ -1,0 +1,82 @@
+{
+  "_comment": "Ressources du monde. Valeurs de départ, à équilibrer ici sans toucher au code. Ids stables : ne jamais les renommer.",
+  "families": ["forests", "rocks", "ores", "water", "enemies"],
+  "resources": [
+    {
+      "id": "tree",
+      "family": "forests",
+      "kind": "object",
+      "amount": 4,
+      "color": "#2f7d32",
+      "biomeDensity": { "prairie": 0.05, "forest": 0.2, "desert": 0.002, "tundra": 0.02 }
+    },
+    {
+      "id": "rock",
+      "family": "rocks",
+      "kind": "object",
+      "amount": 20,
+      "color": "#8a8f98",
+      "biomeDensity": { "prairie": 0.03, "forest": 0.02, "desert": 0.07, "tundra": 0.05 }
+    },
+    {
+      "id": "iron_ore",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#8d6e63",
+      "candidateSizeM": 96,
+      "presence": 0.45,
+      "radiusM": [6, 16],
+      "centerAmount": 3500,
+      "edgeRatio": 0.09,
+      "richness": [0.8, 1.2],
+      "biomeWeight": { "prairie": 1, "forest": 0.8, "desert": 1, "tundra": 1 }
+    },
+    {
+      "id": "copper_ore",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#d2793b",
+      "candidateSizeM": 96,
+      "presence": 0.4,
+      "radiusM": [6, 15],
+      "centerAmount": 3500,
+      "edgeRatio": 0.09,
+      "richness": [0.8, 1.2],
+      "biomeWeight": { "prairie": 1, "forest": 0.8, "desert": 1, "tundra": 1 }
+    },
+    {
+      "id": "coal",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#2b2b2f",
+      "candidateSizeM": 96,
+      "presence": 0.4,
+      "radiusM": [6, 14],
+      "centerAmount": 3500,
+      "edgeRatio": 0.09,
+      "richness": [0.8, 1.2],
+      "biomeWeight": { "prairie": 1, "forest": 1, "desert": 0.8, "tundra": 1 }
+    },
+    {
+      "id": "water",
+      "family": "water",
+      "kind": "pond",
+      "color": "#2f6fb0",
+      "candidateSizeM": 80,
+      "presence": 0.4,
+      "radiusM": [4, 10],
+      "biomeWeight": { "prairie": 1, "forest": 1, "desert": 0.15, "tundra": 0.5 }
+    },
+    {
+      "id": "nest",
+      "family": "enemies",
+      "kind": "nest",
+      "color": "#7b2d5e",
+      "candidateSizeM": 160,
+      "presence": 0.35,
+      "footprintCells": 4,
+      "minDistanceFromSpawnM": 250,
+      "biomeWeight": { "prairie": 1, "forest": 1, "desert": 1, "tundra": 1 }
+    }
+  ]
+}
