@@ -75,7 +75,6 @@ export const ACTIONS = [
   { id: 'techTree', category: 'ui', defaults: ['L:T', null] },
   { id: 'screenshot', category: 'ui', defaults: ['F2', null] },
   { id: 'pause', category: 'ui', defaults: ['Escape', null], fixed: true },
-  { id: 'buildMode', category: 'build', defaults: ['L:B', null] },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
   { id: 'levelUp', category: 'build', defaults: ['PageUp', null] },
   { id: 'levelDown', category: 'build', defaults: ['PageDown', null] },

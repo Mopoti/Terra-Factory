@@ -4,6 +4,7 @@ import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { getSettings } from '../settings/store';
+import { ITEM_DRAG_TYPE } from './hotbar';
 import './menu.css';
 
 export interface InventoryActions {
@@ -156,8 +157,14 @@ export function mountInventory(
           el('span', 'slot-name', itemName(slot.item)),
           el('span', 'slot-count', String(slot.count)),
         );
+        cell.draggable = true;
+        cell.addEventListener('dragstart', (e) =>
+          e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item),
+        );
         cell.addEventListener('click', () => {
           selected = selected === slot.item ? null : slot.item;
+          // L'objet choisi peut être rangé dans une case de la barre de raccourcis d'un clic.
+          state.carried = selected;
           render();
         });
         cell.addEventListener('mouseenter', () => {
@@ -218,6 +225,8 @@ export function mountInventory(
       cell.classList.toggle('raw', def.recipe === null);
       cell.classList.toggle('lack', def.recipe !== null && !canCraft);
       cell.append(el('span', 'slot-name', itemName(def.id)));
+      cell.draggable = true;
+      cell.addEventListener('dragstart', (e) => e.dataTransfer?.setData(ITEM_DRAG_TYPE, def.id));
       cell.addEventListener('click', () => def.recipe && craft(def.id, 1));
       cell.addEventListener('contextmenu', (e) => {
         e.preventDefault();
@@ -238,7 +247,7 @@ export function mountInventory(
 
     layout.append(bag, craftBox);
     panel.append(layout);
-    panel.append(el('small', 'help', t('inv.hint')));
+    panel.append(el('small', 'help', t('inv.hint')), el('small', 'help', t('hotbar.hint')));
     const close = el('button', 'menu-btn', t('inv.close'));
     close.type = 'button';
     close.addEventListener('click', closeWindow);
@@ -264,6 +273,7 @@ export function mountInventory(
   function closeWindow(): void {
     if (!isOpenNow) return;
     isOpenNow = false;
+    state.carried = null;
     hovered = null;
     message = '';
     root.hidden = true;

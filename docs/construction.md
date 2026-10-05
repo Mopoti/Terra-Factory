@@ -82,3 +82,10 @@ La dalle de plafond recouvre maintenant la tranche du mur qui la porte (elle dé
 ### Tour 24 — dessous des dalles
 
 Les dalles, blocs de mur et portes sont maintenant fermés par le **dessous** (`MeshBuilder.box(..., bottom)`) : vu d'en bas, un plafond ou un bloc en hauteur n'est plus transparent (on voyait le ciel à travers).
+
+### Tour 25 — barre de raccourcis, orientation (R)
+
+- **Plus de menu B.** Une **barre de raccourcis** de 9 cases est affichée en bas de l'écran (`src/ui/hotbar.ts`). Cliquer une case, ou la touche 1 à 9 (réglable), la sélectionne ; si elle contient une pièce (mur, porte, sol, plafond en bois/pierre) on passe en pose avec cette pièce, sinon rien ; même case de nouveau = on range. Les matériaux ne sont plus des touches : chaque matériau est un objet, donc une case.
+- **Remplir la barre** : fabriquer une pièce la range dans la première case libre ; on peut aussi glisser un objet du sac ou du panneau de fabrication sur une case, ou le choisir dans le sac puis cliquer une case. Clic droit sur une case : la vider. La barre est enregistrée avec la partie (`changes.hotbar`).
+- **Orientation (R)** : tourne la pièce de 90° à chaque pression, pour tous les éléments. Pour un mur ou une porte, orientation paire = le long de x, impaire = le long de z : la visée ne cherche que les bords de cet axe (ce qui évite que le mur « se bloque » sur le mauvais bord). L'orientation (0 à 3) est enregistrée avec la pièce (`changes.rotations`) pour les futurs habillages (sens d'ouverture d'une porte, face d'un mur…).
+- Touches : `buildMode` (B) supprimée ; `rotate` (R), `remove` (X), étage, hauteur de mur inchangées.

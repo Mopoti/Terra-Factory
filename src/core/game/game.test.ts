@@ -557,3 +557,48 @@ describe('plafond sur un mur bas', () => {
     expect(hit?.pos).toMatchObject({ gz: 1, layer: 0 });
   });
 });
+
+describe('barre de raccourcis et orientation', () => {
+  it('une case vide ne se sélectionne pas, une case pleine se bascule', () => {
+    const s = new GameState({ inventory: {} });
+    s.selectSlot(0);
+    expect(s.selectedSlot).toBeNull();
+    s.assignSlot(0, 'piece_wall_stone');
+    s.selectSlot(0);
+    expect(s.selectedItem()).toBe('piece_wall_stone');
+    s.selectSlot(0);
+    expect(s.selectedSlot).toBeNull();
+  });
+  it("un objet n'occupe qu'une case ; vider la case sélectionnée la désélectionne", () => {
+    const s = new GameState({ inventory: {} });
+    s.assignSlot(0, 'stone');
+    s.assignSlot(3, 'stone');
+    expect(s.changes.hotbar.slice(0, 4)).toEqual([null, null, null, 'stone']);
+    s.selectSlot(3);
+    s.assignSlot(3, null);
+    expect(s.selectedSlot).toBeNull();
+  });
+  it('fabriquer une pièce la range dans la première case libre', () => {
+    const s = new GameState({ inventory: { stone: 3 } });
+    s.assignSlot(0, 'coal');
+    s.craft('piece_wall_stone', 1);
+    expect(s.changes.hotbar[1]).toBe('piece_wall_stone');
+  });
+  it('la barre et les orientations sont enregistrées', () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 2 } });
+    s.assignSlot(2, 'piece_wall_stone');
+    const pos = posFor('wall_stone', 0, 0, 0, 'z', 0);
+    s.place('wall_stone', pos, 3);
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.hotbar[2]).toBe('piece_wall_stone');
+    expect(copy.changes.rotations[pieceKey(pos)]).toBe(3);
+    copy.removeKeys([pieceKey(pos)], { x: 0, z: 0 });
+    expect(copy.changes.rotations).toEqual({});
+  });
+  it("l'orientation imposée limite la visée aux bords de cet axe", () => {
+    const eye = { x: 0.3, y: 1.6, z: -2 };
+    const down = { x: 0.1, y: -0.5, z: 0.85 };
+    expect(aimEdge(eye, down, {}, 'wall_stone', 0, 10, 'place', 'x')?.pos.axis).toBe('x');
+    expect(aimEdge(eye, down, {}, 'wall_stone', 0, 10, 'place', 'z')?.pos.axis).toBe('z');
+  });
+});

@@ -25,6 +25,7 @@ const STEP_M = 0.08;
 function nearestEdge(
   x: number,
   z: number,
+  lock?: 'x' | 'z',
 ): { axis: 'x' | 'z'; gx: number; gz: number; dist: number } {
   const gx = Math.floor(x / CELL_SIZE_M);
   const gz = Math.floor(z / CELL_SIZE_M);
@@ -36,7 +37,8 @@ function nearestEdge(
     { axis: 'x' as const, gx, gz, dist: fz * CELL_SIZE_M },
     { axis: 'x' as const, gx, gz: gz + 1, dist: (1 - fz) * CELL_SIZE_M },
   ];
-  return candidates.reduce((a, b) => (b.dist < a.dist ? b : a));
+  const allowed = lock ? candidates.filter((c) => c.axis === lock) : candidates;
+  return allowed.reduce((a, b) => (b.dist < a.dist ? b : a));
 }
 
 /**
@@ -53,6 +55,8 @@ export function aimEdge(
   level: number,
   maxDist: number,
   mode: 'place' | 'remove' = 'place',
+  /** Orientation imposée (touche R) : on ne vise que les bords le long de cet axe. */
+  lockAxis?: 'x' | 'z',
 ): { pos: PiecePos; cell: { gx: number; gz: number } } | null {
   const y0 = level * STOREY_HEIGHT_M;
   const top = LAYERS_PER_STOREY * LAYER_HEIGHT_M;
@@ -62,7 +66,7 @@ export function aimEdge(
     const z = origin.z + dir.z * t;
     if (y < 0) break;
     if (y >= top) continue;
-    const e = nearestEdge(x, z);
+    const e = nearestEdge(x, z, lockAxis);
     if (e.dist > SNAP_M) continue;
     const layer = Math.min(LAYERS_PER_STOREY - 1, Math.floor(y / LAYER_HEIGHT_M));
     const pos = posFor(kind, level, e.gx, e.gz, e.axis, layer);
@@ -87,7 +91,7 @@ export function aimEdge(
     x = origin.x + (dir.x / flat) * 3;
     z = origin.z + (dir.z / flat) * 3;
   }
-  const e = nearestEdge(x, z);
+  const e = nearestEdge(x, z, lockAxis);
   return {
     pos: posFor(kind, level, e.gx, e.gz, e.axis, 0),
     cell: { gx: Math.floor(x / CELL_SIZE_M), gz: Math.floor(z / CELL_SIZE_M) },

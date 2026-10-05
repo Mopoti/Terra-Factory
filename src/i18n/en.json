@@ -74,8 +74,7 @@
   "action.techTree": "Technology tree",
   "action.screenshot": "Screenshot",
   "action.pause": "Menu / pause",
-  "action.buildMode": "Build mode",
-  "action.rotate": "Rotate object",
+  "action.rotate": "Rotate object (90°)",
   "action.remove": "Remove",
   "action.copy": "Copy",
   "action.undo": "Undo",
@@ -360,7 +359,7 @@
   "build.piece.door": "Door",
   "build.piece.floor": "Floor",
   "build.piece.ceiling": "Ceiling",
-  "build.help": "1-4: piece · 5-6: material · PgUp/PgDn: floor · Home/End: wall height (top view) · Hold click: area or wall · Hold X: demolish (refunds resources) · B: exit",
+  "build.help": "R: rotate · PgUp/PgDn: floor · Home/End: wall height (top view) · Hold click: area or wall · Hold X: demolish · same slot: put away",
   "build.missing": "Item not in the bag: craft it in the inventory",
   "build.occupied": "Spot taken",
   "build.tooFar": "Too far",
@@ -394,5 +393,9 @@
   "build.unsupported": "A wall cannot float: place it on the ground or against an existing wall",
   "build.wallHeight": "Wall height in top view: {n} block(s) ({cm} cm)",
   "build.unsupportedCeiling": "A ceiling attaches to the top of walls: place it against a wall or extend a slab (3 cells max from a wall)",
-  "debug.height": "height"
+  "debug.height": "height",
+  "build.rotation": "rotation {deg}°",
+  "build.stock": "In bag: {n}",
+  "hotbar.hint": "Shortcut bar: drag an item from the bag onto a slot, or select it in the bag then click a slot. Right-click a slot to empty it.",
+  "hotbar.empty": "Empty slot"
 }

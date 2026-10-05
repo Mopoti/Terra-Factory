@@ -213,10 +213,11 @@ export class BuildingView {
     pieces: Pieces,
     maxDist: number,
     mode: 'place' | 'remove' = 'place',
+    lockAxis?: 'x' | 'z',
   ): BuildAim | null {
     const slot = slotOf(pieceDef(kind).type);
     if (slot === 'edge') {
-      const hit = aimEdge(origin, dir, pieces, kind, level, maxDist, mode);
+      const hit = aimEdge(origin, dir, pieces, kind, level, maxDist, mode, lockAxis);
       if (!hit) return null;
       const alongX = hit.pos.axis === 'x';
       return {

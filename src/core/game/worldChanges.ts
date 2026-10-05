@@ -1,4 +1,5 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
+import { itemById } from '../data/items';
 import { resourceById } from '../data/resources';
 import type { ChunkData } from '../world/worldgen';
 
@@ -22,12 +23,25 @@ export interface WorldChanges {
   nextDropId: number;
   /** Pièces de construction posées (voir `core/build/pieces.ts`). */
   pieces: Pieces;
+  /** Orientation des pièces posées, en quarts de tour (1 à 3 ; 0 = non enregistré), pour les futurs habillages. */
+  rotations: Record<string, number>;
+  /** Barre de raccourcis du joueur (rangée avec le reste de la partie) : objet par case, ou null. */
+  hotbar: (string | null)[];
 }
+
+export const HOTBAR_SLOTS = 9;
 
 export const cellKey = (gx: number, gz: number): string => `${gx},${gz}`;
 
 export function emptyChanges(): WorldChanges {
-  return { taken: {}, drops: [], nextDropId: 1, pieces: {} };
+  return {
+    taken: {},
+    drops: [],
+    nextDropId: 1,
+    pieces: {},
+    rotations: {},
+    hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
+  };
 }
 
 /** Applique les changements du joueur à un chunk fraîchement généré. */
@@ -60,6 +74,22 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     }
   }
   result.pieces = normalizePieces(r.pieces);
+  if (typeof r.rotations === 'object' && r.rotations !== null) {
+    for (const [key, v] of Object.entries(r.rotations as Record<string, unknown>)) {
+      if (result.pieces[key] && isNum(v) && v >= 1 && v <= 3) result.rotations[key] = Math.floor(v);
+    }
+  }
+  if (Array.isArray(r.hotbar)) {
+    r.hotbar.slice(0, HOTBAR_SLOTS).forEach((id, i) => {
+      if (typeof id !== 'string') return;
+      try {
+        itemById(id);
+        result.hotbar[i] = id;
+      } catch {
+        /* objet inconnu : case vide */
+      }
+    });
+  }
   if (Array.isArray(r.drops)) {
     for (const d of r.drops) {
       if (typeof d !== 'object' || d === null) continue;

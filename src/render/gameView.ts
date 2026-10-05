@@ -13,14 +13,11 @@ import {
 import { edgeKeysToRemove, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
+  PIECES,
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
-  MATERIALS,
   STOREY_HEIGHT_M,
-  PIECE_TYPES,
-  kindFor,
   pieceDef,
-  type Material,
   type PieceKind,
   type PieceType,
 } from '../core/data/buildings';
@@ -160,15 +157,20 @@ export function startGameView(
   // --- Construction ------------------------------------------------------------------------
   const buildingView = new BuildingView(scene);
   buildingView.rebuild(options.state.changes.pieces);
+  /** On construit tant qu'une case de la barre de raccourcis contenant une pièce est sélectionnée. */
   let building = false;
-  let buildType: PieceType = 'wall';
-  let buildMaterial: Material = 'stone';
   let buildLevel = 0;
-  /** Bloc de mur visé (0 à 4), ou null = tout l'étage : sert à faire des fenêtres et des trous. */
+  /** Orientation en quarts de tour (touche R). Pour un mur : pair = le long de x, impair = le long de z. */
+  let buildRot = 0;
   let wallHeight = 1;
   let dragStart: BuildAim | null = null;
   let lastPlan: PlanItem[] = [];
-  const buildKind = (): PieceKind => kindFor(buildType, buildMaterial);
+  const selectedKind = (): PieceKind | null => {
+    const item = options.state.selectedItem();
+    return PIECES.find((p) => p.item === item)?.id ?? null;
+  };
+  const buildKind = (): PieceKind => selectedKind() ?? 'wall_stone';
+  const buildType = (): PieceType => pieceDef(buildKind()).type;
   const buildHud = document.createElement('div');
   buildHud.className = 'build-hud';
   buildHud.hidden = true;
@@ -191,16 +193,8 @@ export function startGameView(
           ),
       );
     const kind = buildKind();
-    const types = PIECE_TYPES.map(
-      (ty, i) =>
-        `<span class="${ty === buildType ? 'sel' : ''}${stockOf(kindFor(ty, buildMaterial)) > 0 ? '' : ' poor'}">${i + 1} ${t(`build.piece.${ty}` as TranslationKey)}</span>`,
-    ).join('');
-    const mats = MATERIALS.map(
-      (m, i) =>
-        `<span class="${pieceDef(kind).material === m ? 'sel' : ''}">${i + 5} ${t(`build.material.${m}` as TranslationKey)}</span>`,
-    ).join('');
     const wall =
-      buildType === 'wall'
+      buildType() === 'wall'
         ? `<div>${t('build.wallHeight', { n: String(wallHeight), cm: String(wallHeight * 50) })}</div>`
         : '';
     const ok = lastPlan.filter((i) => i.status === 'ok').length;
@@ -210,10 +204,11 @@ export function startGameView(
     const plan = dragStart
       ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
       : '';
-    buildHud.innerHTML = `<strong>${t('build.title')} · ${t('build.level', { n: String(buildLevel) })}</strong><div class="pieces">${types}</div><div class="pieces">${mats}</div>${wall}<div>${t('build.owned', { item: `${itemLabel(pieceDef(kind).item)} : ${stockOf(kind)}` })}</div>${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
+    buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
+    if (e.type === 'hotbar') syncBuilding();
     if (building && (e.type === 'build' || e.type === 'inventory')) renderBuildHud();
   });
 
@@ -240,6 +235,7 @@ export function startGameView(
       options.state.changes.pieces,
       rig.view === 'top' ? 120 : BUILD_REACH_M + 4,
       mode,
+      buildRot % 2 === 0 ? 'x' : 'z',
     );
   }
 
@@ -347,12 +343,12 @@ export function startGameView(
         .map((i) => i.pos);
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
       const floating = lastPlan.filter((i) => i.status === 'unsupported').length;
-      const placed = options.state.placeMany(kind, ok);
+      const placed = options.state.placeMany(kind, ok, buildRot);
       buildMessage =
         placed > 0
           ? ''
           : floating > 0
-            ? t(buildType === 'ceiling' ? 'build.unsupportedCeiling' : 'build.unsupported')
+            ? t(buildType() === 'ceiling' ? 'build.unsupportedCeiling' : 'build.unsupported')
             : lacking > 0
               ? t('build.missing')
               : lastPlan.length > 0
@@ -366,13 +362,18 @@ export function startGameView(
     }
   }
 
-  function setBuilding(value: boolean): void {
-    building = value;
-    buildHud.hidden = !value;
-    dragStart = null;
-    lastPlan = [];
-    if (!value) buildingView.hideGhost();
-    else renderBuildHud();
+  /** Active ou coupe la construction selon la case sélectionnée dans la barre de raccourcis. */
+  function syncBuilding(): void {
+    const value = selectedKind() !== null;
+    if (value !== building) {
+      building = value;
+      dragStart = null;
+      lastPlan = [];
+      buildMessage = '';
+      if (!value) buildingView.hideGhost();
+    }
+    buildHud.hidden = !building;
+    if (building) renderBuildHud();
   }
 
   // --- Chunks ------------------------------------------------------------------------------
@@ -751,21 +752,15 @@ export function startGameView(
         if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
         if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
       }
-      if (pressed('buildMode')) setBuilding(!building);
+      // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
+      for (let i = 1; i <= 9; i++) {
+        if (pressed(`hotbar${i}` as ActionId)) options.state.selectSlot(i - 1);
+      }
       if (building) {
-        PIECE_TYPES.forEach((ty, i) => {
-          if (pressed(`hotbar${i + 1}` as ActionId)) {
-            buildType = ty;
-            buildMessage = '';
-            renderBuildHud();
-          }
-        });
-        MATERIALS.forEach((m, i) => {
-          if (pressed(`hotbar${i + 5}` as ActionId)) {
-            buildMaterial = m;
-            renderBuildHud();
-          }
-        });
+        if (pressed('rotate')) {
+          buildRot = (buildRot + 1) % 4;
+          renderBuildHud();
+        }
         if (pressed('levelUp')) {
           buildLevel = Math.min(9, buildLevel + 1);
           renderBuildHud();

@@ -11,7 +11,11 @@ import {
 } from './worldChanges';
 
 export type StateEvent =
-  { type: 'harvest'; key: string } | { type: 'drops' } | { type: 'inventory' } | { type: 'build' };
+  | { type: 'harvest'; key: string }
+  | { type: 'drops' }
+  | { type: 'inventory' }
+  | { type: 'build' }
+  | { type: 'hotbar' };
 
 export interface HarvestResult {
   /** Unités réellement ajoutées au sac. */
@@ -29,6 +33,10 @@ export interface HarvestResult {
 export class GameState {
   inventory: Inventory;
   changes: WorldChanges;
+  /** Case de la barre de raccourcis sélectionnée (0 à 8), ou null. */
+  selectedSlot: number | null = null;
+  /** Objet « en main » depuis le sac, à poser dans une case de la barre au prochain clic. */
+  carried: string | null = null;
   private roomCache: Room[] | null = null;
   private readonly listeners = new Set<(e: StateEvent) => void>();
 
@@ -108,6 +116,34 @@ export class GameState {
     return { gained, left: stack.count, bagFull: stack.count > 0 };
   }
 
+  // --- Barre de raccourcis ---------------------------------------------------------------------
+
+  /** Sélectionne la case (ou la désélectionne si elle l'était déjà). Une case vide ne se sélectionne pas. */
+  selectSlot(index: number): void {
+    if (index < 0 || index >= this.changes.hotbar.length) return;
+    this.selectedSlot = this.selectedSlot === index || !this.changes.hotbar[index] ? null : index;
+    this.emit({ type: 'hotbar' });
+  }
+
+  /** Objet de la case sélectionnée. */
+  selectedItem(): string | null {
+    return this.selectedSlot === null ? null : this.changes.hotbar[this.selectedSlot];
+  }
+
+  /** Range un objet dans une case (un objet n'occupe qu'une case) ou la vide (`null`). */
+  assignSlot(index: number, item: string | null): void {
+    if (index < 0 || index >= this.changes.hotbar.length) return;
+    if (item !== null) {
+      this.changes.hotbar = this.changes.hotbar.map((x) => (x === item ? null : x));
+    }
+    this.changes.hotbar[index] = item;
+    if (this.selectedSlot !== null && !this.changes.hotbar[this.selectedSlot]) {
+      this.selectedSlot = null;
+    }
+    this.carried = null;
+    this.emit({ type: 'hotbar' });
+  }
+
   // --- Construction ----------------------------------------------------------------------------
 
   /** Les pièces (espaces fermés) du moment, recalculées seulement après une modification. */
@@ -122,7 +158,11 @@ export class GameState {
   }
 
   /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
-  place(kind: PieceKind, pos: PiecePos): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
+  place(
+    kind: PieceKind,
+    pos: PiecePos,
+    rotation = 0,
+  ): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
     const def = pieceDef(kind);
     if (slotOf(def.type) !== pos.slot) return 'invalid';
     if (!isFree(this.changes.pieces, kind, pos)) return 'occupied';
@@ -130,6 +170,7 @@ export class GameState {
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[pieceKey(pos)] = kind;
+    if (rotation % 4 !== 0) this.changes.rotations[pieceKey(pos)] = ((rotation % 4) + 4) % 4;
     this.roomCache = null;
     this.emit({ type: 'build' });
     this.emit({ type: 'inventory' });
@@ -140,14 +181,14 @@ export class GameState {
    * Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock, les emplacements
    * libres et le soutien : un bloc peut s'appuyer sur un autre posé juste avant).
    */
-  placeMany(kind: PieceKind, positions: PiecePos[]): number {
+  placeMany(kind: PieceKind, positions: PiecePos[], rotation = 0): number {
     let remaining = positions;
     let n = 0;
     for (let progress = true; progress && remaining.length > 0;) {
       progress = false;
       const next: PiecePos[] = [];
       for (const pos of remaining) {
-        const r = this.place(kind, pos);
+        const r = this.place(kind, pos, rotation);
         if (r === 'ok') {
           n++;
           progress = true;
@@ -181,7 +222,17 @@ export class GameState {
       this.inventory = add(after, item, 1);
       made++;
     }
-    if (made > 0) this.emit({ type: 'inventory' });
+    if (made > 0) {
+      // Une pièce de construction fabriquée prend la première case libre de la barre.
+      if (item.startsWith('piece_') && !this.changes.hotbar.includes(item)) {
+        const free = this.changes.hotbar.indexOf(null);
+        if (free >= 0) {
+          this.changes.hotbar[free] = item;
+          this.emit({ type: 'hotbar' });
+        }
+      }
+      this.emit({ type: 'inventory' });
+    }
     return { made, stopped };
   }
 
@@ -195,6 +246,7 @@ export class GameState {
       const kind = this.changes.pieces[key];
       if (!kind) continue;
       delete this.changes.pieces[key];
+      delete this.changes.rotations[key];
       n++;
       // Démolir rend les ressources de fabrication (pierre, bois), pas la pièce elle-même.
       const recipe = itemById(pieceDef(kind).item).recipe ?? { [pieceDef(kind).item]: 1 };

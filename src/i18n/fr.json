@@ -74,8 +74,7 @@
   "action.techTree": "Arbre technologique",
   "action.screenshot": "Capture d'écran",
   "action.pause": "Menu / pause",
-  "action.buildMode": "Mode construction",
-  "action.rotate": "Pivoter l'objet",
+  "action.rotate": "Pivoter l'objet (90°)",
   "action.remove": "Supprimer",
   "action.copy": "Copier",
   "action.undo": "Annuler",
@@ -360,7 +359,7 @@
   "build.piece.door": "Porte",
   "build.piece.floor": "Sol",
   "build.piece.ceiling": "Plafond",
-  "build.help": "1-4 : pièce · 5-6 : matériau · Page↑/↓ : étage · Début/Fin : hauteur du mur (vue du dessus) · Clic maintenu : surface ou pan de mur · X maintenu : démolir (rend les ressources) · B : quitter",
+  "build.help": "R : pivoter · Page↑/↓ : étage · Début/Fin : hauteur du mur (vue du dessus) · Clic maintenu : surface ou pan de mur · X maintenu : démolir · même case : ranger",
   "build.missing": "Objet absent du sac : fabrique-le dans l'inventaire",
   "build.occupied": "Emplacement occupé",
   "build.tooFar": "Trop loin",
@@ -394,5 +393,9 @@
   "build.unsupported": "Un mur ne tient pas dans le vide : pose-le au sol ou contre un mur existant",
   "build.wallHeight": "Hauteur du mur en vue du dessus : {n} bloc(s) ({cm} cm)",
   "build.unsupportedCeiling": "Un plafond s'accroche en haut des murs : pose-le contre un mur ou prolonge une dalle (3 cases max depuis un mur)",
-  "debug.height": "haut."
+  "debug.height": "haut.",
+  "build.rotation": "orientation {deg}°",
+  "build.stock": "Dans le sac : {n}",
+  "hotbar.hint": "Barre de raccourcis : glisse un objet du sac sur une case, ou sélectionne-le dans le sac puis clique une case. Clic droit sur une case : la vider.",
+  "hotbar.empty": "Case vide"
 }

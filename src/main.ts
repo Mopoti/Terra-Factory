@@ -13,6 +13,7 @@ import { startGameView, type GameViewHandle } from './render/gameView';
 import { initKeyboardLayout } from './settings/controls';
 import { startApplyingSettings } from './settings/apply';
 import { getSettings, loadSettings } from './settings/store';
+import { mountHotbar, type Hotbar } from './ui/hotbar';
 import { mountInventory, type InventoryWindow } from './ui/inventory';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
@@ -49,6 +50,7 @@ interface Session {
   view: GameViewHandle;
   pause: PauseMenu;
   inventory: InventoryWindow;
+  hotbar: Hotbar;
   /** Sac et changements du monde de cette session. */
   state: GameState;
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
@@ -102,6 +104,7 @@ function quitToMenu(): void {
   window.clearTimeout(s.toastTimer);
   s.pause.dispose();
   s.inventory.dispose();
+  s.hotbar.dispose();
   s.view.dispose();
   session = null;
   showMenu();
@@ -134,6 +137,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     view,
     pause: null as unknown as PauseMenu,
     inventory: null as unknown as InventoryWindow,
+    hotbar: mountHotbar(document.body, state),
     state,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
