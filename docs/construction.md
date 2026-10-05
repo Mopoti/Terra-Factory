@@ -53,3 +53,8 @@ Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (blo
 - **Plus de jour** entre les blocs : ils font exactement 50 cm (seul le bloc du haut garde 1 cm de retrait sous le plafond).
 - **Démolition** (X maintenu) : vise les blocs existants un par un et rend les **ressources de fabrication** (pierre, bois), pas la pièce ; ce qui ne tient pas dans le sac tombe au sol.
 - À préciser avec le PO : « blocs de 10 × 10 cm » (pas de 10 cm en hauteur/largeur de mur ?) — voir question posée.
+
+### Tour 19 — plafonds accrochés aux murs, bande grise
+
+- **Plafonds** : même geste que les sols (glisser un rectangle, vert/rouge), mais une dalle doit **s'accrocher au bloc du haut d'un mur** (ou d'une porte) sur l'un de ses 4 bords, ou **prolonger une dalle déjà posée**, sans dépasser **3 cases** d'un mur porteur (`MAX_CEILING_SPAN`). Les dalles hors de ces limites sont rouges ; un mur trop bas ne porte rien.
+- **Bande grise près des murs** : c'étaient des ombres en escalier que les blocs projetaient sur eux-mêmes ; les blocs ne reçoivent plus d'ombre et le biais d'ombre du soleil est augmenté (`normalBias`). Les blocs continuent de projeter leur ombre au sol.

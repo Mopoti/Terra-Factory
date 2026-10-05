@@ -102,6 +102,7 @@ export function startGameView(
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 80;
   sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
 
   const generator = new WorldGenerator(game.world);
@@ -334,7 +335,7 @@ export function startGameView(
         placed > 0
           ? ''
           : floating > 0
-            ? t('build.unsupported')
+            ? t(buildType === 'ceiling' ? 'build.unsupportedCeiling' : 'build.unsupported')
             : lacking > 0
               ? t('build.missing')
               : lastPlan.length > 0

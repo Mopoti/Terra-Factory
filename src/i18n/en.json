@@ -392,5 +392,6 @@
   "action.layerUp": "Wall: block above",
   "action.layerDown": "Wall: block below",
   "build.unsupported": "A wall cannot float: place it on the ground or against an existing wall",
-  "build.wallHeight": "Wall height in top view: {n} block(s) ({cm} cm)"
+  "build.wallHeight": "Wall height in top view: {n} block(s) ({cm} cm)",
+  "build.unsupportedCeiling": "A ceiling attaches to the top of walls: place it against a wall or extend a slab (3 cells max from a wall)"
 }

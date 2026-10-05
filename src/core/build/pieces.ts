@@ -160,6 +160,7 @@ const hasBlock = (
  * dessous, à côté, ou dans l'angle perpendiculaire) pour faire des encadrements.
  */
 export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
+  if (pos.slot === 'ceiling') return ceilingSupported(pieces, pos);
   if (pos.slot !== 'edge') return true;
   const { level, gx, gz } = pos;
   const axis = pos.axis ?? 'x';
@@ -191,4 +192,47 @@ export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boo
   }
   if (has(gx, gz - 1, 'z', layer) || has(gx, gz + 1, 'z', layer)) return true;
   return [gz, gz + 1].some((z) => has(gx - 1, z, 'x', layer) || has(gx, z, 'x', layer));
+}
+
+/** Jusqu'où (en cases) une dalle de plafond peut s'étendre depuis un mur qui la porte. */
+export const MAX_CEILING_SPAN = 3;
+
+/** La case a-t-elle un mur (ou une porte) à son bord, au bloc du haut ? */
+function carriedByWall(pieces: Pieces, level: number, gx: number, gz: number): boolean {
+  const top = LAYERS_PER_STOREY - 1;
+  return (
+    hasBlock(pieces, level, gx, gz, 'x', top) ||
+    hasBlock(pieces, level, gx, gz + 1, 'x', top) ||
+    hasBlock(pieces, level, gx, gz, 'z', top) ||
+    hasBlock(pieces, level, gx + 1, gz, 'z', top)
+  );
+}
+
+/**
+ * Un plafond s'accroche au haut des murs : la dalle doit toucher un bloc de mur du haut de l'étage, ou
+ * prolonger une dalle déjà posée, à moins de `MAX_CEILING_SPAN` cases d'un mur qui la porte.
+ */
+function ceilingSupported(pieces: Pieces, pos: PiecePos): boolean {
+  const seen = new Set<string>([`${pos.gx},${pos.gz}`]);
+  let frontier: [number, number][] = [[pos.gx, pos.gz]];
+  for (let depth = 0; depth <= MAX_CEILING_SPAN; depth++) {
+    const next: [number, number][] = [];
+    for (const [gx, gz] of frontier) {
+      if (carriedByWall(pieces, pos.level, gx, gz)) return true;
+      for (const [nx, nz] of [
+        [gx - 1, gz],
+        [gx + 1, gz],
+        [gx, gz - 1],
+        [gx, gz + 1],
+      ]) {
+        const k = `${nx},${nz}`;
+        if (seen.has(k) || !pieces[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz })])
+          continue;
+        seen.add(k);
+        next.push([nx, nz]);
+      }
+    }
+    frontier = next;
+  }
+  return false;
 }

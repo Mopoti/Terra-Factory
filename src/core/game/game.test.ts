@@ -254,12 +254,12 @@ describe('construction', () => {
       },
     });
     s.place('floor_wood', posFor('floor_wood', 0, 0, 0));
-    s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0));
     s.place('door_wood', posFor('door_wood', 0, 0, 0, 'x'));
     expect(s.rooms()).toHaveLength(0);
     s.placeMany('wall_stone', planLine('wall_stone', 0, 'x', 1, 0, 0, null));
     s.placeMany('wall_stone', planLine('wall_stone', 0, 'z', 0, 0, 0, null));
     s.placeMany('wall_stone', planLine('wall_stone', 0, 'z', 1, 0, 0, null));
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0))).toBe('ok');
     expect(s.rooms()).toHaveLength(1);
     s.removeKeys([pieceKey(posFor('wall_stone', 0, 0, 1, 'x', 4))], { x: 0, z: 0 });
     expect(s.rooms()).toHaveLength(0);
@@ -427,5 +427,61 @@ describe('visée assistée des murs', () => {
     expect(aimEdge(o, { x: 0, y: 0, z: 1 }, pieces, 'wall_stone', 0, 10, 'remove')?.pos.layer).toBe(
       0,
     );
+  });
+});
+
+describe('plafonds accrochés aux murs', () => {
+  const walls = (s: GameState): void => {
+    // Un carré de 3 x 3 cases de murs pleins (4 côtés).
+    for (let i = 0; i < 3; i++) {
+      s.placeMany(
+        'wall_stone',
+        planWall('wall_stone', 0, 'x', 0, { i, layer: 0 }, { i, layer: 4 }),
+      );
+      s.placeMany(
+        'wall_stone',
+        planWall('wall_stone', 0, 'x', 3, { i, layer: 0 }, { i, layer: 4 }),
+      );
+      s.placeMany(
+        'wall_stone',
+        planWall('wall_stone', 0, 'z', 0, { i, layer: 0 }, { i, layer: 4 }),
+      );
+      s.placeMany(
+        'wall_stone',
+        planWall('wall_stone', 0, 'z', 3, { i, layer: 0 }, { i, layer: 4 }),
+      );
+    }
+  };
+  it("pas de plafond dans le vide, mais contre le haut d'un mur", () => {
+    const s = new GameState({ inventory: { piece_ceiling_wood: 20, piece_wall_stone: 60 } });
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('unsupported');
+    walls(s);
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0))).toBe('ok'); // coin : touche 2 murs
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('unsupported'); // le centre touche seulement en diagonale
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 0))).toBe('ok');
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('ok'); // prolonge la dalle
+  });
+  it('un mur trop bas ne porte pas de plafond', () => {
+    const s = new GameState({ inventory: { piece_ceiling_wood: 5, piece_wall_stone: 20 } });
+    s.placeMany(
+      'wall_stone',
+      planWall('wall_stone', 0, 'x', 0, { i: 0, layer: 0 }, { i: 0, layer: 3 }),
+    );
+    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0))).toBe('unsupported');
+  });
+  it("le tracé : vert jusqu'à 3 cases d'un mur, rouge au-delà", () => {
+    const s = new GameState({ inventory: { piece_wall_stone: 60 } });
+    walls(s);
+    const plan = evaluatePlan(
+      'ceiling_wood',
+      planRect('ceiling_wood', 0, { gx: 0, gz: 0 }, { gx: 9, gz: 0 }),
+      s.changes.pieces,
+      100,
+      { x: 0, z: 0 },
+      12,
+    );
+    const status = plan.map((p) => p.status);
+    expect(status.slice(0, 4)).toEqual(['ok', 'ok', 'ok', 'ok']);
+    expect(status[9]).toBe('unsupported');
   });
 });

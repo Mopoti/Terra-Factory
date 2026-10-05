@@ -147,7 +147,7 @@ export class BuildingView {
     const make = (mb: MeshBuilder): THREE.Mesh => {
       const mesh = new THREE.Mesh(geometryOf(mb), propsMaterial);
       mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      // Pas d'ombres reçues : les dalles et blocs ne se zèbrent pas d'ombres en escalier de près.
       this.root.add(mesh);
       return mesh;
     };
