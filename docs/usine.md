@@ -161,3 +161,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 57 — correctif : poser un tapis contre la sortie d'une machine
 - Les tuiles de tapis/tuyau ne sont plus calées sur une grille fixe de 2 cases : la tuile se pose **là où l'on vise** et se décale d'une case si besoin (4 positions autour du curseur, la première libre) pour **toucher la sortie** de la machine (qui tombait avant sur une tuile chevauchant la foreuse : case rouge). Les tuiles suivantes d'un chemin avancent de 2 cases à partir de la précédente.
 - Vérifié en navigateur : foreuse 4×4, tuile verte contre sa sortie, tracé de 2 tuiles posées (sac 20 → 18).
+
+## Tour 58 — tapis et tuyaux à cheval sur une machine
+- Un **tapis ou un tuyau** peut maintenant être posé **à moitié dans une machine** (la partie dans la machine est cachée) : il suffit qu'au moins une de ses 4 cases soit libre et visible. Il reste interdit entièrement dans une machine (rien de visible), sur un autre tapis/tuyau, ou sur un terrain bloqué ; une **machine** ne peut pas se poser sur un tapis ou un tuyau (même caché en partie).
+- Sur les cases partagées, c'est la machine qui répond (sorties, raccords, visée) ; la tuile ne « possède » que ses cases libres. Vérifié par test et en navigateur (tuile verte à moitié sous la foreuse, posée : sac 20 → 19).

@@ -8,6 +8,7 @@ import {
   isDrill,
   isFluid,
   isLab,
+  isLinear,
   isRouter,
   machineDef,
   smeltRecipe,
@@ -380,8 +381,20 @@ export class Factory {
 
   reindex(): void {
     this.cells.clear();
+    this.linearCells.clear();
+    // Les machines d'abord : un tapis ou un tuyau posé à cheval sur une machine ne « possède » que ses cases libres
+    // (la partie dans la machine est cachée et la machine reste celle qu'on trouve sur ces cases).
     for (const m of this.machines) {
+      if (isLinear(m.type)) continue;
       for (const c of footprint(m.type, m.gx, m.gz, m.rot)) this.cells.set(`${c.gx},${c.gz}`, m);
+    }
+    for (const m of this.machines) {
+      if (!isLinear(m.type)) continue;
+      for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
+        const k = `${c.gx},${c.gz}`;
+        this.linearCells.add(k);
+        if (!this.cells.has(k)) this.cells.set(k, m);
+      }
     }
     this.buildGrids();
     this.links = fluidLinks(
@@ -396,6 +409,8 @@ export class Factory {
     );
   }
 
+  /** Cases couvertes par un tapis ou un tuyau (même celles cachées dans une machine). */
+  private readonly linearCells = new Set<string>();
   private links: FluidLink[] = [];
   private pumpsOk = new Set<number>();
 
@@ -497,9 +512,17 @@ export class Factory {
     blocked: (c: Cell) => boolean,
   ): boolean {
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
-    return footprint(type, gx, gz, rot).every(
-      (c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c),
-    );
+    const cells = footprint(type, gx, gz, rot);
+    if (isLinear(type)) {
+      // Un tapis / tuyau peut chevaucher une machine (la moitié cachée dedans), mais pas un autre tapis / tuyau,
+      // et au moins une de ses cases doit être visible (libre).
+      const free = cells.filter((c) => !this.cells.has(`${c.gx},${c.gz}`));
+      return (
+        free.length > 0 &&
+        cells.every((c) => !this.linearCells.has(`${c.gx},${c.gz}`) && !blocked(c))
+      );
+    }
+    return cells.every((c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c));
   }
 
   add(machine: Machine): void {

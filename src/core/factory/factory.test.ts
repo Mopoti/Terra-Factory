@@ -672,3 +672,24 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     expect(eff[0]).toBeGreaterThan(0);
   });
 });
+
+describe('tapis et tuyaux à cheval sur une machine', () => {
+  it('on peut poser un tapis dont une partie est cachée dans une machine, pas entièrement dedans ni sur un autre tapis', () => {
+    const { world } = makeWorld();
+    const f = new Factory([emptyMachine(1, 'drill', 0, 0, 0)], world); // foreuse 4 x 4 : cases 0..3
+    // tuile 2 x 2 en (3,3) : 1 case dans la foreuse… (3,3) dedans, (4,3), (3,4), (4,4) dehors
+    expect(f.canPlace('conveyor', 3, 3, 0, () => false)).toBe(true);
+    // entièrement dans la foreuse : refusé (rien de visible)
+    expect(f.canPlace('conveyor', 1, 1, 0, () => false)).toBe(false);
+    // une machine ne peut pas se poser sur un tapis (même caché en partie)
+    f.add(emptyMachine(2, 'conveyor', 3, 3, 0));
+    expect(f.canPlace('drill', 3, 3, 0, () => false)).toBe(false);
+    // deux tapis ne se chevauchent pas
+    expect(f.canPlace('conveyor', 4, 4, 0, () => false)).toBe(false);
+    // sur les cases partagées on trouve la machine, sur les cases libres le tapis
+    expect(f.machineAt(3, 3)?.type).toBe('drill');
+    expect(f.machineAt(4, 4)?.type).toBe('conveyor');
+    // les tuyaux suivent la même règle
+    expect(f.canPlace('pipe', -1, 1, 0, () => false)).toBe(true);
+  });
+});
