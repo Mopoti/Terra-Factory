@@ -159,7 +159,12 @@ export function mountMachineWindow(
         dragging = false;
         drop(m, slot, item);
       });
-      box.addEventListener('click', () => {
+      box.addEventListener('click', (e) => {
+        // Maj + clic : la pile revient dans le sac.
+        if (e.shiftKey) {
+          if (state.unloadMachine(m, slot) > 0) playSfx('pickup');
+          return render();
+        }
         if (state.hand) return dropHand(m, slot);
         if (selected) drop(m, slot, selected);
       });
@@ -180,6 +185,26 @@ export function mountMachineWindow(
     });
     row.append(take);
     return row;
+  }
+
+  /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
+  function quickLoad(m: Machine, item: string, count: number): void {
+    const max = machineDef(m.type).stockMax ?? 100;
+    let moved = 0;
+    if (isChest(m.type)) moved = state.putInChest(m, item, count);
+    else if (m.type === 'assembler') moved = state.loadIngredient(m, item, count);
+    else {
+      for (const slot of ['input', 'fuel'] as const) {
+        if (accepts(m, slot, item)) {
+          moved = state.loadMachine(m, slot, item, Math.min(count, max));
+          break;
+        }
+      }
+    }
+    if (moved > 0) {
+      playSfx('pickup');
+      render();
+    }
   }
 
   /** Le sac, toujours visible à gauche. */
@@ -227,6 +252,11 @@ export function mountMachineWindow(
           if (state.hand) {
             state.returnHand();
             render();
+            return;
+          }
+          // Maj + clic : la pile part directement dans la bonne case de la machine (rien si elle n'en veut pas).
+          if (e.shiftKey) {
+            quickLoad(m, slot.item, slot.count);
             return;
           }
           if (e.ctrlKey || e.metaKey) {

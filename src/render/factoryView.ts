@@ -248,6 +248,7 @@ export class FactoryView {
           x = cx + dx * k;
           z = cz + dz * k;
         }
+        if (b.pos < 0) continue;
         const y = itemHeight(m, b.pos);
         if (y === null) continue;
         mb.box(x, y, z, 0.22, 0.16, 0.22, hexToRgb(itemById(b.item).color), true);
@@ -344,12 +345,11 @@ function itemHeight(m: Machine, pos: number): number | null {
       return BELT_H + LEVEL_M;
     case 3:
       return BELT_H + LEVEL_M * (1 - pos);
+    // Tunnel : l'objet disparaît dans le portail de l'entrée et réapparaît à celui de la sortie.
     case 4:
-      return pos < 0.5 ? BELT_H * (1 - 2 * pos) : null;
+      return pos < 0.8 ? BELT_H : null;
     case 5:
-      return null;
-    case 6:
-      return pos > 0.5 ? BELT_H * (2 * pos - 1) : null;
+      return pos > 0.2 ? BELT_H : null;
     default:
       return BELT_H;
   }
@@ -453,22 +453,19 @@ function addBelt(
     return void arrowOnSlope(mb, cxm, czm, rot, y0, y1, shade(color, 1.9));
   }
   if (lift >= 4) {
-    // Tunnel : une plaque sombre au ras du sol, et un portail du côté où le tapis plonge ou émerge.
-    const dark = shade(PORTAL, 1.6);
-    mb.box(cxm, 0, czm, BELT_W, lift === 5 ? 0.04 : 0.1, BELT_W, dark, true);
-    if (lift !== 5) {
-      const edge = lift === 4 ? -1 : 1; // plonge par l'arrière, émerge par l'avant
-      mb.box(
-        cxm + fx * edge * (TILE_M / 2 - 0.05),
-        0,
-        czm + fz * edge * (TILE_M / 2 - 0.05),
-        Math.abs(fx) > 0 ? 0.1 : BELT_W,
-        0.4,
-        Math.abs(fz) > 0 ? 0.1 : BELT_W,
-        PORTAL,
-        true,
-      );
-    }
+    // Tunnel : une dalle sombre avec un portail du côté où les objets entrent (entrée : devant) ou sortent (sortie : derrière).
+    mb.box(cxm, 0, czm, BELT_W, 0.1, BELT_W, shade(PORTAL, 1.6), true);
+    const edge = lift === 4 ? 1 : -1;
+    mb.box(
+      cxm + fx * edge * (TILE_M / 2 - 0.05),
+      0,
+      czm + fz * edge * (TILE_M / 2 - 0.05),
+      Math.abs(fx) > 0 ? 0.1 : BELT_W,
+      0.4,
+      Math.abs(fz) > 0 ? 0.1 : BELT_W,
+      PORTAL,
+      true,
+    );
     arrowOnSlope(mb, cxm, czm, rot, 0.1, 0.1, shade(color, 1.9));
     return;
   }

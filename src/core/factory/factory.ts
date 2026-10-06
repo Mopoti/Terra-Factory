@@ -1,4 +1,5 @@
 import { CELL_SIZE_M } from '../constants';
+import { RISE_DIR } from '../data/buildings';
 import { itemById } from '../data/items';
 import {
   hasOutput,
@@ -63,7 +64,7 @@ export interface Machine {
   recipe: string | null;
   /** Fluides contenus (tuyau, pompe, chaudière, turbine). */
   fluid: Record<FluidKind, number>;
-  /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol. */
+  /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
 }
 
@@ -77,10 +78,13 @@ export const LIFTS: ReadonlyArray<{ from: number; to: number; layers: readonly n
   { from: 0, to: 1, layers: [0] }, // 1 : rampe montante
   { from: 1, to: 1, layers: [1] }, // 2 : surélevé
   { from: 1, to: 0, layers: [1, 0] }, // 3 : rampe descendante
-  { from: 0, to: -1, layers: [0, -1] }, // 4 : entrée de tunnel
-  { from: -1, to: -1, layers: [-1] }, // 5 : souterrain
-  { from: -1, to: 0, layers: [-1] }, // 6 : sortie de tunnel
+  { from: 0, to: 0, layers: [0] }, // 4 : entrée de tunnel (les objets disparaissent)
+  { from: 0, to: 0, layers: [0] }, // 5 : sortie de tunnel (ils réapparaissent)
 ];
+/** Forme qui prolonge celle-ci (ce qu'on pose à sa suite). */
+export const LIFT_NEXT = [0, 2, 2, 0, 0, 0] as const;
+/** Longueur maximale d'un tunnel (en tuiles entre l'entrée et la sortie). */
+export const TUNNEL_MAX_TILES = 8;
 export const LIFT_COUNT = LIFTS.length;
 /** Hauteur d'un niveau (m). */
 export const LEVEL_M = 1;
@@ -350,7 +354,10 @@ export function normalizeMachines(raw: unknown): Machine[] {
         if (typeof bi.item === 'string' && isNum(bi.pos)) {
           try {
             itemById(bi.item);
-            machine.belt.push({ item: bi.item, pos: Math.min(1, Math.max(0, bi.pos)) });
+            machine.belt.push({
+              item: bi.item,
+              pos: Math.min(1, Math.max(-TUNNEL_MAX_TILES - 1, bi.pos)),
+            });
           } catch {
             /* objet inconnu */
           }
@@ -461,6 +468,7 @@ export class Factory {
         if (start === 1 && liftEnd(m) === 0) this.upper.set(k, m);
       }
     }
+    this.linkTunnels();
     this.buildGrids();
     this.links = fluidLinks(
       this.machines.filter((m) => isFluid(m.type)),
@@ -472,6 +480,32 @@ export class Factory {
         .filter((m) => m.type === 'pump' && this.waterNear(m.type, m.gx, m.gz, m.rot))
         .map((m) => m.id),
     );
+  }
+
+  /** Entrée de tunnel (id) → sa sortie : la première sortie alignée devant elle. */
+  private readonly tunnelExit = new Map<number, Machine>();
+
+  private linkTunnels(): void {
+    this.tunnelExit.clear();
+    const anchors = new Map<string, Machine>();
+    for (const m of this.machines)
+      if (m.type === 'conveyor' && m.lift === 5) anchors.set(`${m.gx},${m.gz}`, m);
+    for (const m of this.machines) {
+      if (m.type !== 'conveyor' || m.lift !== 4) continue;
+      const [dx, dz] = RISE_DIR[m.rot];
+      for (let k = 1; k <= TUNNEL_MAX_TILES; k++) {
+        const out = anchors.get(`${m.gx + dx * 2 * k},${m.gz + dz * 2 * k}`);
+        if (out && out.rot === m.rot) {
+          this.tunnelExit.set(m.id, out);
+          break;
+        }
+      }
+    }
+  }
+
+  /** La sortie de tunnel qui reçoit ce que cette entrée avale (null s'il n'y en a pas). */
+  tunnelTarget(m: Machine): Machine | null {
+    return this.tunnelExit.get(m.id) ?? null;
   }
 
   /** Cases prises par les tapis et tuyaux, par couche (0 = sol, 1 = en l'air, −1 = sous terre). */
@@ -924,6 +958,8 @@ export class Factory {
     if (target.type === 'splitter') return !target.stock;
     if (target.type === 'merger') return !target.stock && from.type !== 'conveyor';
     if (target.type === 'conveyor') {
+      // Une sortie de tunnel ne reçoit que de son entrée.
+      if (target.lift === 5) return false;
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
       if (
         target.rot === (dir + 2) % 4 &&
@@ -1316,7 +1352,22 @@ export class Factory {
       m.belt[i].pos = Math.min(limit, m.belt[i].pos + speed * dt);
     }
     const front = m.belt[0];
-    if (front && front.pos >= 1) {
+    if (front && front.pos >= 1 && m.lift === 4) {
+      // Tunnel : l'objet entre et ressort à l'autre bout après le temps du trajet.
+      const out = this.tunnelTarget(m);
+      const last = out?.belt[out.belt.length - 1];
+      const cap = machineDef('conveyor').capacity ?? 3;
+      const tiles = out ? Math.max(Math.abs(out.gx - m.gx), Math.abs(out.gz - m.gz)) / 2 : 0;
+      // Les objets en route sous terre ne comptent pas dans la place du tapis de sortie ; ils gardent leur écart.
+      if (
+        out &&
+        out.belt.filter((b) => b.pos >= 0).length < cap &&
+        !(last && last.pos < GAP - tiles)
+      ) {
+        out.belt.push({ item: front.item, pos: -tiles });
+        m.belt.shift();
+      }
+    } else if (front && front.pos >= 1) {
       if (this.neighbors(m, m.rot).some((t) => this.deliver(t, m, front.item))) m.belt.shift();
     }
   }

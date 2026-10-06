@@ -42,6 +42,13 @@ const groundMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 export const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 propsMaterial.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, ghostUniforms);
+  // Hauteur dans le monde : ce qui est bas (tapis, tuyaux, cailloux) ne cache pas le joueur, on ne le troue pas.
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying float vGhostY;')
+    .replace(
+      '#include <begin_vertex>',
+      '#include <begin_vertex>\nvGhostY = (modelMatrix * vec4(transformed, 1.0)).y;',
+    );
   shader.fragmentShader = shader.fragmentShader
     .replace(
       '#include <common>',
@@ -49,12 +56,13 @@ propsMaterial.onBeforeCompile = (shader) => {
 uniform float uGhostOn;
 uniform vec2 uGhostCenter;
 uniform float uGhostDepth;
-uniform float uGhostRadius;`,
+uniform float uGhostRadius;
+varying float vGhostY;`,
     )
     .replace(
       '#include <clipping_planes_fragment>',
       `#include <clipping_planes_fragment>
-if (uGhostOn > 0.5 && -vViewPosition.z < uGhostDepth - 0.35) {
+if (uGhostOn > 0.5 && vGhostY > 0.45 && -vViewPosition.z < uGhostDepth - 0.35) {
   float t = clamp(distance(gl_FragCoord.xy, uGhostCenter) / uGhostRadius, 0.0, 1.0);
   float opacity = 0.08 + 0.92 * (t * t * (3.0 - 2.0 * t));
   float noise = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));

@@ -768,24 +768,34 @@ describe('tapis en hauteur et tunnels', () => {
     expect(a.belt).toHaveLength(1);
   });
 
-  it('un tunnel passe sous une machine', () => {
+  it('un tunnel relie une entrée à une sortie sans rien entre les deux', () => {
     const { world } = makeWorld();
-    const chest = emptyMachine(9, 'chest_wood', 4, 11, 0);
-    const parts = [
-      belt(1, 4, 6, 0, 4), // entrée
-      belt(2, 4, 8, 0, 5),
-      belt(3, 4, 10, 0, 5), // sous le coffre
-      belt(4, 4, 12, 0, 5),
-      belt(5, 4, 14, 0, 6), // sortie
-      belt(6, 4, 16, 0, 0),
-    ];
-    parts[0].belt.push({ item: 'iron_ore', pos: 0 });
-    const f = new Factory([chest, ...parts], world);
+    const chest = emptyMachine(9, 'chest_wood', 4, 11, 0); // posé au-dessus du tunnel
+    const entrance = belt(1, 4, 6, 0, 4);
+    const exit = belt(2, 4, 14, 0, 5);
+    const after = belt(3, 4, 16, 0, 0);
+    entrance.belt.push({ item: 'iron_ore', pos: 0 }, { item: 'copper_ore', pos: 0.3 });
+    const f = new Factory([chest, entrance, exit, after], world);
+    expect(f.tunnelTarget(entrance)?.id).toBe(2);
+    run(f, 2);
+    expect(entrance.belt).toHaveLength(0); // avalés
+    expect(after.belt).toHaveLength(0); // pas encore ressortis
     run(f, 20);
-    expect(parts[5].belt.map((b) => b.item)).toEqual(['iron_ore']);
+    expect(after.belt.map((b) => b.item).sort()).toEqual(['copper_ore', 'iron_ore']);
     expect(chest.slots).toHaveLength(0);
-    expect(f.machineAt(4, 11, -1)?.id).toBe(3);
-    expect(f.machineAt(4, 11)?.id).toBe(9);
+  });
+
+  it('une sortie de tunnel ne reçoit rien par derrière et une entrée sans sortie bloque', () => {
+    const { world } = makeWorld();
+    const feeder = belt(1, 4, 0, 0);
+    const exit = belt(2, 4, 2, 0, 5);
+    feeder.belt.push({ item: 'iron_ore', pos: 0 });
+    const lone = belt(3, 10, 0, 0, 4);
+    lone.belt.push({ item: 'iron_ore', pos: 0 });
+    const f = new Factory([feeder, exit, lone], world);
+    run(f, 6);
+    expect(exit.belt).toHaveLength(0);
+    expect(lone.belt).toHaveLength(1);
   });
 
   it('la forme du tapis est enregistrée', () => {
