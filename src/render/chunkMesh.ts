@@ -39,6 +39,14 @@ export const ghostUniforms = {
 };
 
 const groundMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
+/** Teinte du sol selon la saison. */
+export const setGroundTint = (
+  tint: [number, number, number],
+  snow: [number, number, number],
+): void => {
+  groundMaterial.color.setRGB(...tint);
+  groundMaterial.emissive.setRGB(...snow);
+};
 export const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 propsMaterial.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, ghostUniforms);

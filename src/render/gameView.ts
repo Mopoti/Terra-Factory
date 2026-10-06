@@ -40,7 +40,8 @@ import type { Settings } from '../settings/schema';
 import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
-import { buildChunkMesh, ghostUniforms, type ChunkMesh } from './chunkMesh';
+import { seasonAt } from '../core/game/seasons';
+import { buildChunkMesh, ghostUniforms, setGroundTint, type ChunkMesh } from './chunkMesh';
 import {
   bodyBlocked,
   ceilingAbove,
@@ -100,6 +101,7 @@ import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
+import type { Vehicle } from '../core/game/worldChanges';
 import { POLLUTION_CELL_M, Threat, type ThreatTarget, type ThreatWorld } from '../core/game/threat';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
@@ -108,6 +110,9 @@ const SKY = 0x8fb8d8;
 // Déplacement provisoire (le vrai personnage arrive plus tard).
 const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
+/** Buggy : vitesse (par rapport à la marche) avec / sans carburant. */
+const BUGGY_FACTOR = 2.6;
+const BUGGY_EMPTY_FACTOR = 0.5;
 const PLAYER_RADIUS_M = 0.25;
 const PLAYER_HEIGHT_M = 1.7;
 const CAMERA_YAW_SPEED = 1.8;
@@ -168,6 +173,7 @@ export function startGameView(
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY);
+  let skyNow = SKY;
   const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 500);
   scene.add(camera);
 
@@ -1577,7 +1583,13 @@ export function startGameView(
     }
 
     const len = Math.hypot(forward, right);
-    const speed = WALK_SPEED_M_S * (input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
+    // Au volant d'un buggy : bien plus vite tant qu'il reste du carburant (on en prend dans le sac), très lent sinon.
+    const driving =
+      mounted !== null && (mounted.fuel > 0 || options.state.refuelVehicle(mounted) > 0);
+    const base = mounted ? (driving ? BUGGY_FACTOR : BUGGY_EMPTY_FACTOR) : 1;
+    if (mounted && driving) mounted.fuel = Math.max(0, mounted.fuel - dt);
+    const speed =
+      WALK_SPEED_M_S * base * (!mounted && input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
     const yaw = rig.yaw;
     // « Avant » = la direction vers laquelle regarde la caméra.
     const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
@@ -1610,6 +1622,134 @@ export function startGameView(
     if (rig.view === 'third' && views.third.autoRotate && moved > 0)
       rig.followHeading(dirX, dirZ, dt);
     return { speed: dt > 0 ? moved / dt : 0, strafe: right / len };
+  }
+
+  // --- Saisons ---------------------------------------------------------------------------------
+  let seasonKey = '';
+  function updateSeason(dt: number): void {
+    options.state.changes.time += dt;
+    const { season } = seasonAt(options.state.changes.time);
+    threat.treeFactor = season.treeAbsorb;
+    if (season.id === seasonKey) return;
+    seasonKey = season.id;
+    setGroundTint(season.ground, season.snow);
+    skyNow = season.sky;
+    (scene.background as THREE.Color).set(season.sky);
+    if (scene.fog) scene.fog.color.set(season.sky);
+  }
+
+  // --- Véhicules : buggy ------------------------------------------------------------------------
+  let mounted: Vehicle | null = null;
+  const vehicleMeshes = new Map<number, THREE.Group>();
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x2b2d33 });
+  const buggyMat = new THREE.MeshStandardMaterial({ color: 0xc9a227 });
+  function makeBuggy(): THREE.Group {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 1.5), buggyMat);
+    body.position.y = 0.35;
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.6), buggyMat);
+    cab.position.set(0, 0.65, -0.1);
+    g.add(body, cab);
+    for (const [x, z] of [
+      [-0.5, -0.5],
+      [0.5, -0.5],
+      [-0.5, 0.5],
+      [0.5, 0.5],
+    ]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.16, 10), wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, 0.22, z);
+      g.add(wheel);
+    }
+    g.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = true;
+    });
+    return g;
+  }
+  const vehicleBox = document.createElement('div');
+  vehicleBox.className = 'ammo-box';
+  vehicleBox.hidden = true;
+  container.appendChild(vehicleBox);
+  let placeWasDown = false;
+  let runOverCooldown = 0;
+  function vehicleTick(dt: number, pressedUse: boolean): void {
+    const list = options.state.changes.vehicles;
+    // Les modèles suivent la liste enregistrée.
+    for (const v of list) {
+      let mesh = vehicleMeshes.get(v.id);
+      if (!mesh) {
+        mesh = makeBuggy();
+        scene.add(mesh);
+        vehicleMeshes.set(v.id, mesh);
+      }
+      mesh.position.set(v.x, 0, v.z);
+      mesh.rotation.y = v.yaw;
+    }
+    for (const [id, mesh] of vehicleMeshes) {
+      if (!list.some((v) => v.id === id)) {
+        scene.remove(mesh);
+        vehicleMeshes.delete(id);
+      }
+    }
+    if (mounted && !list.includes(mounted)) mounted = null;
+    const near = list
+      .filter((v) => Math.hypot(v.x - playerX, v.z - playerZ) <= 3)
+      .sort(
+        (a, b) =>
+          Math.hypot(a.x - playerX, a.z - playerZ) - Math.hypot(b.x - playerX, b.z - playerZ),
+      )[0];
+    if (pressedUse && !aimedMachine) {
+      if (mounted) {
+        mounted = null;
+        options.onMessage?.(t('vehicle.mount'));
+      } else if (near) {
+        if (input.isActionActive('sprint')) options.state.pickUpVehicle(near.id);
+        else {
+          mounted = near;
+          if (near.fuel <= 0 && options.state.refuelVehicle(near) <= 0)
+            options.onMessage?.(t('vehicle.noFuel'));
+        }
+      }
+    }
+    // Poser un buggy : clic gauche avec le buggy choisi, quand rien d'autre n'est visé.
+    const down = input.isActionActive('interact');
+    if (
+      down &&
+      !placeWasDown &&
+      !building &&
+      options.state.selectedItem() === 'vehicle_buggy' &&
+      !interaction.aimed
+    ) {
+      computeRay();
+      const cell = cellOnPlane(rayOrigin, rayDir, 0);
+      if (cell) {
+        const x = center(cell.gx);
+        const z = center(cell.gz);
+        if (!isBlockedAt(x, z) && Math.hypot(x - playerX, z - playerZ) <= 12) {
+          if (options.state.placeVehicle(x, z, facing)) {
+            playSfx('placeStone');
+            options.onMessage?.(t('vehicle.placed'));
+          }
+        } else playSfx('deny');
+      }
+    }
+    placeWasDown = down;
+    if (mounted) {
+      mounted.x = playerX;
+      mounted.z = playerZ;
+      mounted.yaw = facing;
+      // Écraser les ennemis sur la route.
+      runOverCooldown = Math.max(0, runOverCooldown - dt);
+      if (runOverCooldown <= 0 && mounted.fuel > 0 && threat.enemies.length > 0) {
+        const result = threat.hit(playerX, playerZ, 1.8, 20);
+        if (result) {
+          runOverCooldown = 0.4;
+          playSfx(result === 'kill' ? 'rockBreak' : 'enemyHurt');
+        }
+      }
+      vehicleBox.hidden = false;
+      vehicleBox.textContent = t('vehicle.fuel', { v: String(Math.round(mounted.fuel)) });
+    } else vehicleBox.hidden = true;
   }
 
   // --- Réticule, indice, réglages, FPS, infos ----------------------------------------------
@@ -1934,7 +2074,7 @@ export function startGameView(
     const far = d.viewDistance * CHUNK_SIZE_M;
     camera.far = far + CHUNK_SIZE_M;
     camera.updateProjectionMatrix();
-    scene.fog = new THREE.Fog(SKY, far * 0.55, far);
+    scene.fog = new THREE.Fog(skyNow, far * 0.55, far);
     fpsLimit = d.fpsLimit;
     fpsBox.hidden = !d.showFps;
     debugBox.hidden = !d.showDebug;
@@ -1965,6 +2105,10 @@ export function startGameView(
     const info = renderer.info;
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,
+      (() => {
+        const { season, day, year } = seasonAt(options.state.changes.time);
+        return `${t('debug.season')} : ${t(`season.${season.id}` as TranslationKey)} · ${t('debug.seasonDay', { d: String(day), y: String(year) })}`;
+      })(),
       `${t('debug.view')} : ${t(`view.${rig.view}` as TranslationKey)}`,
       `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m · ${t('debug.height')} ${playerY.toFixed(2)} m`,
       `${t('debug.cell')} : ${gx}, ${gz}`,
@@ -2099,6 +2243,8 @@ export function startGameView(
         if (repeating('zoomIn', dt)) rig.zoom(1, views);
         if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       }
+      updateSeason(dt);
+      vehicleTick(dt, pressed('use'));
       motion = step(dt);
       stepBody(dt);
       carryByBelt(dt);

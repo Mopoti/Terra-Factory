@@ -29,6 +29,7 @@ import {
   emptyChanges,
   normalizeChanges,
   type DroppedStack,
+  type Vehicle,
   type WorldChanges,
 } from './worldChanges';
 
@@ -642,6 +643,43 @@ export class GameState {
       this.emit({ type: 'inventory' });
     }
     return n;
+  }
+
+  // --- Véhicules ---------------------------------------------------------------------------------
+
+  /** Pose un buggy (consomme l'objet du sac). */
+  placeVehicle(x: number, z: number, yaw: number): Vehicle | null {
+    if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
+    this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;
+    const id = this.changes.vehicles.reduce((m, v) => Math.max(m, v.id), 0) + 1;
+    const v: Vehicle = { id, x, z, yaw, fuel: 0 };
+    this.changes.vehicles.push(v);
+    this.emit({ type: 'inventory' });
+    return v;
+  }
+
+  /** Range un buggy dans le sac (ou au sol s'il est plein). */
+  pickUpVehicle(id: number): boolean {
+    const i = this.changes.vehicles.findIndex((v) => v.id === id);
+    if (i < 0) return false;
+    const [v] = this.changes.vehicles.splice(i, 1);
+    this.giveBack('vehicle_buggy', 1, { x: v.x, z: v.z });
+    this.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /** Remplit le réservoir du buggy avec un combustible du sac (renvoie les secondes de route ajoutées, 0 s'il n'y en a pas). */
+  refuelVehicle(v: Vehicle): number {
+    for (const item of ['coal', 'wood']) {
+      if ((this.inventory[item] ?? 0) < 1) continue;
+      const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
+      if (seconds <= 0) continue;
+      this.inventory = remove(this.inventory, item, 1).inventory;
+      v.fuel += seconds;
+      this.emit({ type: 'inventory' });
+      return seconds;
+    }
+    return 0;
   }
 
   // --- Machines ------------------------------------------------------------------------------------

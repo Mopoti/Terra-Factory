@@ -82,6 +82,8 @@ const key = (pcx: number, pcz: number): string => `${pcx},${pcz}`;
 export class Threat {
   /** Ennemis en vie : le tableau enregistré avec la partie (modifié sur place). */
   readonly enemies: Enemy[];
+  /** Part de l'absorption des arbres (saison). */
+  treeFactor = 1;
   private nextId = 1;
   private readonly charge = new Map<string, number>();
   private clock = 0;
@@ -220,7 +222,7 @@ export class Threat {
           }
         }
       }
-      p -= ABSORB_BASE + ABSORB_PER_TREE * this.world.treesIn(pcx, pcz);
+      p -= ABSORB_BASE + ABSORB_PER_TREE * this.treeFactor * this.world.treesIn(pcx, pcz);
       if (p < 0.05) delete this.pollution[k];
       else this.pollution[k] = p;
     }

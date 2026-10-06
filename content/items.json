@@ -435,6 +435,17 @@
         "iron_ingot": 16,
         "copper_ingot": 6
       }
+    },
+    {
+      "id": "vehicle_buggy",
+      "weightKg": 30,
+      "volumeL": 40,
+      "color": "#c9a227",
+      "recipe": {
+        "iron_ingot": 24,
+        "copper_ingot": 8,
+        "wood": 6
+      }
     }
   ]
 }
