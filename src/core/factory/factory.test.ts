@@ -915,3 +915,19 @@ describe('marcher sur les tapis surélevés', () => {
     expect(highSpan.bottom).toBeGreaterThan(1.7); // le joueur (1,7 m) passe dessous
   });
 });
+
+describe('amorçage de la vapeur sans générateur', () => {
+  it('la pompe tourne au ralenti sans courant, ce qui permet de lancer chaudière et turbine', () => {
+    const water: FactoryWorld = {
+      oreAt: () => null,
+      mineOre: () => 0,
+      waterAt: (_gx, gz) => gz < 9, // l'eau est au nord (z < 9), la terre au sud
+    };
+    // Pompe : sortie vers +z (terre), le reste dans l'eau.
+    const pump = emptyMachine(1, 'pump', 0, 8, 0);
+    const f = new Factory([pump], water);
+    run(f, 5);
+    expect(pump.fluid.water).toBeGreaterThan(0);
+    expect(pump.fluid.water).toBeLessThan(5 * 100 * 0.5); // bien moins vite qu'à pleine puissance
+  });
+});

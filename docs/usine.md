@@ -302,3 +302,10 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Gestes de la fenêtre de machine / coffre / buggy** alignés sur le sac : clic = la pile au curseur (ou on y dépose la pile tenue), clic droit = la moitié au curseur, Ctrl + clic = une quantité, Maj + clic = directement dans le sac. Plus de clic droit qui vide dans le sac. Liste complète des commandes à valider : `docs/commandes.md`.
 - **Pas reproduit** : « impossible de poser un tapis jusqu'au bout » contre la chaudière et la foreuse électrique : les tuiles de tapis se posent bien jusque sous ces machines (vérifié en scène). À préciser avec le PO (capture ou description du geste).
 - Vérifié : tests, scène navigateur (fumée de turbine, panneau d'aide). Non vérifié à la souris : nouveaux gestes de coffre / machine, lancement automatique de la recherche.
+
+## Tour 74 — amorçage de la vapeur
+
+- **Cause du « pas de courant »** (captures du PO) : un circuit **uniquement à turbines** ne démarrait jamais : la pompe est électrique, donc sans courant pas d'eau, donc pas de vapeur (chaudière « Pas d'eau », turbine à 11 %), donc pas de courant.
+- **Correctif** : sans courant la pompe tourne à **20 %** (`PUMP_BACKUP`), assez pour amorcer chaudière et turbine ; elle passe à pleine puissance dès que le réseau produit. (Un générateur à combustible dans le même réseau marche toujours aussi.)
+- **Aides dans les panneaux** : « Pas de courant » explique qu'il faut un générateur avec du combustible ou une turbine à ≥ 20 % de pression et vérifier les poteaux ; « Pas d'eau » sur une chaudière renvoie vers la pompe (au bord de l'eau) et les tuyaux jusqu'à l'entrée arrière.
+- Test : pompe sans courant → remplit lentement.

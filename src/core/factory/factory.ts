@@ -180,6 +180,9 @@ export interface Cell {
 /** Écart minimal entre deux objets sur un tapis (en longueurs de tuile de tapis). */
 const GAP = 0.17;
 
+/** Part du débit de la pompe quand le réseau ne lui donne pas de courant. */
+export const PUMP_BACKUP = 0.2;
+
 /** Bras robotique : réserve de combustible (s) sous laquelle il se ravitaille. */
 const ARM_LOW_FUEL_S = 15;
 
@@ -858,7 +861,6 @@ export class Factory {
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
     if (m.type === 'pump') {
       if (!this.pumpsOk.has(m.id)) return 'noWater';
-      if (this.powerFactor(m) <= 0) return 'noPower';
       return m.fluid.water >= (machineDef('pump').fluidCap ?? 100) - 1 ? 'full' : 'running';
     }
     if (m.type === 'boiler') {
@@ -1216,8 +1218,9 @@ export class Factory {
   private tickPump(m: Machine, dt: number): void {
     const def = machineDef('pump');
     if (!this.pumpsOk.has(m.id)) return;
-    const speed = this.powerFactor(m);
-    if (speed <= 0) return;
+    // Sans courant la pompe tourne au ralenti (amorçage à la main) : sinon, pas d'eau, donc pas de vapeur, donc
+    // jamais de courant pour la faire tourner quand on n'a que des turbines.
+    const speed = Math.max(PUMP_BACKUP, this.powerFactor(m));
     m.fluid.water = Math.min(
       def.fluidCap ?? 100,
       m.fluid.water + (def.pumpRate ?? 100) * dt * speed,

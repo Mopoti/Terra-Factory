@@ -630,6 +630,8 @@
   "factory.turbine.help": "It produces from 20 % pressure and at full power (200 kW) at 60 %; steam comes from the boiler.",
   "factory.status.noStudy": "No study chosen: open technologies (T) and start a science-pack research",
   "tech.autoStudy": "Laboratories are studying: {tech}",
+  "factory.hint.noPower": "The grid does not produce enough: a generator needs fuel, or a turbine enough steam (pressure ≥ 20 %). Also check the poles (wire reach).",
+  "factory.hint.noWater": "No water: check the pump (at the water's edge) and the pipes up to the boiler's back inlet. Without power the pump runs at 20 % to prime the circuit.",
   "item.pistol": "Pistol",
   "item.tool_stone": "Stone tool",
   "item.tool_iron": "Iron tool",

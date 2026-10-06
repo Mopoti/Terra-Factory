@@ -630,6 +630,8 @@
   "factory.turbine.help": "Elle produit dès 20 % de pression et à pleine puissance (200 kW) à 60 % ; la vapeur vient de la chaudière.",
   "factory.status.noStudy": "Aucune étude choisie : ouvre les technologies (T) et lance une recherche à paquets de science",
   "tech.autoStudy": "Les laboratoires étudient : {tech}",
+  "factory.hint.noPower": "Le réseau ne produit pas assez : un générateur doit avoir du combustible, ou une turbine assez de vapeur (pression ≥ 20 %). Vérifie aussi les poteaux (portée du câble).",
+  "factory.hint.noWater": "Pas d'eau : vérifie la pompe (au bord de l'eau) et les tuyaux jusqu'à l'entrée arrière de la chaudière. Sans courant la pompe tourne à 20 % pour amorcer le circuit.",
   "item.pistol": "Pistolet",
   "item.tool_stone": "Outil en pierre",
   "item.tool_iron": "Outil en fer",

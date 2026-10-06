@@ -1098,6 +1098,9 @@ export function startGameView(
     const rows: string[] = [];
     rows.push(`<strong>${t(`item.${def.item}` as TranslationKey)}</strong>`);
     rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
+    if (status === 'noPower') rows.push(`<div class="sub">${t('factory.hint.noPower')}</div>`);
+    if (status === 'noWater' && m.type === 'boiler')
+      rows.push(`<div class="sub">${t('factory.hint.noWater')}</div>`);
     if (isDrill(m.type)) {
       const ore = factory.oreUnder(m);
       rows.push(
