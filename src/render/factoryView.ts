@@ -13,7 +13,7 @@ import {
   type MachineType,
 } from '../core/data/machines';
 import {
-  LEVEL_M,
+  levelY,
   LIFTS,
   dims,
   footprint,
@@ -163,6 +163,18 @@ export class FactoryView {
     depthWrite: false,
   });
   private entries = new Map<number, { ex: number; ez: number; curved: boolean }>();
+  /** Fumée (vapeur) qui monte des turbines en marche. */
+  private readonly smoke = new THREE.Points(
+    new THREE.BufferGeometry(),
+    new THREE.PointsMaterial({
+      size: 0.55,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+    }),
+  );
   private ghostKey = '';
 
   constructor(
@@ -176,7 +188,8 @@ export class FactoryView {
     this.ghost.renderOrder = 6;
     this.bodies.castShadow = true;
     this.items.castShadow = false;
-    this.root.add(this.bodies, this.items, this.wires);
+    this.smoke.frustumCulled = false;
+    this.root.add(this.bodies, this.items, this.wires, this.smoke);
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
@@ -208,8 +221,8 @@ export class FactoryView {
     const pts: number[] = [];
     const top = (m: Machine): [number, number, number] => {
       const { w, d } = dims(m.type, m.rot);
-      const h = m.type === 'pole' ? 3.3 + GROW_M : visualHeight(m.type);
-      return [(m.gx + w / 2) * CELL_SIZE_M, h + m.lift * LEVEL_M, (m.gz + d / 2) * CELL_SIZE_M];
+      const h = m.type === 'pole' ? visualHeight(m.type) - 0.3 : visualHeight(m.type);
+      return [(m.gx + w / 2) * CELL_SIZE_M, h + levelY(m.lift), (m.gz + d / 2) * CELL_SIZE_M];
     };
     for (const { from, to } of this.factory.wires) {
       const a = top(from);
@@ -226,6 +239,38 @@ export class FactoryView {
     this.wires.geometry = new THREE.BufferGeometry();
     this.wires.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     this.updateItems();
+  }
+
+  /** Anime la fumée blanche des turbines en marche (appelée à chaque image, `time` en secondes). */
+  updateSmoke(time: number): void {
+    const PER = 7;
+    const pos: number[] = [];
+    const col: number[] = [];
+    for (const m of this.factory.machines) {
+      if (m.type !== 'turbine') continue;
+      const power = this.factory.turbineEfficiency(m);
+      if (power <= 0 || (this.factory.gridInfo(m)?.demandKw ?? 0) <= 0) continue;
+      const { w, d } = dims(m.type, m.rot);
+      const cx = (m.gx + w / 2) * CELL_SIZE_M;
+      const cz = (m.gz + d / 2) * CELL_SIZE_M;
+      const base = visualHeight(m.type) + levelY(m.lift);
+      for (let i = 0; i < PER; i++) {
+        // Phase de chaque volute : elle monte, s'étale et s'éclaircit en s'éloignant.
+        const t = (time * 0.3 + i / PER + m.id * 0.137) % 1;
+        const sway = Math.sin(time * 1.3 + i * 2.1 + m.id) * 0.25 * t;
+        pos.push(
+          cx + sway + Math.sin(i * 12.9) * 0.12,
+          base + t * 2.4,
+          cz + Math.cos(time + i) * 0.15 * t,
+        );
+        const g = 0.95 - 0.35 * t;
+        col.push(g, g, g);
+      }
+    }
+    const geo = this.smoke.geometry;
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    this.smoke.visible = pos.length > 0;
   }
 
   /** Remet les objets à leur place sur les tapis (quelques fois par seconde suffit). */
@@ -337,6 +382,8 @@ export class FactoryView {
     (this.wires.material as THREE.Material).dispose();
     this.ghost.geometry.dispose();
     this.ghostMaterial.dispose();
+    this.smoke.geometry.dispose();
+    (this.smoke.material as THREE.Material).dispose();
   }
 }
 
@@ -346,7 +393,7 @@ function itemHeight(m: Machine, pos: number): number | null {
   if (m.lift === 4) return pos < 0.8 ? BELT_H : null;
   if (m.lift === 5) return pos > 0.2 ? BELT_H : null;
   const { from, to } = LIFTS[m.lift];
-  return BELT_H + LEVEL_M * (from + (to - from) * pos);
+  return BELT_H + levelY(from) + (levelY(to) - levelY(from)) * pos;
 }
 
 /** Dalle inclinée sur une tuile : de la hauteur `y0` au bord arrière à `y1` au bord avant. */
@@ -400,10 +447,10 @@ function ghostBelt(
 ): void {
   const { from, to } = LIFTS[lift] ?? LIFTS[0];
   if (from === to) {
-    mb.box(x, from * LEVEL_M, z, BELT_W, 0.14, BELT_W, color, true);
+    mb.box(x, levelY(from), z, BELT_W, 0.14, BELT_W, color, true);
     return;
   }
-  slope(mb, x, z, rot, Math.max(0, from) * LEVEL_M, Math.max(0, to) * LEVEL_M, 0.14, color);
+  slope(mb, x, z, rot, levelY(from), levelY(to), 0.14, color);
 }
 
 const PORTAL: Rgb = hexToRgb('#2b2d33');
@@ -416,7 +463,7 @@ function pillar(mb: MeshBuilder, m: Machine, factory: Factory, color: Rgb, heigh
     // Rien ne doit traverser le pilier : un tapis ou une machine dessous (sol, ou niveau 1 sous un tapis de niveau 2).
     const under = factory.machineAt(c.gx, c.gz);
     if (under && (under.type !== 'conveyor' || under.lift === 0)) return;
-    if (height > LEVEL_M && factory.machineAt(c.gx, c.gz, 1)) return;
+    if (height > levelY(1) && factory.machineAt(c.gx, c.gz, 1)) return;
   }
   mb.box(
     (m.gx + 1) * CELL_SIZE_M,
@@ -443,7 +490,7 @@ function addBelt(
   const [fx, fz] = RISE_DIR[rot];
   const shape = LIFTS[lift];
   if (shape.from !== shape.to) {
-    const [y0, y1] = [shape.from * LEVEL_M, shape.to * LEVEL_M];
+    const [y0, y1] = [levelY(shape.from), levelY(shape.to)];
     slope(mb, cxm, czm, rot, y0, y1, BELT_H, color);
     // Flèche de sens sur la pente.
     return void arrowOnSlope(mb, cxm, czm, rot, y0, y1, shade(color, 1.9));
@@ -465,7 +512,7 @@ function addBelt(
     arrowOnSlope(mb, cxm, czm, rot, 0.1, 0.1, shade(color, 1.9));
     return;
   }
-  const height = shape.from * LEVEL_M;
+  const height = levelY(shape.from);
   if (height > 0) pillar(mb, m, factory, color, height);
   addFlatBelt(mb, gx, gz, rot, entry, color, height);
 }
@@ -561,10 +608,32 @@ function addFlatBelt(
   );
 }
 
+/** Hauteur à laquelle chaque forme est dessinée (avant l'alignement des fiches sur des multiples de 50 cm). */
+const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
+  drill: 1.3,
+  drill_electric: 1.3,
+  furnace: 1.0,
+  chest_wood: 0.6,
+  chest_iron: 0.6,
+  generator: 1.1,
+  pole: 3.6,
+  splitter: 0.4,
+  merger: 0.4,
+  arm: 0.7,
+  arm_electric: 0.7,
+  assembler: 1.0,
+  lab: 0.9,
+  pipe: 0.3,
+  pump: 0.8,
+  boiler: 1.5,
+  turbine: 1.1,
+  turret: 0.9,
+};
+
 /** Monte tout ce qui a été dessiné depuis `start` à la hauteur du niveau (machine posée à l'étage). */
 function liftBody(mb: MeshBuilder, start: number, level: number): void {
   if (level <= 0) return;
-  for (let i = start + 1; i < mb.positions.length; i += 3) mb.positions[i] += level * LEVEL_M;
+  for (let i = start + 1; i < mb.positions.length; i += 3) mb.positions[i] += levelY(level);
 }
 
 /** Agrandit le corps d'une machine de 10 cm en largeur, longueur et hauteur (autour de son centre au sol). */
@@ -572,12 +641,14 @@ function growBody(mb: MeshBuilder, start: number, m: Machine): void {
   const { w, d } = dims(m.type, m.rot);
   const W = w * CELL_SIZE_M;
   const D = d * CELL_SIZE_M;
-  const H = machineDef(m.type).height;
+  // Les formes sont dessinées à l'ancienne hauteur : on les ramène à la hauteur de la fiche (multiple de 50 cm).
+  const H = DRAWN_HEIGHT[m.type] ?? machineDef(m.type).height;
+  const target = machineDef(m.type).height;
   const cx = (m.gx + w / 2) * CELL_SIZE_M;
   const cz = (m.gz + d / 2) * CELL_SIZE_M;
   const kx = (W + GROW_M) / W;
   const kz = (D + GROW_M) / D;
-  const ky = (H + GROW_M) / H;
+  const ky = (target + GROW_M) / H;
   const p = mb.positions;
   for (let i = start; i < p.length; i += 3) {
     p[i] = cx + (p[i] - cx) * kx;

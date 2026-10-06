@@ -77,7 +77,7 @@ import {
 } from '../core/data/machines';
 import {
   Factory,
-  LEVEL_M,
+  levelY,
   UPPER_LEVEL,
   LIFTS,
   LIFT_NEXT,
@@ -708,7 +708,7 @@ export function startGameView(
     const thin = m.type === 'pole';
     return {
       x: (m.gx + w / 2) * CELL_SIZE_M,
-      y: h / 2 + (m.type === 'conveyor' ? 0 : m.lift * LEVEL_M),
+      y: h / 2 + (m.type === 'conveyor' ? 0 : levelY(m.lift)),
       z: (m.gz + d / 2) * CELL_SIZE_M,
       sx: thin ? 0.3 : w * CELL_SIZE_M + grow,
       sy: h,
@@ -842,7 +842,7 @@ export function startGameView(
     computeRay();
     // Machine à l'étage : on vise le plan de la dalle (2,5 m) ; elle exige une dalle d'étage sous chacune de ses cases.
     const upper = !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL;
-    const c = cellOnPlane(rayOrigin, rayDir, upper ? 2 * LEVEL_M : 0);
+    const c = cellOnPlane(rayOrigin, rayDir, upper ? levelY(UPPER_LEVEL) : 0);
     const down = input.isActionActive('interact');
     if (!c) {
       factoryView.hideGhost();
@@ -967,7 +967,7 @@ export function startGameView(
     };
     // En l'air, la case visée est celle du plan à 1 m (sinon le tracé dérive à cause de la perspective).
     const aimLevel = machinePath.length > 0 ? levelAfter(dragLifts[dragLifts.length - 1] ?? 0) : 0;
-    const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, aimLevel * LEVEL_M) : null;
+    const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, levelY(aimLevel)) : null;
     const snap = rampSnap(cAir ?? c);
     // Le patron suit l'inclinaison choisie, au niveau du tapis visé (sol si rien n'est visé).
     baseLift = tiltLift(snap?.level ?? 0, buildTilt);
@@ -1138,6 +1138,7 @@ export function startGameView(
         rows.push(
           `<div>${t('factory.fluid.pressure', { v: String(Math.round((m.fluid.steam / cap) * 100)) })}</div>`,
           `<div>${t('factory.turbine.output', { kw: String(Math.round(factory.turbineKw(m))) })}</div>`,
+          `<div class="sub">${t('factory.turbine.help')}</div>`,
         );
       }
     } else if (isTurret(m.type)) {
@@ -1188,7 +1189,7 @@ export function startGameView(
       const g = factory.gridInfo(m);
       rows.push(
         g && g.machines > 0
-          ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(g.capacityKw), demand: String(g.demandKw) })}</div>`
+          ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(Math.round(g.capacityKw)), demand: String(Math.round(g.demandKw)) })}</div>`
           : `<div class="sub">${t('factory.power.unlinked')}</div>`,
       );
     } else if (m.type === 'generator') {
@@ -1243,8 +1244,9 @@ export function startGameView(
           v: g
             ? t('factory.power.consumer', {
                 kw: String(def.consumesKw),
-                demand: String(g.demandKw),
-                cap: String(g.capacityKw),
+                demand: String(Math.round(g.demandKw)),
+                cap: String(Math.round(g.capacityKw)),
+                pct: String(Math.round(g.satisfaction * 100)),
               })
             : t('factory.power.none', { m: String(machineDef('pole').linkReachM ?? 4) }),
         })}</div>`,
@@ -2361,6 +2363,15 @@ export function startGameView(
     // Usine : 20 pas de simulation par seconde, affichage des objets sur les tapis 10 fois par seconde.
     if (!paused) {
       simAcc = Math.min(simAcc + dt, 0.5);
+      // Un laboratoire qui a des paquets mais pas d'étude choisie lance la première technologie disponible.
+      if (
+        !options.state.changes.researching &&
+        factory.machines.some((m) => m.type === 'lab' && (m.input?.count ?? 0) > 0)
+      ) {
+        const id = options.state.autoStudy();
+        if (id)
+          options.onMessage?.(t('tech.autoStudy', { tech: t(`tech.${id}` as TranslationKey) }));
+      }
       while (simAcc >= 0.05) {
         factory.labDemand = options.state.studyRemaining();
         factory.tick(0.05);
@@ -2369,6 +2380,7 @@ export function startGameView(
       }
     }
     if (!paused) updateThreat(dt);
+    factoryView.updateSmoke(now / 1000);
     enemyView.update(
       threat.enemies,
       (e) => {

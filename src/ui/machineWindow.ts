@@ -13,7 +13,7 @@ import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
-import { takeAsked, takeHalf, updateHandCursor } from './pick';
+import { askAmount, takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
 
 export interface MachineWindow {
@@ -168,23 +168,41 @@ export function mountMachineWindow(
         dragging = false;
         drop(m, slot, item);
       });
-      box.addEventListener('click', (e) => {
-        // Maj + clic : la pile revient dans le sac.
-        if (e.shiftKey) {
-          if (state.unloadMachine(m, slot) > 0) playSfx('pickup');
-          return render();
-        }
-        if (state.hand) return dropHand(m, slot);
-        if (selected) drop(m, slot, selected);
-      });
     }
     row.append(box);
     const take = el('button', undefined, t('machine.take'));
     take.type = 'button';
     take.disabled = stack === null;
+    // Mêmes gestes que dans le sac : clic = la pile au curseur (ou on y dépose la pile du curseur), clic droit =
+    // la moitié, Ctrl + clic = une quantité, Maj + clic = directement dans l'autre inventaire.
+    box.addEventListener('click', (e) => {
+      if (e.shiftKey) {
+        if (stack && state.unloadMachine(m, slot) > 0) playSfx('pickup');
+        return render();
+      }
+      if (state.hand) {
+        if (slot === 'stock') return playSfx('deny');
+        return dropHand(m, slot);
+      }
+      if (e.ctrlKey || e.metaKey) {
+        if (!stack) return;
+        void askAmount(itemName(stack.item), stack.count, e).then((n) => {
+          if (n !== null && state.takeSlotToHand(m, slot, n) > 0) playSfx('pickup');
+          render();
+        });
+        return;
+      }
+      if (selected && slot !== 'stock') return drop(m, slot, selected);
+      if (stack && state.takeSlotToHand(m, slot, stack.count) > 0) playSfx('pickup');
+      render();
+    });
     box.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      if (stack && state.unloadMachine(m, slot, Math.max(1, Math.ceil(stack.count / 2))) > 0)
+      if (
+        stack &&
+        !state.hand &&
+        state.takeSlotToHand(m, slot, Math.max(1, Math.ceil(stack.count / 2))) > 0
+      )
         playSfx('pickup');
       render();
     });
@@ -321,14 +339,29 @@ export function mountMachineWindow(
           dragging = false;
           render();
         });
-        cell.addEventListener('click', () => {
+        cell.addEventListener('click', (e) => {
           if (state.hand) return putInChest(m, state.hand.item);
-          if (state.takeFromChest(m, i) > 0) playSfx('pickup');
+          // Maj + clic : directement dans le sac ; Ctrl + clic : une quantité ; sinon la pile au curseur.
+          if (e.shiftKey) {
+            if (state.takeFromChest(m, i) > 0) playSfx('pickup');
+            return render();
+          }
+          if (e.ctrlKey || e.metaKey) {
+            void askAmount(itemName(stack.item), stack.count, e).then((n) => {
+              if (n !== null && state.takeChestToHand(m, i, n) > 0) playSfx('pickup');
+              render();
+            });
+            return;
+          }
+          if (state.takeChestToHand(m, i, stack.count) > 0) playSfx('pickup');
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          if (state.takeFromChest(m, i, Math.max(1, Math.ceil(stack.count / 2))) > 0)
+          if (
+            !state.hand &&
+            state.takeChestToHand(m, i, Math.max(1, Math.ceil(stack.count / 2))) > 0
+          )
             playSfx('pickup');
           render();
         });
@@ -398,7 +431,17 @@ export function mountMachineWindow(
           if (state.hand) return putIngredient(m, state.hand.item);
           if (selected) return putIngredient(m, selected);
           const index = m.slots.findIndex((x) => x.item === item);
-          if (index >= 0 && state.takeFromChest(m, index) > 0) playSfx('pickup');
+          if (index >= 0 && state.takeChestToHand(m, index, m.slots[index].count) > 0)
+            playSfx('pickup');
+          render();
+        });
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          const index = m.slots.findIndex((x) => x.item === item);
+          if (index >= 0 && !state.hand) {
+            state.takeChestToHand(m, index, Math.max(1, Math.ceil(m.slots[index].count / 2)));
+            playSfx('pickup');
+          }
           render();
         });
         cell.addEventListener('dragover', (e) => {

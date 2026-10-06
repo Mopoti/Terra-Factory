@@ -92,7 +92,9 @@ export const LIFT_NEXT = [0, 2, 2, 0, 0, 0, 7, 7, 2] as const;
 export const TUNNEL_MAX_TILES = 8;
 export const LIFT_COUNT = LIFTS.length;
 /** Hauteur d'un niveau (m). */
-export const LEVEL_M = 1.25;
+/** Hauteur (m) de chaque niveau, en multiples de 50 cm : sol, 1 m, 2,5 m (un étage : la dalle). */
+export const LEVEL_HEIGHTS = [0, 1, 2.5] as const;
+export const levelY = (level: number): number => LEVEL_HEIGHTS[level] ?? 0;
 /** Niveau d'entrée d'une pièce : un tapis suit sa forme ; une machine est au sol (0) ou à l'étage sur une dalle (2). */
 export const liftStart = (m: Machine): number =>
   m.type === 'conveyor' ? LIFTS[m.lift].from : m.lift;
@@ -149,6 +151,7 @@ export type MachineStatus =
   | 'running'
   | 'idle'
   | 'noAmmo'
+  | 'noStudy'
   | 'noFuel'
   | 'noOre'
   | 'full'
@@ -720,7 +723,7 @@ export class Factory {
       // Avancement 0 → 1 le long de la tuile (2 × 2 cases) dans le sens du tapis.
       const raw = dx !== 0 ? (dx > 0 ? fx : 2 - fx) : dz > 0 ? fz : 2 - fz;
       const along = Math.min(1, Math.max(0, raw / 2));
-      const top = (from + (to - from) * along) * LEVEL_M + 0.12;
+      const top = levelY(from) + (levelY(to) - levelY(from)) * along + 0.12;
       out.push({ bottom: top - 0.2, top, belt: m });
     }
     return out;
@@ -870,6 +873,7 @@ export class Factory {
     if (isTurret(m.type)) return this.turretReady(m) ? 'idle' : 'noAmmo';
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
+      if ((m.input?.count ?? 0) > 0 && this.labDemand <= 0) return 'noStudy';
       return this.labWorking(m) ? 'running' : 'idle';
     }
     if (isArm(m.type)) {
@@ -1190,7 +1194,8 @@ export class Factory {
 
   /** Turbine : rendement (0 à 1) selon la pression de vapeur : rien sous 20 %, plein à 60 %. */
   turbineEfficiency(m: Machine): number {
-    return Math.min(1, Math.max(0, (fluidLevel(m, 'steam') - 0.2) / 0.4));
+    const e = Math.min(1, Math.max(0, (fluidLevel(m, 'steam') - 0.2) / 0.4));
+    return e < 0.01 ? 0 : e;
   }
 
   turbineKw(m: Machine): number {
@@ -1519,13 +1524,13 @@ export function pickMachine(
     const gx = Math.floor(px / CELL_SIZE_M);
     const gz = Math.floor(pz / CELL_SIZE_M);
     // En l'air : tapis surélevés (niveaux 1 et 2), rampes, machines posées à l'étage.
-    if (y >= LEVEL_M - 0.4) {
+    if (y >= levelY(1) - 0.4) {
       const one = factory.machineAt(gx, gz, 1);
-      if (one && y <= (one.lift === 6 ? 2 * LEVEL_M + 0.3 : LEVEL_M + 0.3))
+      if (one && y <= (one.lift === 6 ? levelY(2) + 0.3 : levelY(1) + 0.3))
         return { machine: one, t };
       const two = factory.machineAt(gx, gz, 2);
       if (two) {
-        const floor = 2 * LEVEL_M;
+        const floor = levelY(2);
         const ok =
           two.type !== 'conveyor'
             ? y >= floor && y <= floor + visualHeight(two.type)
@@ -1544,7 +1549,7 @@ export function pickMachine(
     const m = factory.machineAt(gx, gz);
     const top =
       m && m.type === 'conveyor' && m.lift !== 0
-        ? Math.max(LIFTS[m.lift].from, LIFTS[m.lift].to) * LEVEL_M + 0.15
+        ? levelY(Math.max(LIFTS[m.lift].from, LIFTS[m.lift].to)) + 0.15
         : m
           ? visualHeight(m.type)
           : 0;

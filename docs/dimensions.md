@@ -32,8 +32,9 @@ Arbre 4,2 m (tronc seul bloquant), rocher 0,8 m, buisson de fibres 0,6 m, minera
 3. Emprises **impaires** (3 × 3) : leur centre tombe au milieu d'une case alors que celui des tuiles (2 × 2) tombe sur une arête ; les raccordements doivent alors se décaler d'une demi-case.
 4. Le joueur (1,7 m) = 3,4 couches : un tapis à 1,25 m le bloque, à 2,5 m il passe dessous, mais un niveau intermédiaire à 2 m (= 4 couches) le laisserait aussi passer.
 
-## Proposition (à valider)
+## Appliqué (validé par le PO au Tour 73)
 
 - **Toutes les hauteurs en multiples de 50 cm** : machines arrondies (0,5 / 1,0 / 1,5 m), poteau 3,5 m.
-- **Niveaux de tapis alignés sur les blocs** : sol 0 ; **niveau 1 = 1,0 m** (rampe à 45° sur une tuile) ; **niveau 2 = 2,5 m** (un étage, pour poser des machines sur les dalles existantes). La rampe 1 → 2 fait 1,5 m de dénivelé : soit sur **1,5 tuile (3 cases, 45°)**, soit sur 1 tuile (56°).
+- **Niveaux de tapis alignés sur les blocs** : sol 0 ; **niveau 1 = 1,0 m** (rampe à 45° sur une tuile) ; **niveau 2 = 2,5 m** (un étage, pour poser des machines sur les dalles existantes). La rampe 1 → 2 fait 1,5 m de dénivelé sur **1 tuile (≈ 56°)** : une rampe à 45° demanderait une tuile de 1,5 m, que la grille de 2 cases ne permet pas. Les emprises impaires (3 × 3) restent.
+- Hauteurs des machines arrondies : foreuses 1,5 · four, générateur, assembleur, laboratoire, turbine, pompe, tourelle 1,0 · chaudière 1,5 · coffres, bras, séparateur, groupeur 0,5 · tuyau 0,5 · poteau 3,5 (le corps dessiné reste 10 cm plus grand).
 - Garder les tuiles de tapis à 1 m (2 × 2 cases) ; les emprises impaires restent (il n'y a pas de raison de les changer).

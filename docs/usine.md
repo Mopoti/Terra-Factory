@@ -286,8 +286,19 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Vérifié : tests (tourelle, saisons, ennemis / temps / véhicules enregistrés), scènes navigateur (buggy qui roule et se ravitaille, hiver enneigé). Non vérifié à la souris : pose du buggy au clic, tir réel des tourelles sur des ennemis, équilibrage ressenti.
 
 ## Tour 72 — coffre du buggy, tilt du patron, marcher sur les tapis en l'air
+
 - **Buggy** : clic gauche dessus (à ≤ 8 m, visé) ou **inventaire au volant** → ouvre son coffre (16 cases, comme un coffre en bois ; objet `vehicles[].slots` sauvegardé) pour mettre du carburant (charbon / bois, consommés d'abord dans le coffre puis dans le sac) et des objets ; rangé, tout revient dans le sac.
 - **Patron incliné** : PageUp incline le patron vers le haut, PageDown le remet à plat puis l'incline vers le bas (au sol : entrée de tunnel). Le patron se cale sur la **tranche** du tapis visé (au niveau de son extrémité) et prend la forme qui convient : du niveau 1 on peut monter au niveau 2 (rampe 1 → 2), du niveau 2 redescendre. Viser un tapis au sol avec une inclinaison le prolonge par une rampe. (Pendant un tracé à la souris, PageUp / PageDown gardent leur rôle « monter / descendre d'un niveau ».)
 - **Marcher sur les tapis en l'air** : le joueur monte les rampes, marche sur les tapis de niveau 1 et 2 (dessus, physique `beltSpansAt`), s'y cogne par le côté / se cogne la tête sous un tapis, passe dessous au niveau 2, et est emporté par le tapis sur lequel il se tient.
 - **Dimensions** : état et incohérences repérées dans `docs/dimensions.md` ; en attente de la validation du PO avant de changer les hauteurs.
 - Vérifié : tests (coffre du buggy enregistré, surfaces des tapis), scènes navigateur (le joueur monte la rampe et marche à 1,37 m ; le patron incliné devient « rampe montante vers le niveau 2 » sur un tapis de niveau 1). Non vérifié à la souris : clic sur le buggy, pose complète d'une rampe vers le niveau 2.
+
+## Tour 73 — hauteurs en multiples de 50 cm, laboratoire, fumée de turbine, gestes d'inventaire
+
+- **Dimensions** (validées par le PO) : niveaux de tapis **0 / 1 m / 2,5 m** (`levelY`) ; rampe 1 → 2,5 m sur une tuile (≈ 56°) ; hauteurs des machines arrondies à 50 cm (`content/machines.json`), formes redessinées pour garder le même aspect. Emprises impaires conservées. Voir `docs/dimensions.md`.
+- **Laboratoire** : les paquets n'étaient pas consommés parce qu'**aucune recherche n'était choisie** (la fenêtre des technologies, T, lance l'étude). Maintenant : un laboratoire qui a des paquets lance seul la première technologie à paquets disponible (message), et son statut dit « Aucune étude choisie » quand il attend.
+- **Électricité** : le panneau affichait « réseau : 150 / 1,05e-12 kW » (puissance de turbine quasi nulle par erreur d'arrondi : la turbine sans pression suffisante). Corrigé : sous 1 % de rendement la turbine produit 0, les nombres sont arrondis et le texte dit « le réseau produit X kW pour Y kW demandés (Z % alimenté) ». Le panneau de la turbine explique la pression (produit dès 20 %, pleine puissance à 60 %).
+- **Fumée** : de la vapeur blanche monte des turbines en marche (`updateSmoke`).
+- **Gestes de la fenêtre de machine / coffre / buggy** alignés sur le sac : clic = la pile au curseur (ou on y dépose la pile tenue), clic droit = la moitié au curseur, Ctrl + clic = une quantité, Maj + clic = directement dans le sac. Plus de clic droit qui vide dans le sac. Liste complète des commandes à valider : `docs/commandes.md`.
+- **Pas reproduit** : « impossible de poser un tapis jusqu'au bout » contre la chaudière et la foreuse électrique : les tuiles de tapis se posent bien jusque sous ces machines (vérifié en scène). À préciser avec le PO (capture ou description du geste).
+- Vérifié : tests, scène navigateur (fumée de turbine, panneau d'aide). Non vérifié à la souris : nouveaux gestes de coffre / machine, lancement automatique de la recherche.

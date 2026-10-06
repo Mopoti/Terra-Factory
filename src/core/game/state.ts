@@ -9,7 +9,7 @@ import {
   type Machine,
   type Stack,
 } from '../factory/factory';
-import { SCIENCE_PACK, scienceCost, techById, techFor } from '../data/techs';
+import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
@@ -256,6 +256,34 @@ export class GameState {
     }
     this.inventory = remove(this.inventory, item, n).inventory;
     this.hand = { item, count: (this.hand?.count ?? 0) + n };
+    this.emit({ type: 'inventory' });
+    return n;
+  }
+
+  /** Prend des objets d'une case de coffre (ou d'ingrédient d'assembleur) au bout du curseur. */
+  takeChestToHand(m: Machine, index: number, count: number): number {
+    const st = m.slots[index];
+    if (!st || (this.hand && this.hand.item !== st.item)) return 0;
+    const n = Math.min(count, st.count);
+    if (n <= 0) return 0;
+    st.count -= n;
+    if (st.count <= 0) m.slots.splice(index, 1);
+    this.hand = { item: st.item, count: (this.hand?.count ?? 0) + n };
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return n;
+  }
+
+  /** Prend des objets d'une case de machine (combustible, entrée, sortie) au bout du curseur. */
+  takeSlotToHand(m: Machine, slot: 'fuel' | 'input' | 'stock', count: number): number {
+    const st = m[slot];
+    if (!st || (this.hand && this.hand.item !== st.item)) return 0;
+    const n = Math.min(count, st.count);
+    if (n <= 0) return 0;
+    st.count -= n;
+    if (st.count <= 0) m[slot] = null;
+    this.hand = { item: st.item, count: (this.hand?.count ?? 0) + n };
+    this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return n;
   }
@@ -561,6 +589,18 @@ export class GameState {
     this.changes.researching = id;
     this.emit({ type: 'factory' });
     return 'ok';
+  }
+
+  /** Sans étude choisie, les laboratoires qui ont des paquets étudient la première technologie disponible. */
+  autoStudy(): string | null {
+    if (this.changes.researching) return null;
+    for (const tech of TECHS) {
+      if (scienceCost(tech) <= 0 || this.changes.unlocked.includes(tech.id)) continue;
+      if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) continue;
+      this.study(tech.id);
+      return tech.id;
+    }
+    return null;
   }
 
   /** Paquets de science encore à étudier pour la technologie en cours. */

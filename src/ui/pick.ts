@@ -49,6 +49,30 @@ export function takeHalf(
   state.takeToHand(item, Math.max(1, Math.ceil(stackCount / 2)), slot);
 }
 
+/** Demande une quantité (1 à `max`) au joueur ; null s'il annule. */
+export async function askAmount(
+  itemName: string,
+  max: number,
+  at: MouseEvent,
+): Promise<number | null> {
+  last = { x: at.clientX, y: at.clientY };
+  const value = await promptModal({
+    title: itemName,
+    label: t('inv.pickLabel', { max: String(max) }),
+    value: String(max),
+    confirmLabel: t('inv.pickConfirm'),
+    cancelLabel: t('inv.pickCancel'),
+    maxLength: 4,
+    validate: (v) => {
+      const n = Number(v);
+      return Number.isInteger(n) && n >= 1 && n <= max
+        ? null
+        : t('inv.pickInvalid', { max: String(max) });
+    },
+  });
+  return value === null ? null : Number(value);
+}
+
 /** Ctrl + clic gauche : le joueur choisit la quantité à prendre. */
 export async function takeAsked(
   state: GameState,
@@ -58,20 +82,6 @@ export async function takeAsked(
   at: MouseEvent,
   slot?: number,
 ): Promise<void> {
-  last = { x: at.clientX, y: at.clientY };
-  const value = await promptModal({
-    title: itemName,
-    label: t('inv.pickLabel', { max: String(stackCount) }),
-    value: String(stackCount),
-    confirmLabel: t('inv.pickConfirm'),
-    cancelLabel: t('inv.pickCancel'),
-    maxLength: 4,
-    validate: (v) => {
-      const n = Number(v);
-      return Number.isInteger(n) && n >= 1 && n <= stackCount
-        ? null
-        : t('inv.pickInvalid', { max: String(stackCount) });
-    },
-  });
-  if (value !== null) state.takeToHand(item, Number(value), slot);
+  const n = await askAmount(itemName, stackCount, at);
+  if (n !== null) state.takeToHand(item, n, slot);
 }
