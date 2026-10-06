@@ -1210,6 +1210,25 @@ describe('ennemis et temps enregistrés', () => {
     expect(c.enemies).toHaveLength(1);
     expect(c.enemies[0].home).toEqual({ x: 1, z: 2 });
     expect(c.time).toBe(125.5);
-    expect(c.vehicles).toEqual([{ id: 1, x: 2, z: 3, yaw: 1, fuel: 40, slots: [] }]);
+    expect(c.vehicles).toEqual([
+      { id: 1, x: 2, z: 3, yaw: 1, fuel: 40, fuelStack: null, slots: [] },
+    ]);
+  });
+});
+
+describe('carburant du buggy', () => {
+  it('le buggy consomme d’abord sa case de carburant, puis son coffre, puis le sac', () => {
+    const s = new GameState({ inventory: { vehicle_buggy: 1, coal: 1, wood: 1 } });
+    const v = s.placeVehicle(0, 0, 0)!;
+    v.fuelStack = { item: 'coal', count: 1 };
+    v.slots.push({ item: 'wood', count: 1 });
+    expect(s.refuelVehicle(v)).toBeGreaterThan(0); // la case de carburant (charbon)
+    expect(v.fuelStack).toBeNull();
+    const second = s.refuelVehicle(v); // le coffre (bois)
+    expect(second).toBeGreaterThan(0);
+    expect(v.slots).toHaveLength(0);
+    expect(s.refuelVehicle(v)).toBeGreaterThan(0); // le sac (charbon, puis bois)
+    expect(s.refuelVehicle(v)).toBeGreaterThan(0);
+    expect(s.refuelVehicle(v)).toBe(0);
   });
 });

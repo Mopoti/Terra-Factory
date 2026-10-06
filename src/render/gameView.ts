@@ -1725,6 +1725,11 @@ export function startGameView(
       vehicleChests.set(v.id, m);
     }
     m.slots = v.slots;
+    // La case de carburant et les secondes de route restantes sont celles du buggy.
+    if (!Object.getOwnPropertyDescriptor(m, 'fuel')?.get) {
+      Object.defineProperty(m, 'fuel', { get: () => v.fuelStack, set: (x) => (v.fuelStack = x) });
+      Object.defineProperty(m, 'fuelLeft', { get: () => v.fuel, set: (x) => (v.fuel = x) });
+    }
     return m;
   }
   /** Le rayon de visée touche-t-il ce buggy (sphère autour de lui) ? */

@@ -692,7 +692,7 @@ export class GameState {
     if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
     this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;
     const id = this.changes.vehicles.reduce((m, v) => Math.max(m, v.id), 0) + 1;
-    const v: Vehicle = { id, x, z, yaw, fuel: 0, slots: [] };
+    const v: Vehicle = { id, x, z, yaw, fuel: 0, fuelStack: null, slots: [] };
     this.changes.vehicles.push(v);
     this.emit({ type: 'inventory' });
     return v;
@@ -704,27 +704,45 @@ export class GameState {
     if (i < 0) return false;
     const [v] = this.changes.vehicles.splice(i, 1);
     this.giveBack('vehicle_buggy', 1, { x: v.x, z: v.z });
-    for (const st of v.slots) this.giveBack(st.item, st.count, { x: v.x, z: v.z });
+    for (const st of [v.fuelStack, ...v.slots])
+      if (st) this.giveBack(st.item, st.count, { x: v.x, z: v.z });
     this.emit({ type: 'inventory' });
     return true;
   }
 
   /** Remplit le réservoir du buggy avec un combustible du sac (renvoie les secondes de route ajoutées, 0 s'il n'y en a pas). */
   refuelVehicle(v: Vehicle): number {
-    for (const item of ['coal', 'wood']) {
-      const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
-      if (seconds <= 0) continue;
-      // D'abord le coffre du buggy, puis le sac.
-      const stack = v.slots.find((x) => x.item === item);
-      if (stack) {
-        stack.count--;
-        if (stack.count <= 0) v.slots.splice(v.slots.indexOf(stack), 1);
-      } else if ((this.inventory[item] ?? 0) >= 1) {
-        this.inventory = remove(this.inventory, item, 1).inventory;
-      } else continue;
-      v.fuel += seconds;
+    // D'abord la case de carburant, puis le coffre du buggy, puis le sac.
+    const take = (): { seconds: number } | null => {
+      const f = v.fuelStack;
+      if (f && itemById(f.item).fuelSeconds) {
+        f.count--;
+        if (f.count <= 0) v.fuelStack = null;
+        return { seconds: (itemById(f.item).fuelSeconds ?? 0) * 0.5 };
+      }
+      for (const item of ['coal', 'wood']) {
+        const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
+        const stack = v.slots.find((x) => x.item === item);
+        if (stack) {
+          stack.count--;
+          if (stack.count <= 0) v.slots.splice(v.slots.indexOf(stack), 1);
+          return { seconds };
+        }
+      }
+      for (const item of ['coal', 'wood']) {
+        const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
+        if ((this.inventory[item] ?? 0) >= 1) {
+          this.inventory = remove(this.inventory, item, 1).inventory;
+          return { seconds };
+        }
+      }
+      return null;
+    };
+    const got = take();
+    if (got) {
+      v.fuel += got.seconds;
       this.emit({ type: 'inventory' });
-      return seconds;
+      return got.seconds;
     }
     return 0;
   }
@@ -848,7 +866,8 @@ export class GameState {
    */
   loadMachine(m: Machine, slot: 'fuel' | 'input', item: string, count: number): number {
     const max = machineDef(m.type).stockMax ?? 100;
-    if (slot === 'fuel' && (!machineDef(m.type).fuel || !itemById(item).fuelSeconds)) return 0;
+    if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).fuelSeconds))
+      return 0;
     if (
       slot === 'input' &&
       !(m.type === 'furnace' && smeltRecipe(item)) &&

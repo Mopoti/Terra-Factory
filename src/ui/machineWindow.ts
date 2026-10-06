@@ -96,7 +96,7 @@ export function mountMachineWindow(
 
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
-    (slot === 'fuel' && machineDef(m.type).fuel && !!itemById(item).fuelSeconds) ||
+    (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).fuelSeconds) ||
     (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item)) ||
     (slot === 'input' && m.type === 'lab' && item === 'science_pack') ||
     (slot === 'input' && m.type === 'turret' && item === 'magazine');
@@ -537,7 +537,7 @@ export function mountMachineWindow(
       ),
     );
     if (isChest(m.type)) rows.append(chestGrid(m), el('small', 'help', t('machine.chestHint')));
-    if (def.fuel) {
+    if (def.fuel || m.id < 0) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));
       live.fuel = fuelInfo;
@@ -575,9 +575,10 @@ export function mountMachineWindow(
     const layout = el('div', 'inv-layout');
     layout.append(bagColumn(m), rows);
     panel.append(layout);
-    panel.append(
-      el('small', 'help', `${footprint(m.type, m.gx, m.gz, m.rot).length} ${t('machine.cells')}`),
-    );
+    if (m.id >= 0)
+      panel.append(
+        el('small', 'help', `${footprint(m.type, m.gx, m.gz, m.rot).length} ${t('machine.cells')}`),
+      );
     const x = el('button', 'panel-close', '✕');
     x.type = 'button';
     x.title = t('inv.close');

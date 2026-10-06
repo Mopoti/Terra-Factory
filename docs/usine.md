@@ -309,3 +309,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Correctif** : sans courant la pompe tourne à **20 %** (`PUMP_BACKUP`), assez pour amorcer chaudière et turbine ; elle passe à pleine puissance dès que le réseau produit. (Un générateur à combustible dans le même réseau marche toujours aussi.)
 - **Aides dans les panneaux** : « Pas de courant » explique qu'il faut un générateur avec du combustible ou une turbine à ≥ 20 % de pression et vérifier les poteaux ; « Pas d'eau » sur une chaudière renvoie vers la pompe (au bord de l'eau) et les tuyaux jusqu'à l'entrée arrière.
 - Test : pompe sans courant → remplit lentement.
+
+## Tour 75 — case de carburant du buggy
+
+- La fenêtre du buggy a maintenant un champ **Combustible** (comme les machines : charbon, bois…) en plus du coffre (`vehicles[].fuelStack`, sauvegardé), avec le temps de route restant. Le buggy consomme d'abord cette case, puis le charbon / bois de son coffre, puis ceux du sac. Rangé, tout revient dans le sac. Test.
