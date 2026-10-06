@@ -169,3 +169,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 59 — seul le menu pause fige le jeu
 - Les fenêtres **machine / coffre**, **sac**, **carte (M)** et **technologies (T)** ne mettent plus le jeu en pause : l'usine, les ennemis et la pollution continuent, et le joueur peut marcher (la souris est libre, le clic ne récolte ni ne démolit, la caméra ne tourne pas). **Seul le menu ouvert par Échap fige le jeu.**
 - Vérifié en navigateur : étude d'une technologie en laboratoire pendant que la fenêtre Technologies reste ouverte (l'avancement progresse).
+
+## Tour 60 — machines pleines, tapis qui emportent
+- Le joueur **ne traverse plus les machines ni les tuyaux** (toute leur emprise bloque, comme un mur) ; les **tapis se marchent**. Si une machine est posée sur le joueur, il peut en sortir librement.
+- Un **tapis emporte le joueur** qui s'y tient (au sol), dans le sens du tapis, à la vitesse des objets (0,75 m/s), tant qu'aucun obstacle ne bloque ; marcher dans le sens contraire ralentit, dans le même sens accélère.
+- Vérifié en navigateur : le joueur posé sur deux tuiles de tapis est emmené jusqu'au bout (21,2 → 23,0 m) puis s'arrête avant le fourneau (en marchant vers lui il reste à 23,5 m, devant la machine qui commence à 24 m).

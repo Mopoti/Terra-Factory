@@ -1237,8 +1237,14 @@ export function startGameView(
     options.onViewChange?.(rig.view);
   }
 
+  /** Les machines et les tuyaux sont pleins (on ne les traverse pas) ; les tapis se marchent. */
+  const machineSolidAt = (xM: number, zM: number): boolean => {
+    const m = factory.machineAt(Math.floor(xM / CELL_SIZE_M), Math.floor(zM / CELL_SIZE_M));
+    return m !== null && m.type !== 'conveyor';
+  };
   const isBlockedAt = (xM: number, zM: number): boolean =>
-    blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`);
+    blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`) ||
+    machineSolidAt(xM, zM);
   /** Distance parcourue au dernier pas : une pente d'escalier se monte même à faible nombre d'images/s. */
   let stepSlack = 0;
   const canStand = (x: number, z: number): boolean => {
@@ -1303,6 +1309,24 @@ export function startGameView(
               : 'stepGrass';
     playSfx(id, sprinting ? 1.25 : 1);
   }
+  /** Un tapis emporte le joueur qui s'y tient (à la vitesse des objets), tant que rien ne le bloque. */
+  function carryByBelt(dt: number): void {
+    if (!onGround || playerY > 0.2) return;
+    const m = factory.machineAt(
+      Math.floor(playerX / CELL_SIZE_M),
+      Math.floor(playerZ / CELL_SIZE_M),
+    );
+    if (!m || m.type !== 'conveyor') return;
+    const [dx, dz] = RISE_DIR[m.rot];
+    const dist = (machineDef('conveyor').cellsPerSecond ?? 0.75) * 2 * CELL_SIZE_M * dt;
+    const nx = playerX + dx * dist;
+    const nz = playerZ + dz * dist;
+    if (canStand(nx, nz)) {
+      playerX = nx;
+      playerZ = nz;
+    } else if (canStand(nx, playerZ)) playerX = nx;
+    else if (canStand(playerX, nz)) playerZ = nz;
+  }
   const obstacleAt = (x: number, y: number, z: number): boolean => {
     const h = obstacles.get(`${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`);
     return h !== undefined && y < h;
@@ -1333,7 +1357,9 @@ export function startGameView(
     const nz = playerZ + dirZ * speed * dt;
     const ox = playerX;
     const oz = playerZ;
-    if (canStand(nx, nz)) {
+    // Coincé dans une machine posée sur soi : on peut en sortir librement.
+    const stuck = machineSolidAt(playerX, playerZ);
+    if (stuck || canStand(nx, nz)) {
       playerX = nx;
       playerZ = nz;
     } else if (canStand(nx, playerZ)) playerX = nx;
@@ -1793,6 +1819,7 @@ export function startGameView(
       }
       motion = step(dt);
       stepBody(dt);
+      carryByBelt(dt);
     }
 
     updateWanted(
