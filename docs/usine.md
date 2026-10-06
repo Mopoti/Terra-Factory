@@ -74,7 +74,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 43 — bras sur 3 côtés, bras électrique, carte
 - **Bras robotique** : prend maintenant sur **3 côtés** (derrière, gauche, droite — petits carrés clairs sur ces faces) à tour de rôle et dépose **devant**. Il peut prendre sur un tapis qui passe sur le côté (objet de tête de la case). Il prend uniquement ce que la destination accepte. Sans combustible (ou sans courant pour l'électrique) il ne fait rien : le panneau d'infos affiche « Panne de combustible » / « Pas de courant ».
 - **Bras robotique électrique** (6 lingots de fer + 3 de cuivre) : même principe, 20 kW via un poteau (4 m), 0,45 s par aller-retour (×2), ralentit si le réseau manque de courant.
-- **Carte (touche M)** : fenêtre avec le monde en pixels (1 pixel = 1 case de 50 cm) : biomes, eau, minerais (couleurs des gisements), arbres, rochers, nids, constructions, tapis et machines (contour doré si zoom ≥ ×4), flèche du joueur et nord. Glisser = déplacer, molette ou + / − = zoom (×1 à ×16), M / Échap / ✕ = fermer. Les zones sont dessinées au fur et à mesure (rayon de 28 chunks ≈ 225 m autour du joueur), le reste est « inexploré ». Le jeu est en pause pendant que la carte est ouverte.
+- **Carte (touche M)** : fenêtre avec le monde en pixels (1 pixel = 1 case de 50 cm) : biomes, eau, minerais (couleurs des gisements), arbres, rochers, nids, constructions, tapis et machines (contour doré si zoom ≥ ×4), flèche du joueur et nord. Glisser = déplacer, molette ou + / − = zoom (×1 à ×16), M / Échap / ✕ = fermer. Les zones sont dessinées au fur et à mesure (rayon de 28 chunks ≈ 225 m autour du joueur), le reste est « inexploré ». Le jeu continue pendant que la carte est ouverte (tour 59).
 - Limites : la carte ne montre pas l'épuisement des gisements (dessin figé à la génération) ; les zones « explorées » ne sont pas mémorisées entre deux ouvertures de partie.
 
 ## Tour 44 — assembleur
@@ -102,7 +102,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Les mondes déjà créés reçoivent des buissons : quelques arbres/rochers très proches d'un buisson peuvent changer de place.
 
 ## Tour 48 — technologies (touche T)
-- **Fenêtre Technologies** : une carte par technologie avec son coût (objets du sac, consommés à la recherche), ses prérequis et ce qu'elle débloque. Le jeu est en pause pendant qu'elle est ouverte ; T / Échap / ✕ pour fermer.
+- **Fenêtre Technologies** : une carte par technologie avec son coût (objets du sac, consommés à la recherche), ses prérequis et ce qu'elle débloque. Le jeu continue pendant qu'elle est ouverte (tour 59) ; T / Échap / ✕ pour fermer.
 - **Technologies** (`content/techs.json`) : *Logistique* (20 lingots de fer → séparateur, groupeur, coffre en fer, bras), *Textile* (30 fibres → tissu, sac à dos, vêtements), *Électricité* (30 fer + 20 cuivre → poteau, générateur, foreuse électrique), *Automatisation* (40 fer + 30 cuivre, nécessite Électricité et Logistique → bras électrique, assembleur).
 - **Effet** : seule la **fabrication** à la main est bloquée (case grisée en pointillés dans le panneau de fabrication, info-bulle « Technologie requise »). Un objet qui n'est dans aucune technologie (pièces de construction, foreuse, fourneau, tapis, coffre en bois) reste disponible dès le départ. Les objets déjà possédés ou posés ne sont pas touchés.
 - **Sauvegardes** : enregistrées avec la partie (`changes.unlocked`) ; une ancienne partie, créée avant les technologies, a tout débloqué. Ajouter une technologie = ajouter une entrée dans `techs.json` + son nom `tech.<id>` dans les deux fichiers de langue.
@@ -165,3 +165,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 58 — tapis et tuyaux à cheval sur une machine
 - Un **tapis ou un tuyau** peut maintenant être posé **à moitié dans une machine** (la partie dans la machine est cachée) : il suffit qu'au moins une de ses 4 cases soit libre et visible. Il reste interdit entièrement dans une machine (rien de visible), sur un autre tapis/tuyau, ou sur un terrain bloqué ; une **machine** ne peut pas se poser sur un tapis ou un tuyau (même caché en partie).
 - Sur les cases partagées, c'est la machine qui répond (sorties, raccords, visée) ; la tuile ne « possède » que ses cases libres. Vérifié par test et en navigateur (tuile verte à moitié sous la foreuse, posée : sac 20 → 19).
+
+## Tour 59 — seul le menu pause fige le jeu
+- Les fenêtres **machine / coffre**, **sac**, **carte (M)** et **technologies (T)** ne mettent plus le jeu en pause : l'usine, les ennemis et la pollution continuent, et le joueur peut marcher (la souris est libre, le clic ne récolte ni ne démolit, la caméra ne tourne pas). **Seul le menu ouvert par Échap fige le jeu.**
+- Vérifié en navigateur : étude d'une technologie en laboratoire pendant que la fenêtre Technologies reste ouverte (l'avancement progresse).

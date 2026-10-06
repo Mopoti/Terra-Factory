@@ -184,12 +184,14 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   };
   session = s;
 
-  /** Le jeu est figé tant que le menu pause ou le sac est ouvert. */
+  /** Le jeu n'est figé que par le menu pause. */
   const syncPaused = (): void => {
-    view.setPaused(s.pause.isOpen() || s.machine.isOpen() || s.map.isOpen() || s.tech.isOpen());
-    // Le sac laisse le jeu tourner et le joueur marcher (la souris est libre pour l'utiliser).
-    view.setUiOpen(s.inventory.isOpen());
+    // Seul le menu pause (Échap) fige le jeu. Sac, machine, carte et technologies laissent l'usine tourner
+    // et le joueur marcher : la souris est libre pour s'en servir.
+    view.setPaused(s.pause.isOpen());
+    view.setUiOpen(s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen() || s.tech.isOpen());
   };
+
   s.machine = mountMachineWindow(machineEl, state, view.factory, { onOpenChange: syncPaused });
   s.tech = mountTech(techEl, state, { onOpenChange: syncPaused });
   s.map = mountMap(mapEl, {
