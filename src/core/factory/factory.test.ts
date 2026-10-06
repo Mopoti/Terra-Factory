@@ -67,18 +67,18 @@ describe('foreuse', () => {
     expect(d.stock).toBeNull();
     expect(f.status(d)).toBe('noFuel');
   });
-  it('mine 1 minerai par seconde, brûle du combustible et épuise vraiment les cases', () => {
+  it('mine 1 minerai toutes les 2 secondes, brûle du combustible et épuise vraiment les cases', () => {
     const { world, left } = makeWorld();
     const d = emptyMachine(1, 'drill', 0, 0, 0);
     d.fuel = { item: 'coal', count: 1 }; // 100 s
     const f = new Factory([d], world);
     expect(f.oreUnder(d).total).toBe(45);
-    run(f, 10);
+    run(f, 20);
     expect(d.stock).toEqual({ item: 'iron_ore', count: 10 });
     expect(f.oreUnder(d).total).toBe(35);
     expect([...left.values()].reduce((a, b) => a + b, 0)).toBe(35);
     expect(d.fuel).toBeNull();
-    expect(f.fuelSecondsLeft(d)).toBeCloseTo(90, 0);
+    expect(f.fuelSecondsLeft(d)).toBeCloseTo(80, 0);
   });
   it("s'arrête quand le stock est plein ou qu'il n'y a plus de minerai", () => {
     const { world } = makeWorld(1);
@@ -239,15 +239,15 @@ describe('électricité', () => {
   });
   it('le générateur alimente la foreuse électrique, qui mine plus vite', () => {
     const { f, gen, drill } = setup();
-    run(f, 6);
-    expect(drill.stock?.count).toBe(8); // 1,5 minerai / s pendant 6 s ~ 9, premier minerai au bout de 0,67 s
+    run(f, 12);
+    expect(drill.stock?.count).toBe(9); // 0,75 minerai / s pendant 12 s ~ 9, premier minerai au bout de 1,33 s
     expect(f.status(drill)).toBe('running');
     const g = f.gridInfo(drill)!;
     expect(g.demandKw).toBe(90);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBe(1);
     // Charge de 30 % : le générateur ne brûle que 0,3 s de combustible par seconde.
-    expect(f.fuelSecondsLeft(gen)).toBeGreaterThan(200 - 6 * 0.35);
+    expect(f.fuelSecondsLeft(gen)).toBeGreaterThan(200 - 12 * 0.35);
     expect(gen.fuelLeft).toBeLessThan(100);
   });
   it("sans combustible : plus de courant ; sans poteau : la foreuse est à l'arrêt", () => {
@@ -275,12 +275,12 @@ describe('électricité', () => {
       emptyMachine(6, 'drill_electric', 0, -3, 0),
     ];
     const f = new Factory([gen, pole, ...drills], rich);
-    run(f, 10);
+    run(f, 20);
     const g = f.gridInfo(drills[0])!;
     expect(g.demandKw).toBe(360);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBeCloseTo(300 / 360, 3);
-    // 10 s x 1,5 minerai/s x 5/6 de courant, soit 12 à 13 minerais chacune.
+    // 20 s x 0,75 minerai/s x 5/6 de courant, soit 12 à 13 minerais chacune.
     expect(drills[0].stock!.count).toBeGreaterThanOrEqual(12);
     expect(drills[0].stock!.count).toBeLessThanOrEqual(13);
     // À pleine charge le générateur brûle 1 s de combustible par seconde.
