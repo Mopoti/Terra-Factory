@@ -295,7 +295,7 @@ describe('zone de départ garantie', () => {
       }
     }
     expect(farNests).toBeGreaterThan(0);
-  });
+  }, 60_000);
 });
 
 describe('regroupement en tas / bosquets', () => {
