@@ -6,6 +6,7 @@ import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { getSettings } from '../settings/store';
 import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
+import { pickAsked, pickHalf } from './pick';
 import './menu.css';
 
 export interface InventoryActions {
@@ -165,10 +166,24 @@ export function mountInventory(
         cell.addEventListener('dragstart', (e) =>
           e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item),
         );
-        cell.addEventListener('click', () => {
+        cell.addEventListener('click', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            void pickAsked(state, slot.item, itemName(slot.item), slot.count).then((ok) => {
+              if (ok) selected = slot.item;
+              render();
+            });
+            return;
+          }
           selected = selected === slot.item ? null : slot.item;
           // L'objet choisi peut être rangé dans une case de la barre de raccourcis d'un clic.
           state.carried = selected;
+          state.pick = null;
+          render();
+        });
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          pickHalf(state, slot.item, slot.count);
+          selected = slot.item;
           render();
         });
         cell.addEventListener('mouseenter', () => {
@@ -191,7 +206,9 @@ export function mountInventory(
         el(
           'div',
           'inv-selected',
-          t('inv.selected', { item: itemName(selected), n: String(count) }),
+          state.pick && state.pick.item === selected
+            ? t('inv.picked', { item: itemName(selected), n: String(state.pick.count) })
+            : t('inv.selected', { item: itemName(selected), n: String(count) }),
         ),
       );
       const buttons = el('span', 'inv-actions');
@@ -280,6 +297,7 @@ export function mountInventory(
     if (!isOpenNow) return;
     isOpenNow = false;
     state.carried = null;
+    state.pick = null;
     hovered = null;
     message = '';
     root.hidden = true;

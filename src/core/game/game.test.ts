@@ -940,3 +940,18 @@ describe('battant de porte', () => {
     expect(s.changes.pieces).toEqual({});
   });
 });
+
+describe('prendre une quantité', () => {
+  it('reprendre une partie d’un coffre ou d’une machine', () => {
+    const noWorld = { oreAt: () => null, mineOre: () => 0 };
+    const s = new GameState({ inventory: { machine_chest_wood: 1, stone: 30 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    s.placeMachine(f, 'chest_wood', 2, 2, 0, () => false);
+    const c = s.changes.machines[0];
+    s.putInChest(c, 'stone', 30);
+    expect(s.takeFromChest(c, 0, 15)).toBe(15);
+    expect(c.slots[0].count).toBe(15);
+    expect(s.inventory.stone).toBe(15);
+    expect(s.takeFromChest(c, 0)).toBe(15);
+  });
+});

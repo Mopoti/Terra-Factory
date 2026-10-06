@@ -473,5 +473,10 @@
   "factory.router.splitter": "Splits one belt into 3 outputs (front, left, right), in turn.",
   "factory.router.merger": "Merges up to 3 belts (back, left, right) into the front output.",
   "factory.router.holding": "Carrying: {v}",
-  "factory.router.empty": "Empty"
+  "factory.router.empty": "Empty",
+  "inv.picked": "Holding: {item} ×{n}",
+  "inv.pickLabel": "Quantity to take (1 to {max})",
+  "inv.pickConfirm": "Take",
+  "inv.pickCancel": "Cancel",
+  "inv.pickInvalid": "Enter a whole number from 1 to {max}."
 }

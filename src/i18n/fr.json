@@ -313,7 +313,7 @@
   "inv.dropAll": "Tout jeter",
   "inv.close": "Fermer",
   "inv.count": "Quantité",
-  "inv.hint": "Les objets jetés tombent devant toi. Maintiens « Interagir » dessus pour les ramasser.",
+  "inv.hint": "Clic droit sur une pile : en prendre la moitié. Ctrl + clic : choisir la quantité. Les objets jetés tombent devant toi. Maintiens « Interagir » dessus pour les ramasser.",
   "game.hud.bag": "Sac",
   "manage.import": "Importer une partie",
   "manage.rename": "Renommer",
@@ -473,5 +473,10 @@
   "factory.router.splitter": "Sépare un tapis en 3 sorties (devant, gauche, droite), à tour de rôle.",
   "factory.router.merger": "Réunit jusqu'à 3 tapis (derrière, gauche, droite) vers la sortie de devant.",
   "factory.router.holding": "Transporte : {v}",
-  "factory.router.empty": "Vide"
+  "factory.router.empty": "Vide",
+  "inv.picked": "En main : {item} ×{n}",
+  "inv.pickLabel": "Quantité à prendre (1 à {max})",
+  "inv.pickConfirm": "Prendre",
+  "inv.pickCancel": "Annuler",
+  "inv.pickInvalid": "Entre un nombre entier de 1 à {max}."
 }

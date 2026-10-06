@@ -48,6 +48,8 @@ export class GameState {
   selectedSlot: number | null = null;
   /** Objet « en main » depuis le sac, à poser dans une case de la barre au prochain clic. */
   carried: string | null = null;
+  /** Quantité choisie (moitié de la pile, ou saisie) sur l'objet « en main » ; null = toute la pile. */
+  pick: { item: string; count: number } | null = null;
   private roomCache: Room[] | null = null;
   private readonly listeners = new Set<(e: StateEvent) => void>();
 
@@ -165,6 +167,7 @@ export class GameState {
       this.selectedSlot = null;
     }
     this.carried = null;
+    this.pick = null;
     this.emit({ type: 'hotbar' });
   }
 
@@ -360,10 +363,10 @@ export class GameState {
   }
 
   /** Reprend dans le sac le contenu d'une case de machine (tout ce qui tient). Renvoie la quantité. */
-  unloadMachine(m: Machine, slot: 'fuel' | 'input' | 'stock'): number {
+  unloadMachine(m: Machine, slot: 'fuel' | 'input' | 'stock', count = Infinity): number {
     const stack = m[slot];
     if (!stack) return 0;
-    const moved = Math.min(stack.count, maxAddable(this.inventory, stack.item, this.limits));
+    const moved = Math.min(count, stack.count, maxAddable(this.inventory, stack.item, this.limits));
     if (moved <= 0) return 0;
     this.inventory = add(this.inventory, stack.item, moved);
     stack.count -= moved;
@@ -392,10 +395,10 @@ export class GameState {
   }
 
   /** Reprend dans le sac la pile n° `index` d'un coffre (tout ce qui tient). Renvoie la quantité. */
-  takeFromChest(m: Machine, index: number): number {
+  takeFromChest(m: Machine, index: number, count = Infinity): number {
     const stack = m.slots[index];
     if (!stack) return 0;
-    const moved = Math.min(stack.count, maxAddable(this.inventory, stack.item, this.limits));
+    const moved = Math.min(count, stack.count, maxAddable(this.inventory, stack.item, this.limits));
     if (moved <= 0) return 0;
     this.inventory = add(this.inventory, stack.item, moved);
     stack.count -= moved;

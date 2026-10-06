@@ -6,6 +6,7 @@ import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
+import { pickAsked, pickHalf, pickedCount } from './pick';
 import './menu.css';
 
 export interface MachineWindow {
@@ -70,6 +71,7 @@ export function mountMachineWindow(
       m.stock?.item ?? null,
       m.slots.map((x) => x.item),
       selected,
+      state.pick,
     ]);
 
   const machine = (): Machine | null =>
@@ -86,7 +88,9 @@ export function mountMachineWindow(
       return;
     }
     const max = machineDef(m.type).stockMax ?? 100;
-    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, max) > 0 ? 'pickup' : 'deny');
+    const n = pickedCount(state, item, max);
+    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, n) > 0 ? 'pickup' : 'deny');
+    state.pick = null;
     render();
   }
 
@@ -140,6 +144,12 @@ export function mountMachineWindow(
     const take = el('button', undefined, t('machine.take'));
     take.type = 'button';
     take.disabled = stack === null;
+    box.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (stack && state.unloadMachine(m, slot, Math.max(1, Math.ceil(stack.count / 2))) > 0)
+        playSfx('pickup');
+      render();
+    });
     take.addEventListener('click', () => {
       if (state.unloadMachine(m, slot) > 0) playSfx('pickup');
       render();
@@ -189,8 +199,22 @@ export function mountMachineWindow(
           dragging = false;
           render();
         });
-        cell.addEventListener('click', () => {
+        cell.addEventListener('click', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            void pickAsked(state, slot.item, itemName(slot.item), slot.count).then((ok) => {
+              if (ok) selected = slot.item;
+              render();
+            });
+            return;
+          }
           selected = selected === slot.item ? null : slot.item;
+          state.pick = null;
+          render();
+        });
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          pickHalf(state, slot.item, slot.count);
+          selected = slot.item;
           render();
         });
       } else cell.disabled = true;
@@ -240,6 +264,12 @@ export function mountMachineWindow(
           if (state.takeFromChest(m, i) > 0) playSfx('pickup');
           render();
         });
+        cell.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (state.takeFromChest(m, i, Math.max(1, Math.ceil(stack.count / 2))) > 0)
+            playSfx('pickup');
+          render();
+        });
       } else {
         cell.addEventListener('click', () => {
           if (selected) putInChest(m, selected);
@@ -261,7 +291,8 @@ export function mountMachineWindow(
   }
 
   function putInChest(m: Machine, item: string): void {
-    playSfx(state.putInChest(m, item, 100) > 0 ? 'pickup' : 'deny');
+    playSfx(state.putInChest(m, item, pickedCount(state, item, 100)) > 0 ? 'pickup' : 'deny');
+    state.pick = null;
     render();
   }
 

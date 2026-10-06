@@ -52,3 +52,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 39 — retours PO
 - Les fenêtres (sac, machine) n'ont plus de bouton « Fermer » : une croix ✕ en haut à droite (Échap fonctionne toujours).
 - Détruire une construction ou une machine rend **l'objet** (ex. Mur en pierre, Fourneau) et non plus ses ressources de fabrication ; le contenu des machines/coffres revient aussi. Ce qui ne tient pas dans le sac tombe au sol.
+
+## Tour 40 — prendre une partie d'une pile
+- Sac et fenêtre machine : **clic droit** sur une pile = en prendre la moitié (arrondie au-dessus) ; **Ctrl + clic gauche** = fenêtre pour choisir la quantité. La quantité choisie (« En main : … ×N ») est celle déposée ensuite dans une case de machine ou un coffre (clic sur la case) ; clic gauche normal = toute la pile comme avant.
+- Dans la fenêtre machine, clic droit sur une case de la machine ou du coffre = reprendre la moitié.
+- Limite : le glisser-déposer à la souris déplace toujours la pile selon l'ancien comportement, sauf si une quantité a été choisie juste avant (elle est alors utilisée). Non vérifié visuellement.
