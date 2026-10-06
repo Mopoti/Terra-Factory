@@ -805,3 +805,22 @@ describe('tapis en hauteur et tunnels', () => {
     expect(normalizeMachines([{ ...m, lift: 99 }])[0].lift).toBe(0);
   });
 });
+
+describe('séparateur posé sur un tapis', () => {
+  it('remplace le tapis et la chaîne continue', () => {
+    const { world } = makeWorld();
+    const belt = (id: number, gz: number): Machine => emptyMachine(id, 'conveyor', 4, gz, 0);
+    const parts = [belt(1, 0), belt(2, 2), belt(3, 4), belt(4, 6), belt(5, 8)];
+    parts[0].belt.push({ item: 'iron_ore', pos: 0 });
+    const end = parts[4];
+    const f = new Factory(parts, world);
+    expect(f.canPlace('merger', 4, 4, 0, () => false)).toBe(true);
+    expect(f.canPlace('chest_wood', 4, 4, 0, () => false)).toBe(false);
+    const replaced = f.replacedBelts('merger', 4, 4, 0);
+    expect(replaced.map((b) => b.id)).toEqual([3]);
+    for (const b of replaced) f.remove(b.id);
+    f.add(emptyMachine(9, 'merger', 4, 4, 0));
+    run(f, 20);
+    expect(end.belt.map((b) => b.item)).toEqual(['iron_ore']);
+  });
+});

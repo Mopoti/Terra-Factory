@@ -690,7 +690,25 @@ export class Factory {
         cells.every((c) => !taken(c) && (!onGround || !blocked(c)))
       );
     }
+    // Un séparateur ou un groupeur se pose sur des tapis à plat : ils sont remplacés et la chaîne continue.
+    if (isRouter(type)) {
+      return cells.every((c) => {
+        const there = this.cells.get(`${c.gx},${c.gz}`);
+        return there ? there.type === 'conveyor' && there.lift === 0 : !blocked(c);
+      });
+    }
     return cells.every((c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c));
+  }
+
+  /** Tapis qu'un séparateur / groupeur posé là remplacerait. */
+  replacedBelts(type: MachineType, gx: number, gz: number, rot: number): Machine[] {
+    if (!isRouter(type)) return [];
+    const found = new Set<Machine>();
+    for (const c of footprint(type, gx, gz, rot)) {
+      const there = this.cells.get(`${c.gx},${c.gz}`);
+      if (there && there.type === 'conveyor') found.add(there);
+    }
+    return [...found];
   }
 
   add(machine: Machine): void {

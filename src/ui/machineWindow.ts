@@ -242,7 +242,7 @@ export function mountMachineWindow(
         });
         cell.addEventListener('click', (e) => {
           if (state.hand) {
-            state.returnHand();
+            if (!state.placeHand(i)) playSfx('deny');
             render();
             return;
           }
@@ -266,7 +266,7 @@ export function mountMachineWindow(
       } else {
         cell.addEventListener('click', () => {
           if (!state.hand) return;
-          state.returnHand();
+          state.placeHand(i);
           render();
         });
       }

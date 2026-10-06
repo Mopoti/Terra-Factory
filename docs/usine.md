@@ -219,3 +219,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Poteaux en série** : en gardant le clic gauche et en marchant, un nouveau poteau se pose à la limite du câble (8 m) derrière le joueur, tant qu'il en a.
 - **Tapis** : emportent le joueur 2× plus vite (`CARRY_BOOST`).
 - Vérifié : tests (piles, main, outils ; recettes mises à jour), scène navigateur (case d'outils affichée, 2 poteaux posés en marchant 12 m, aucune erreur). Non vérifié à la souris : glisser-déposer des piles, jet hors fenêtre, objet en main après fermeture du sac, clic droit bref, récolte avec outil visible dans les mains. Non équilibré : vitesses, rendement, prix.
+
+## Tour 67 — pile posée dans une case vide (fenêtre de machine), séparateur / groupeur sur un tapis
+- **Piles** : dans la colonne « sac » de la **fenêtre d'une machine / d'un coffre**, poser la pile du curseur dans une case vide la refusionnait avec la première pile (ancien code). Elle utilise maintenant `placeHand` comme le sac : case vide = nouvelle pile, même objet = on complète, autre objet = échange.
+- **Séparateur / groupeur sur une ligne** : on peut les poser **sur des tapis à plat** ; les tapis recouverts sont **remplacés** (ils reviennent dans le sac avec leur contenu) et la chaîne continue de part et d'autre (`Factory.replacedBelts`, `canPlace` accepte les tapis pour les routeurs). Test : un objet traverse un groupeur posé au milieu d'une ligne. Les autres machines et les tapis surélevés / rampes / tunnels ne sont pas remplaçables.
