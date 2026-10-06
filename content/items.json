@@ -209,6 +209,15 @@
       "recipe": {
         "iron_ingot": 5
       }
+    },
+    {
+      "id": "machine_arm",
+      "weightKg": 3,
+      "volumeL": 6,
+      "color": "#c0813a",
+      "recipe": {
+        "iron_ingot": 6
+      }
     }
   ]
 }

@@ -106,6 +106,10 @@ export interface Cell {
 
 const GAP = 0.34;
 
+/** Bras robotique : durée d'un aller-retour (s), et réserve de combustible (s) sous laquelle il se ravitaille. */
+const ARM_SWING_S = 0.9;
+const ARM_LOW_FUEL_S = 15;
+
 /** Largeur et profondeur de l'emprise selon l'orientation. */
 export function dims(type: MachineType, rot: number): { w: number; d: number } {
   const def = machineDef(type);
@@ -231,6 +235,7 @@ const MACHINE_TYPES: MachineType[] = [
   'pole',
   'splitter',
   'merger',
+  'arm',
 ];
 
 /** Centre d'une machine (m). */
@@ -388,6 +393,10 @@ export class Factory {
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
     if (isRouter(m.type)) return m.stock ? 'blocked' : 'idle';
+    if (m.type === 'arm') {
+      if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
+      return m.stock ? 'running' : 'idle';
+    }
     if (m.type === 'conveyor')
       return m.belt.length > 0 && m.belt[0].pos >= 1
         ? 'blocked'
@@ -420,6 +429,7 @@ export class Factory {
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
       else if (isRouter(m.type)) this.tickRouter(m);
+      else if (m.type === 'arm') this.tickArm(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -542,54 +552,58 @@ export class Factory {
 
   // --- Tapis et échanges ---------------------------------------------------------------------------
 
-  /** Une machine ou un tapis peut-il recevoir cet objet par cette case ? Si oui, l'y met. */
-  private deliver(target: Machine, from: Machine, item: string, dir = from.rot): boolean {
-    if (isChest(target.type)) return chestPut(target, item, 1) > 0;
-    if (target.type === 'splitter') {
-      // Une seule case d'attente ; un tapis qui sort du séparateur ne le réalimente pas.
-      if (target.stock) return false;
-      target.stock = { item, count: 1 };
-      return true;
-    }
-    // Le groupeur va chercher lui-même les objets sur les tapis qui l'alimentent (à tour de rôle).
-    if (target.type === 'merger') {
-      if (target.stock || from.type === 'conveyor') return false;
-      target.stock = { item, count: 1 };
-      return true;
-    }
+  /** Peut-on y ranger au moins 1 `item` poussé dans la direction `dir` ? (sans rien changer) */
+  private canAccept(target: Machine, from: Machine, item: string, dir: number): boolean {
+    if (isChest(target.type)) return chestRoom(target, item) > 0;
+    // Séparateur : une seule case d'attente. Groupeur : va chercher lui-même sur les tapis qui l'alimentent.
+    if (target.type === 'splitter') return !target.stock;
+    if (target.type === 'merger') return !target.stock && from.type !== 'conveyor';
     if (target.type === 'conveyor') {
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
-      if (target.rot === (dir + 2) % 4 && (from.type === 'conveyor' || isRouter(from.type)))
+      if (
+        target.rot === (dir + 2) % 4 &&
+        (from.type === 'conveyor' || isRouter(from.type) || from.type === 'arm')
+      )
         return false;
       const cap = machineDef('conveyor').capacity ?? 3;
       if (target.belt.length >= cap) return false;
       const last = target.belt[target.belt.length - 1];
-      if (last && last.pos < GAP) return false;
-      target.belt.push({ item, pos: 0 });
-      return true;
+      return !(last && last.pos < GAP);
     }
-    // Le générateur prend son combustible par sa face d'entrée (celle que montre le carré clair).
+    // Combustible : par la face d'entrée (carré clair). Générateur : face avant ; foreuse et fourneau : face arrière.
     if (target.type === 'generator')
-      return dir === (target.rot + 2) % 4 && this.deliverFuel(target, item);
+      return dir === (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (target.type === 'furnace') {
-      if (!smeltRecipe(item)) return this.deliverFuel(target, item);
+      if (!smeltRecipe(item)) return dir === target.rot && this.fuelRoom(target, item);
       const max = machineDef('furnace').stockMax ?? 100;
-      if (target.input && (target.input.item !== item || target.input.count >= max)) return false;
-      if (target.input) target.input.count++;
-      else target.input = { item, count: 1 };
-      return true;
+      return !target.input || (target.input.item === item && target.input.count < max);
     }
+    if (isDrill(target.type)) return dir === target.rot && this.fuelRoom(target, item);
     return false;
   }
 
-  /** Met un combustible dans la case de combustible d'une machine, si elle en prend. */
-  private deliverFuel(target: Machine, item: string): boolean {
-    if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return false;
-    const max = machineDef(target.type).stockMax ?? 100;
-    if (target.fuel && (target.fuel.item !== item || target.fuel.count >= max)) return false;
+  /** Une machine ou un tapis peut-il recevoir cet objet par cette case ? Si oui, l'y met. */
+  private deliver(target: Machine, from: Machine, item: string, dir = from.rot): boolean {
+    if (!this.canAccept(target, from, item, dir)) return false;
+    if (isChest(target.type)) return chestPut(target, item, 1) > 0;
+    if (isRouter(target.type)) target.stock = { item, count: 1 };
+    else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
+    else if (target.type === 'furnace' && smeltRecipe(item)) {
+      if (target.input) target.input.count++;
+      else target.input = { item, count: 1 };
+    } else this.addFuel(target, item);
+    return true;
+  }
+
+  private addFuel(target: Machine, item: string): void {
     if (target.fuel) target.fuel.count++;
     else target.fuel = { item, count: 1 };
-    return true;
+  }
+
+  private fuelRoom(target: Machine, item: string): boolean {
+    if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return false;
+    const max = machineDef(target.type).stockMax ?? 100;
+    return !target.fuel || (target.fuel.item === item && target.fuel.count < max);
   }
 
   /** Foreuse / fourneau : pousse un objet du stock vers la case de sortie. */
@@ -633,6 +647,75 @@ export class Factory {
       m.stock = null;
       if (m.type === 'splitter') m.progress = (k + 1) % 3;
       break;
+    }
+  }
+
+  /** Ce qu'on peut prendre sur une machine voisine (objet de tête d'un tapis, d'un coffre, d'un stock de sortie). */
+  private peekSource(src: Machine): { item: string; take: () => void } | null {
+    if (src.type === 'conveyor') {
+      const head = src.belt[0];
+      return head && head.pos >= 0.5 ? { item: head.item, take: () => src.belt.shift() } : null;
+    }
+    if (isChest(src.type)) {
+      const stack = src.slots[0];
+      if (!stack) return null;
+      return {
+        item: stack.item,
+        take: () => {
+          stack.count--;
+          if (stack.count <= 0) src.slots.shift();
+        },
+      };
+    }
+    if (hasOutput(src.type) && src.stock) {
+      const stack = src.stock;
+      return {
+        item: stack.item,
+        take: () => {
+          stack.count--;
+          if (stack.count <= 0) src.stock = null;
+        },
+      };
+    }
+    return null;
+  }
+
+  /** Bras robotique : s'il va manquer de combustible, en prend un dans une case voisine (derrière ou sur les côtés). */
+  private armRefuel(m: Machine): void {
+    const max = machineDef('arm').stockMax ?? 10;
+    for (const side of [2, 1, 3]) {
+      const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
+      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      const found = src ? this.peekSource(src) : null;
+      if (!found || !itemById(found.item).fuelSeconds) continue;
+      if (m.fuel && (m.fuel.item !== found.item || m.fuel.count >= max)) continue;
+      found.take();
+      this.addFuel(m, found.item);
+      return;
+    }
+  }
+
+  /** Bras robotique : prend derrière, dépose devant (un aller-retour par `ARM_SWING_S`). */
+  private tickArm(m: Machine, dt: number): void {
+    const [fx, fz] = RISE_DIR[m.rot];
+    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    if (!m.stock) {
+      if (this.fuelSecondsLeft(m) < ARM_LOW_FUEL_S) this.armRefuel(m);
+      if (this.fuelSecondsLeft(m) <= 0 || !dest) return;
+      const src = this.machineAt(m.gx - fx, m.gz - fz);
+      const found = src ? this.peekSource(src) : null;
+      if (!found || !this.canAccept(dest, m, found.item, m.rot)) return;
+      found.take();
+      m.stock = { item: found.item, count: 1 };
+      m.progress = 0;
+      return;
+    }
+    if (!this.fire(m)) return;
+    this.burn(m, dt);
+    m.progress = Math.min(ARM_SWING_S, m.progress + dt);
+    if (m.progress >= ARM_SWING_S && dest && this.deliver(dest, m, m.stock.item, m.rot)) {
+      m.stock = null;
+      m.progress = 0;
     }
   }
 

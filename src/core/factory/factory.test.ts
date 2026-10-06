@@ -356,15 +356,89 @@ describe('combustible par tapis', () => {
     expect(bad.belt.length).toBe(1);
   });
 
-  it('un fourneau prend aussi son combustible par tapis, et refuse ce qui ne brûle pas', () => {
+  it('un fourneau ou une foreuse prend son combustible par sa face arrière, pas par les côtés', () => {
     const furnace = emptyMachine(1, 'furnace', 10, 10, 0);
-    const a = emptyMachine(2, 'conveyor', 9, 10, 1);
-    a.belt.push({ item: 'coal', pos: 1 });
-    const b = emptyMachine(3, 'conveyor', 9, 11, 1);
-    b.belt.push({ item: 'stone', pos: 1 });
-    const f = new Factory([furnace, a, b], makeWorld().world);
+    const back = emptyMachine(2, 'conveyor', 10, 9, 0);
+    back.belt.push({ item: 'coal', pos: 1 });
+    const side = emptyMachine(3, 'conveyor', 9, 10, 1);
+    side.belt.push({ item: 'coal', pos: 1 });
+    const stone = emptyMachine(4, 'conveyor', 10, 8, 0);
+    const f = new Factory([furnace, back, side, stone], makeWorld().world);
     run(f, 0.5);
     expect(furnace.fuel?.count).toBe(1);
-    expect(b.belt.length).toBe(1);
+    expect(back.belt.length).toBe(0);
+    expect(side.belt.length).toBe(1);
+    // une pierre sur la face arrière reste bloquée
+    back.belt.push({ item: 'stone', pos: 1 });
+    run(f, 0.5);
+    expect(back.belt.length).toBe(1);
+  });
+});
+
+describe('bras robotique', () => {
+  const chestWith = (id: number, gx: number, gz: number, item: string, n: number): Machine => {
+    const c = emptyMachine(id, 'chest_wood', gx, gz, 0);
+    c.slots.push({ item, count: n });
+    return c;
+  };
+
+  it('prend dans le coffre derrière et dépose dans le fourneau devant, au rythme du bras', () => {
+    const src = chestWith(1, 10, 9, 'iron_ore', 5);
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuel = { item: 'coal', count: 3 };
+    const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    const f = new Factory([src, arm, furnace], makeWorld().world);
+    run(f, 4);
+    expect(furnace.input?.count ?? 0).toBeGreaterThanOrEqual(3);
+    expect(src.slots[0]?.count ?? 0).toBeLessThanOrEqual(2);
+  });
+
+  it('ne prend rien que la destination refuse', () => {
+    const src = chestWith(1, 10, 9, 'stone', 5);
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuel = { item: 'coal', count: 3 };
+    const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    const f = new Factory([src, arm, furnace], makeWorld().world);
+    run(f, 3);
+    expect(src.slots[0].count).toBe(5);
+    expect(arm.stock).toBeNull();
+  });
+
+  it('sans combustible il ne bouge pas ; il en reprend un dans un coffre voisin et repart', () => {
+    const src = chestWith(1, 10, 9, 'iron_ore', 5);
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    const f = new Factory([src, arm, furnace], makeWorld().world);
+    run(f, 2);
+    expect(f.status(arm)).toBe('noFuel');
+    expect(furnace.input).toBeNull();
+    // un coffre de charbon sur le côté
+    const fuelBox = chestWith(4, 11, 10, 'coal', 4);
+    const g = new Factory([src, arm, furnace, fuelBox], makeWorld().world);
+    run(g, 3);
+    expect(fuelBox.slots[0].count).toBeLessThan(4);
+    expect(g.fuelSecondsLeft(arm)).toBeGreaterThan(0);
+    expect(furnace.input?.count ?? 0).toBeGreaterThan(0);
+  });
+
+  it('quand il va manquer de combustible il en garde un de ce qu’il transporte', () => {
+    const src = chestWith(1, 10, 9, 'coal', 20);
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuelLeft = 5;
+    const target = emptyMachine(3, 'chest_wood', 10, 11, 0);
+    const f = new Factory([src, arm, target], makeWorld().world);
+    run(f, 1.5);
+    expect(arm.fuel?.item).toBe('coal');
+    expect(target.slots[0]?.count ?? 0).toBeGreaterThanOrEqual(1);
+  });
+
+  it('alimente une foreuse en combustible par sa face arrière', () => {
+    const src = chestWith(1, 1, -2, 'coal', 10);
+    const arm = emptyMachine(2, 'arm', 1, -1, 0);
+    arm.fuel = { item: 'coal', count: 2 };
+    const drill = emptyMachine(3, 'drill', 0, 0, 0);
+    const f = new Factory([src, arm, drill], makeWorld().world);
+    run(f, 3);
+    expect(drill.fuel?.count ?? 0).toBeGreaterThan(0);
   });
 });

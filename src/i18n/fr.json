@@ -477,5 +477,8 @@
   "inv.pickLabel": "Quantité à prendre (1 à {max})",
   "inv.pickConfirm": "Prendre",
   "inv.pickCancel": "Annuler",
-  "inv.pickInvalid": "Entre un nombre entier de 1 à {max}."
+  "inv.pickInvalid": "Entre un nombre entier de 1 à {max}.",
+  "item.machine_arm": "Bras robotique",
+  "factory.router.arm": "Prend les objets derrière lui (tapis, coffre, machine) et les dépose dans ce qui est devant (machine, tapis, coffre). Il brûle du combustible et s'en prend lui-même quand il en manque, s'il y en a à côté ou derrière.",
+  "factory.arm.holding": "Tient : {v}"
 }

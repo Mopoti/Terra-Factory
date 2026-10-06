@@ -477,5 +477,8 @@
   "inv.pickLabel": "Quantity to take (1 to {max})",
   "inv.pickConfirm": "Take",
   "inv.pickCancel": "Cancel",
-  "inv.pickInvalid": "Enter a whole number from 1 to {max}."
+  "inv.pickInvalid": "Enter a whole number from 1 to {max}.",
+  "item.machine_arm": "Robotic arm",
+  "factory.router.arm": "Takes items from behind (belt, chest, machine) and drops them into what is in front (machine, belt, chest). It burns fuel and refuels itself from nearby containers when running low.",
+  "factory.arm.holding": "Holding: {v}"
 }

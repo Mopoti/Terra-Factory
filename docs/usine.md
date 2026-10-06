@@ -64,3 +64,9 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Séparateur / groupeur** : becs sombres = sorties, petits carrés clairs = entrées (1 pour le séparateur, 3 pour le groupeur). Les becs et carrés ne partagent plus de faces avec le boîtier (les motifs hachurés venaient de faces confondues).
 - **Vérification des autres objets** : coffre — le fermoir ne tournait pas, corrigé ; poteau — symétrique, R ne change rien d'visible (normal) ; foreuses/fourneau/tapis — déjà orientés par leur bec de sortie. Le panneau d'un séparateur/groupeur n'affiche plus la ligne « consommation électrique ».
 - Vérifié par tests (295) et capture navigateur (vue du dessus).
+
+## Tour 42 — bras robotique et entrée de combustible
+- **Bras robotique** (6 lingots de fer, R oriente) : prend l'objet de tête dans la case **derrière** (tapis, coffre, stock de sortie d'une foreuse/fourneau) et le dépose dans la case **devant** (machine, tapis, coffre, séparateur…), un aller-retour par 0,9 s. Il ne prend que ce que la destination accepte.
+- Il fonctionne au **combustible** (fenêtre F : case combustible, 1 unité/s de combustion pendant qu'il travaille). Quand il lui reste moins de 15 s de combustible, il en prend un dans les cases voisines (derrière, côtés) — tapis ou coffre — au lieu de le transporter ; sans combustible du tout il s'arrête (« Panne de combustible ») mais en reprend dès qu'il en voit à côté.
+- **Entrée de combustible** : foreuses à combustible et fourneaux ont un carré clair sur leur **face arrière** (opposée à la sortie) : un tapis ou un bras qui y débouche leur apporte du charbon/bois. Générateur : face avant (carré clair). Les autres faces refusent le combustible. Le minerai du fourneau reste accepté par toutes les faces.
+- Vérifié : 5 tests d'unité (bras), capture navigateur (bras visibles). Équilibrage non testé.

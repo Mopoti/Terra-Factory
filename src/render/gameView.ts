@@ -803,6 +803,11 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (m.type === 'arm') {
+      rows.push(`<div class="sub">${t('factory.router.arm')}</div>`);
+      rows.push(
+        `<div>${t('factory.arm.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
+      );
     } else if (isRouter(m.type)) {
       rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
       rows.push(
@@ -856,7 +861,7 @@ export function startGameView(
     }
     if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);
     if (m.type === 'generator') rows.push(`<small>${t('factory.useHint')}</small>`);
-    if (hasOutput(m.type)) {
+    if (hasOutput(m.type) || m.type === 'arm') {
       const out = outputCell(m.type, m.gx, m.gz, m.rot);
       const target = factory.machineAt(out.gx, out.gz);
       rows.push(

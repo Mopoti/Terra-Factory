@@ -10,7 +10,8 @@ export type MachineType =
   | 'generator'
   | 'pole'
   | 'splitter'
-  | 'merger';
+  | 'merger'
+  | 'arm';
 
 export interface MachineDef {
   id: MachineType;

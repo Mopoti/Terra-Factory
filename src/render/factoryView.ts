@@ -59,7 +59,7 @@ export function beltEntry(
       );
     }
     const front =
-      n.type === 'conveyor' || n.type === 'merger'
+      n.type === 'conveyor' || n.type === 'merger' || n.type === 'arm'
         ? { gx: n.gx + RISE_DIR[n.rot][0], gz: n.gz + RISE_DIR[n.rot][1] }
         : outputCell(n.type, n.gx, n.gz, n.rot);
     return front.gx === m.gx && front.gz === m.gz;
@@ -211,7 +211,7 @@ export class FactoryView {
               shade(color, 0.85),
               true,
             );
-        } else if (hasOutput(g.type)) {
+        } else if (hasOutput(g.type) || g.type === 'arm') {
           const out = outputCell(g.type, g.gx, g.gz, g.rot);
           mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
         }
@@ -223,7 +223,9 @@ export class FactoryView {
               ? [(g.rot + 2) % 4]
               : g.type === 'merger'
                 ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
-                : [];
+                : g.type === 'arm' || g.type === 'furnace' || (isDrill(g.type) && def.fuel)
+                  ? [(g.rot + 2) % 4]
+                  : [];
         for (const dir of inDirs) {
           const [ix, iz] = RISE_DIR[dir];
           mb.box(
@@ -344,6 +346,36 @@ function addMachineBody(
   const color = hexToRgb(def.color);
   const [fx, fz] = RISE_DIR[rot];
   const out = outputCell(type, gx, gz, rot);
+  // Foreuse à combustible et fourneau : carré clair sur la face arrière = entrée du combustible.
+  if ((isDrill(type) && def.fuel) || type === 'furnace')
+    inputMark(mb, x - fx * (sx / 2), z - fz * (sz / 2), -fx, -fz, 0.3, 0.12, 0.28);
+  if (type === 'arm') {
+    // Bras : socle, mât, bras horizontal vers l'avant et pince ; petit carré clair derrière (combustible/prise).
+    mb.box(x, 0, z, 0.4, 0.12, 0.4, color, true);
+    mb.box(x, 0.12, z, 0.14, 0.33, 0.14, shade(color, 0.8), true);
+    mb.box(
+      x + fx * 0.12,
+      0.45,
+      z + fz * 0.12,
+      fx !== 0 ? 0.5 : 0.12,
+      0.1,
+      fz !== 0 ? 0.5 : 0.12,
+      shade(color, 1.2),
+      true,
+    );
+    mb.box(
+      x + fx * 0.3,
+      0.25,
+      z + fz * 0.3,
+      fx !== 0 ? 0.08 : 0.2,
+      0.2,
+      fz !== 0 ? 0.08 : 0.2,
+      hexToRgb('#2a2d31'),
+      true,
+    );
+    inputMark(mb, x - fx * 0.2, z - fz * 0.2, -fx, -fz, 0.16, 0.03, 0.06);
+    return;
+  }
   if (isChest(type)) {
     // Coffre : caisse, couvercle un peu plus large, sangles sombres.
     const iron = type === 'chest_iron';
