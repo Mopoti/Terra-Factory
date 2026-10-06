@@ -432,7 +432,7 @@
   "factory.needOre": "A drill must be placed on ore",
   "factory.cannotPlace": "Spot taken or impassable",
   "factory.helpMachine": "R: orient the output · click: place · same slot: put away",
-  "factory.helpConveyor": "R: direction · PageUp / PageDown: shape (ramp, raised, tunnel…) · hold click and trace to place several belts in a row · same slot: put away",
+  "factory.helpConveyor": "R: direction · PageUp / PageDown: go up / down (ramp, tunnel) while tracing · hold click and trace to place several belts in a row · same slot: put away",
   "factory.lift.0": "Flat (ground)",
   "factory.lift.1": "Ramp up (45°)",
   "factory.lift.2": "Raised (1 m)",

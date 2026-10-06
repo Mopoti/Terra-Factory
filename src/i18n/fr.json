@@ -432,7 +432,7 @@
   "factory.needOre": "Une foreuse doit être posée sur du minerai",
   "factory.cannotPlace": "Emplacement occupé ou impraticable",
   "factory.helpMachine": "R : orienter la sortie · clic : poser · même case : ranger",
-  "factory.helpConveyor": "R : sens · PageUp / PageDown : forme (rampe, surélevé, tunnel…) · maintenir le clic et tracer pour poser plusieurs tapis à la suite · même case : ranger",
+  "factory.helpConveyor": "R : sens · PageUp / PageDown : monter / descendre (rampe, tunnel) en traçant · maintenir le clic et tracer pour poser plusieurs tapis à la suite · même case : ranger",
   "factory.lift.0": "À plat (sol)",
   "factory.lift.1": "Rampe montante (45°)",
   "factory.lift.2": "Surélevé (1 m)",

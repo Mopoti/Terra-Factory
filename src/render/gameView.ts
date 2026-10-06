@@ -73,6 +73,7 @@ import {
   Factory,
   LIFT_COUNT,
   LIFT_NEXT,
+  TUNNEL_MAX_TILES,
   POLE_HIT_M,
   centerOf,
   dims,
@@ -723,6 +724,13 @@ export function startGameView(
   /** Tracé en cours : forme du premier tapis, et formes choisies en route (PageUp / PageDown) par rang. */
   let dragLift = 0;
   const liftOverride = new Map<number, number>();
+  /** Formes du tracé en cours (−1 = sous terre : rien à poser, le tunnel passe là). */
+  let dragLifts: number[] = [];
+  const HIDDEN = -1;
+  /** Niveau (0 sol, 1 en l'air, −1 sous terre) où l'on se trouve après un tapis de cette forme. */
+  const levelAfter = (lift: number): number => [0, 1, 1, 0, -1, 0][lift] ?? -1;
+  const nextLift = (lift: number): number =>
+    lift === HIDDEN || lift === 4 ? HIDDEN : LIFT_NEXT[lift];
   const pathReached = new Set<string>();
   const MACHINE_REACH_M = 20;
   const MAX_BELT_PATH = 150;
@@ -866,6 +874,7 @@ export function startGameView(
       }
     }
     const path = machinePath.length > 0 ? machinePath : [snap?.cell ?? tileAround(c)];
+    for (const k of [...liftOverride.keys()]) if (k >= path.length) liftOverride.delete(k);
     const lifts: number[] = [];
     path.forEach((_, i) => {
       lifts.push(
@@ -874,24 +883,47 @@ export function startGameView(
             ? machinePath.length > 0
               ? dragLift
               : (snap?.lift ?? buildLift)
-            : LIFT_NEXT[lifts[i - 1]]),
+            : nextLift(lifts[i - 1])),
       );
     });
+    dragLifts = lifts;
     let left = stock;
-    const ghosts = path.map((cell, i) => {
+    const rotAt = (i: number): number =>
+      i < path.length - 1
+        ? dirIndex(path[i], path[i + 1])
+        : path.length > 1
+          ? dirIndex(path[i - 1], path[i])
+          : (snap?.rot ?? baseRot);
+    // Tunnel : l'entrée et la sortie doivent être alignées, dans le même sens, et pas trop éloignées.
+    const tunnelOk = (i: number): boolean => {
+      if (lifts[i] !== 4 && lifts[i] !== 5) return true;
+      if (lifts[i] === 4) {
+        const out = lifts.findIndex((l, j) => j > i && l === 5);
+        return out >= 0 && tunnelOk(out);
+      }
+      const inn = lifts.lastIndexOf(4, i);
+      if (inn < 0) return false;
+      const a = path[inn];
+      const b = path[i];
+      return (
+        rotAt(inn) === rotAt(i) &&
+        (a.gx === b.gx || a.gz === b.gz) &&
+        Math.max(Math.abs(a.gx - b.gx), Math.abs(a.gz - b.gz)) / 2 <= TUNNEL_MAX_TILES
+      );
+    };
+    const all = path.map((cell, i) => {
       const lift = lifts[i];
-      const rot =
-        i < path.length - 1
-          ? dirIndex(cell, path[i + 1])
-          : path.length > 1
-            ? dirIndex(path[i - 1], cell)
-            : (snap?.rot ?? baseRot);
+      const rot = rotAt(i);
+      if (lift === HIDDEN) return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok: false, lift };
       const free =
-        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked, lift) && tileWithin(cell);
+        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked, lift) &&
+        tileWithin(cell) &&
+        tunnelOk(i);
       const ok = free && left > 0;
       if (ok) left--;
       return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok, lift };
     });
+    const ghosts = all.filter((g) => g.lift !== HIDDEN);
     factoryView.showGhost(ghosts);
     if (!down && machinePath.length > 0) {
       let placed = 0;
@@ -1861,9 +1893,21 @@ export function startGameView(
           if (buildingMachine) {
             // Tapis : change de forme (plat, rampe, surélevé, descente, tunnel).
             if ((up || down) && selectedMachine()?.id === 'conveyor') {
-              buildLift = (buildLift + (up ? 1 : LIFT_COUNT - 1)) % LIFT_COUNT;
-              // En traçant : le tapis sous le curseur prend cette forme et la suite s'enchaîne.
-              if (machinePath.length > 0) liftOverride.set(machinePath.length - 1, buildLift);
+              if (machinePath.length > 0) {
+                // En traçant : monter / descendre à partir du tapis sous le curseur (rampe, entrée ou sortie de tunnel).
+                const i = machinePath.length - 1;
+                const before = i === 0 ? 0 : levelAfter(dragLifts[i - 1]);
+                const set = liftOverride.get(i);
+                if (up) {
+                  if (set === 4) liftOverride.delete(i);
+                  else if (before === 0) liftOverride.set(i, 1);
+                  else if (before === -1) liftOverride.set(i, 5);
+                } else if (set === 1) liftOverride.delete(i);
+                else if (before === 0) liftOverride.set(i, 4);
+                else if (before === 1) liftOverride.set(i, 3);
+              } else {
+                buildLift = (buildLift + (up ? 1 : LIFT_COUNT - 1)) % LIFT_COUNT;
+              }
               renderBuildHud();
             }
           } else if (up) {

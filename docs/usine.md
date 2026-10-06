@@ -204,3 +204,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Halo de transparence** : il ne troue plus que ce qui dépasse de 45 cm (murs, arbres, machines) ; les tapis, tuyaux et cailloux au sol ne le déclenchent plus, d'où plus de halo vert permanent.
 - **Pas encore fait** : installation complète en hauteur (séparateurs, bras et machines posés sur des **dalles** à l'étage) ; il faudra des machines à un niveau ≠ 0.
 - Vérifié : tests tunnels, scène navigateur sans erreur. Non vérifié à la souris : calage des rampes, Maj + clic, ouverture d'un coffre avec un objet en main. Test `worldgen` « aucun nid à moins de 250 m » : dépasse 5 s (échoue aussi sans mes changements).
+
+## Tour 65 — tracer un tunnel d'un seul geste
+- En **traçant** des tapis (clic maintenu), **PageDown** sur le tapis sous le curseur y met une **entrée de tunnel** (ou une rampe descendante si on est en l'air) ; les tuiles suivantes ne sont **pas posées** (le tunnel passe dessous, le ghost ne les montre pas) ; **PageUp** met une **sortie de tunnel** (ou une rampe montante si on est au sol) et le tracé continue à plat. Rappuyer en sens inverse sur la même tuile annule. Hors tracé, PageUp / PageDown garde le choix de la forme du premier tapis.
+- Validation du tunnel : entrée et sortie alignées, même sens, au plus 8 tuiles ; sinon elles restent rouges et ne sont pas posées (une entrée sans sortie non plus). Ne pas poser l'entrée sur un tapis existant : elle se met avant le croisement.
+- Vérifié en navigateur (vue du dessus) : tracé à travers un tapis → entrée, trou, sortie, tapis à plat ; 3 tapis consommés, tapis du croisement intact.
