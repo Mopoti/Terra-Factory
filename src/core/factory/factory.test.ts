@@ -897,3 +897,21 @@ describe('tourelle', () => {
     expect(turret.input).toBeNull();
   });
 });
+
+describe('marcher sur les tapis surélevés', () => {
+  it('donne la hauteur du dessus : plat à 1,25 m, rampe qui monte, et dessous libre à 2,5 m', () => {
+    const { world } = makeWorld();
+    const ramp = emptyMachine(1, 'conveyor', 0, 0, 1, 1); // vers +x, de 0 à 1,25 m
+    const flat = emptyMachine(2, 'conveyor', 2, 0, 1, 2);
+    const high = emptyMachine(3, 'conveyor', 4, 0, 1, 7);
+    const f = new Factory([ramp, flat, high], world);
+    const top = (x: number): number => f.beltSpansAt(x, 0.25)[0]?.top ?? -1;
+    expect(top(0.05)).toBeCloseTo(0.12 + 0.05 * 1.25, 1);
+    expect(top(0.95)).toBeGreaterThan(top(0.2));
+    expect(top(1.5)).toBeCloseTo(1.25 + 0.12, 2);
+    expect(f.beltUnder(1.5, 0.25, 1.4)?.id).toBe(2);
+    expect(f.beltUnder(1.5, 0.25, 0)).toBeNull();
+    const highSpan = f.beltSpansAt(2.5, 0.25)[0];
+    expect(highSpan.bottom).toBeGreaterThan(1.7); // le joueur (1,7 m) passe dessous
+  });
+});

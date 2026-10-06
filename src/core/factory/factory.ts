@@ -696,6 +696,41 @@ export class Factory {
     return this.layerAt(layer, gx, gz);
   }
 
+  /**
+   * Dessus des tapis surélevés et rampes au point (x, z) en mètres : le joueur peut s'y tenir (sol) ou s'y
+   * cogner (côté, dessous). Les tapis à plat au sol et les tunnels sont trop bas pour compter.
+   */
+  beltSpansAt(x: number, z: number): { bottom: number; top: number; belt: Machine }[] {
+    const gx = Math.floor(x / CELL_SIZE_M);
+    const gz = Math.floor(z / CELL_SIZE_M);
+    const k = `${gx},${gz}`;
+    const found = new Set<Machine>();
+    const low = this.cells.get(k);
+    if (low && low.type === 'conveyor' && low.lift !== 0 && low.lift < 4) found.add(low);
+    for (const level of this.air.values()) {
+      const m = level.get(k);
+      if (m && m.type === 'conveyor') found.add(m);
+    }
+    const out: { bottom: number; top: number; belt: Machine }[] = [];
+    for (const m of found) {
+      const { from, to } = LIFTS[m.lift];
+      const [dx, dz] = RISE_DIR[m.rot];
+      const fx = x / CELL_SIZE_M - m.gx;
+      const fz = z / CELL_SIZE_M - m.gz;
+      // Avancement 0 → 1 le long de la tuile (2 × 2 cases) dans le sens du tapis.
+      const raw = dx !== 0 ? (dx > 0 ? fx : 2 - fx) : dz > 0 ? fz : 2 - fz;
+      const along = Math.min(1, Math.max(0, raw / 2));
+      const top = (from + (to - from) * along) * LEVEL_M + 0.12;
+      out.push({ bottom: top - 0.2, top, belt: m });
+    }
+    return out;
+  }
+
+  /** Le tapis (surélevé ou rampe) sur lequel se tient quelqu'un dont les pieds sont à la hauteur `y`, ou null. */
+  beltUnder(x: number, z: number, y: number): Machine | null {
+    return this.beltSpansAt(x, z).find((s) => Math.abs(s.top - y) <= 0.25)?.belt ?? null;
+  }
+
   /** Un tapis plein (rampe, tapis surélevé à 1 m) bloque le passage du joueur ; à 2 m on passe dessous. */
   solidAt(gx: number, gz: number): boolean {
     const k = `${gx},${gz}`;

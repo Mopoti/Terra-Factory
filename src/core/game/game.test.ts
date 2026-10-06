@@ -1210,6 +1210,6 @@ describe('ennemis et temps enregistrés', () => {
     expect(c.enemies).toHaveLength(1);
     expect(c.enemies[0].home).toEqual({ x: 1, z: 2 });
     expect(c.time).toBe(125.5);
-    expect(c.vehicles).toEqual([{ id: 1, x: 2, z: 3, yaw: 1, fuel: 40 }]);
+    expect(c.vehicles).toEqual([{ id: 1, x: 2, z: 3, yaw: 1, fuel: 40, slots: [] }]);
   });
 });

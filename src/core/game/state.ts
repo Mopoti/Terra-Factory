@@ -652,7 +652,7 @@ export class GameState {
     if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
     this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;
     const id = this.changes.vehicles.reduce((m, v) => Math.max(m, v.id), 0) + 1;
-    const v: Vehicle = { id, x, z, yaw, fuel: 0 };
+    const v: Vehicle = { id, x, z, yaw, fuel: 0, slots: [] };
     this.changes.vehicles.push(v);
     this.emit({ type: 'inventory' });
     return v;
@@ -664,6 +664,7 @@ export class GameState {
     if (i < 0) return false;
     const [v] = this.changes.vehicles.splice(i, 1);
     this.giveBack('vehicle_buggy', 1, { x: v.x, z: v.z });
+    for (const st of v.slots) this.giveBack(st.item, st.count, { x: v.x, z: v.z });
     this.emit({ type: 'inventory' });
     return true;
   }
@@ -671,10 +672,16 @@ export class GameState {
   /** Remplit le réservoir du buggy avec un combustible du sac (renvoie les secondes de route ajoutées, 0 s'il n'y en a pas). */
   refuelVehicle(v: Vehicle): number {
     for (const item of ['coal', 'wood']) {
-      if ((this.inventory[item] ?? 0) < 1) continue;
       const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
       if (seconds <= 0) continue;
-      this.inventory = remove(this.inventory, item, 1).inventory;
+      // D'abord le coffre du buggy, puis le sac.
+      const stack = v.slots.find((x) => x.item === item);
+      if (stack) {
+        stack.count--;
+        if (stack.count <= 0) v.slots.splice(v.slots.indexOf(stack), 1);
+      } else if ((this.inventory[item] ?? 0) >= 1) {
+        this.inventory = remove(this.inventory, item, 1).inventory;
+      } else continue;
       v.fuel += seconds;
       this.emit({ type: 'inventory' });
       return seconds;

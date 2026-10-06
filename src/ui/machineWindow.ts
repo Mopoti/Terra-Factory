@@ -51,7 +51,11 @@ export function mountMachineWindow(
   root: HTMLElement,
   state: GameState,
   factory: Factory,
-  actions: { onOpenChange(open: boolean): void },
+  actions: {
+    onOpenChange(open: boolean): void;
+    /** Machines qui ne sont pas dans l'usine (le coffre d'un buggy : identifiant négatif). */
+    resolve?: (id: number) => Machine | null;
+  },
 ): MachineWindow {
   let current: number | null = null;
   let timer = 0;
@@ -84,7 +88,11 @@ export function mountMachineWindow(
     ]);
 
   const machine = (): Machine | null =>
-    current === null ? null : (factory.machines.find((m) => m.id === current) ?? null);
+    current === null
+      ? null
+      : current < 0
+        ? (actions.resolve?.(current) ?? null)
+        : (factory.machines.find((m) => m.id === current) ?? null);
 
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
@@ -465,14 +473,26 @@ export function mountMachineWindow(
     lastShape = shape(m);
     const panel = el('div', 'panel machine-window');
     panel.setAttribute('role', 'dialog');
-    panel.append(el('h2', undefined, itemName(def.item)));
+    panel.append(
+      el(
+        'h2',
+        undefined,
+        current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
+      ),
+    );
     const status = factory.status(m);
     const statusEl = el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey));
     live.status = statusEl;
     panel.append(statusEl);
 
     const rows = el('div', 'mach-rows');
-    rows.append(el('h3', undefined, itemName(def.item)));
+    rows.append(
+      el(
+        'h3',
+        undefined,
+        current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
+      ),
+    );
     if (isChest(m.type)) rows.append(chestGrid(m), el('small', 'help', t('machine.chestHint')));
     if (def.fuel) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));

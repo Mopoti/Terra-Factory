@@ -284,3 +284,10 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Équilibrage** : foreuses 2 × plus lentes ; tableau des valeurs et principes dans `docs/equilibrage.md`.
 - **Modèles** : rien à remplacer sans assets, voir `docs/modeles.md`.
 - Vérifié : tests (tourelle, saisons, ennemis / temps / véhicules enregistrés), scènes navigateur (buggy qui roule et se ravitaille, hiver enneigé). Non vérifié à la souris : pose du buggy au clic, tir réel des tourelles sur des ennemis, équilibrage ressenti.
+
+## Tour 72 — coffre du buggy, tilt du patron, marcher sur les tapis en l'air
+- **Buggy** : clic gauche dessus (à ≤ 8 m, visé) ou **inventaire au volant** → ouvre son coffre (16 cases, comme un coffre en bois ; objet `vehicles[].slots` sauvegardé) pour mettre du carburant (charbon / bois, consommés d'abord dans le coffre puis dans le sac) et des objets ; rangé, tout revient dans le sac.
+- **Patron incliné** : PageUp incline le patron vers le haut, PageDown le remet à plat puis l'incline vers le bas (au sol : entrée de tunnel). Le patron se cale sur la **tranche** du tapis visé (au niveau de son extrémité) et prend la forme qui convient : du niveau 1 on peut monter au niveau 2 (rampe 1 → 2), du niveau 2 redescendre. Viser un tapis au sol avec une inclinaison le prolonge par une rampe. (Pendant un tracé à la souris, PageUp / PageDown gardent leur rôle « monter / descendre d'un niveau ».)
+- **Marcher sur les tapis en l'air** : le joueur monte les rampes, marche sur les tapis de niveau 1 et 2 (dessus, physique `beltSpansAt`), s'y cogne par le côté / se cogne la tête sous un tapis, passe dessous au niveau 2, et est emporté par le tapis sur lequel il se tient.
+- **Dimensions** : état et incohérences repérées dans `docs/dimensions.md` ; en attente de la validation du PO avant de changer les hauteurs.
+- Vérifié : tests (coffre du buggy enregistré, surfaces des tapis), scènes navigateur (le joueur monte la rampe et marche à 1,37 m ; le patron incliné devient « rampe montante vers le niveau 2 » sur un tapis de niveau 1). Non vérifié à la souris : clic sur le buggy, pose complète d'une rampe vers le niveau 2.

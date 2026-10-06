@@ -139,8 +139,13 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     state,
     start,
     onToggleInventory: () => {
-      if (!session?.pause.isOpen() && !session?.map.isOpen() && !session?.tech.isOpen())
-        session?.inventory.toggle();
+      if (!session?.pause.isOpen() && !session?.map.isOpen() && !session?.tech.isOpen()) {
+        // Au volant du buggy, l'inventaire est celui du buggy (carburant et objets).
+        const driving = session?.view.mountedMachineId() ?? null;
+        if (session?.machine.isOpen()) session.machine.close();
+        else if (driving !== null && !session?.inventory.isOpen()) session?.machine.open(driving);
+        else session?.inventory.toggle();
+      }
     },
     onToggleMap: () => {
       if (
@@ -192,7 +197,10 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     view.setUiOpen(s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen() || s.tech.isOpen());
   };
 
-  s.machine = mountMachineWindow(machineEl, state, view.factory, { onOpenChange: syncPaused });
+  s.machine = mountMachineWindow(machineEl, state, view.factory, {
+    onOpenChange: syncPaused,
+    resolve: (id) => view.vehicleMachine(id),
+  });
   s.tech = mountTech(techEl, state, { onOpenChange: syncPaused });
   s.map = mountMap(mapEl, {
     world: game.world,

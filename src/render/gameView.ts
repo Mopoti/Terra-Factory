@@ -43,6 +43,7 @@ import { CameraRig } from './cameraRig';
 import { seasonAt } from '../core/game/seasons';
 import { buildChunkMesh, ghostUniforms, setGroundTint, type ChunkMesh } from './chunkMesh';
 import {
+  STEP_UP_M,
   bodyBlocked,
   ceilingAbove,
   groundAt,
@@ -79,8 +80,8 @@ import {
   LEVEL_M,
   UPPER_LEVEL,
   LIFTS,
-  LIFT_COUNT,
   LIFT_NEXT,
+  liftEnd,
   TUNNEL_MAX_TILES,
   POLE_HIT_M,
   centerOf,
@@ -158,6 +159,10 @@ export interface GameViewHandle {
   factory: Factory;
   /** Pollution et ennemis, pour la carte. */
   threat: Threat;
+  /** Le coffre d'un buggy vu comme une machine (identifiant négatif = −identifiant du buggy), ou null. */
+  vehicleMachine(id: number): Machine | null;
+  /** Identifiant (négatif, pour la fenêtre) du buggy que conduit le joueur, ou null. */
+  mountedMachineId(): number | null;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -370,7 +375,10 @@ export function startGameView(
   /** Orientation en quarts de tour (touche R), `null` = automatique (le bord le plus proche, contre le mur visé). Pour un mur : pair = le long de x, impair = le long de z. */
   let buildRot: number | null = null;
   /** Forme verticale du tapis qu'on pose (PageUp / PageDown) : voir `LIFTS`. */
-  let buildLift = 0;
+  /** Inclinaison du patron de tapis (PageUp / PageDown) : −1 descend, 0 à plat, 1 monte. */
+  let buildTilt = 0;
+  /** Forme qui en résulte (selon le niveau du tapis visé), pour l'affichage. */
+  let hudLift = 0;
   /** Machine : au sol (0) ou à l'étage sur une dalle (2), choisi avec PageUp / PageDown. */
   let buildMachineLevel = 0;
   /** Axe du dernier bord visé (pour que R parte de l'orientation actuelle d'un mur). */
@@ -407,7 +415,7 @@ export function startGameView(
           ? t('build.rotationAuto')
           : t('build.rotation', { deg: String(buildRot * 90) });
       const lift =
-        def.id === 'conveyor' ? ` · ${t(`factory.lift.${buildLift}` as TranslationKey)}` : '';
+        def.id === 'conveyor' ? ` · ${t(`factory.lift.${hudLift}` as TranslationKey)}` : '';
       const floor =
         !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL
           ? ` · ${t('factory.upperFloor')}`
@@ -759,6 +767,12 @@ export function startGameView(
   let dragLifts: number[] = [];
   const HIDDEN = -1;
   /** Niveau (0 sol, 1 en l'air, −1 sous terre) où l'on se trouve après un tapis de cette forme. */
+  /** Forme du tapis qui part du niveau `level` avec cette inclinaison (1 monte, 0 à plat, −1 descend). */
+  const tiltLift = (level: number, tilt: number): number => {
+    if (level >= 2) return tilt < 0 ? 8 : 7;
+    if (level === 1) return tilt > 0 ? 6 : tilt < 0 ? 3 : 2;
+    return tilt > 0 ? 1 : tilt < 0 ? 4 : 0;
+  };
   const levelAfter = (lift: number): number => [0, 1, 1, 0, -1, 0, 2, 2, 1][lift] ?? -1;
   const nextLift = (lift: number): number =>
     lift === HIDDEN || lift === 4 ? HIDDEN : LIFT_NEXT[lift];
@@ -903,6 +917,7 @@ export function startGameView(
     const contains = (t: Cell, cell: Cell): boolean =>
       cell.gx >= t.gx && cell.gx < t.gx + 2 && cell.gz >= t.gz && cell.gz < t.gz + 2;
     /** Première tuile libre qui contient la case visée (4 positions possibles autour du curseur). */
+    let baseLift = 0;
     const tileAround = (cell: Cell): Cell => {
       const options = [
         { gx: cell.gx, gz: cell.gz },
@@ -912,15 +927,19 @@ export function startGameView(
       ];
       return (
         options.find((o) =>
-          factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked, buildLift),
+          factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked, baseLift),
         ) ?? options[0]
       );
     };
     /** Viser une rampe ou un tapis en l'air : le patron se cale à sa suite (même niveau, même sens). */
-    const rampSnap = (cell: Cell): { cell: Cell; rot: number; lift: number } | null => {
+    const rampSnap = (cell: Cell): { cell: Cell; rot: number; level: number } | null => {
       if (def.id !== 'conveyor') return null;
       const shaped = (m: Machine | null): m is Machine =>
-        !!m && m.type === 'conveyor' && m.lift !== 0 && m.lift !== 4 && m.lift !== 5;
+        !!m &&
+        m.type === 'conveyor' &&
+        m.lift !== 4 &&
+        m.lift !== 5 &&
+        (m.lift !== 0 || buildTilt !== 0);
       // Le rayon peut traverser un tapis en l'air bien avant d'atteindre la case visée au sol.
       const hit = pickMachine(factory, rayOrigin, rayDir, 80)?.machine ?? null;
       const found =
@@ -943,22 +962,25 @@ export function startGameView(
       return {
         cell: { gx: last.gx + dx * 2, gz: last.gz + dz * 2 },
         rot: found.rot,
-        lift: LIFT_NEXT[last.lift],
+        level: liftEnd(last),
       };
     };
     // En l'air, la case visée est celle du plan à 1 m (sinon le tracé dérive à cause de la perspective).
-    const aimLevel =
-      machinePath.length > 0
-        ? levelAfter(dragLifts[dragLifts.length - 1] ?? 0)
-        : (LIFTS[buildLift]?.from ?? 0);
+    const aimLevel = machinePath.length > 0 ? levelAfter(dragLifts[dragLifts.length - 1] ?? 0) : 0;
     const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, aimLevel * LEVEL_M) : null;
     const snap = rampSnap(cAir ?? c);
+    // Le patron suit l'inclinaison choisie, au niveau du tapis visé (sol si rien n'est visé).
+    baseLift = tiltLift(snap?.level ?? 0, buildTilt);
+    if (baseLift !== hudLift) {
+      hudLift = baseLift;
+      renderBuildHud();
+    }
     const aim = snap && machinePath.length === 0 ? c : (cAir ?? c);
     if (down) {
       const last = machinePath[machinePath.length - 1];
       if (!last) {
         const first = snap?.cell ?? tileAround(aim);
-        dragLift = snap?.lift ?? buildLift;
+        dragLift = baseLift;
         liftOverride.clear();
         machinePath = [first];
         pathReached.clear();
@@ -986,11 +1008,7 @@ export function startGameView(
     path.forEach((_, i) => {
       lifts.push(
         liftOverride.get(i) ??
-          (i === 0
-            ? machinePath.length > 0
-              ? dragLift
-              : (snap?.lift ?? buildLift)
-            : nextLift(lifts[i - 1])),
+          (i === 0 ? (machinePath.length > 0 ? dragLift : baseLift) : nextLift(lifts[i - 1])),
       );
     });
     dragLifts = lifts;
@@ -1460,8 +1478,6 @@ export function startGameView(
   const machineSolidAt = (xM: number, zM: number): boolean => {
     const gx = Math.floor(xM / CELL_SIZE_M);
     const gz = Math.floor(zM / CELL_SIZE_M);
-    // Les tapis à plat se marchent ; les rampes et les tapis à 1 m sont pleins ; à 2 m on passe dessous.
-    if (factory.solidAt(gx, gz)) return true;
     // Sur une dalle d'étage, on est au-dessus des machines du sol ; en bas, on passe sous celles de l'étage.
     const above = playerY >= 1.5;
     const upstairs = factory.machineAt(gx, gz, UPPER_LEVEL);
@@ -1481,12 +1497,24 @@ export function startGameView(
     machineSolidAt(xM, zM);
   /** Distance parcourue au dernier pas : une pente d'escalier se monte même à faible nombre d'images/s. */
   let stepSlack = 0;
+  /** Les rampes inclinées montent d'environ 1,25 m par mètre : on tolère un peu plus de pas qu'un escalier. */
+  const BELT_SLACK = 1.4;
+  /** Un tapis surélevé ou une rampe barre le passage (côté, dessous) sauf s'il est assez bas pour le monter. */
+  const beltBlocked = (x: number, z: number): boolean =>
+    factory
+      .beltSpansAt(x, z)
+      .some(
+        (s) =>
+          s.top > playerY + STEP_UP_M + stepSlack * BELT_SLACK &&
+          s.bottom < playerY + PLAYER_HEIGHT_M,
+      );
   const canStand = (x: number, z: number): boolean => {
     const pieces = options.state.changes.pieces;
     for (const dx of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
       for (const dz of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
         if (isBlockedAt(x + dx, z + dz)) return false;
         if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M, stepSlack)) return false;
+        if (beltBlocked(x + dx, z + dz)) return false;
       }
     }
     return true;
@@ -1507,8 +1535,15 @@ export function startGameView(
     let ground = 0;
     for (const [dx, dz] of FOOT_SAMPLES) {
       ground = Math.max(ground, groundAt(pieces, playerX + dx, playerZ + dz, playerY, stepSlack));
+      // Se tenir sur un tapis surélevé ou monter une rampe.
+      for (const s of factory.beltSpansAt(playerX + dx, playerZ + dz)) {
+        if (s.top <= playerY + STEP_UP_M + stepSlack * BELT_SLACK && s.top > ground) ground = s.top;
+      }
     }
-    const roof = ceilingAbove(pieces, playerX, playerZ, playerY + PLAYER_HEIGHT_M, playerY);
+    let roof = ceilingAbove(pieces, playerX, playerZ, playerY + PLAYER_HEIGHT_M, playerY);
+    for (const s of factory.beltSpansAt(playerX, playerZ)) {
+      if (s.bottom >= playerY + PLAYER_HEIGHT_M - 0.02 && s.bottom < roof) roof = s.bottom;
+    }
     const next = stepVertical(
       { y: playerY, vy: velY, onGround },
       dt,
@@ -1545,12 +1580,14 @@ export function startGameView(
   }
   /** Un tapis emporte le joueur qui s'y tient (à la vitesse des objets), tant que rien ne le bloque. */
   function carryByBelt(dt: number): void {
-    if (!onGround || playerY > 0.2) return;
-    const m = factory.machineAt(
-      Math.floor(playerX / CELL_SIZE_M),
-      Math.floor(playerZ / CELL_SIZE_M),
-    );
-    if (!m || m.type !== 'conveyor' || m.lift !== 0) return;
+    if (!onGround) return;
+    // Un tapis surélevé ou une rampe emporte aussi quand on se tient dessus ; au sol, seulement les tapis à plat.
+    let m: Machine | null = factory.beltUnder(playerX, playerZ, playerY);
+    if (!m && playerY <= 0.2) {
+      m = factory.machineAt(Math.floor(playerX / CELL_SIZE_M), Math.floor(playerZ / CELL_SIZE_M));
+      if (!m || m.type !== 'conveyor' || m.lift !== 0) return;
+    }
+    if (!m) return;
     const [dx, dz] = RISE_DIR[m.rot];
     // Le tapis emporte un peu plus que la vitesse des objets : on le sent en marchant dessus.
     const dist =
@@ -1672,6 +1709,30 @@ export function startGameView(
   container.appendChild(vehicleBox);
   let placeWasDown = false;
   let runOverCooldown = 0;
+  const vehicleChests = new Map<number, Machine>();
+  /** Le coffre d'un buggy, vu comme un coffre en bois qui partage le contenu du buggy. */
+  function vehicleMachine(id: number): Machine | null {
+    const v = options.state.changes.vehicles.find((x) => x.id === -id);
+    if (!v) return null;
+    let m = vehicleChests.get(v.id);
+    if (!m) {
+      m = emptyMachine(id, 'chest_wood', 0, 0, 0);
+      vehicleChests.set(v.id, m);
+    }
+    m.slots = v.slots;
+    return m;
+  }
+  /** Le rayon de visée touche-t-il ce buggy (sphère autour de lui) ? */
+  function aimsAt(v: Vehicle): boolean {
+    computeRay();
+    const cx = v.x - rayOrigin.x;
+    const cy = 0.5 - rayOrigin.y;
+    const cz = v.z - rayOrigin.z;
+    const along = cx * rayDir.x + cy * rayDir.y + cz * rayDir.z;
+    if (along < 0 || along > 8) return false;
+    const d2 = cx * cx + cy * cy + cz * cz - along * along;
+    return d2 <= 0.9 * 0.9;
+  }
   function vehicleTick(dt: number, pressedUse: boolean): void {
     const list = options.state.changes.vehicles;
     // Les modèles suivent la liste enregistrée.
@@ -1711,8 +1772,13 @@ export function startGameView(
         }
       }
     }
-    // Poser un buggy : clic gauche avec le buggy choisi, quand rien d'autre n'est visé.
+    // Clic gauche sur un buggy : on ouvre son coffre (carburant et objets).
     const down = input.isActionActive('interact');
+    if (down && !placeWasDown && !building && !uiOpen) {
+      const target = list.find((v) => v !== mounted && aimsAt(v));
+      if (target) options.onOpenMachine?.(-target.id);
+    }
+    // Poser un buggy : clic gauche avec le buggy choisi, quand rien d'autre n'est visé.
     if (
       down &&
       !placeWasDown &&
@@ -2219,7 +2285,9 @@ export function startGameView(
                 else if (before === 1) liftOverride.set(i, 3);
                 else if (before === 2) liftOverride.set(i, 8);
               } else {
-                buildLift = (buildLift + (up ? 1 : LIFT_COUNT - 1)) % LIFT_COUNT;
+                // Patron : PageUp l'incline vers le haut, PageDown le remet à plat puis l'incline vers le bas.
+                buildTilt = Math.max(-1, Math.min(1, buildTilt + (up ? 1 : -1)));
+                renderBuildHud();
               }
               renderBuildHud();
             }
@@ -2381,6 +2449,8 @@ export function startGameView(
     getState: () => ({ x: playerX, y: playerY, z: playerZ, ...rig.getState() }),
     factory,
     threat,
+    vehicleMachine,
+    mountedMachineId: () => (mounted ? -mounted.id : null),
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.
       const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;

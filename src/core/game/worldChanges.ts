@@ -16,6 +16,8 @@ export interface Vehicle {
   z: number;
   yaw: number;
   fuel: number;
+  /** Coffre du buggy (carburant et quelques objets) : piles d'au plus 100. */
+  slots: { item: string; count: number }[];
 }
 
 /** Objets déposés au sol par le joueur. */
@@ -200,6 +202,19 @@ export function normalizeChanges(raw: unknown): WorldChanges {
         z: v.z,
         yaw: isNum(v.yaw) ? v.yaw : 0,
         fuel: isNum(v.fuel) ? Math.max(0, v.fuel) : 0,
+        slots: Array.isArray(v.slots)
+          ? v.slots.slice(0, 16).flatMap((raw: unknown) => {
+              const st = raw as Record<string, unknown> | null;
+              if (!st || typeof st.item !== 'string' || !isNum(st.count) || st.count <= 0)
+                return [];
+              try {
+                itemById(st.item);
+              } catch {
+                return [];
+              }
+              return [{ item: st.item, count: Math.min(100, Math.floor(st.count)) }];
+            })
+          : [],
       });
     }
   }
