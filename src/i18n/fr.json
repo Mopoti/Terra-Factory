@@ -507,5 +507,20 @@
   "factory.arm.diag.ok": "Prêt : un objet est à prendre.",
   "factory.arm.diag.noDest": "Rien devant lui : pose une machine, un tapis ou un coffre devant.",
   "factory.arm.diag.noSource": "Rien à prendre derrière, à gauche ou à droite.",
-  "factory.arm.diag.refused": "Il y a des objets autour, mais la destination les refuse (ex. combustible refusé par la face de sortie d'un fourneau ou d'une foreuse ; minerai : fourneau déjà plein d'un autre minerai ; un objet qui ne se cuit pas)."
+  "factory.arm.diag.refused": "Il y a des objets autour, mais la destination les refuse (ex. combustible refusé par la face de sortie d'un fourneau ou d'une foreuse ; minerai : fourneau déjà plein d'un autre minerai ; un objet qui ne se cuit pas).",
+  "factory.block.nothing": "Bout du tapis : {item} n'a nulle part où aller (rien devant).",
+  "factory.block.refused": "{item} bloqué devant {target} : {reason}",
+  "factory.block.waiting": "Un instant, la case devant se libère.",
+  "factory.refuse.chestFull": "le coffre est plein",
+  "factory.refuse.busy": "occupé",
+  "factory.refuse.merger": "un groupeur prend lui-même sur les tapis qui le touchent (pas de poussée directe) — il doit être relié par un tapis qui pointe vers lui",
+  "factory.refuse.facing": "le tapis suivant vous fait face",
+  "factory.refuse.beltFull": "le tapis suivant est plein",
+  "factory.refuse.otherOre": "le fourneau contient déjà un autre minerai (un seul type à la fois)",
+  "factory.refuse.inputFull": "l'entrée du fourneau est pleine",
+  "factory.refuse.notUsable": "cet objet ne lui sert à rien",
+  "factory.refuse.outputFace": "c'est la face de sortie",
+  "factory.refuse.fuelFull": "la case de combustible est pleine ou d'un autre type",
+  "factory.refuse.ingredientFull": "assez de cet ingrédient en attente",
+  "factory.refuse.notIngredient": "ce n'est pas un ingrédient de la recette"
 }

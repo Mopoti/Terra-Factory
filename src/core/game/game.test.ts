@@ -93,7 +93,17 @@ describe('récolte (commandes)', () => {
     s.onChange((e) => seen.push(e.type));
     s.harvest('0,0', 4, 'wood', 1);
     s.harvest('0,0', 4, 'wood', 0);
-    expect(seen).toEqual(['harvest']);
+    expect(seen).toEqual(['harvest', 'inventory']);
+  });
+  it('jeter et ramasser préviennent aussi le sac (barre de raccourcis à jour)', () => {
+    const s = new GameState({ inventory: { stone: 10 } });
+    const seen: string[] = [];
+    s.onChange((e) => seen.push(e.type));
+    const stack = s.drop('stone', 4, 0, 0);
+    expect(seen).toContain('inventory');
+    seen.length = 0;
+    s.pickUp(stack!.id);
+    expect(seen).toContain('inventory');
   });
 });
 

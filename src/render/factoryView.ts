@@ -3,16 +3,14 @@ import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
 import {
-  hasOutput,
   isChest,
   isArm,
   isAssembler,
   isDrill,
-  isRouter,
   machineDef,
   type MachineType,
 } from '../core/data/machines';
-import { dims, outputCell, type Factory, type Machine } from '../core/factory/factory';
+import { dims, outputCell, ports, type Factory, type Machine } from '../core/factory/factory';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
@@ -20,6 +18,9 @@ const BELT_H = 0.12;
 const BELT_W = 0.42;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
+
+const OUT_ARROW: Rgb = hexToRgb('#ffb347');
+const IN_ARROW: Rgb = hexToRgb('#7ec8ff');
 
 const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 
@@ -43,6 +44,29 @@ function flatTri(
   const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   const pts = cross > 0 ? [a, c, b] : [a, b, c];
   mb.tri([pts[0][0], y, pts[0][1]], [pts[1][0], y, pts[1][1]], [pts[2][0], y, pts[2][1]], color);
+}
+
+/** Flèche à plat dans une case, pointant dans la direction `dir` (entrée : vers la machine ; sortie : vers l'extérieur). */
+function flatArrow(
+  mb: MeshBuilder,
+  cell: { gx: number; gz: number },
+  dir: number,
+  color: Rgb,
+): void {
+  const [dx, dz] = RISE_DIR[dir];
+  const px = -dz;
+  const pz = dx;
+  const cx = center(cell.gx);
+  const cz = center(cell.gz);
+  const y = 0.04;
+  const at = (along: number, across: number): [number, number] => [
+    cx + dx * along + px * across,
+    cz + dz * along + pz * across,
+  ];
+  // Hampe, puis pointe.
+  flatTri(mb, at(-0.2, -0.04), at(0.02, -0.04), at(0.02, 0.04), y, color);
+  flatTri(mb, at(-0.2, -0.04), at(0.02, 0.04), at(-0.2, 0.04), y, color);
+  flatTri(mb, at(0.02, -0.14), at(0.2, 0), at(0.02, 0.14), y, color);
 }
 
 /** Côté d'où arrivent les objets sur un tapis : un tapis ou une machine qui débouche sur lui. */
@@ -123,7 +147,12 @@ export class FactoryView {
         const entry = beltEntry(this.factory, m);
         this.entries.set(m.id, entry);
         addBelt(mb, m.gx, m.gz, m.rot, entry, hexToRgb(machineDef('conveyor').color));
-      } else addMachineBody(mb, m.type, m.gx, m.gz, m.rot);
+      } else {
+        addMachineBody(mb, m.type, m.gx, m.gz, m.rot);
+        const io = ports(m.type, m.gx, m.gz, m.rot);
+        for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
+        for (const i of io.ins) flatArrow(mb, i.cell, i.dir, IN_ARROW);
+      }
     }
     this.bodies.geometry.dispose();
     this.bodies.geometry = geometryOf(mb);
@@ -199,50 +228,10 @@ export class FactoryView {
         if (g.type === 'conveyor') mb.box(x, 0, z, 0.46, 0.14, 0.46, color, true);
         else
           mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
-        // Flèche de sortie (un coffre n'en a pas : il se remplit par les tapis).
-        if (isRouter(g.type)) {
-          const outs = g.type === 'splitter' ? [g.rot, (g.rot + 1) % 4, (g.rot + 3) % 4] : [g.rot];
-          for (const dir of outs)
-            mb.box(
-              center(g.gx + RISE_DIR[dir][0]),
-              0,
-              center(g.gz + RISE_DIR[dir][1]),
-              0.2,
-              0.2,
-              0.2,
-              shade(color, 0.85),
-              true,
-            );
-        } else if (hasOutput(g.type) || isArm(g.type)) {
-          const out = outputCell(g.type, g.gx, g.gz, g.rot);
-          mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
-        }
-        // Entrées : petit cube clair sur la face qui reçoit (combustible du générateur, entrées du groupeur…).
-        const inDirs =
-          g.type === 'generator'
-            ? [g.rot]
-            : g.type === 'splitter'
-              ? [(g.rot + 2) % 4]
-              : g.type === 'merger'
-                ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
-                : isArm(g.type)
-                  ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
-                  : g.type === 'furnace' || (isDrill(g.type) && def.fuel)
-                    ? [(g.rot + 2) % 4]
-                    : [];
-        for (const dir of inDirs) {
-          const [ix, iz] = RISE_DIR[dir];
-          mb.box(
-            x + ix * ((ix !== 0 ? w : d) * CELL_SIZE_M * 0.5 + 0.1),
-            0,
-            z + iz * ((ix !== 0 ? w : d) * CELL_SIZE_M * 0.5 + 0.1),
-            0.16,
-            0.16,
-            0.16,
-            shade(color, 1.25),
-            true,
-          );
-        }
+        // Flèches : sorties vers l'extérieur, entrées vers l'intérieur.
+        const io = ports(g.type, g.gx, g.gz, g.rot);
+        for (const o of io.outs) flatArrow(mb, o.cell, o.dir, shade(color, 0.85));
+        for (const i of io.ins) flatArrow(mb, i.cell, i.dir, shade(color, 1.3));
       }
       this.ghost.geometry.dispose();
       this.ghost.geometry = geometryOf(mb);
@@ -310,30 +299,6 @@ function addBelt(
   );
 }
 
-/** Petit carré clair posé sur une face (entrée de ressources) : largeur `w`, de la hauteur `y` sur `h` de haut. */
-function inputMark(
-  mb: MeshBuilder,
-  ex: number,
-  ez: number,
-  dx: number,
-  dz: number,
-  w: number,
-  y: number,
-  h: number,
-): void {
-  const t = 0.03;
-  mb.box(
-    ex + dx * (t / 2 - 0.005),
-    y,
-    ez + dz * (t / 2 - 0.005),
-    dx !== 0 ? t : w,
-    h,
-    dz !== 0 ? t : w,
-    hexToRgb('#cfe4f2'),
-    true,
-  );
-}
-
 function addMachineBody(
   mb: MeshBuilder,
   type: MachineType,
@@ -349,12 +314,8 @@ function addMachineBody(
   const sz = d * CELL_SIZE_M - 0.06;
   const color = hexToRgb(def.color);
   const [fx, fz] = RISE_DIR[rot];
-  const out = outputCell(type, gx, gz, rot);
-  // Foreuse à combustible et fourneau : carré clair sur la face arrière = entrée du combustible.
-  if ((isDrill(type) && def.fuel) || type === 'furnace')
-    inputMark(mb, x - fx * (sx / 2), z - fz * (sz / 2), -fx, -fz, 0.3, 0.12, 0.28);
   if (isArm(type)) {
-    // Bras : socle, mât, bras horizontal vers l'avant et pince ; petit carré clair derrière (combustible/prise).
+    // Bras : socle, mât, bras horizontal vers l'avant et pince .
     mb.box(x, 0, z, 0.4, 0.12, 0.4, color, true);
     mb.box(x, 0.12, z, 0.14, 0.33, 0.14, shade(color, 0.8), true);
     mb.box(
@@ -377,11 +338,6 @@ function addMachineBody(
       hexToRgb('#2a2d31'),
       true,
     );
-    // Trois prises : derrière, à gauche, à droite.
-    for (const dir of [(rot + 2) % 4, (rot + 1) % 4, (rot + 3) % 4]) {
-      const [ix, iz] = RISE_DIR[dir];
-      inputMark(mb, x + ix * 0.2, z + iz * 0.2, ix, iz, 0.16, 0.03, 0.06);
-    }
     return;
   }
   if (isAssembler(type)) {
@@ -423,31 +379,9 @@ function addMachineBody(
     return;
   }
   if (type === 'splitter' || type === 'merger') {
-    // Boîtier plat. Becs sombres = sorties (séparateur : 3, groupeur : 1) ; carrés clairs en creux = entrées.
-    // Becs et carrés restent sous le dessus (0.25) et débordent de 2 cm dans le boîtier : pas de faces confondues.
+    // Boîtier plat (les entrées et sorties sont indiquées par des flèches au sol).
     mb.box(x, 0, z, sx, 0.25, sz, color, true);
     mb.box(x, 0.25, z, sx - 0.16, 0.08, sz - 0.16, shade(color, 1.3), true);
-    const side = (dir: number): [number, number] => RISE_DIR[dir];
-    const outs = type === 'splitter' ? [rot, (rot + 1) % 4, (rot + 3) % 4] : [rot];
-    const ins =
-      type === 'splitter' ? [(rot + 2) % 4] : [(rot + 2) % 4, (rot + 1) % 4, (rot + 3) % 4];
-    for (const dir of outs) {
-      const [bx, bz] = side(dir);
-      mb.box(
-        x + bx * 0.28,
-        0.04,
-        z + bz * 0.28,
-        bx !== 0 ? 0.16 : 0.2,
-        0.18,
-        bz !== 0 ? 0.16 : 0.2,
-        hexToRgb('#2a2d31'),
-        true,
-      );
-    }
-    for (const dir of ins) {
-      const [bx, bz] = side(dir);
-      inputMark(mb, x + bx * (sx / 2), z + bz * (sz / 2), bx, bz, 0.12, 0.06, 0.14);
-    }
     return;
   }
   if (type === 'pole') {
@@ -459,7 +393,7 @@ function addMachineBody(
     return;
   }
   if (type === 'generator') {
-    // Générateur : caisson, bloc moteur, échappement à l'arrière ; carré clair sur la face d'entrée du combustible.
+    // Générateur : caisson, bloc moteur, échappement à l'arrière .
     const [rx, rz] = [-fz, fx];
     mb.box(x, 0, z, sx, 0.7, sz, color, true);
     mb.box(x - fx * 0.1, 0.7, z - fz * 0.1, sx - 0.4, 0.3, sz - 0.4, shade(color, 1.3), true);
@@ -473,28 +407,16 @@ function addMachineBody(
       hexToRgb('#3d3a38'),
       true,
     );
-    inputMark(mb, x + fx * (sx / 2), z + fz * (sz / 2), fx, fz, 0.3, 0.2, 0.3);
     return;
   }
   if (isDrill(type)) {
     mb.box(x, 0, z, sx, 0.5, sz, hexToRgb('#4b4f55'), true);
     mb.box(x, 0.5, z, sx - 0.5, 0.45, sz - 0.5, color, true);
     mb.cone(x, 0.95, z, 0.3, 0.35, 8, hexToRgb('#8a9099'), 0.1);
-    // Bec de sortie vers la case de sortie.
-    mb.box(
-      center(out.gx) - fx * 0.2,
-      0.12,
-      center(out.gz) - fz * 0.2,
-      fx !== 0 ? 0.3 : 0.28,
-      0.22,
-      fz !== 0 ? 0.3 : 0.28,
-      hexToRgb('#2a2d31'),
-      true,
-    );
   } else {
     mb.box(x, 0, z, sx, 0.9, sz, color, true);
     mb.box(x, 0.9, z, sx + 0.04, 0.06, sz + 0.04, shade(color, 1.25), true);
-    // Cheminée à l'arrière, ouverture et braise côté sortie.
+    // Cheminée à l'arrière.
     mb.box(
       x - fx * 0.2 - (fx === 0 ? 0.2 : 0),
       0.96,
@@ -503,16 +425,6 @@ function addMachineBody(
       0.5,
       0.28,
       hexToRgb('#3d3835'),
-      true,
-    );
-    mb.box(
-      center(out.gx) - fx * 0.2,
-      0.1,
-      center(out.gz) - fz * 0.2,
-      fx !== 0 ? 0.08 : 0.5,
-      0.4,
-      fz !== 0 ? 0.08 : 0.5,
-      hexToRgb('#e0702a'),
       true,
     );
   }

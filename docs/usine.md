@@ -87,3 +87,9 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Cause du blocage constaté** : le bras ne regardait que l'objet de tête du tapis (ou la 1re pile du coffre). Si cet objet était refusé (ex. charbon devant du minerai), tout le reste restait coincé derrière. Le bras examine maintenant **tous** les objets du tapis / toutes les piles du coffre et prend le premier que la destination accepte.
 - **Combustible** : un fourneau, une foreuse ou un générateur accepte désormais le combustible par **toutes les faces sauf leur sortie** (le carré clair reste l'entrée conseillée). Avant, seule la face arrière marchait, ce qui bloquait un bras posé sur le côté.
 - Le panneau d'infos d'un bras indique la raison quand il ne bouge pas : rien devant, rien à prendre, ou « la destination refuse ces objets ».
+
+## Tour 46 — retours PO
+- **Flèches d'entrée et de sortie** : les petits/gros carrés sont remplacés par des flèches posées au sol dans la case voisine : **orange vers l'extérieur** = sortie, **bleu vers la machine** = entrée (fantôme de pose compris). Définies par `ports()` dans `factory.ts` : foreuse/fourneau (sortie devant, combustible derrière), générateur (combustible), séparateur (1 entrée, 3 sorties), groupeur / bras / assembleur (3 entrées, 1 sortie).
+- **Tapis bloqué** : le panneau d'un tapis dit maintenant pourquoi son objet de tête ne passe pas (fourneau déjà rempli d'un autre minerai, entrée pleine, pas de combustible possible par cette face, coffre plein, rien devant…), via `Factory.refusal` / `beltBlock`.
+- **Barre de raccourcis** : les quantités se mettent à jour quand on ramasse, récolte ou jette un objet (la pile ne prévenait pas le sac).
+- **Échap dans une interface (1re personne)** : le navigateur refuse de recapturer la souris sans geste ; le jeu réessaie à la première touche (ou clic) suivante au lieu de laisser le curseur libre.

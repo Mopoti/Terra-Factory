@@ -148,6 +148,62 @@ export function outputCell(type: MachineType, gx: number, gz: number, rot: numbe
   }
 }
 
+/** Une entrée ou une sortie : la case voisine concernée et le sens de la flèche (sens de circulation des objets). */
+export interface Port {
+  cell: Cell;
+  dir: number;
+}
+
+/** Case voisine au milieu du côté `dir` (0 = +z, 1 = +x, 2 = −z, 3 = −x) d'une machine posée avec l'orientation `rot`. */
+function sideCell(type: MachineType, gx: number, gz: number, rot: number, dir: number): Cell {
+  const { w, d } = dims(type, rot);
+  switch (dir % 4) {
+    case 0:
+      return { gx: gx + Math.floor(w / 2), gz: gz + d };
+    case 1:
+      return { gx: gx + w, gz: gz + Math.floor(d / 2) };
+    case 2:
+      return { gx: gx + Math.floor(w / 2), gz: gz - 1 };
+    default:
+      return { gx: gx - 1, gz: gz + Math.floor(d / 2) };
+  }
+}
+
+/** Entrées (flèches vers la machine) et sorties (flèches vers l'extérieur) à dessiner autour d'une machine. */
+export function ports(
+  type: MachineType,
+  gx: number,
+  gz: number,
+  rot: number,
+): { ins: Port[]; outs: Port[] } {
+  const out = (dir: number): Port => ({ cell: sideCell(type, gx, gz, rot, dir), dir: dir % 4 });
+  const into = (dir: number): Port => ({
+    cell: sideCell(type, gx, gz, rot, dir),
+    dir: (dir + 2) % 4,
+  });
+  const back = (rot + 2) % 4;
+  const left = (rot + 1) % 4;
+  const right = (rot + 3) % 4;
+  switch (type) {
+    case 'drill':
+    case 'furnace':
+      return { ins: [into(back)], outs: [out(rot)] };
+    case 'drill_electric':
+      return { ins: [], outs: [out(rot)] };
+    case 'generator':
+      return { ins: [into(rot)], outs: [] };
+    case 'splitter':
+      return { ins: [into(back)], outs: [out(rot), out(left), out(right)] };
+    case 'merger':
+    case 'arm':
+    case 'arm_electric':
+    case 'assembler':
+      return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
+    default:
+      return { ins: [], outs: [] };
+  }
+}
+
 export function emptyMachine(
   id: number,
   type: MachineType,
@@ -619,6 +675,40 @@ export class Factory {
     if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
     return false;
+  }
+
+  /** Pourquoi `target` refuse cet objet (clé de traduction `factory.refuse.*`), ou null s'il l'accepte. */
+  refusal(target: Machine, from: Machine, item: string, dir: number): string | null {
+    if (this.canAccept(target, from, item, dir)) return null;
+    if (isChest(target.type)) return 'chestFull';
+    if (isRouter(target.type))
+      return target.type === 'merger' && from.type === 'conveyor' ? 'merger' : 'busy';
+    if (target.type === 'conveyor') {
+      if (target.rot === (dir + 2) % 4) return 'facing';
+      return 'beltFull';
+    }
+    if (target.type === 'furnace') {
+      if (smeltRecipe(item)) return target.input?.item !== item ? 'otherOre' : 'inputFull';
+      if (!itemById(item).fuelSeconds) return 'notUsable';
+      return dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
+    }
+    if (target.type === 'generator' || isDrill(target.type)) {
+      if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return 'notUsable';
+      return isDrill(target.type) && dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
+    }
+    if (isAssembler(target.type))
+      return recipeOf(target)?.[item] ? 'ingredientFull' : 'notIngredient';
+    return 'notUsable';
+  }
+
+  /** Tapis bloqué : l'objet de tête, sa destination et la raison du refus (pour le panneau d'infos). */
+  beltBlock(m: Machine): { item: string; target: Machine | null; reason: string | null } | null {
+    const head = m.belt[0];
+    if (m.type !== 'conveyor' || !head || head.pos < 1) return null;
+    const [dx, dz] = RISE_DIR[m.rot];
+    const target = this.machineAt(m.gx + dx, m.gz + dz);
+    if (!target || target === m) return { item: head.item, target: null, reason: null };
+    return { item: head.item, target, reason: this.refusal(target, m, head.item, m.rot) };
   }
 
   /** Une machine ou un tapis peut-il recevoir cet objet par cette case ? Si oui, l'y met. */

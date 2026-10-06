@@ -140,6 +140,7 @@ export class GameState {
       this.inventory = add(this.inventory, item, gained);
       this.changes.taken[key] = (this.changes.taken[key] ?? 0) + gained;
       this.emit({ type: 'harvest', key });
+      this.emit({ type: 'inventory' });
     }
     return { gained, left: available - gained, bagFull: gained < Math.min(units, available) };
   }
@@ -158,6 +159,7 @@ export class GameState {
     };
     this.changes.drops.push(stack);
     this.emit({ type: 'drops' });
+    this.emit({ type: 'inventory' });
     return stack;
   }
 
@@ -171,6 +173,7 @@ export class GameState {
       stack.count -= gained;
       if (stack.count <= 0) this.changes.drops = this.changes.drops.filter((d) => d.id !== stackId);
       this.emit({ type: 'drops' });
+      this.emit({ type: 'inventory' });
     }
     return { gained, left: stack.count, bagFull: stack.count > 0 };
   }

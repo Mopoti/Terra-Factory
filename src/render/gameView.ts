@@ -864,6 +864,23 @@ export function startGameView(
         `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
       );
       rows.push(`<div>${t('factory.speed', { n: String(def.cellsPerSecond ?? 1) })}</div>`);
+      const block = factory.beltBlock(m);
+      if (block) {
+        const what = t(`item.${block.item}` as TranslationKey);
+        rows.push(
+          `<div class="sub">${
+            !block.target
+              ? t('factory.block.nothing', { item: what })
+              : block.reason
+                ? t('factory.block.refused', {
+                    item: what,
+                    target: t(`item.${machineDef(block.target.type).item}` as TranslationKey),
+                    reason: t(`factory.refuse.${block.reason}` as TranslationKey),
+                  })
+                : t('factory.block.waiting')
+          }</div>`,
+        );
+      }
     }
     if (def.fuel) {
       const secs = factory.fuelSecondsLeft(m);
@@ -1013,6 +1030,8 @@ export function startGameView(
   }
   /** Après la fermeture d'une interface avec Échap, le navigateur libère la souris : ce n'est pas une demande de pause. */
   let ignoreUnlockUntil = 0;
+  /** Après un Échap qui ferme une interface, le navigateur refuse de recapturer la souris sans geste : on réessaie à la touche / au clic suivant. */
+  let wantLock = false;
   const onLockChange = (): void => {
     const locked = isLocked();
     if (!locked && releasingOnPurpose) {
@@ -1021,9 +1040,21 @@ export function startGameView(
       // Le navigateur a libéré la souris (le joueur a appuyé sur Échap) : on ouvre la pause.
       options.onRequestPause?.();
     }
+    if (locked) wantLock = false;
     wasLocked = locked;
   };
   document.addEventListener('pointerlockchange', onLockChange);
+  const retryLock = (e: KeyboardEvent | MouseEvent): void => {
+    if (!wantLock) return;
+    if (isLocked() || paused || rig.view !== 'first') {
+      wantLock = isLocked() ? false : wantLock && !paused && rig.view === 'first';
+      return;
+    }
+    if (e instanceof KeyboardEvent && e.key === 'Escape') return;
+    requestLock();
+  };
+  window.addEventListener('keydown', retryLock, true);
+  window.addEventListener('mousedown', retryLock, true);
 
   const previouslyActive = new Set<ActionId>();
   /** Vrai à l'appui sur la touche (une seule fois par appui). */
@@ -1524,6 +1555,7 @@ export function startGameView(
         releaseLock();
       } else {
         ignoreUnlockUntil = performance.now() + 600;
+        wantLock = rig.view === 'first';
         requestLock();
       }
     },
@@ -1543,6 +1575,8 @@ export function startGameView(
       window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
+      window.removeEventListener('keydown', retryLock, true);
+      window.removeEventListener('mousedown', retryLock, true);
       renderer.domElement.removeEventListener('click', requestLock);
       ghostUniforms.uGhostOn.value = 0;
       for (const mesh of chunks.values()) mesh.dispose();

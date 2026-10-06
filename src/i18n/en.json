@@ -507,5 +507,20 @@
   "factory.arm.diag.ok": "Ready: an item can be picked.",
   "factory.arm.diag.noDest": "Nothing in front: place a machine, belt or chest in front.",
   "factory.arm.diag.noSource": "Nothing to pick behind, left or right.",
-  "factory.arm.diag.refused": "Items are nearby but the destination refuses them (e.g. fuel through the output face of a furnace or drill; ore: furnace already full of another ore; an item that cannot be smelted)."
+  "factory.arm.diag.refused": "Items are nearby but the destination refuses them (e.g. fuel through the output face of a furnace or drill; ore: furnace already full of another ore; an item that cannot be smelted).",
+  "factory.block.nothing": "End of belt: {item} has nowhere to go (nothing in front).",
+  "factory.block.refused": "{item} stuck in front of {target}: {reason}",
+  "factory.block.waiting": "Just a moment, the cell in front is clearing.",
+  "factory.refuse.chestFull": "the chest is full",
+  "factory.refuse.busy": "busy",
+  "factory.refuse.merger": "a merger pulls from belts that touch it itself — connect it with a belt pointing at it",
+  "factory.refuse.facing": "the next belt faces this one",
+  "factory.refuse.beltFull": "the next belt is full",
+  "factory.refuse.otherOre": "the furnace already holds another ore (one type at a time)",
+  "factory.refuse.inputFull": "the furnace input is full",
+  "factory.refuse.notUsable": "it has no use for this item",
+  "factory.refuse.outputFace": "this is the output face",
+  "factory.refuse.fuelFull": "the fuel slot is full or holds another type",
+  "factory.refuse.ingredientFull": "enough of this ingredient is waiting",
+  "factory.refuse.notIngredient": "not an ingredient of the recipe"
 }
