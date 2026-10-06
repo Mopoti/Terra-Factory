@@ -492,5 +492,16 @@
   "map.belts": "Tapis",
   "map.help": "Glisse pour déplacer la carte, molette ou + / − pour zoomer, M ou Échap pour fermer. Les zones lointaines apparaissent au fur et à mesure.",
   "item.machine_arm_electric": "Bras robotique électrique",
-  "factory.router.arm_electric": "Comme le bras à combustible, mais alimenté par un poteau (20 kW) : deux fois plus rapide. Prend sur les 3 côtés (derrière, gauche, droite) et dépose devant."
+  "factory.router.arm_electric": "Comme le bras à combustible, mais alimenté par un poteau (20 kW) : deux fois plus rapide. Prend sur les 3 côtés (derrière, gauche, droite) et dépose devant.",
+  "item.machine_assembler": "Assembleur",
+  "factory.router.assembler": "Fabrique l'objet choisi à partir d'ingrédients amenés par tapis ou bras (toutes les faces sauf la sortie, devant). Électrique : 60 kW.",
+  "machine.recipe": "Recette",
+  "machine.recipeNone": "— choisir un objet —",
+  "machine.ingredients": "Ingrédients (entrée)",
+  "machine.product": "Produit (sortie)",
+  "machine.ingHint": "Glisse ou clique un ingrédient du sac sur sa case. Clic sur la case pour le reprendre.",
+  "factory.assembler.recipe": "Recette : {v}",
+  "factory.assembler.none": "aucune (ouvrir l'interface)",
+  "factory.assembler.needs": "Ingrédients : {v}",
+  "factory.assembler.time": "Production : 1 objet / {s} s"
 }

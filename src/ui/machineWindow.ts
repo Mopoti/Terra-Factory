@@ -1,7 +1,14 @@
 import { playSfx } from '../audio/sfx';
 import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
-import { isChest, isDrill, machineDef, smeltRecipe } from '../core/data/machines';
-import { footprint, type Factory, type Machine, type Stack } from '../core/factory/factory';
+import { isAssembler, isChest, isDrill, machineDef, smeltRecipe } from '../core/data/machines';
+import {
+  footprint,
+  ingredientCap,
+  recipeOf,
+  type Factory,
+  type Machine,
+  type Stack,
+} from '../core/factory/factory';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
@@ -60,7 +67,8 @@ export function mountMachineWindow(
     ore?: HTMLElement;
     counts: Map<SlotName, HTMLElement>;
     chest: HTMLElement[];
-  } = { counts: new Map(), chest: [] };
+    ingredients: Map<string, HTMLElement>;
+  } = { counts: new Map(), chest: [], ingredients: new Map() };
   /** Ce qui, s'il change, oblige à redessiner la fenêtre (sac, présence d'objets dans les cases). */
   let lastShape = '';
   const shape = (m: Machine): string =>
@@ -70,6 +78,7 @@ export function mountMachineWindow(
       m.input?.item ?? null,
       m.stock?.item ?? null,
       m.slots.map((x) => x.item),
+      m.recipe,
       selected,
       state.hand,
     ]);
@@ -312,6 +321,71 @@ export function mountMachineWindow(
     return grid;
   }
 
+  /** Dépose un ingrédient (de la main, de l'objet choisi ou glissé) dans l'assembleur. */
+  function putIngredient(m: Machine, item: string): void {
+    const hand = state.hand;
+    const moved =
+      hand && hand.item === item
+        ? state.useHand((it, n) => state.loadIngredient(m, it, n))
+        : state.loadIngredient(m, item, 100);
+    playSfx(moved > 0 ? 'pickup' : 'deny');
+    render();
+  }
+
+  /** Assembleur : choix de la recette et cases d'ingrédients. */
+  function assemblerRows(m: Machine): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    const row = el('div', 'mach-row');
+    row.append(el('span', 'mach-label', t('machine.recipe')));
+    const select = el('select', 'mach-select');
+    select.append(new Option(t('machine.recipeNone'), ''));
+    for (const def of ITEMS) {
+      if (def.recipe)
+        select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
+    }
+    select.value = m.recipe ?? '';
+    select.addEventListener('change', () => {
+      if (state.setRecipe(m, select.value || null)) playSfx('pickup');
+      render();
+    });
+    row.append(select);
+    out.push(row);
+    const need = recipeOf(m);
+    if (need) {
+      out.push(el('h3', undefined, t('machine.ingredients')));
+      const grid = el('div', 'slot-grid chest-grid');
+      for (const [item, n] of Object.entries(need)) {
+        const have = m.slots.find((x) => x.item === item)?.count ?? 0;
+        const cell = el('button', have > 0 ? 'slot' : 'slot empty');
+        cell.type = 'button';
+        cell.style.setProperty('--item', itemById(item).color);
+        const count = el('span', 'slot-count', `${have} / ${ingredientCap(n)}`);
+        live.ingredients.set(item, count);
+        cell.append(el('span', 'slot-name', `${n} × ${itemName(item)}`), count);
+        cell.addEventListener('click', () => {
+          if (state.hand) return putIngredient(m, state.hand.item);
+          if (selected) return putIngredient(m, selected);
+          const index = m.slots.findIndex((x) => x.item === item);
+          if (index >= 0 && state.takeFromChest(m, index) > 0) playSfx('pickup');
+          render();
+        });
+        cell.addEventListener('dragover', (e) => {
+          if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+        });
+        cell.addEventListener('drop', (e) => {
+          const dropped = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+          if (!dropped) return;
+          e.preventDefault();
+          dragging = false;
+          putIngredient(m, dropped);
+        });
+        grid.append(cell);
+      }
+      out.push(grid, el('small', 'help', t('machine.ingHint')));
+    }
+    return out;
+  }
+
   function putInChest(m: Machine, item: string): void {
     const hand = state.hand;
     const moved =
@@ -345,6 +419,11 @@ export function mountMachineWindow(
       if (node) node.textContent = String(stack.count);
     });
     const max = machineDef(m.type).stockMax ?? 100;
+    const need = recipeOf(m);
+    for (const [item, node] of live.ingredients) {
+      const have = m.slots.find((x) => x.item === item)?.count ?? 0;
+      node.textContent = `${have} / ${ingredientCap(need?.[item] ?? 0)}`;
+    }
     for (const [name, node] of live.counts) {
       const stack = m[name];
       if (stack) node.textContent = `${stack.count} / ${max}`;
@@ -358,7 +437,7 @@ export function mountMachineWindow(
       return;
     }
     const def = machineDef(m.type);
-    live = { counts: new Map(), chest: [] };
+    live = { counts: new Map(), chest: [], ingredients: new Map() };
     lastShape = shape(m);
     const panel = el('div', 'panel machine-window');
     panel.setAttribute('role', 'dialog');
@@ -377,10 +456,22 @@ export function mountMachineWindow(
       live.fuel = fuelInfo;
       rows.append(fuelInfo);
     }
+    if (isAssembler(m.type)) rows.append(...assemblerRows(m));
     if (m.type === 'furnace') rows.append(machineSlot(m, 'input', t('machine.input'), m.input));
-    if (isDrill(m.type) || m.type === 'furnace') {
+    if (isDrill(m.type) || m.type === 'furnace' || isAssembler(m.type)) {
       rows.append(
-        machineSlot(m, 'stock', t(isDrill(m.type) ? 'machine.stock' : 'machine.output'), m.stock),
+        machineSlot(
+          m,
+          'stock',
+          t(
+            isDrill(m.type)
+              ? 'machine.stock'
+              : isAssembler(m.type)
+                ? 'machine.product'
+                : 'machine.output',
+          ),
+          m.stock,
+        ),
       );
     }
     if (isDrill(m.type)) {

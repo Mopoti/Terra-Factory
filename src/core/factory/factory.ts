@@ -5,6 +5,7 @@ import {
   hasOutput,
   isChest,
   isArm,
+  isAssembler,
   isDrill,
   isRouter,
   machineDef,
@@ -45,9 +46,18 @@ export interface Machine {
   progress: number;
   /** Tapis : objets en route. */
   belt: BeltItem[];
-  /** Coffre : piles rangées (au plus `slots`). */
+  /** Coffre : piles rangées (au plus `slots`). Assembleur : ingrédients en attente. */
   slots: Stack[];
+  /** Assembleur : objet fabriqué (null = aucun choix). */
+  recipe: string | null;
 }
+
+/** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */
+export const recipeOf = (m: Machine): Record<string, number> | null =>
+  m.recipe ? itemById(m.recipe).recipe : null;
+
+/** Assembleur : combien d'unités d'un ingrédient il garde en attente au plus. */
+export const ingredientCap = (need: number): number => Math.max(10, need * 4);
 
 /** Taille d'une pile dans un coffre. */
 export const CHEST_STACK = 100;
@@ -158,6 +168,7 @@ export function emptyMachine(
     progress: 0,
     belt: [],
     slots: [],
+    recipe: null,
   };
 }
 
@@ -212,12 +223,22 @@ export function normalizeMachines(raw: unknown): Machine[] {
         }
       }
     }
-    if (Array.isArray(m.slots) && isChest(machine.type)) {
+    if (typeof m.recipe === 'string' && isAssembler(machine.type)) {
+      try {
+        if (itemById(m.recipe).recipe) machine.recipe = m.recipe;
+      } catch {
+        /* recette inconnue */
+      }
+    }
+    if (Array.isArray(m.slots) && (isChest(machine.type) || isAssembler(machine.type))) {
       for (const st of m.slots) {
         const stack = normalizeStack(st);
         if (stack) machine.slots.push({ ...stack, count: Math.min(stack.count, CHEST_STACK) });
       }
-      machine.slots.length = Math.min(machine.slots.length, machineDef(machine.type).slots ?? 0);
+      machine.slots.length = Math.min(
+        machine.slots.length,
+        isChest(machine.type) ? (machineDef(machine.type).slots ?? 0) : 8,
+      );
     }
     out.push(machine);
   }
@@ -237,6 +258,7 @@ const MACHINE_TYPES: MachineType[] = [
   'merger',
   'arm',
   'arm_electric',
+  'assembler',
 ];
 
 /** Centre d'une machine (m). */
@@ -394,6 +416,14 @@ export class Factory {
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
     if (isRouter(m.type)) return m.stock ? 'blocked' : 'idle';
+    if (isAssembler(m.type)) {
+      const need = recipeOf(m);
+      if (!need) return 'idle';
+      if (this.powerFactor(m) <= 0) return 'noPower';
+      if (m.stock && (m.stock.item !== m.recipe || m.stock.count >= (def.stockMax ?? 100)))
+        return 'full';
+      return this.hasIngredients(m, need) ? 'running' : 'idle';
+    }
     if (isArm(m.type)) {
       if (def.consumesKw) {
         if (this.powerFactor(m) <= 0) return 'noPower';
@@ -433,6 +463,7 @@ export class Factory {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
       else if (isRouter(m.type)) this.tickRouter(m);
       else if (isArm(m.type)) this.tickArm(m, dt);
+      else if (isAssembler(m.type)) this.tickAssembler(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -444,6 +475,7 @@ export class Factory {
 
   /** Une machine électrique a-t-elle quelque chose à faire (donc demande du courant) ? */
   private wantsToWork(m: Machine): boolean {
+    if (isAssembler(m.type)) return this.canCraft(m);
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (!isDrill(m.type)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
@@ -586,6 +618,7 @@ export class Factory {
       return !target.input || (target.input.item === item && target.input.count < max);
     }
     if (isDrill(target.type)) return dir === target.rot && this.fuelRoom(target, item);
+    if (isAssembler(target.type)) return this.ingredientRoom(target, item);
     return false;
   }
 
@@ -595,11 +628,58 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
-    else if (target.type === 'furnace' && smeltRecipe(item)) {
+    else if (isAssembler(target.type)) {
+      const stack = target.slots.find((x) => x.item === item);
+      if (stack) stack.count++;
+      else target.slots.push({ item, count: 1 });
+    } else if (target.type === 'furnace' && smeltRecipe(item)) {
       if (target.input) target.input.count++;
       else target.input = { item, count: 1 };
     } else this.addFuel(target, item);
     return true;
+  }
+
+  private ingredientRoom(m: Machine, item: string): boolean {
+    const need = recipeOf(m)?.[item];
+    if (!need) return false;
+    const have = m.slots.find((x) => x.item === item)?.count ?? 0;
+    return have < ingredientCap(need);
+  }
+
+  private hasIngredients(m: Machine, need: Record<string, number>): boolean {
+    return Object.entries(need).every(
+      ([item, n]) => (m.slots.find((x) => x.item === item)?.count ?? 0) >= n,
+    );
+  }
+
+  /** Assembleur : assez d'ingrédients et de la place pour le produit ? */
+  private canCraft(m: Machine): boolean {
+    const need = recipeOf(m);
+    if (!need || !m.recipe || !this.hasIngredients(m, need)) return false;
+    const max = machineDef(m.type).stockMax ?? 100;
+    return !m.stock || (m.stock.item === m.recipe && m.stock.count < max);
+  }
+
+  private tickAssembler(m: Machine, dt: number): void {
+    this.pushOutput(m);
+    const need = recipeOf(m);
+    const speed = this.powerFactor(m);
+    if (!need || !m.recipe || !this.canCraft(m) || speed <= 0) {
+      if (!this.canCraft(m)) m.progress = 0;
+      return;
+    }
+    m.progress += dt * speed;
+    const seconds = machineDef(m.type).craftSeconds ?? 2;
+    if (m.progress < seconds) return;
+    m.progress -= seconds;
+    for (const [item, n] of Object.entries(need)) {
+      const stack = m.slots.find((x) => x.item === item);
+      if (!stack) continue;
+      stack.count -= n;
+      if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
+    }
+    if (m.stock) m.stock.count++;
+    else m.stock = { item: m.recipe, count: 1 };
   }
 
   private addFuel(target: Machine, item: string): void {

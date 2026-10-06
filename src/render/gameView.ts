@@ -54,6 +54,7 @@ import {
   hasOutput,
   isChest,
   isArm,
+  isAssembler,
   isDrill,
   isRouter,
   machineDef,
@@ -64,6 +65,7 @@ import {
   Factory,
   dims,
   emptyMachine,
+  recipeOf,
   outputCell,
   pickMachine,
   type Cell,
@@ -806,6 +808,25 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (isAssembler(m.type)) {
+      const need = recipeOf(m);
+      rows.push(
+        `<div>${t('factory.assembler.recipe', { v: m.recipe ? t(`item.${m.recipe}` as TranslationKey) : t('factory.assembler.none') })}</div>`,
+      );
+      if (need) {
+        rows.push(
+          `<div class="sub">${Object.entries(need)
+            .map(
+              ([item, n]) =>
+                `${m.slots.find((x) => x.item === item)?.count ?? 0}/${n} ${t(`item.${item}` as TranslationKey)}`,
+            )
+            .join(' · ')}</div>`,
+        );
+        rows.push(
+          `<div>${t('factory.assembler.time', { s: String(def.craftSeconds ?? 2) })}</div>`,
+        );
+      }
+      rows.push(`<div>${t('factory.stock', { v: stackText(m.stock, def.stockMax) })}</div>`);
     } else if (isArm(m.type)) {
       rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
       rows.push(

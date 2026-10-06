@@ -6,6 +6,7 @@ import {
   hasOutput,
   isChest,
   isArm,
+  isAssembler,
   isDrill,
   isRouter,
   machineDef,
@@ -381,6 +382,24 @@ function addMachineBody(
       const [ix, iz] = RISE_DIR[dir];
       inputMark(mb, x + ix * 0.2, z + iz * 0.2, ix, iz, 0.16, 0.03, 0.06);
     }
+    return;
+  }
+  if (isAssembler(type)) {
+    // Assembleur : socle, caisson, plateau de travail et bras de montage ; bec sombre côté sortie.
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x, 0.2, z, sx - 0.1, 0.7, sz - 0.1, color, true);
+    mb.box(x, 0.9, z, sx - 0.3, 0.1, sz - 0.3, shade(color, 1.3), true);
+    mb.box(x - fx * 0.15, 1.0, z - fz * 0.15, 0.12, 0.3, 0.12, hexToRgb('#3d3a38'), true);
+    mb.box(
+      x + fx * 0.05,
+      1.2,
+      z + fz * 0.05,
+      fx !== 0 ? 0.4 : 0.1,
+      0.08,
+      fz !== 0 ? 0.4 : 0.1,
+      hexToRgb('#e6c84a'),
+      true,
+    );
     return;
   }
   if (isChest(type)) {

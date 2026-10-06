@@ -12,7 +12,8 @@ export type MachineType =
   | 'splitter'
   | 'merger'
   | 'arm'
-  | 'arm_electric';
+  | 'arm_electric'
+  | 'assembler';
 
 export interface MachineDef {
   id: MachineType;
@@ -38,6 +39,8 @@ export interface MachineDef {
   /** Poteau : portée du fil vers un autre poteau (m) et vers une machine (m, bord de la machine). */
   wireReachM?: number;
   linkReachM?: number;
+  /** Assembleur : secondes par objet fabriqué (à pleine puissance). */
+  craftSeconds?: number;
   /** Bras robotique : durée d'un aller-retour (s). */
   swingSeconds?: number;
   /** Coffre : nombre de cases (une pile de 100 au plus par case). */
@@ -57,7 +60,11 @@ export const isDrill = (type: MachineType): boolean =>
   type === 'drill' || type === 'drill_electric';
 
 /** A une case de sortie (pousse son stock devant elle). */
-export const hasOutput = (type: MachineType): boolean => isDrill(type) || type === 'furnace';
+export const hasOutput = (type: MachineType): boolean =>
+  isDrill(type) || type === 'furnace' || type === 'assembler';
+
+/** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
+export const isAssembler = (type: MachineType): boolean => type === 'assembler';
 
 /** Séparateur (1 entrée, 3 sorties) ou groupeur (3 entrées, 1 sortie) : aiguille les objets d'un tapis à l'autre. */
 export const isRouter = (type: MachineType): boolean => type === 'splitter' || type === 'merger';

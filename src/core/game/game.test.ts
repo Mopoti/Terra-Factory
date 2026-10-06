@@ -984,3 +984,23 @@ describe('pile au bout du curseur', () => {
     expect(s.inventory.iron_ingot ?? 0).toBe(0);
   });
 });
+
+describe('assembleur dans la partie', () => {
+  it('choisir une recette, charger des ingrédients, changer de recette rend tout au sac', () => {
+    const noWorld = { oreAt: () => null, mineOre: () => 0 };
+    const s = new GameState({
+      inventory: { machine_assembler: 1, iron_ingot: 10, copper_ingot: 4 },
+    });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'assembler', 4, 4, 0, () => false)).toBe('ok');
+    const m = s.changes.machines[0];
+    expect(s.loadIngredient(m, 'iron_ingot', 5)).toBe(0); // pas de recette
+    expect(s.setRecipe(m, 'machine_conveyor')).toBe(true);
+    expect(s.loadIngredient(m, 'copper_ingot', 4)).toBe(0); // pas un ingrédient
+    expect(s.loadIngredient(m, 'iron_ingot', 100)).toBe(10); // plafonné à 10 pour 1 par objet
+    expect(s.inventory.iron_ingot ?? 0).toBe(0);
+    expect(s.setRecipe(m, 'stone')).toBe(false); // une matière brute ne se fabrique pas
+    expect(s.setRecipe(m, null)).toBe(true);
+    expect(s.inventory.iron_ingot).toBe(10);
+  });
+});

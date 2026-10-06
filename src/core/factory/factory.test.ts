@@ -483,3 +483,52 @@ describe('bras robotique', () => {
     expect(out.slots[0]?.count ?? 0).toBeGreaterThanOrEqual(7);
   });
 });
+
+describe('assembleur', () => {
+  const powered = (asm: Machine, extra: Machine[] = []): Factory => {
+    const gen = emptyMachine(90, 'generator', 14, 10, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const pole = emptyMachine(91, 'pole', 12, 10, 0);
+    return new Factory([asm, gen, pole, ...extra], makeWorld().world);
+  };
+
+  it('fabrique la recette choisie avec courant, ingrédients et place pour le produit', () => {
+    const asm = emptyMachine(1, 'assembler', 10, 10, 0);
+    asm.recipe = 'machine_conveyor';
+    asm.slots.push({ item: 'iron_ingot', count: 3 });
+    const out = emptyMachine(2, 'chest_wood', 11, 12, 0);
+    const f = powered(asm, [out]);
+    run(f, 8);
+    expect(out.slots[0]).toEqual({ item: 'machine_conveyor', count: 3 });
+    expect(asm.slots).toHaveLength(0);
+    expect(f.status(asm)).toBe('idle');
+  });
+
+  it('ne travaille pas sans courant ni sans recette, et ne prend que les ingrédients de la recette', () => {
+    const asm = emptyMachine(1, 'assembler', 10, 10, 0);
+    asm.recipe = 'machine_conveyor';
+    asm.slots.push({ item: 'iron_ingot', count: 3 });
+    const f = new Factory([asm], makeWorld().world);
+    run(f, 5);
+    expect(f.status(asm)).toBe('noPower');
+    expect(asm.stock).toBeNull();
+    const belt = emptyMachine(5, 'conveyor', 9, 10, 1);
+    belt.belt.push({ item: 'copper_ingot', pos: 1 });
+    const g = powered(asm, [belt]);
+    run(g, 1);
+    expect(belt.belt).toHaveLength(1); // le cuivre n'est pas un ingrédient
+    belt.belt[0].item = 'iron_ingot';
+    run(g, 0.5);
+    expect(belt.belt).toHaveLength(0);
+  });
+
+  it('la recette est enregistrée ; changer de recette rend tout au sac', () => {
+    const asm = emptyMachine(1, 'assembler', 3, 3, 1);
+    asm.recipe = 'machine_conveyor';
+    asm.slots.push({ item: 'iron_ingot', count: 4 });
+    const back = normalizeMachines(JSON.parse(JSON.stringify([asm])));
+    expect(back[0].recipe).toBe('machine_conveyor');
+    expect(back[0].slots).toEqual([{ item: 'iron_ingot', count: 4 }]);
+    expect(normalizeMachines([{ ...asm, recipe: 'pas_un_objet' }])[0].recipe).toBeNull();
+  });
+});

@@ -492,5 +492,16 @@
   "map.belts": "Belts",
   "map.help": "Drag to pan, mouse wheel or + / − to zoom, M or Esc to close. Distant areas appear progressively.",
   "item.machine_arm_electric": "Electric robotic arm",
-  "factory.router.arm_electric": "Like the fuel arm but powered through a pole (20 kW): twice as fast. Picks from 3 sides (back, left, right) and drops in front."
+  "factory.router.arm_electric": "Like the fuel arm but powered through a pole (20 kW): twice as fast. Picks from 3 sides (back, left, right) and drops in front.",
+  "item.machine_assembler": "Assembler",
+  "factory.router.assembler": "Crafts the chosen item from ingredients brought by belts or arms (any side except the front output). Electric: 60 kW.",
+  "machine.recipe": "Recipe",
+  "machine.recipeNone": "— choose an item —",
+  "machine.ingredients": "Ingredients (input)",
+  "machine.product": "Product (output)",
+  "machine.ingHint": "Drag or click an ingredient from the bag onto its slot. Click the slot to take it back.",
+  "factory.assembler.recipe": "Recipe: {v}",
+  "factory.assembler.none": "none (open the interface)",
+  "factory.assembler.needs": "Ingredients: {v}",
+  "factory.assembler.time": "Output: 1 item / {s} s"
 }

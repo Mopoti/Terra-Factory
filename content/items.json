@@ -228,6 +228,16 @@
         "iron_ingot": 6,
         "copper_ingot": 3
       }
+    },
+    {
+      "id": "machine_assembler",
+      "weightKg": 15,
+      "volumeL": 30,
+      "color": "#6d7f95",
+      "recipe": {
+        "iron_ingot": 12,
+        "copper_ingot": 6
+      }
     }
   ]
 }

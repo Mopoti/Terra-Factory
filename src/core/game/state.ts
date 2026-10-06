@@ -1,7 +1,9 @@
+import { CELL_SIZE_M } from '../constants';
 import {
   chestPut,
   chestRoom,
   emptyMachine,
+  ingredientCap,
   type Cell,
   type Factory,
   type Machine,
@@ -369,6 +371,38 @@ export class GameState {
       });
       this.emit({ type: 'drops' });
     }
+  }
+
+  /** Assembleur : choisit l'objet à fabriquer ; les ingrédients et le produit en cours reviennent au sac. */
+  setRecipe(m: Machine, item: string | null): boolean {
+    if (m.type !== 'assembler') return false;
+    if (item !== null && !itemById(item).recipe) return false;
+    const at = { x: m.gx * CELL_SIZE_M, z: m.gz * CELL_SIZE_M };
+    for (const stack of [...m.slots, m.stock])
+      if (stack) this.giveBack(stack.item, stack.count, at);
+    m.slots = [];
+    m.stock = null;
+    m.progress = 0;
+    m.recipe = item;
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /** Assembleur : met des ingrédients du sac dans la machine (seulement ceux de la recette). Renvoie la quantité. */
+  loadIngredient(m: Machine, item: string, count: number): number {
+    const need = m.recipe ? itemById(m.recipe).recipe?.[item] : undefined;
+    if (m.type !== 'assembler' || !need) return 0;
+    const stack = m.slots.find((x) => x.item === item);
+    const room = ingredientCap(need) - (stack?.count ?? 0);
+    const moved = Math.min(count, this.inventory[item] ?? 0, room);
+    if (moved <= 0) return 0;
+    this.inventory = remove(this.inventory, item, moved).inventory;
+    if (stack) stack.count += moved;
+    else m.slots.push({ item, count: moved });
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return moved;
   }
 
   /** Démolit une machine : l'objet et son contenu reviennent au joueur. */
