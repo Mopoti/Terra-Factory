@@ -1452,3 +1452,29 @@
   opacity: 0.45;
   border-style: dashed;
 }
+
+/* Onglets de catégories du panneau de fabrication. */
+.craft-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.craft-tab {
+  padding: 5px 10px;
+  border: 1px solid #2c3640;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.craft-tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.craft-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111;
+  font-weight: 600;
+}

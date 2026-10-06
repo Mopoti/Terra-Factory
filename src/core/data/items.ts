@@ -63,6 +63,20 @@ export const BAG_LIMITS: BagLimits = {
   stackMax: raw.bag.stackMax,
 };
 
+export type ItemCategory = 'machines' | 'tools' | 'buildings' | 'equipment';
+export const ITEM_CATEGORIES: ItemCategory[] = ['machines', 'tools', 'buildings', 'equipment'];
+
+/**
+ * Catégorie d'un objet dans le panneau de fabrication : constructions (pièces), machines, équipements
+ * (ce qui se porte), et « ustensiles » pour tout le reste (matières, lingots, fibres, tissu…).
+ */
+export function categoryOf(item: ItemDef): ItemCategory {
+  if (item.id.startsWith('piece_')) return 'buildings';
+  if (item.id.startsWith('machine_')) return 'machines';
+  if (item.equip) return 'equipment';
+  return 'tools';
+}
+
 /** Portée de la récolte à la main, en mètres. */
 export const REACH_M: number = raw.reachM;
 

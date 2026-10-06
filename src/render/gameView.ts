@@ -1,3 +1,4 @@
+import { itemById } from '../core/data/items';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
 import { cellOnPlane } from '../core/build/aim';
@@ -198,6 +199,60 @@ export function startGameView(
   bodyTool.rotation.set(-0.5, 0, 0);
   player.add(bodyTool);
 
+  // Équipement porté : formes simples sur le personnage (3ème personne et vue du dessus). Provisoire : plus tard, de vrais modèles.
+  const worn = new THREE.Group();
+  player.add(worn);
+  let wornKey = '';
+  function refreshWorn(): void {
+    const eq = options.state.changes.equipment;
+    const key = JSON.stringify(eq);
+    if (key === wornKey) return;
+    wornKey = key;
+    for (const child of [...worn.children]) {
+      worn.remove(child);
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        (child.material as THREE.Material).dispose();
+      }
+    }
+    const add = (
+      geo: THREE.BufferGeometry,
+      item: string,
+      x: number,
+      y: number,
+      z: number,
+    ): void => {
+      const mesh = new THREE.Mesh(
+        geo,
+        new THREE.MeshStandardMaterial({ color: new THREE.Color(itemById(item).color) }),
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      worn.add(mesh);
+    };
+    // Le personnage regarde vers +z (repère local) : le dos est vers -z. Capsule : y de -0,85 à +0,85.
+    if (eq.torso) {
+      add(new THREE.BoxGeometry(0.4, 0.5, 0.22), eq.torso, 0, 0.18, -0.32);
+      add(new THREE.BoxGeometry(0.3, 0.14, 0.05), eq.torso, 0, 0.32, -0.45);
+    }
+    if (eq.head) {
+      add(
+        new THREE.SphereGeometry(0.3, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.62),
+        eq.head,
+        0,
+        0.6,
+        -0.02,
+      );
+    }
+    if (eq.legs) add(new THREE.CylinderGeometry(0.27, 0.26, 0.5, 12), eq.legs, 0, -0.5, 0);
+    if (eq.feet) add(new THREE.CylinderGeometry(0.285, 0.285, 0.17, 12), eq.feet, 0, -0.77, 0);
+    if (eq.hands) {
+      add(new THREE.SphereGeometry(0.075, 8, 6), eq.hands, 0.29, 0.02, 0.05);
+      add(new THREE.SphereGeometry(0.075, 8, 6), eq.hands, -0.29, 0.02, 0.05);
+    }
+  }
+  refreshWorn();
+
   const rig = new CameraRig(camera, state);
   const interaction: Interaction = new Interaction(scene, camera, options.state, container, {
     rebuildChunk: (cx, cz) => buildInto(cx, cz),
@@ -319,6 +374,7 @@ export function startGameView(
     buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${buildRot === null ? t('build.rotationAuto') : t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
+    if (e.type === 'inventory') refreshWorn();
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
     if (e.type === 'hotbar') syncBuilding();
     if (e.type === 'factory') factoryView.rebuild();

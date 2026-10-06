@@ -557,5 +557,9 @@
   "tech.researched": "Technologie recherchée : {tech}",
   "tech.help": "Les ressources du coût sont prises dans le sac. T ou Échap pour fermer.",
   "tech.have": "{have} / {need}",
-  "target.fiber_bush": "Buisson de fibres"
+  "target.fiber_bush": "Buisson de fibres",
+  "craft.cat.machines": "Machines",
+  "craft.cat.tools": "Ustensiles",
+  "craft.cat.buildings": "Constructions",
+  "craft.cat.equipment": "Équipements"
 }

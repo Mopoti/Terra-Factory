@@ -1,5 +1,12 @@
 import { techFor } from '../core/data/techs';
-import { ITEMS, itemById, type EquipSlot } from '../core/data/items';
+import {
+  ITEM_CATEGORIES,
+  ITEMS,
+  categoryOf,
+  type ItemCategory,
+  itemById,
+  type EquipSlot,
+} from '../core/data/items';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
@@ -56,6 +63,7 @@ export function mountInventory(
 ): InventoryWindow {
   let isOpenNow = false;
   let selected: string | null = null;
+  let craftTab: ItemCategory = 'machines';
   let hovered: string | null = null;
   let message = '';
   let mouse = { x: 0, y: 0 };
@@ -354,8 +362,21 @@ export function mountInventory(
     // Droite : tous les objets, à fabriquer.
     const craftBox = el('div', 'inv-craft');
     craftBox.append(el('h3', undefined, t('inv.craftTitle')));
+    const tabs = el('div', 'craft-tabs');
+    for (const category of ITEM_CATEGORIES) {
+      const tab = el('button', category === craftTab ? 'craft-tab active' : 'craft-tab');
+      tab.type = 'button';
+      tab.textContent = t(`craft.cat.${category}` as TranslationKey);
+      tab.addEventListener('click', () => {
+        craftTab = category;
+        hovered = null;
+        render();
+      });
+      tabs.append(tab);
+    }
+    craftBox.append(tabs);
     const catalog = el('div', 'slot-grid craft-grid');
-    for (const def of ITEMS) {
+    for (const def of ITEMS.filter((i) => categoryOf(i) === craftTab)) {
       const cell = el('button', 'slot craft');
       cell.type = 'button';
       cell.style.setProperty('--item', def.color);
