@@ -53,6 +53,7 @@ import { RISE_DIR } from '../core/data/buildings';
 import {
   hasOutput,
   isChest,
+  isArm,
   isDrill,
   isRouter,
   machineDef,
@@ -97,6 +98,8 @@ export interface GameViewOptions {
   state: GameState;
   /** La touche « Inventaire » a été pressée. */
   onToggleInventory?: () => void;
+  /** La touche « Carte » a été pressée. */
+  onToggleMap?: () => void;
   /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
   start?: Partial<PlayerState>;
   /** Appelé quand le joueur change de vue avec le clavier. */
@@ -803,8 +806,8 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
-    } else if (m.type === 'arm') {
-      rows.push(`<div class="sub">${t('factory.router.arm')}</div>`);
+    } else if (isArm(m.type)) {
+      rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
       rows.push(
         `<div>${t('factory.arm.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
       );
@@ -861,7 +864,7 @@ export function startGameView(
     }
     if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);
     if (m.type === 'generator') rows.push(`<small>${t('factory.useHint')}</small>`);
-    if (hasOutput(m.type) || m.type === 'arm') {
+    if (hasOutput(m.type) || isArm(m.type)) {
       const out = outputCell(m.type, m.gx, m.gz, m.rot);
       const target = factory.machineAt(out.gx, out.gz);
       rows.push(
@@ -1328,6 +1331,7 @@ export function startGameView(
     const views = getSettings().views;
 
     if (pressed('inventory')) options.onToggleInventory?.();
+    if (pressed('map')) options.onToggleMap?.();
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {

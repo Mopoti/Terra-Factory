@@ -441,4 +441,45 @@ describe('bras robotique', () => {
     run(f, 3);
     expect(drill.fuel?.count ?? 0).toBeGreaterThan(0);
   });
+
+  it('prend sur ses 3 côtés, à tour de rôle, et dépose devant', () => {
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuel = { item: 'coal', count: 5 };
+    const back = chestWith(1, 10, 9, 'iron_ore', 2);
+    const left = chestWith(3, 11, 10, 'copper_ore', 2);
+    const right = chestWith(4, 9, 10, 'iron_ore', 2);
+    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const f = new Factory([arm, back, left, right, out], makeWorld().world);
+    run(f, 8);
+    const total = out.slots.reduce((n, x) => n + x.count, 0);
+    expect(total).toBe(6);
+    expect([back, left, right].map((c) => c.slots.length)).toEqual([0, 0, 0]);
+  });
+
+  it('prend aussi sur un tapis qui passe sur le côté', () => {
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuel = { item: 'coal', count: 5 };
+    const belt = emptyMachine(1, 'conveyor', 11, 10, 0);
+    belt.belt.push({ item: 'iron_ore', pos: 0.3 });
+    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const f = new Factory([arm, belt, out], makeWorld().world);
+    run(f, 2);
+    expect(out.slots[0]?.count).toBe(1);
+  });
+
+  it('le bras électrique est deux fois plus rapide et ne marche qu’avec du courant', () => {
+    const src = chestWith(1, 10, 9, 'iron_ore', 20);
+    const arm = emptyMachine(2, 'arm_electric', 10, 10, 0);
+    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const f = new Factory([src, arm, out], makeWorld().world);
+    run(f, 3);
+    expect(f.status(arm)).toBe('noPower');
+    expect(out.slots.length).toBe(0);
+    const gen = emptyMachine(3, 'generator', 14, 10, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const pole = emptyMachine(4, 'pole', 12, 10, 0);
+    const g = new Factory([src, arm, out, gen, pole], makeWorld().world);
+    run(g, 4);
+    expect(out.slots[0]?.count ?? 0).toBeGreaterThanOrEqual(7);
+  });
 });

@@ -4,6 +4,7 @@ import { itemById } from '../data/items';
 import {
   hasOutput,
   isChest,
+  isArm,
   isDrill,
   isRouter,
   machineDef,
@@ -106,8 +107,7 @@ export interface Cell {
 
 const GAP = 0.34;
 
-/** Bras robotique : durée d'un aller-retour (s), et réserve de combustible (s) sous laquelle il se ravitaille. */
-const ARM_SWING_S = 0.9;
+/** Bras robotique : réserve de combustible (s) sous laquelle il se ravitaille. */
 const ARM_LOW_FUEL_S = 15;
 
 /** Largeur et profondeur de l'emprise selon l'orientation. */
@@ -236,6 +236,7 @@ const MACHINE_TYPES: MachineType[] = [
   'splitter',
   'merger',
   'arm',
+  'arm_electric',
 ];
 
 /** Centre d'une machine (m). */
@@ -393,8 +394,10 @@ export class Factory {
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
     if (isRouter(m.type)) return m.stock ? 'blocked' : 'idle';
-    if (m.type === 'arm') {
-      if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
+    if (isArm(m.type)) {
+      if (def.consumesKw) {
+        if (this.powerFactor(m) <= 0) return 'noPower';
+      } else if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
       return m.stock ? 'running' : 'idle';
     }
     if (m.type === 'conveyor')
@@ -429,7 +432,7 @@ export class Factory {
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
       else if (isRouter(m.type)) this.tickRouter(m);
-      else if (m.type === 'arm') this.tickArm(m, dt);
+      else if (isArm(m.type)) this.tickArm(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -441,12 +444,16 @@ export class Factory {
 
   /** Une machine électrique a-t-elle quelque chose à faire (donc demande du courant) ? */
   private wantsToWork(m: Machine): boolean {
+    if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (!isDrill(m.type)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
     return !(m.stock && m.stock.count >= max) && this.pickOreCell(m) !== null;
   }
 
   /** Puissance disponible et demandée sur chaque réseau, puis part satisfaite. */
+  /** Bras robotiques : prochain côté à servir (pas sauvegardé). */
+  private readonly armTurn = new Map<number, number>();
+
   private updateGrids(): void {
     for (const g of this.grids.values()) {
       g.capacityKw = 0;
@@ -562,7 +569,7 @@ export class Factory {
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
       if (
         target.rot === (dir + 2) % 4 &&
-        (from.type === 'conveyor' || isRouter(from.type) || from.type === 'arm')
+        (from.type === 'conveyor' || isRouter(from.type) || isArm(from.type))
       )
         return false;
       const cap = machineDef('conveyor').capacity ?? 3;
@@ -654,7 +661,7 @@ export class Factory {
   private peekSource(src: Machine): { item: string; take: () => void } | null {
     if (src.type === 'conveyor') {
       const head = src.belt[0];
-      return head && head.pos >= 0.5 ? { item: head.item, take: () => src.belt.shift() } : null;
+      return head ? { item: head.item, take: () => src.belt.shift() } : null;
     }
     if (isChest(src.type)) {
       const stack = src.slots[0];
@@ -682,7 +689,7 @@ export class Factory {
 
   /** Bras robotique : s'il va manquer de combustible, en prend un dans une case voisine (derrière ou sur les côtés). */
   private armRefuel(m: Machine): void {
-    const max = machineDef('arm').stockMax ?? 10;
+    const max = machineDef(m.type).stockMax ?? 10;
     for (const side of [2, 1, 3]) {
       const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
       const src = this.machineAt(m.gx + dx, m.gz + dz);
@@ -695,25 +702,49 @@ export class Factory {
     }
   }
 
-  /** Bras robotique : prend derrière, dépose devant (un aller-retour par `ARM_SWING_S`). */
-  private tickArm(m: Machine, dt: number): void {
+  /** Ce que le bras pourrait prendre maintenant : un objet des 3 côtés (à tour de rôle) que la destination accepte. */
+  private armCandidate(m: Machine): { item: string; take: () => void; side: number } | null {
     const [fx, fz] = RISE_DIR[m.rot];
     const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    if (!dest) return null;
+    const turn = this.armTurn.get(m.id) ?? 0;
+    for (let i = 0; i < 3; i++) {
+      const side = (turn + i) % 3;
+      const [dx, dz] = RISE_DIR[(m.rot + [2, 1, 3][side]) % 4];
+      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      const found = src && src !== dest ? this.peekSource(src) : null;
+      if (found && this.canAccept(dest, m, found.item, m.rot)) return { ...found, side };
+    }
+    return null;
+  }
+
+  /** Bras robotique : prend sur 3 côtés, dépose devant (un aller-retour par `swingSeconds`). */
+  private tickArm(m: Machine, dt: number): void {
+    const def = machineDef(m.type);
+    const electric = !!def.consumesKw;
+    const swing = def.swingSeconds ?? 0.9;
+    const [fx, fz] = RISE_DIR[m.rot];
+    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    const speed = electric ? this.powerFactor(m) : 1;
     if (!m.stock) {
-      if (this.fuelSecondsLeft(m) < ARM_LOW_FUEL_S) this.armRefuel(m);
-      if (this.fuelSecondsLeft(m) <= 0 || !dest) return;
-      const src = this.machineAt(m.gx - fx, m.gz - fz);
-      const found = src ? this.peekSource(src) : null;
-      if (!found || !this.canAccept(dest, m, found.item, m.rot)) return;
+      if (!electric && this.fuelSecondsLeft(m) < ARM_LOW_FUEL_S) this.armRefuel(m);
+      if (speed <= 0 || (!electric && this.fuelSecondsLeft(m) <= 0)) return;
+      const found = this.armCandidate(m);
+      if (!found) return;
       found.take();
+      this.armTurn.set(m.id, (found.side + 1) % 3);
       m.stock = { item: found.item, count: 1 };
       m.progress = 0;
       return;
     }
-    if (!this.fire(m)) return;
-    this.burn(m, dt);
-    m.progress = Math.min(ARM_SWING_S, m.progress + dt);
-    if (m.progress >= ARM_SWING_S && dest && this.deliver(dest, m, m.stock.item, m.rot)) {
+    if (electric) {
+      if (speed <= 0) return;
+    } else {
+      if (!this.fire(m)) return;
+      this.burn(m, dt);
+    }
+    m.progress = Math.min(swing, m.progress + dt * speed);
+    if (m.progress >= swing && dest && this.deliver(dest, m, m.stock.item, m.rot)) {
       m.stock = null;
       m.progress = 0;
     }

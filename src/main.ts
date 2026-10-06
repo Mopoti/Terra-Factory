@@ -16,6 +16,7 @@ import { getSettings, loadSettings } from './settings/store';
 import { mountHotbar, type Hotbar } from './ui/hotbar';
 import { mountMachineWindow, type MachineWindow } from './ui/machineWindow';
 import { mountInventory, type InventoryWindow } from './ui/inventory';
+import { mountMap, type MapWindow } from './ui/mapView';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
@@ -34,6 +35,7 @@ const hudEl = document.getElementById('hud') as HTMLElement;
 const pauseEl = document.getElementById('pause') as HTMLElement;
 const inventoryEl = document.getElementById('inventory') as HTMLElement;
 const machineEl = document.getElementById('machine') as HTMLElement;
+const mapEl = document.getElementById('map') as HTMLElement;
 
 /** Stockage définitif (IndexedDB) ; les parties de l'ancien stockage navigateur y sont reprises une fois. */
 const storage = await openBestStorage();
@@ -54,6 +56,7 @@ interface Session {
   inventory: InventoryWindow;
   hotbar: Hotbar;
   machine: MachineWindow;
+  map: MapWindow;
   /** Sac et changements du monde de cette session. */
   state: GameState;
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
@@ -107,6 +110,7 @@ function quitToMenu(): void {
   window.clearTimeout(s.toastTimer);
   s.pause.dispose();
   s.inventory.dispose();
+  s.map.dispose();
   s.hotbar.dispose();
   s.machine.dispose();
   s.view.dispose();
@@ -131,7 +135,11 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     state,
     start,
     onToggleInventory: () => {
-      if (!session?.pause.isOpen()) session?.inventory.toggle();
+      if (!session?.pause.isOpen() && !session?.map.isOpen()) session?.inventory.toggle();
+    },
+    onToggleMap: () => {
+      if (!session?.pause.isOpen() && !session?.inventory.isOpen() && !session?.machine.isOpen())
+        session?.map.toggle();
     },
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
@@ -146,6 +154,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     inventory: null as unknown as InventoryWindow,
     hotbar: mountHotbar(document.body, state),
     machine: null as unknown as MachineWindow,
+    map: null as unknown as MapWindow,
     state,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
@@ -156,8 +165,20 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
 
   /** Le jeu est figé tant que le menu pause ou le sac est ouvert. */
   const syncPaused = (): void =>
-    view.setPaused(s.pause.isOpen() || s.inventory.isOpen() || s.machine.isOpen());
+    view.setPaused(
+      s.pause.isOpen() || s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen(),
+    );
   s.machine = mountMachineWindow(machineEl, state, view.factory, { onOpenChange: syncPaused });
+  s.map = mountMap(mapEl, {
+    world: game.world,
+    state,
+    factory: view.factory,
+    player: () => {
+      const p = view.getState();
+      return { x: p.x, z: p.z, yaw: p.yaw };
+    },
+    onOpenChange: syncPaused,
+  });
   s.inventory = mountInventory(inventoryEl, state, {
     drop: (item, count) => view.dropItem(item, count),
     onOpenChange: syncPaused,

@@ -479,6 +479,18 @@
   "inv.pickCancel": "Cancel",
   "inv.pickInvalid": "Enter a whole number from 1 to {max}.",
   "item.machine_arm": "Robotic arm",
-  "factory.router.arm": "Takes items from behind (belt, chest, machine) and drops them into what is in front (machine, belt, chest). It burns fuel and refuels itself from nearby containers when running low.",
-  "factory.arm.holding": "Holding: {v}"
+  "factory.router.arm": "Picks items from 3 sides (back, left, right: belt, chest, machine) and drops them in front. It burns fuel and refuels itself from nearby containers when running low.",
+  "factory.arm.holding": "Holding: {v}",
+  "map.title": "Map",
+  "map.coords": "Position",
+  "map.zoom": "Zoom ×{n}",
+  "map.water": "Water",
+  "map.trees": "Trees",
+  "map.rocks": "Rocks",
+  "map.nests": "Nests",
+  "map.buildings": "Buildings",
+  "map.belts": "Belts",
+  "map.help": "Drag to pan, mouse wheel or + / − to zoom, M or Esc to close. Distant areas appear progressively.",
+  "item.machine_arm_electric": "Electric robotic arm",
+  "factory.router.arm_electric": "Like the fuel arm but powered through a pole (20 kW): twice as fast. Picks from 3 sides (back, left, right) and drops in front."
 }

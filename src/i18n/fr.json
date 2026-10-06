@@ -479,6 +479,18 @@
   "inv.pickCancel": "Annuler",
   "inv.pickInvalid": "Entre un nombre entier de 1 à {max}.",
   "item.machine_arm": "Bras robotique",
-  "factory.router.arm": "Prend les objets derrière lui (tapis, coffre, machine) et les dépose dans ce qui est devant (machine, tapis, coffre). Il brûle du combustible et s'en prend lui-même quand il en manque, s'il y en a à côté ou derrière.",
-  "factory.arm.holding": "Tient : {v}"
+  "factory.router.arm": "Prend les objets sur 3 côtés (derrière, gauche, droite : tapis, coffre, machine) et les dépose dans ce qui est devant. Il brûle du combustible et s'en prend lui-même quand il en manque, s'il y en a à côté.",
+  "factory.arm.holding": "Tient : {v}",
+  "map.title": "Carte",
+  "map.coords": "Position",
+  "map.zoom": "Zoom ×{n}",
+  "map.water": "Eau",
+  "map.trees": "Arbres",
+  "map.rocks": "Rochers",
+  "map.nests": "Nids",
+  "map.buildings": "Constructions",
+  "map.belts": "Tapis",
+  "map.help": "Glisse pour déplacer la carte, molette ou + / − pour zoomer, M ou Échap pour fermer. Les zones lointaines apparaissent au fur et à mesure.",
+  "item.machine_arm_electric": "Bras robotique électrique",
+  "factory.router.arm_electric": "Comme le bras à combustible, mais alimenté par un poteau (20 kW) : deux fois plus rapide. Prend sur les 3 côtés (derrière, gauche, droite) et dépose devant."
 }

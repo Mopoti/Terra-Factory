@@ -116,6 +116,18 @@
       "fuel": true,
       "burnPerSecond": 1,
       "stockMax": 10,
+      "height": 0.7,
+      "swingSeconds": 0.9
+    },
+    {
+      "id": "arm_electric",
+      "w": 1,
+      "d": 1,
+      "item": "machine_arm_electric",
+      "color": "#4a7fb5",
+      "fuel": false,
+      "consumesKw": 20,
+      "swingSeconds": 0.45,
       "height": 0.7
     }
   ],

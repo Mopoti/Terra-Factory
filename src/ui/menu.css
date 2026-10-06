@@ -1314,3 +1314,54 @@
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
+
+/* Carte (touche M). */
+#map {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 19;
+  padding-bottom: 84px;
+  background: rgba(0, 0, 0, 0.45);
+}
+#map .panel {
+  position: relative;
+  width: auto;
+  max-width: calc(100vw - 32px);
+  max-height: 94vh;
+}
+.map-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  image-rendering: pixelated;
+  cursor: grab;
+  border: 1px solid #2c3640;
+  background: #0b0e12;
+}
+.map-canvas:active {
+  cursor: grabbing;
+}
+.map-info {
+  font-size: 13px;
+  opacity: 0.85;
+}
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 13px;
+}
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.map-legend-item i {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}

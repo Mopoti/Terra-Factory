@@ -5,6 +5,7 @@ import { itemById } from '../core/data/items';
 import {
   hasOutput,
   isChest,
+  isArm,
   isDrill,
   isRouter,
   machineDef,
@@ -59,7 +60,7 @@ export function beltEntry(
       );
     }
     const front =
-      n.type === 'conveyor' || n.type === 'merger' || n.type === 'arm'
+      n.type === 'conveyor' || n.type === 'merger' || isArm(n.type)
         ? { gx: n.gx + RISE_DIR[n.rot][0], gz: n.gz + RISE_DIR[n.rot][1] }
         : outputCell(n.type, n.gx, n.gz, n.rot);
     return front.gx === m.gx && front.gz === m.gz;
@@ -211,7 +212,7 @@ export class FactoryView {
               shade(color, 0.85),
               true,
             );
-        } else if (hasOutput(g.type) || g.type === 'arm') {
+        } else if (hasOutput(g.type) || isArm(g.type)) {
           const out = outputCell(g.type, g.gx, g.gz, g.rot);
           mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
         }
@@ -223,9 +224,11 @@ export class FactoryView {
               ? [(g.rot + 2) % 4]
               : g.type === 'merger'
                 ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
-                : g.type === 'arm' || g.type === 'furnace' || (isDrill(g.type) && def.fuel)
-                  ? [(g.rot + 2) % 4]
-                  : [];
+                : isArm(g.type)
+                  ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
+                  : g.type === 'furnace' || (isDrill(g.type) && def.fuel)
+                    ? [(g.rot + 2) % 4]
+                    : [];
         for (const dir of inDirs) {
           const [ix, iz] = RISE_DIR[dir];
           mb.box(
@@ -349,7 +352,7 @@ function addMachineBody(
   // Foreuse à combustible et fourneau : carré clair sur la face arrière = entrée du combustible.
   if ((isDrill(type) && def.fuel) || type === 'furnace')
     inputMark(mb, x - fx * (sx / 2), z - fz * (sz / 2), -fx, -fz, 0.3, 0.12, 0.28);
-  if (type === 'arm') {
+  if (isArm(type)) {
     // Bras : socle, mât, bras horizontal vers l'avant et pince ; petit carré clair derrière (combustible/prise).
     mb.box(x, 0, z, 0.4, 0.12, 0.4, color, true);
     mb.box(x, 0.12, z, 0.14, 0.33, 0.14, shade(color, 0.8), true);
@@ -373,7 +376,11 @@ function addMachineBody(
       hexToRgb('#2a2d31'),
       true,
     );
-    inputMark(mb, x - fx * 0.2, z - fz * 0.2, -fx, -fz, 0.16, 0.03, 0.06);
+    // Trois prises : derrière, à gauche, à droite.
+    for (const dir of [(rot + 2) % 4, (rot + 1) % 4, (rot + 3) % 4]) {
+      const [ix, iz] = RISE_DIR[dir];
+      inputMark(mb, x + ix * 0.2, z + iz * 0.2, ix, iz, 0.16, 0.03, 0.06);
+    }
     return;
   }
   if (isChest(type)) {

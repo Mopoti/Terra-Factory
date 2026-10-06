@@ -218,6 +218,16 @@
       "recipe": {
         "iron_ingot": 6
       }
+    },
+    {
+      "id": "machine_arm_electric",
+      "weightKg": 4,
+      "volumeL": 6,
+      "color": "#4a7fb5",
+      "recipe": {
+        "iron_ingot": 6,
+        "copper_ingot": 3
+      }
     }
   ]
 }
