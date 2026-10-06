@@ -425,6 +425,16 @@
         "speed": 3.5,
         "yield": 2
       }
+    },
+    {
+      "id": "machine_turret",
+      "weightKg": 8,
+      "volumeL": 10,
+      "color": "#6b5b45",
+      "recipe": {
+        "iron_ingot": 16,
+        "copper_ingot": 6
+      }
     }
   ]
 }

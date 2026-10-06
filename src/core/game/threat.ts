@@ -80,7 +80,8 @@ export const cellOf = (m: number): number => Math.floor(m / POLLUTION_CELL_M);
 const key = (pcx: number, pcz: number): string => `${pcx},${pcz}`;
 
 export class Threat {
-  readonly enemies: Enemy[] = [];
+  /** Ennemis en vie : le tableau enregistré avec la partie (modifié sur place). */
+  readonly enemies: Enemy[];
   private nextId = 1;
   private readonly charge = new Map<string, number>();
   private clock = 0;
@@ -93,7 +94,11 @@ export class Threat {
     readonly ground: Record<string, number>,
     private readonly world: ThreatWorld,
     private readonly options: ThreatOptions,
-  ) {}
+    saved: Enemy[] = [],
+  ) {
+    this.enemies = saved;
+    this.nextId = saved.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+  }
 
   /** Secondes avant que le nid (clé) refasse un gardien. */
   private readonly guardTimer = new Map<string, number>();

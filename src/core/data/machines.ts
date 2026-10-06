@@ -15,6 +15,7 @@ export type MachineType =
   | 'arm_electric'
   | 'assembler'
   | 'lab'
+  | 'turret'
   | 'pipe'
   | 'pump'
   | 'boiler'
@@ -91,6 +92,14 @@ export const isArm = (type: MachineType): boolean => type === 'arm' || type === 
 
 /** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
 export const isLab = (type: MachineType): boolean => type === 'lab';
+
+/** Tourelle automatique : tire sur les ennemis proches avec des chargeurs. */
+export const isTurret = (type: MachineType): boolean => type === 'turret';
+/** Balles par chargeur dans une tourelle, portée (m), dégâts par balle, secondes entre deux tirs. */
+export const TURRET_ROUNDS = 12;
+export const TURRET_RANGE_M = 22;
+export const TURRET_DAMAGE = 9;
+export const TURRET_EVERY_S = 0.6;
 
 /** Machine du réseau de fluides (tuyau, pompe, chaudière, turbine). */
 export const isFluid = (type: MachineType): boolean =>

@@ -9,6 +9,8 @@ import {
   isDrill,
   isFluid,
   isLab,
+  isTurret,
+  TURRET_ROUNDS,
   isLinear,
   isRouter,
   machineDef,
@@ -144,7 +146,16 @@ export interface FactoryWorld {
 }
 
 export type MachineStatus =
-  'running' | 'idle' | 'noFuel' | 'noOre' | 'full' | 'blocked' | 'noPower' | 'noSteam' | 'noWater';
+  | 'running'
+  | 'idle'
+  | 'noAmmo'
+  | 'noFuel'
+  | 'noOre'
+  | 'full'
+  | 'blocked'
+  | 'noPower'
+  | 'noSteam'
+  | 'noWater';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -281,6 +292,7 @@ export function ports(
     case 'assembler':
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
+    case 'turret':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     case 'boiler':
       return { ins: [into(left), into(right)], outs: [] };
@@ -423,6 +435,7 @@ const MACHINE_TYPES: MachineType[] = [
   'arm_electric',
   'assembler',
   'lab',
+  'turret',
   'pipe',
   'pump',
   'boiler',
@@ -819,6 +832,7 @@ export class Factory {
       if (this.turbineEfficiency(m) <= 0) return 'noSteam';
       return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
     }
+    if (isTurret(m.type)) return this.turretReady(m) ? 'idle' : 'noAmmo';
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
       return this.labWorking(m) ? 'running' : 'idle';
@@ -1041,12 +1055,33 @@ export class Factory {
     if (isDrill(target.type) || target.type === 'boiler')
       return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
+    if (isTurret(target.type))
+      return (
+        item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
+      );
     if (isLab(target.type))
       return (
         item === 'science_pack' &&
         (target.input?.count ?? 0) < (machineDef(target.type).stockMax ?? 20)
       );
     return false;
+  }
+
+  /** Une tourelle a-t-elle de quoi tirer (balles dans le chargeur en place ou chargeurs en réserve) ? */
+  turretReady(m: Machine): boolean {
+    return m.fuelLeft >= 1 || (m.input?.item === 'magazine' && m.input.count > 0);
+  }
+
+  /** Tire une balle de la tourelle (recharge un chargeur au besoin). Renvoie faux sans munitions. */
+  turretTake(m: Machine): boolean {
+    if (m.fuelLeft < 1) {
+      if (m.input?.item !== 'magazine' || m.input.count <= 0) return false;
+      m.input.count--;
+      if (m.input.count <= 0) m.input = null;
+      m.fuelLeft = TURRET_ROUNDS;
+    }
+    m.fuelLeft -= 1;
+    return true;
   }
 
   /** Pourquoi `target` refuse cet objet (clé de traduction `factory.refuse.*`), ou null s'il l'accepte. */
@@ -1088,7 +1123,7 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
-    else if (isLab(target.type)) {
+    else if (isLab(target.type) || isTurret(target.type)) {
       if (target.input) target.input.count++;
       else target.input = { item, count: 1 };
     } else if (isAssembler(target.type)) {

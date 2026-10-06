@@ -214,6 +214,17 @@
       "fluidCap": 100,
       "steamUse": 20,
       "height": 1.1
+    },
+    {
+      "id": "turret",
+      "w": 2,
+      "d": 2,
+      "item": "machine_turret",
+      "color": "#6b5b45",
+      "fuel": false,
+      "stockMax": 20,
+      "height": 0.9,
+      "pollution": 0
     }
   ],
   "smelting": [

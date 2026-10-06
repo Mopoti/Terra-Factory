@@ -767,7 +767,8 @@ export class GameState {
     if (
       slot === 'input' &&
       !(m.type === 'furnace' && smeltRecipe(item)) &&
-      !(m.type === 'lab' && item === SCIENCE_PACK)
+      !(m.type === 'lab' && item === SCIENCE_PACK) &&
+      !(m.type === 'turret' && item === 'magazine')
     )
       return 0;
     const current: Stack | null = slot === 'fuel' ? m.fuel : m.input;

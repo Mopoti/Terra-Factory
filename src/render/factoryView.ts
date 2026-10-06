@@ -704,6 +704,23 @@ function addMachineBody(
     mb.box(x, 0.9, z, fx !== 0 ? 0.5 : 0.1, 0.06, fz !== 0 ? 0.5 : 0.1, hexToRgb('#e6c84a'), true);
     return;
   }
+  if (type === 'turret') {
+    // Tourelle : socle large, tourelle ronde et canon vers l'avant.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.7), true);
+    mb.cone(x, 0.3, z, Math.min(sx, sz) * 0.36, 0.3, 10, color, Math.min(sx, sz) * 0.3);
+    mb.box(
+      x + fx * 0.28,
+      0.5,
+      z + fz * 0.28,
+      fx !== 0 ? 0.6 : 0.1,
+      0.1,
+      fz !== 0 ? 0.6 : 0.1,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    mb.box(x - fx * 0.12, 0.6, z - fz * 0.12, 0.24, 0.12, 0.24, shade(color, 1.3), true);
+    return;
+  }
   if (type === 'lab') {
     // Laboratoire : paillasse basse, cornue (cône) et éprouvette lumineuse.
     mb.box(x, 0, z, sx, 0.55, sz, color, true);

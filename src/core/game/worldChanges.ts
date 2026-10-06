@@ -4,9 +4,19 @@ import { footprint, normalizeMachines, type Machine } from '../factory/factory';
 import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
 import { migrateItemId } from './inventory';
+import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { TECHS } from '../data/techs';
 import type { ChunkData } from '../world/worldgen';
+
+/** Un véhicule posé dans le monde : position, cap (rad) et carburant (secondes de marche). */
+export interface Vehicle {
+  id: number;
+  x: number;
+  z: number;
+  yaw: number;
+  fuel: number;
+}
 
 /** Objets déposés au sol par le joueur. */
 export interface DroppedStack {
@@ -48,6 +58,12 @@ export interface WorldChanges {
   pollution: Record<string, number>;
   /** Pollution du sol, par cellule de 32 m. */
   groundPollution: Record<string, number>;
+  /** Ennemis en vie (enregistrés avec la partie). */
+  enemies: Enemy[];
+  /** Temps de jeu écoulé (secondes) : fait tourner les saisons. */
+  time: number;
+  /** Véhicules posés dans le monde. */
+  vehicles: Vehicle[];
   /** Balles dans le pistolet. */
   ammo: number;
   /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case). */
@@ -82,6 +98,9 @@ export function emptyChanges(): WorldChanges {
     progress: {},
     pollution: {},
     groundPollution: {},
+    enemies: [],
+    time: 0,
+    vehicles: [],
     ammo: 0,
     footprintVersion: FOOTPRINT_VERSION,
   };
@@ -146,6 +165,42 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];
       if (isNum(v) && v > 0) result.progress[t.id] = Math.floor(v);
+    }
+  }
+  if (isNum(r.time) && r.time > 0) result.time = r.time;
+  if (Array.isArray(r.enemies)) {
+    const seen = new Set<number>();
+    for (const raw of r.enemies.slice(0, 200)) {
+      if (typeof raw !== 'object' || raw === null) continue;
+      const e = raw as Record<string, unknown>;
+      if (!isNum(e.id) || seen.has(e.id) || !isNum(e.x) || !isNum(e.z) || !isNum(e.hp)) continue;
+      if (e.hp <= 0) continue;
+      seen.add(e.id);
+      const home = e.home as Record<string, unknown> | undefined;
+      result.enemies.push({
+        id: e.id,
+        x: e.x,
+        z: e.z,
+        hp: e.hp,
+        cooldown: isNum(e.cooldown) ? Math.max(0, e.cooldown) : 0,
+        idle: isNum(e.idle) ? Math.max(0, e.idle) : 0,
+        target: typeof e.target === 'string' ? e.target : null,
+        ...(home && isNum(home.x) && isNum(home.z) ? { home: { x: home.x, z: home.z } } : {}),
+      });
+    }
+  }
+  if (Array.isArray(r.vehicles)) {
+    for (const raw of r.vehicles.slice(0, 50)) {
+      if (typeof raw !== 'object' || raw === null) continue;
+      const v = raw as Record<string, unknown>;
+      if (!isNum(v.id) || !isNum(v.x) || !isNum(v.z)) continue;
+      result.vehicles.push({
+        id: v.id,
+        x: v.x,
+        z: v.z,
+        yaw: isNum(v.yaw) ? v.yaw : 0,
+        fuel: isNum(v.fuel) ? Math.max(0, v.fuel) : 0,
+      });
     }
   }
   if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));

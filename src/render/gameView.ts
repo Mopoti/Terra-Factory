@@ -63,6 +63,10 @@ import {
   isLinear,
   isDrill,
   isLab,
+  isTurret,
+  TURRET_DAMAGE,
+  TURRET_EVERY_S,
+  TURRET_RANGE_M,
   isRouter,
   machineDef,
   machineForItem,
@@ -1112,6 +1116,10 @@ export function startGameView(
           `<div>${t('factory.turbine.output', { kw: String(Math.round(factory.turbineKw(m))) })}</div>`,
         );
       }
+    } else if (isTurret(m.type)) {
+      rows.push(
+        `<div>${t('factory.turret.ammo', { v: `${Math.floor(m.fuelLeft)} + ${stackText(m.input, def.stockMax)}` })}</div>`,
+      );
     } else if (isLab(m.type)) {
       const id = options.state.changes.researching;
       rows.push(`<div class="sub">${t('factory.router.lab')}</div>`);
@@ -1700,6 +1708,7 @@ export function startGameView(
     {
       aggressive: game.options.enemies.aggressive,
     },
+    options.state.changes.enemies,
   );
   const enemyView = new EnemyView(scene);
   const MAX_HEALTH = 100;
@@ -1807,6 +1816,20 @@ export function startGameView(
     }
     // Les nids proches gardent leurs gardiens.
     threat.keepGuards(playerX, playerZ, dt);
+    // Tourelles automatiques : elles tirent sur l'ennemi le plus proche à portée tant qu'elles ont des balles.
+    if (threat.enemies.length > 0) {
+      for (const m of factory.machines) {
+        if (!isTurret(m.type)) continue;
+        m.progress = Math.max(0, m.progress - dt);
+        if (m.progress > 0 || !factory.turretReady(m)) continue;
+        const c = centerOf(m);
+        const result = threat.hit(c.x, c.z, TURRET_RANGE_M, TURRET_DAMAGE);
+        if (!result) continue;
+        factory.turretTake(m);
+        m.progress = TURRET_EVERY_S;
+        playSfx(result === 'kill' ? 'rockBreak' : 'shot');
+      }
+    }
     // Le joueur combat : au pistolet (clic gauche pour tirer, R pour recharger) ou, sinon, au corps à corps.
     attackCooldown = Math.max(0, attackCooldown - dt);
     tracerLife = Math.max(0, tracerLife - dt);

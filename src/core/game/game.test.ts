@@ -1185,3 +1185,31 @@ describe('dalle au bout d’un escalier', () => {
     expect(hit?.pos.layer).toBe(0);
   });
 });
+
+describe('ennemis et temps enregistrés', () => {
+  it('les ennemis, le temps et les véhicules passent par la sauvegarde', () => {
+    const c = normalizeChanges({
+      enemies: [
+        {
+          id: 3,
+          x: 10,
+          z: 20,
+          hp: 12,
+          cooldown: 1,
+          idle: 2,
+          target: 'player',
+          home: { x: 1, z: 2 },
+        },
+        { id: 3, x: 0, z: 0, hp: 5 }, // identifiant en double
+        { id: 4, x: 0, z: 0, hp: 0 }, // mort
+        { id: 'x' },
+      ],
+      time: 125.5,
+      vehicles: [{ id: 1, x: 2, z: 3, yaw: 1, fuel: 40 }, { id: 'a' }],
+    });
+    expect(c.enemies).toHaveLength(1);
+    expect(c.enemies[0].home).toEqual({ x: 1, z: 2 });
+    expect(c.time).toBe(125.5);
+    expect(c.vehicles).toEqual([{ id: 1, x: 2, z: 3, yaw: 1, fuel: 40 }]);
+  });
+});

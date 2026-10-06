@@ -877,3 +877,23 @@ describe('machines à l’étage', () => {
     expect(groundChest.slots).toHaveLength(0);
   });
 });
+
+describe('tourelle', () => {
+  it('reçoit des chargeurs par un tapis et tire balle par balle', () => {
+    const { world } = makeWorld();
+    const belt = emptyMachine(1, 'conveyor', 4, 2, 0);
+    belt.belt.push({ item: 'magazine', pos: 0.5 });
+    const side = emptyMachine(3, 'conveyor', 6, 4, 3); // débouche sur le côté de la tourelle
+    side.belt.push({ item: 'iron_ore', pos: 0.9 });
+    const turret = emptyMachine(2, 'turret', 4, 4, 0);
+    const f = new Factory([belt, side, turret], world);
+    expect(f.status(turret)).toBe('noAmmo');
+    run(f, 10);
+    expect(turret.input?.item).toBe('magazine');
+    expect(side.belt.map((b) => b.item)).toEqual(['iron_ore']); // le minerai n'est pas accepté
+    expect(f.turretReady(turret)).toBe(true);
+    for (let i = 0; i < 12; i++) expect(f.turretTake(turret)).toBe(true);
+    expect(f.turretTake(turret)).toBe(false);
+    expect(turret.input).toBeNull();
+  });
+});

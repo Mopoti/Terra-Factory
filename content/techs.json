@@ -43,6 +43,15 @@
       },
       "requires": ["electricity"],
       "unlocks": ["machine_pipe", "machine_pump", "machine_boiler", "machine_turbine"]
+    },
+    {
+      "id": "defense",
+      "cost": {
+        "iron_ingot": 30,
+        "copper_ingot": 10
+      },
+      "requires": ["logistics"],
+      "unlocks": ["machine_turret"]
     }
   ]
 }
