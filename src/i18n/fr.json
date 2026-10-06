@@ -540,5 +540,21 @@
   "equip.hint": "Glisse ou clique un équipement du sac sur sa case. Clique une case remplie pour retirer l'objet.",
   "equip.bagFull": "Impossible de l'enlever : le sac serait trop plein sans lui.",
   "equip.bonus": "+{slots} cases · +{kg} kg · +{l} L",
-  "equip.slotOf": "Se porte : {slot}"
+  "equip.slotOf": "Se porte : {slot}",
+  "tech.title": "Technologies",
+  "tech.logistics": "Logistique",
+  "tech.textile": "Textile",
+  "tech.electricity": "Électricité",
+  "tech.automation": "Automatisation",
+  "tech.needed": "Technologie requise : {tech} (touche T)",
+  "tech.cost": "Coût",
+  "tech.unlocks": "Débloque",
+  "tech.requires": "Nécessite",
+  "tech.research": "Rechercher",
+  "tech.done": "Recherchée",
+  "tech.locked": "Prérequis manquant",
+  "tech.missing": "Ressources insuffisantes dans le sac",
+  "tech.researched": "Technologie recherchée : {tech}",
+  "tech.help": "Les ressources du coût sont prises dans le sac. T ou Échap pour fermer.",
+  "tech.have": "{have} / {need}"
 }

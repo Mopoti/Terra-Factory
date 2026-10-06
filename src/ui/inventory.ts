@@ -1,3 +1,4 @@
+import { techFor } from '../core/data/techs';
 import { ITEMS, itemById, type EquipSlot } from '../core/data/items';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
@@ -197,6 +198,15 @@ export function mountInventory(
         ),
       );
     }
+    if (!state.isUnlocked(hovered)) {
+      tooltip.append(
+        el(
+          'div',
+          'lack',
+          t('tech.needed', { tech: t(`tech.${techFor(hovered)?.id ?? ''}` as TranslationKey) }),
+        ),
+      );
+    }
     tooltip.append(el('small', undefined, `${t('inv.count')} : ${state.inventory[hovered] ?? 0}`));
     tooltip.hidden = false;
     const w = tooltip.offsetWidth;
@@ -209,7 +219,12 @@ export function mountInventory(
     const { made, stopped } = state.craft(item, times);
     if (made === 0) {
       playSfx('deny');
-      message = stopped === 'bag' ? t('inv.craftBagFull') : t('inv.noResources');
+      message =
+        stopped === 'bag'
+          ? t('inv.craftBagFull')
+          : stopped === 'locked'
+            ? t('tech.needed', { tech: t(`tech.${techFor(item)?.id ?? ''}` as TranslationKey) })
+            : t('inv.noResources');
     } else if (made < times) {
       playSfx('craft');
       message = t('inv.craftedPartial', { n: String(made), item: itemName(item) });
@@ -348,6 +363,7 @@ export function mountInventory(
         def.recipe !== null &&
         Object.entries(def.recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
       cell.classList.toggle('raw', def.recipe === null);
+      cell.classList.toggle('locked', !state.isUnlocked(def.id));
       cell.classList.toggle('lack', def.recipe !== null && !canCraft);
       cell.append(el('span', 'slot-name', itemName(def.id)));
       cell.draggable = true;

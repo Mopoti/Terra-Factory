@@ -100,3 +100,10 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Sac à dos** (6 tissus), emplacement Tronc : **+10 cases, +20 kg, +30 L**. On ne peut pas l'enlever si le sac contiendrait alors plus que sa capacité de base.
 - **Fibres** : nouveau **buisson de fibres** dans le monde (se traverse, se récolte en 0,4 s, 3 fibres, plutôt en prairie/forêt) ; **Fibre** (combustible faible : 6 s) → **Tissu** (4 fibres) → **Sac à dos**, **Capuche** (tête), **Pantalon** (jambes), **Bottes** (pieds), **Gants** (mains). Les vêtements n'ont pas encore d'effet (emplacements et recettes seulement).
 - Les mondes déjà créés reçoivent des buissons : quelques arbres/rochers très proches d'un buisson peuvent changer de place.
+
+## Tour 48 — technologies (touche T)
+- **Fenêtre Technologies** : une carte par technologie avec son coût (objets du sac, consommés à la recherche), ses prérequis et ce qu'elle débloque. Le jeu est en pause pendant qu'elle est ouverte ; T / Échap / ✕ pour fermer.
+- **Technologies** (`content/techs.json`) : *Logistique* (20 lingots de fer → séparateur, groupeur, coffre en fer, bras), *Textile* (30 fibres → tissu, sac à dos, vêtements), *Électricité* (30 fer + 20 cuivre → poteau, générateur, foreuse électrique), *Automatisation* (40 fer + 30 cuivre, nécessite Électricité et Logistique → bras électrique, assembleur).
+- **Effet** : seule la **fabrication** à la main est bloquée (case grisée en pointillés dans le panneau de fabrication, info-bulle « Technologie requise »). Un objet qui n'est dans aucune technologie (pièces de construction, foreuse, fourneau, tapis, coffre en bois) reste disponible dès le départ. Les objets déjà possédés ou posés ne sont pas touchés.
+- **Sauvegardes** : enregistrées avec la partie (`changes.unlocked`) ; une ancienne partie, créée avant les technologies, a tout débloqué. Ajouter une technologie = ajouter une entrée dans `techs.json` + son nom `tech.<id>` dans les deux fichiers de langue.
+- Vérifié : tests (fabrication refusée, coût, prérequis, sauvegarde) et script navigateur (T, recherche du Textile, cases verrouillées).

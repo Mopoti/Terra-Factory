@@ -102,6 +102,8 @@ export interface GameViewOptions {
   onToggleInventory?: () => void;
   /** La touche « Carte » a été pressée. */
   onToggleMap?: () => void;
+  /** La touche « Arbre technologique » a été pressée. */
+  onToggleTech?: () => void;
   /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
   start?: Partial<PlayerState>;
   /** Appelé quand le joueur change de vue avec le clavier. */
@@ -1397,6 +1399,7 @@ export function startGameView(
 
     if (pressed('inventory')) options.onToggleInventory?.();
     if (pressed('map')) options.onToggleMap?.();
+    if (pressed('techTree')) options.onToggleTech?.();
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {

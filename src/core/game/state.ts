@@ -9,6 +9,7 @@ import {
   type Machine,
   type Stack,
 } from '../factory/factory';
+import { techById, techFor } from '../data/techs';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
@@ -349,9 +350,33 @@ export class GameState {
    * Fabrique à la main jusqu'à `times` unités d'un objet. Ne fabrique que ce que les ressources et la
    * place dans le sac permettent. Renvoie le nombre fabriqué et la raison de l'arrêt éventuel.
    */
-  craft(item: string, times: number): { made: number; stopped: 'resources' | 'bag' | null } {
+  /** Cet objet peut-il être fabriqué (sa technologie est-elle recherchée) ? */
+  isUnlocked(item: string): boolean {
+    const tech = techFor(item);
+    return !tech || this.changes.unlocked.includes(tech.id);
+  }
+
+  /** Recherche une technologie : consomme son coût dans le sac. */
+  research(id: string): 'ok' | 'done' | 'locked' | 'missing' {
+    const tech = techById(id);
+    if (this.changes.unlocked.includes(id)) return 'done';
+    if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) return 'locked';
+    if (!Object.entries(tech.cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n))
+      return 'missing';
+    for (const [item, n] of Object.entries(tech.cost))
+      this.inventory = remove(this.inventory, item, n).inventory;
+    this.changes.unlocked.push(id);
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  craft(
+    item: string,
+    times: number,
+  ): { made: number; stopped: 'resources' | 'bag' | 'locked' | null } {
     const recipe = itemById(item).recipe;
     if (!recipe) return { made: 0, stopped: 'resources' };
+    if (!this.isUnlocked(item)) return { made: 0, stopped: 'locked' };
     let made = 0;
     let stopped: 'resources' | 'bag' | null = null;
     while (made < times) {

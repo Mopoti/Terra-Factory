@@ -540,5 +540,21 @@
   "equip.hint": "Drag or click equipment from the bag onto its slot. Click a filled slot to take it off.",
   "equip.bagFull": "Cannot remove it: the bag would be too full without it.",
   "equip.bonus": "+{slots} slots · +{kg} kg · +{l} L",
-  "equip.slotOf": "Worn on: {slot}"
+  "equip.slotOf": "Worn on: {slot}",
+  "tech.title": "Technologies",
+  "tech.logistics": "Logistics",
+  "tech.textile": "Textiles",
+  "tech.electricity": "Electricity",
+  "tech.automation": "Automation",
+  "tech.needed": "Technology required: {tech} (T key)",
+  "tech.cost": "Cost",
+  "tech.unlocks": "Unlocks",
+  "tech.requires": "Requires",
+  "tech.research": "Research",
+  "tech.done": "Researched",
+  "tech.locked": "Missing prerequisite",
+  "tech.missing": "Not enough resources in the bag",
+  "tech.researched": "Technology researched: {tech}",
+  "tech.help": "The cost is taken from the bag. T or Esc to close.",
+  "tech.have": "{have} / {need}"
 }

@@ -1400,3 +1400,55 @@
   opacity: 0.6;
   text-transform: uppercase;
 }
+
+/* Fenêtre des technologies (touche T). */
+#tech {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 19;
+  padding-bottom: 84px;
+  background: rgba(0, 0, 0, 0.45);
+}
+#tech .panel {
+  position: relative;
+  width: min(900px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.tech-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #2c3640;
+  border-left: 4px solid var(--item, #888);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.tech-card.done {
+  opacity: 0.65;
+}
+.tech-card.blocked {
+  opacity: 0.5;
+}
+.tech-card h3 {
+  margin: 0;
+}
+.tech-line {
+  font-size: 13px;
+}
+.tech-line.sub {
+  opacity: 0.8;
+}
+.slot.craft.locked {
+  opacity: 0.45;
+  border-style: dashed;
+}

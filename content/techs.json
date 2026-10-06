@@ -1,0 +1,39 @@
+{
+  "_comment": "Technologies : coût (objets du sac consommés), prérequis, objets débloqués à la fabrication. Un objet qui n'est dans aucune technologie est disponible dès le départ.",
+  "techs": [
+    {
+      "id": "logistics",
+      "cost": {
+        "iron_ingot": 20
+      },
+      "requires": [],
+      "unlocks": ["machine_splitter", "machine_merger", "machine_chest_iron", "machine_arm"]
+    },
+    {
+      "id": "textile",
+      "cost": {
+        "fiber": 30
+      },
+      "requires": [],
+      "unlocks": ["cloth", "backpack", "hood", "trousers", "boots", "gloves"]
+    },
+    {
+      "id": "electricity",
+      "cost": {
+        "iron_ingot": 30,
+        "copper_ingot": 20
+      },
+      "requires": [],
+      "unlocks": ["machine_pole", "machine_generator", "machine_drill_electric"]
+    },
+    {
+      "id": "automation",
+      "cost": {
+        "iron_ingot": 40,
+        "copper_ingot": 30
+      },
+      "requires": ["electricity", "logistics"],
+      "unlocks": ["machine_arm_electric", "machine_assembler"]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { normalizeMachines, type Machine } from '../factory/factory';
 import { itemById, type EquipSlot } from '../data/items';
 import { migrateItemId } from './inventory';
 import { resourceById } from '../data/resources';
+import { TECHS } from '../data/techs';
 import type { ChunkData } from '../world/worldgen';
 
 /** Objets déposés au sol par le joueur. */
@@ -34,6 +35,8 @@ export interface WorldChanges {
   nextMachineId: number;
   /** Équipement porté : un objet par emplacement du corps. */
   equipment: Partial<Record<EquipSlot, string>>;
+  /** Technologies déjà recherchées. */
+  unlocked: string[];
 }
 
 export const HOTBAR_SLOTS = 9;
@@ -51,6 +54,7 @@ export function emptyChanges(): WorldChanges {
     machines: [],
     nextMachineId: 1,
     equipment: {},
+    unlocked: [],
   };
 }
 
@@ -105,6 +109,10 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       }
     }
   }
+  // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
+  result.unlocked = Array.isArray(r.unlocked)
+    ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
+    : TECHS.map((t) => t.id);
   if (Array.isArray(r.hotbar)) {
     r.hotbar.slice(0, HOTBAR_SLOTS).forEach((rawId, i) => {
       if (typeof rawId !== 'string') return;

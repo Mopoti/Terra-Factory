@@ -1049,3 +1049,32 @@ describe('équipement et sac à dos', () => {
     expect(s.changes.equipment).toEqual({ legs: 'trousers' });
   });
 });
+
+describe('technologies', () => {
+  it('fabriquer un objet verrouillé est refusé tant que la technologie n’est pas recherchée', () => {
+    const s = new GameState({ inventory: { iron_ingot: 25 } });
+    expect(s.isUnlocked('machine_splitter')).toBe(false);
+    expect(s.craft('machine_splitter', 1)).toEqual({ made: 0, stopped: 'locked' });
+    expect(s.isUnlocked('machine_conveyor')).toBe(true);
+    expect(s.research('logistics')).toBe('ok');
+    expect(s.inventory.iron_ingot).toBe(5);
+    expect(s.research('logistics')).toBe('done');
+    expect(s.craft('machine_splitter', 1).made).toBe(1);
+  });
+
+  it('prérequis et coût sont vérifiés ; la recherche est enregistrée', () => {
+    const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
+    expect(s.research('automation')).toBe('locked');
+    expect(s.research('logistics')).toBe('ok');
+    expect(s.research('electricity')).toBe('ok');
+    expect(s.research('automation')).toBe('ok');
+    expect(s.research('textile')).toBe('missing');
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.isUnlocked('machine_assembler')).toBe(true);
+  });
+
+  it('une ancienne sauvegarde (sans recherche) garde tout débloqué', () => {
+    const s = new GameState({ inventory: {}, changes: { taken: {} } });
+    expect(s.isUnlocked('machine_assembler')).toBe(true);
+  });
+});
