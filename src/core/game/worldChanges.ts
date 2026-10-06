@@ -40,6 +40,8 @@ export interface WorldChanges {
   /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
   researching: string | null;
   progress: Record<string, number>;
+  /** Pollution par cellule de 32 m (« pcx,pcz »). */
+  pollution: Record<string, number>;
 }
 
 export const HOTBAR_SLOTS = 9;
@@ -60,6 +62,7 @@ export function emptyChanges(): WorldChanges {
     unlocked: [],
     researching: null,
     progress: {},
+    pollution: {},
   };
 }
 
@@ -122,6 +125,11 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];
       if (isNum(v) && v > 0) result.progress[t.id] = Math.floor(v);
+    }
+  }
+  if (typeof r.pollution === 'object' && r.pollution !== null) {
+    for (const [k, v] of Object.entries(r.pollution as Record<string, unknown>)) {
+      if (/^-?\d+,-?\d+$/.test(k) && isNum(v) && v > 0) result.pollution[k] = v;
     }
   }
   if (typeof r.researching === 'string' && TECHS.some((t) => t.id === r.researching)) {

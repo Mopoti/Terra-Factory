@@ -11,7 +11,8 @@
       "mineSeconds": 1,
       "burnPerSecond": 1,
       "stockMax": 100,
-      "height": 1.3
+      "height": 1.3,
+      "pollution": 0.6
     },
     {
       "id": "furnace",
@@ -22,7 +23,8 @@
       "fuel": true,
       "burnPerSecond": 1,
       "stockMax": 100,
-      "height": 1.0
+      "height": 1.0,
+      "pollution": 0.5
     },
     {
       "id": "conveyor",
@@ -64,7 +66,8 @@
       "height": 1.1,
       "fuel": true,
       "burnPerSecond": 1,
-      "producesKw": 300
+      "producesKw": 300,
+      "pollution": 1.0
     },
     {
       "id": "pole",
@@ -87,7 +90,8 @@
       "fuel": false,
       "mineSeconds": 0.667,
       "stockMax": 100,
-      "consumesKw": 90
+      "consumesKw": 90,
+      "pollution": 0.3
     },
     {
       "id": "splitter",
@@ -140,7 +144,8 @@
       "consumesKw": 60,
       "craftSeconds": 2,
       "stockMax": 100,
-      "height": 1.0
+      "height": 1.0,
+      "pollution": 0.2
     },
     {
       "id": "lab",
@@ -152,7 +157,8 @@
       "consumesKw": 30,
       "craftSeconds": 6,
       "stockMax": 20,
-      "height": 0.9
+      "height": 0.9,
+      "pollution": 0.1
     },
     {
       "id": "pipe",
@@ -187,7 +193,8 @@
       "stockMax": 20,
       "fluidCap": 200,
       "boilRate": 60,
-      "height": 1.5
+      "height": 1.5,
+      "pollution": 2.0
     },
     {
       "id": "turbine",

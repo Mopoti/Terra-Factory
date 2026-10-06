@@ -84,6 +84,8 @@ import { FactoryView } from './factoryView';
 import type { Structure } from './interaction';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
+import { EnemyView } from './enemyView';
+import { POLLUTION_CELL_M, Threat, type ThreatTarget, type ThreatWorld } from '../core/game/threat';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
 const SKY = 0x8fb8d8;
@@ -116,6 +118,8 @@ export interface GameViewOptions {
   onViewChange?: (view: ViewId) => void;
   /** Appelé quand le navigateur libère la souris (Échap en 1ère personne) : ouvrir la pause. */
   onRequestPause?: () => void;
+  /** Un message court à montrer au joueur (toast). */
+  onMessage?: (text: string) => void;
   /** Le joueur veut ouvrir l'interface de la machine visée (touche « Utiliser »). */
   onOpenMachine?: (id: number) => void;
 }
@@ -132,6 +136,8 @@ export interface GameViewHandle {
   dropItem(item: string, count: number): void;
   /** L'usine (machines et tapis) de la partie, pour l'interface des machines. */
   factory: Factory;
+  /** Pollution et ennemis, pour la carte. */
+  threat: Threat;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -982,6 +988,11 @@ export function startGameView(
         );
       }
     }
+    if ((def.pollution ?? 0) > 0) {
+      rows.push(
+        `<div class="sub">${t('threat.pollution', { v: String(Math.round(factory.pollutionRate(m) * 60)) })}</div>`,
+      );
+    }
     if (def.fuel) {
       const secs = factory.fuelSecondsLeft(m);
       rows.push(
@@ -1367,6 +1378,116 @@ export function startGameView(
     });
     compassValue.textContent = `${Math.round(bearing)}°`;
   }
+  // --- Pollution, ennemis, santé ---------------------------------------------------------------
+  const cellChunks = POLLUTION_CELL_M / (CHUNK_CELLS * CELL_SIZE_M);
+  const nestCache = new Map<string, { x: number; z: number }[]>();
+  const treeCache = new Map<string, number>();
+  const scanCell = (pcx: number, pcz: number): void => {
+    const k = `${pcx},${pcz}`;
+    if (nestCache.has(k)) return;
+    const nests: { x: number; z: number }[] = [];
+    let trees = 0;
+    for (let dz = 0; dz < cellChunks; dz++) {
+      for (let dx = 0; dx < cellChunks; dx++) {
+        for (const o of generator.chunk(pcx * cellChunks + dx, pcz * cellChunks + dz).objects) {
+          if (o.id === 'nest') {
+            nests.push({
+              x: (o.gx + o.cells / 2) * CELL_SIZE_M,
+              z: (o.gz + o.cells / 2) * CELL_SIZE_M,
+            });
+          } else if (o.id === 'tree') trees++;
+        }
+      }
+    }
+    nestCache.set(k, nests);
+    treeCache.set(k, trees);
+  };
+  const threatWorld: ThreatWorld = {
+    nestsIn: (pcx, pcz) => (scanCell(pcx, pcz), nestCache.get(`${pcx},${pcz}`) ?? []),
+    treesIn: (pcx, pcz) => (scanCell(pcx, pcz), treeCache.get(`${pcx},${pcz}`) ?? 0),
+  };
+  const threat = new Threat(options.state.changes.pollution, threatWorld, {
+    aggressive: game.options.enemies.aggressive,
+  });
+  const enemyView = new EnemyView(scene);
+  const MAX_HEALTH = 100;
+  const MACHINE_HEALTH = 120;
+  let playerHealth = MAX_HEALTH;
+  let sinceHurt = 99;
+  let attackCooldown = 0;
+  let pollutionClock = 0;
+  let targetClock = 0;
+  let threatTargets: ThreatTarget[] = [];
+  const machineHealth = new Map<number, number>();
+  const healthBar = document.createElement('div');
+  healthBar.className = 'health-bar';
+  healthBar.innerHTML = '<div class="health-fill"></div><span></span>';
+  container.appendChild(healthBar);
+  const healthFill = healthBar.querySelector('.health-fill') as HTMLElement;
+  const healthText = healthBar.querySelector('span') as HTMLElement;
+  const machineCenter = (m: Machine): { x: number; z: number } => {
+    const { w, d } = dims(m.type, m.rot);
+    return { x: (m.gx + w / 2) * CELL_SIZE_M, z: (m.gz + d / 2) * CELL_SIZE_M };
+  };
+  function updateThreat(dt: number): void {
+    // Les machines qui travaillent polluent (une fois par seconde).
+    pollutionClock += dt;
+    if (pollutionClock >= 1) {
+      pollutionClock -= 1;
+      for (const m of factory.machines) {
+        const rate = factory.pollutionRate(m);
+        if (rate > 0) {
+          const c = machineCenter(m);
+          threat.emit(c.x, c.z, rate);
+        }
+      }
+    }
+    targetClock += dt;
+    if (targetClock >= 0.5) {
+      targetClock = 0;
+      threatTargets = factory.machines
+        .filter((m) => (machineDef(m.type).pollution ?? 0) > 0)
+        .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
+    }
+    const targets: ThreatTarget[] = [...threatTargets, { id: 'player', x: playerX, z: playerZ }];
+    for (const hit of threat.update(dt, targets)) {
+      if (hit.target === 'player') {
+        playerHealth -= hit.amount;
+        sinceHurt = 0;
+        playSfx('deny');
+      } else {
+        const id = Number(hit.target.slice(8));
+        const left = (machineHealth.get(id) ?? MACHINE_HEALTH) - hit.amount;
+        if (left <= 0) {
+          machineHealth.delete(id);
+          if (options.state.destroyMachine(factory, id)) {
+            playSfx('rockBreak');
+            options.onMessage?.(t('threat.machineLost'));
+          }
+        } else machineHealth.set(id, left);
+      }
+    }
+    // Le joueur frappe les ennemis proches (clic gauche).
+    attackCooldown = Math.max(0, attackCooldown - dt);
+    if (attackCooldown <= 0 && !building && input.isActionActive('interact')) {
+      const result = threat.hit(playerX, playerZ, 2.6, 12);
+      if (result) {
+        attackCooldown = 0.45;
+        playSfx(result === 'kill' ? 'rockBreak' : 'woodChop');
+      }
+    }
+    // Santé : elle revient doucement ; à zéro, on se réveille au point de départ.
+    sinceHurt += dt;
+    if (sinceHurt > 5) playerHealth = Math.min(MAX_HEALTH, playerHealth + 4 * dt);
+    if (playerHealth <= 0) {
+      playerHealth = MAX_HEALTH;
+      playerX = DEFAULT_PLAYER_STATE.x;
+      playerZ = DEFAULT_PLAYER_STATE.z;
+      playerY = 0;
+      velY = 0;
+      options.onMessage?.(t('threat.knockedOut'));
+    }
+  }
   const hint = document.createElement('div');
   hint.className = 'look-hint';
   hint.textContent = t('hint.mouseLook');
@@ -1595,6 +1716,20 @@ export function startGameView(
         simAcc -= 0.05;
       }
     }
+    if (!paused) updateThreat(dt);
+    enemyView.update(
+      threat.enemies,
+      (e) => {
+        if (!e.target) return null;
+        if (e.target === 'player') return { x: playerX, z: playerZ };
+        const m = factory.machines.find((x) => `machine:${x.id}` === e.target);
+        return m ? machineCenter(m) : null;
+      },
+      now / 1000,
+    );
+    healthBar.hidden = playerHealth >= MAX_HEALTH - 0.5 && threat.enemies.length === 0;
+    healthFill.style.width = `${Math.max(0, Math.round(playerHealth))}%`;
+    healthText.textContent = `${t('threat.health')} ${Math.max(0, Math.round(playerHealth))}`;
     itemsTimer += realDt;
     if (itemsTimer >= 0.1) {
       itemsTimer = 0;
@@ -1658,6 +1793,7 @@ export function startGameView(
   return {
     getState: () => ({ x: playerX, y: playerY, z: playerZ, ...rig.getState() }),
     factory,
+    threat,
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.
       const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;
@@ -1690,6 +1826,8 @@ export function startGameView(
       }
     },
     dispose: () => {
+      enemyView.dispose();
+      healthBar.remove();
       unsubscribe();
       interaction.dispose();
       unsubscribeBuild();

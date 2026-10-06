@@ -591,5 +591,12 @@
   "factory.fluid.empty": "empty",
   "factory.fluid.pressure": "Pressure: {v} %",
   "factory.needWater": "A pump goes at the water's edge (a neighbouring pond cell).",
-  "factory.turbine.output": "Output: {kw} kW"
+  "factory.turbine.output": "Output: {kw} kW",
+  "threat.health": "Health",
+  "threat.machineLost": "An installation was destroyed by enemies!",
+  "threat.knockedOut": "You were knocked out: back at the starting point.",
+  "threat.pollution": "Pollution emitted: {v} / min",
+  "threat.pollutionHere": "Pollution here: {v}",
+  "map.pollution": "Pollution",
+  "map.enemies": "Enemies"
 }

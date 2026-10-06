@@ -160,6 +160,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       )
         session?.tech.toggle();
     },
+    onMessage: (text) => showToast(text),
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
     onOpenMachine: (id) => {
@@ -195,6 +196,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     world: game.world,
     state,
     factory: view.factory,
+    threat: view.threat,
     player: () => {
       const p = view.getState();
       return { x: p.x, z: p.z, yaw: p.yaw };

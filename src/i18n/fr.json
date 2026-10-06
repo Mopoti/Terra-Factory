@@ -591,5 +591,12 @@
   "factory.fluid.empty": "vide",
   "factory.fluid.pressure": "Pression : {v} %",
   "factory.needWater": "Une pompe se pose au bord de l'eau (une case d'étang voisine).",
-  "factory.turbine.output": "Production : {kw} kW"
+  "factory.turbine.output": "Production : {kw} kW",
+  "threat.health": "Santé",
+  "threat.machineLost": "Une installation a été détruite par des ennemis !",
+  "threat.knockedOut": "Tu as été assommé : te voilà de retour au point de départ.",
+  "threat.pollution": "Pollution émise : {v} / min",
+  "threat.pollutionHere": "Pollution ici : {v}",
+  "map.pollution": "Pollution",
+  "map.enemies": "Ennemis"
 }

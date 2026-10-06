@@ -839,6 +839,12 @@ export class Factory {
     return true;
   }
 
+  /** Pollution émise par seconde par cette machine (0 si elle ne travaille pas). */
+  pollutionRate(m: Machine): number {
+    const rate = machineDef(m.type).pollution ?? 0;
+    return rate > 0 && this.status(m) === 'running' ? rate : 0;
+  }
+
   /** Côtés d'une machine à fluide raccordés à une autre (pour dessiner les tuyaux). */
   fluidSides(m: Machine): number[] {
     const out: number[] = [];

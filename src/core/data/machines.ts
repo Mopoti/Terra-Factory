@@ -44,6 +44,8 @@ export interface MachineDef {
   /** Poteau : portée du fil vers un autre poteau (m) et vers une machine (m, bord de la machine). */
   wireReachM?: number;
   linkReachM?: number;
+  /** Pollution émise (points par seconde) quand la machine travaille. */
+  pollution?: number;
   /** Fluides : capacité de la machine (unités). */
   fluidCap?: number;
   /** Pompe : eau pompée (unités/s) à pleine puissance. */

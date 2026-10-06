@@ -5,6 +5,7 @@ import type { Factory } from '../core/factory/factory';
 import type { GameState } from '../core/game/state';
 import { BIOME_COLORS } from '../core/world/biomes';
 import { WorldGenerator, type WorldParams } from '../core/world/worldgen';
+import { POLLUTION_CELL_M, type Threat } from '../core/game/threat';
 import { t, type TranslationKey } from '../i18n';
 import './menu.css';
 
@@ -20,6 +21,7 @@ export interface MapOptions {
   world: WorldParams;
   state: GameState;
   factory: Factory;
+  threat: Threat;
   /** Position et cap du joueur (x, z en mètres ; yaw comme la caméra). */
   player(): { x: number; z: number; yaw: number };
   onOpenChange(open: boolean): void;
@@ -180,6 +182,25 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
         ctx.strokeRect(sx(mc.gx) + 0.5, sz(mc.gz) + 0.5, w2 * zoom - 1, d2 * zoom - 1);
       }
     }
+    // Pollution : voile rouge par cellule de 32 m ; ennemis : points rouges.
+    const cellCells = POLLUTION_CELL_M / CELL_SIZE_M;
+    for (const [k, v] of Object.entries(options.threat.pollution)) {
+      const [pcx, pcz] = k.split(',').map(Number);
+      ctx.fillStyle = `rgba(214, 48, 49, ${Math.min(0.6, 0.1 + v / 200)})`;
+      ctx.fillRect(sx(pcx * cellCells), sz(pcz * cellCells), cellCells * zoom, cellCells * zoom);
+    }
+    ctx.fillStyle = '#ff3b3b';
+    for (const e of options.threat.enemies) {
+      ctx.beginPath();
+      ctx.arc(
+        sx(e.x / CELL_SIZE_M),
+        sz(e.z / CELL_SIZE_M),
+        Math.max(3, zoom * 0.8),
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
     // Joueur : flèche blanche dans le sens du regard.
     const p = options.player();
     const px = (p.x / CELL_SIZE_M - gx0) * zoom;
@@ -242,6 +263,8 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(OBJECT_COLORS.tree, t('map.trees')),
       legendItem(OBJECT_COLORS.rock, t('map.rocks')),
       legendItem(OBJECT_COLORS.nest, t('map.nests')),
+      legendItem('rgba(214,48,49,0.6)', t('map.pollution')),
+      legendItem('#ff3b3b', t('map.enemies')),
       legendItem('#c79a5d', t('map.buildings')),
       legendItem('#e2e6ea', t('map.belts')),
     );

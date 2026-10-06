@@ -539,6 +539,14 @@ export class GameState {
     return moved;
   }
 
+  /** Une machine détruite (par des ennemis) : elle disparaît avec son contenu, sans rien rendre. */
+  destroyMachine(factory: Factory, id: number): boolean {
+    const m = factory.remove(id);
+    if (!m) return false;
+    this.emit({ type: 'factory' });
+    return true;
+  }
+
   /** Démolit une machine : l'objet et son contenu reviennent au joueur. */
   removeMachine(factory: Factory, id: number, at: { x: number; z: number }): boolean {
     const m = factory.remove(id);
