@@ -342,36 +342,32 @@ describe('séparateur et groupeur', () => {
 });
 
 describe('combustible par tapis', () => {
-  it('le générateur ne prend le combustible que par sa face d’entrée', () => {
-    // Générateur 2x2 en (10,10), entrée côté +z (rot 0). Tapis en (10,12) qui descend vers -z : bonne face.
-    const good = emptyMachine(2, 'conveyor', 10, 12, 2);
-    good.belt.push({ item: 'coal', pos: 1 });
+  it('le générateur prend le combustible par n’importe quelle face', () => {
     const gen = emptyMachine(1, 'generator', 10, 10, 0);
-    const bad = emptyMachine(3, 'conveyor', 9, 10, 1);
-    bad.belt.push({ item: 'coal', pos: 1 });
-    const f = new Factory([gen, good, bad], makeWorld().world);
+    const a = emptyMachine(2, 'conveyor', 10, 12, 2);
+    a.belt.push({ item: 'coal', pos: 1 });
+    const b = emptyMachine(3, 'conveyor', 9, 10, 1);
+    b.belt.push({ item: 'coal', pos: 1 });
+    const f = new Factory([gen, a, b], makeWorld().world);
     run(f, 0.5);
-    expect(gen.fuel).toEqual({ item: 'coal', count: 1 });
-    expect(good.belt.length).toBe(0);
-    expect(bad.belt.length).toBe(1);
+    expect([a.belt.length, b.belt.length, gen.fuel?.count]).toEqual([0, 0, 2]);
   });
 
-  it('un fourneau ou une foreuse prend son combustible par sa face arrière, pas par les côtés', () => {
+  it('un fourneau prend son combustible par les côtés et l’arrière, pas par sa sortie', () => {
     const furnace = emptyMachine(1, 'furnace', 10, 10, 0);
     const back = emptyMachine(2, 'conveyor', 10, 9, 0);
     back.belt.push({ item: 'coal', pos: 1 });
     const side = emptyMachine(3, 'conveyor', 9, 10, 1);
     side.belt.push({ item: 'coal', pos: 1 });
-    const stone = emptyMachine(4, 'conveyor', 10, 8, 0);
-    const f = new Factory([furnace, back, side, stone], makeWorld().world);
+    const front = emptyMachine(4, 'conveyor', 10, 11, 2);
+    front.belt.push({ item: 'coal', pos: 1 });
+    const f = new Factory([furnace, back, side, front], makeWorld().world);
     run(f, 0.5);
-    expect(furnace.fuel?.count).toBe(1);
-    expect(back.belt.length).toBe(0);
-    expect(side.belt.length).toBe(1);
-    // une pierre sur la face arrière reste bloquée
+    expect(furnace.fuel?.count).toBe(2);
+    expect(front.belt.length).toBe(1);
     back.belt.push({ item: 'stone', pos: 1 });
     run(f, 0.5);
-    expect(back.belt.length).toBe(1);
+    expect(back.belt.length).toBe(1); // la pierre ne brûle pas
   });
 });
 
@@ -481,6 +477,33 @@ describe('bras robotique', () => {
     const g = new Factory([src, arm, out, gen, pole], makeWorld().world);
     run(g, 4);
     expect(out.slots[0]?.count ?? 0).toBeGreaterThanOrEqual(7);
+  });
+});
+
+describe('bras et tapis mélangés', () => {
+  it('prend dans le tapis l’objet que la destination accepte, même derrière un autre', () => {
+    const belt = emptyMachine(1, 'conveyor', 10, 9, 0);
+    belt.belt.push({ item: 'stone', pos: 1 }, { item: 'iron_ore', pos: 0.6 });
+    const arm = emptyMachine(2, 'arm', 10, 10, 0);
+    arm.fuel = { item: 'coal', count: 3 };
+    const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    const f = new Factory([belt, arm, furnace], makeWorld().world);
+    expect(f.armDiagnosis(arm)).toBe('ok');
+    run(f, 3);
+    expect(furnace.input?.item).toBe('iron_ore');
+    expect(belt.belt.map((b) => b.item)).toEqual(['stone']);
+    expect(f.armDiagnosis(arm)).toBe('refused');
+  });
+
+  it('un bras de côté apporte le charbon au fourneau', () => {
+    const chest = emptyMachine(1, 'chest_wood', 8, 10, 0);
+    chest.slots.push({ item: 'coal', count: 5 });
+    const arm = emptyMachine(2, 'arm', 9, 10, 1);
+    arm.fuel = { item: 'coal', count: 3 };
+    const furnace = emptyMachine(3, 'furnace', 10, 10, 0);
+    const f = new Factory([chest, arm, furnace], makeWorld().world);
+    run(f, 3);
+    expect(furnace.fuel?.count ?? 0).toBeGreaterThanOrEqual(2);
   });
 });
 

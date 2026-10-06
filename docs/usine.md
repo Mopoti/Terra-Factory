@@ -82,3 +82,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Entrées** : toutes les faces sauf la sortie (devant) acceptent, par tapis ou bras, uniquement les ingrédients de la recette (jusqu'à 4× la quantité nécessaire, 10 au minimum). Dans la fenêtre : glisser/cliquer un ingrédient du sac (ou la pile tenue au curseur) sur sa case ; clic sur la case = le reprendre.
 - **Sortie** : 1 objet par 2 s à pleine puissance (plus lent si le réseau manque de courant), poussé vers la case devant (tapis, coffre, bras…). Un bras peut aussi y prendre le produit.
 - Panneau d'infos : recette, ingrédients en attente (« 23/6 »), temps, stock, consommation. Vérifié : tests (fabrication, courant, ingrédients refusés, sauvegarde) et capture navigateur (bras électrique → assembleur → coffre).
+
+## Tour 45 — correctif bras robotique
+- **Cause du blocage constaté** : le bras ne regardait que l'objet de tête du tapis (ou la 1re pile du coffre). Si cet objet était refusé (ex. charbon devant du minerai), tout le reste restait coincé derrière. Le bras examine maintenant **tous** les objets du tapis / toutes les piles du coffre et prend le premier que la destination accepte.
+- **Combustible** : un fourneau, une foreuse ou un générateur accepte désormais le combustible par **toutes les faces sauf leur sortie** (le carré clair reste l'entrée conseillée). Avant, seule la face arrière marchait, ce qui bloquait un bras posé sur le côté.
+- Le panneau d'infos d'un bras indique la raison quand il ne bouge pas : rien devant, rien à prendre, ou « la destination refuse ces objets ».

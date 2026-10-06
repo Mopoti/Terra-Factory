@@ -832,6 +832,10 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.arm.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
       );
+      if (!m.stock)
+        rows.push(
+          `<div class="sub">${t(`factory.arm.diag.${factory.armDiagnosis(m)}` as TranslationKey)}</div>`,
+        );
     } else if (isRouter(m.type)) {
       rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
       rows.push(

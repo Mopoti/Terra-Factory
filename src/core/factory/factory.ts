@@ -609,15 +609,14 @@ export class Factory {
       const last = target.belt[target.belt.length - 1];
       return !(last && last.pos < GAP);
     }
-    // Combustible : par la face d'entrée (carré clair). Générateur : face avant ; foreuse et fourneau : face arrière.
-    if (target.type === 'generator')
-      return dir === (target.rot + 2) % 4 && this.fuelRoom(target, item);
+    // Combustible : par n'importe quelle face sauf la sortie (le carré clair marque l'entrée conseillée).
+    if (target.type === 'generator') return this.fuelRoom(target, item);
     if (target.type === 'furnace') {
-      if (!smeltRecipe(item)) return dir === target.rot && this.fuelRoom(target, item);
+      if (!smeltRecipe(item)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
       const max = machineDef('furnace').stockMax ?? 100;
       return !target.input || (target.input.item === item && target.input.count < max);
     }
-    if (isDrill(target.type)) return dir === target.rot && this.fuelRoom(target, item);
+    if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
     return false;
   }
@@ -737,34 +736,39 @@ export class Factory {
     }
   }
 
-  /** Ce qu'on peut prendre sur une machine voisine (objet de tête d'un tapis, d'un coffre, d'un stock de sortie). */
-  private peekSource(src: Machine): { item: string; take: () => void } | null {
+  /** Tout ce qu'on peut prendre sur une machine voisine : objets d'un tapis, piles d'un coffre, stock de sortie. */
+  private peekSources(src: Machine): { item: string; take: () => void }[] {
     if (src.type === 'conveyor') {
-      const head = src.belt[0];
-      return head ? { item: head.item, take: () => src.belt.shift() } : null;
+      return src.belt.map((b) => ({
+        item: b.item,
+        take: () => {
+          const i = src.belt.indexOf(b);
+          if (i >= 0) src.belt.splice(i, 1);
+        },
+      }));
     }
     if (isChest(src.type)) {
-      const stack = src.slots[0];
-      if (!stack) return null;
-      return {
+      return src.slots.map((stack) => ({
         item: stack.item,
         take: () => {
           stack.count--;
-          if (stack.count <= 0) src.slots.shift();
+          if (stack.count <= 0) src.slots.splice(src.slots.indexOf(stack), 1);
         },
-      };
+      }));
     }
     if (hasOutput(src.type) && src.stock) {
       const stack = src.stock;
-      return {
-        item: stack.item,
-        take: () => {
-          stack.count--;
-          if (stack.count <= 0) src.stock = null;
+      return [
+        {
+          item: stack.item,
+          take: () => {
+            stack.count--;
+            if (stack.count <= 0) src.stock = null;
+          },
         },
-      };
+      ];
     }
-    return null;
+    return [];
   }
 
   /** Bras robotique : s'il va manquer de combustible, en prend un dans une case voisine (derrière ou sur les côtés). */
@@ -773,9 +777,12 @@ export class Factory {
     for (const side of [2, 1, 3]) {
       const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
       const src = this.machineAt(m.gx + dx, m.gz + dz);
-      const found = src ? this.peekSource(src) : null;
-      if (!found || !itemById(found.item).fuelSeconds) continue;
-      if (m.fuel && (m.fuel.item !== found.item || m.fuel.count >= max)) continue;
+      const found = (src ? this.peekSources(src) : []).find(
+        (f) =>
+          itemById(f.item).fuelSeconds &&
+          (!m.fuel || (m.fuel.item === f.item && m.fuel.count < max)),
+      );
+      if (!found) continue;
       found.take();
       this.addFuel(m, found.item);
       return;
@@ -792,10 +799,31 @@ export class Factory {
       const side = (turn + i) % 3;
       const [dx, dz] = RISE_DIR[(m.rot + [2, 1, 3][side]) % 4];
       const src = this.machineAt(m.gx + dx, m.gz + dz);
-      const found = src && src !== dest ? this.peekSource(src) : null;
-      if (found && this.canAccept(dest, m, found.item, m.rot)) return { ...found, side };
+      const found =
+        src && src !== dest
+          ? this.peekSources(src).find((f) => this.canAccept(dest, m, f.item, m.rot))
+          : undefined;
+      if (found) return { ...found, side };
     }
     return null;
+  }
+
+  /** Pourquoi un bras ne travaille pas (pour le panneau d'infos). */
+  armDiagnosis(m: Machine): 'ok' | 'noDest' | 'noSource' | 'refused' {
+    const [fx, fz] = RISE_DIR[m.rot];
+    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    if (!dest) return 'noDest';
+    let any = false;
+    for (const side of [2, 1, 3]) {
+      const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
+      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      if (!src || src === dest) continue;
+      for (const f of this.peekSources(src)) {
+        any = true;
+        if (this.canAccept(dest, m, f.item, m.rot)) return 'ok';
+      }
+    }
+    return any ? 'refused' : 'noSource';
   }
 
   /** Bras robotique : prend sur 3 côtés, dépose devant (un aller-retour par `swingSeconds`). */

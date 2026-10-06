@@ -503,5 +503,9 @@
   "factory.assembler.recipe": "Recette : {v}",
   "factory.assembler.none": "aucune (ouvrir l'interface)",
   "factory.assembler.needs": "Ingrédients : {v}",
-  "factory.assembler.time": "Production : 1 objet / {s} s"
+  "factory.assembler.time": "Production : 1 objet / {s} s",
+  "factory.arm.diag.ok": "Prêt : un objet est à prendre.",
+  "factory.arm.diag.noDest": "Rien devant lui : pose une machine, un tapis ou un coffre devant.",
+  "factory.arm.diag.noSource": "Rien à prendre derrière, à gauche ou à droite.",
+  "factory.arm.diag.refused": "Il y a des objets autour, mais la destination les refuse (ex. combustible refusé par la face de sortie d'un fourneau ou d'une foreuse ; minerai : fourneau déjà plein d'un autre minerai ; un objet qui ne se cuit pas)."
 }

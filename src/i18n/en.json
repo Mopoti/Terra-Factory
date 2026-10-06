@@ -503,5 +503,9 @@
   "factory.assembler.recipe": "Recipe: {v}",
   "factory.assembler.none": "none (open the interface)",
   "factory.assembler.needs": "Ingredients: {v}",
-  "factory.assembler.time": "Output: 1 item / {s} s"
+  "factory.assembler.time": "Output: 1 item / {s} s",
+  "factory.arm.diag.ok": "Ready: an item can be picked.",
+  "factory.arm.diag.noDest": "Nothing in front: place a machine, belt or chest in front.",
+  "factory.arm.diag.noSource": "Nothing to pick behind, left or right.",
+  "factory.arm.diag.refused": "Items are nearby but the destination refuses them (e.g. fuel through the output face of a furnace or drill; ore: furnace already full of another ore; an item that cannot be smelted)."
 }
