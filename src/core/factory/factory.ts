@@ -7,12 +7,21 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  isFluid,
   isLab,
   isRouter,
   machineDef,
   smeltRecipe,
   type MachineType,
 } from '../data/machines';
+import {
+  emptyFluid,
+  fluidLevel,
+  fluidLinks,
+  stepFluids,
+  type FluidKind,
+  type FluidLink,
+} from './fluids';
 
 /** Une pile dans une case de machine : un seul type d'objet. */
 export interface Stack {
@@ -51,6 +60,8 @@ export interface Machine {
   slots: Stack[];
   /** Assembleur : objet fabriqué (null = aucun choix). */
   recipe: string | null;
+  /** Fluides contenus (tuyau, pompe, chaudière, turbine). */
+  fluid: Record<FluidKind, number>;
 }
 
 /** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */
@@ -94,10 +105,12 @@ export function chestPut(m: Machine, item: string, count: number): number {
 export interface FactoryWorld {
   oreAt(gx: number, gz: number): { id: string; item: string; amount: number } | null;
   mineOre(gx: number, gz: number, units: number): number;
+  /** Y a-t-il de l'eau (étang) sur cette case ? Absent = pas d'eau. */
+  waterAt?(gx: number, gz: number): boolean;
 }
 
 export type MachineStatus =
-  'running' | 'idle' | 'noFuel' | 'noOre' | 'full' | 'blocked' | 'noPower';
+  'running' | 'idle' | 'noFuel' | 'noOre' | 'full' | 'blocked' | 'noPower' | 'noSteam' | 'noWater';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -156,7 +169,13 @@ export interface Port {
 }
 
 /** Case voisine au milieu du côté `dir` (0 = +z, 1 = +x, 2 = −z, 3 = −x) d'une machine posée avec l'orientation `rot`. */
-function sideCell(type: MachineType, gx: number, gz: number, rot: number, dir: number): Cell {
+export function sideCell(
+  type: MachineType,
+  gx: number,
+  gz: number,
+  rot: number,
+  dir: number,
+): Cell {
   const { w, d } = dims(type, rot);
   switch (dir % 4) {
     case 0:
@@ -202,6 +221,8 @@ export function ports(
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
+    case 'boiler':
+      return { ins: [into(left), into(right)], outs: [] };
     default:
       return { ins: [], outs: [] };
   }
@@ -228,6 +249,7 @@ export function emptyMachine(
     belt: [],
     slots: [],
     recipe: null,
+    fluid: emptyFluid(),
   };
 }
 
@@ -282,6 +304,14 @@ export function normalizeMachines(raw: unknown): Machine[] {
         }
       }
     }
+    if (isFluid(machine.type) && typeof m.fluid === 'object' && m.fluid !== null) {
+      const f = m.fluid as Record<string, unknown>;
+      const cap = machineDef(machine.type).fluidCap ?? 100;
+      for (const kind of ['water', 'steam'] as const) {
+        const v = f[kind];
+        if (isNum(v) && v > 0) machine.fluid[kind] = Math.min(cap, v);
+      }
+    }
     if (typeof m.recipe === 'string' && isAssembler(machine.type)) {
       try {
         if (itemById(m.recipe).recipe) machine.recipe = m.recipe;
@@ -319,6 +349,10 @@ const MACHINE_TYPES: MachineType[] = [
   'arm_electric',
   'assembler',
   'lab',
+  'pipe',
+  'pump',
+  'boiler',
+  'turbine',
 ];
 
 /** Centre d'une machine (m). */
@@ -349,6 +383,29 @@ export class Factory {
       for (const c of footprint(m.type, m.gx, m.gz, m.rot)) this.cells.set(`${c.gx},${c.gz}`, m);
     }
     this.buildGrids();
+    this.links = fluidLinks(
+      this.machines.filter((m) => isFluid(m.type)),
+      (gx, gz) => this.machineAt(gx, gz),
+      (m, side) => sideCell(m.type, m.gx, m.gz, m.rot, side),
+    );
+    this.pumpsOk = new Set(
+      this.machines.filter((m) => m.type === 'pump' && this.waterNear(m.gx, m.gz)).map((m) => m.id),
+    );
+  }
+
+  private links: FluidLink[] = [];
+  private pumpsOk = new Set<number>();
+
+  /** Une case d'eau touche-t-elle cette case ? */
+  private waterNear(gx: number, gz: number): boolean {
+    const w = this.world.waterAt;
+    if (!w) return false;
+    return [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ].some(([dx, dz]) => w.call(this.world, gx + dx, gz + dz));
   }
 
   /** Relie les poteaux entre eux (fil de 8 m) et les machines électriques au poteau le plus proche (4 m). */
@@ -428,6 +485,7 @@ export class Factory {
     rot: number,
     blocked: (c: Cell) => boolean,
   ): boolean {
+    if (type === 'pump' && !this.waterNear(gx, gz)) return false;
     return footprint(type, gx, gz, rot).every(
       (c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c),
     );
@@ -484,6 +542,21 @@ export class Factory {
         return 'full';
       return this.hasIngredients(m, need) ? 'running' : 'idle';
     }
+    if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'pump') {
+      if (!this.pumpsOk.has(m.id)) return 'noWater';
+      if (this.powerFactor(m) <= 0) return 'noPower';
+      return m.fluid.water >= (machineDef('pump').fluidCap ?? 100) - 1 ? 'full' : 'running';
+    }
+    if (m.type === 'boiler') {
+      if (m.fluid.water < 0.5) return 'noWater';
+      if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
+      return m.fluid.steam >= (def.fluidCap ?? 200) - 1 ? 'full' : 'running';
+    }
+    if (m.type === 'turbine') {
+      if (this.turbineEfficiency(m) <= 0) return 'noSteam';
+      return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
+    }
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
       return this.labWorking(m) ? 'running' : 'idle';
@@ -522,6 +595,7 @@ export class Factory {
   // --- Simulation ----------------------------------------------------------------------------------
 
   tick(dt: number): void {
+    stepFluids(this.links, dt);
     this.updateGrids();
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
@@ -529,6 +603,9 @@ export class Factory {
       else if (isArm(m.type)) this.tickArm(m, dt);
       else if (isAssembler(m.type)) this.tickAssembler(m, dt);
       else if (isLab(m.type)) this.tickLab(m, dt);
+      else if (m.type === 'pump') this.tickPump(m, dt);
+      else if (m.type === 'boiler') this.tickBoiler(m, dt);
+      else if (m.type === 'turbine') this.tickTurbine(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -542,6 +619,8 @@ export class Factory {
   private wantsToWork(m: Machine): boolean {
     if (isAssembler(m.type)) return this.canCraft(m);
     if (isLab(m.type)) return this.labWorking(m);
+    if (m.type === 'pump')
+      return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (!isDrill(m.type)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
@@ -574,7 +653,8 @@ export class Factory {
       if (!g) continue;
       const def = machineDef(m.type);
       if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
-      if (def.producesKw && (m.fuelLeft > 0 || (m.fuel && m.fuel.count > 0))) {
+      if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
+      else if (def.producesKw && (m.fuelLeft > 0 || (m.fuel && m.fuel.count > 0))) {
         g.capacityKw += def.producesKw;
       }
     }
@@ -694,7 +774,8 @@ export class Factory {
       const max = machineDef('furnace').stockMax ?? 100;
       return !target.input || (target.input.item === item && target.input.count < max);
     }
-    if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
+    if (isDrill(target.type) || target.type === 'boiler')
+      return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
     if (isLab(target.type))
       return (
@@ -756,6 +837,59 @@ export class Factory {
       else target.input = { item, count: 1 };
     } else this.addFuel(target, item);
     return true;
+  }
+
+  /** Côtés d'une machine à fluide raccordés à une autre (pour dessiner les tuyaux). */
+  fluidSides(m: Machine): number[] {
+    const out: number[] = [];
+    for (const l of this.links) {
+      if (l.a === m) out.push(l.pa.side);
+      else if (l.b === m) out.push(l.pb.side);
+    }
+    return out;
+  }
+
+  /** Turbine : rendement (0 à 1) selon la pression de vapeur : rien sous 20 %, plein à 60 %. */
+  turbineEfficiency(m: Machine): number {
+    return Math.min(1, Math.max(0, (fluidLevel(m, 'steam') - 0.2) / 0.4));
+  }
+
+  turbineKw(m: Machine): number {
+    return (machineDef('turbine').producesKw ?? 0) * this.turbineEfficiency(m);
+  }
+
+  private tickTurbine(m: Machine, dt: number): void {
+    const g = this.gridInfo(m);
+    const e = this.turbineEfficiency(m);
+    if (!g || g.demandKw <= 0 || g.capacityKw <= 0 || e <= 0) return;
+    const load = Math.min(1, g.demandKw / g.capacityKw);
+    m.fluid.steam = Math.max(
+      0,
+      m.fluid.steam - (machineDef('turbine').steamUse ?? 20) * dt * e * load,
+    );
+  }
+
+  private tickPump(m: Machine, dt: number): void {
+    const def = machineDef('pump');
+    if (!this.pumpsOk.has(m.id)) return;
+    const speed = this.powerFactor(m);
+    if (speed <= 0) return;
+    m.fluid.water = Math.min(
+      def.fluidCap ?? 100,
+      m.fluid.water + (def.pumpRate ?? 100) * dt * speed,
+    );
+  }
+
+  /** Chaudière : transforme l'eau en vapeur tant qu'il y a du combustible et de la place pour la vapeur. */
+  private tickBoiler(m: Machine, dt: number): void {
+    const def = machineDef('boiler');
+    const rate = def.boilRate ?? 60;
+    const room = (def.fluidCap ?? 200) - m.fluid.steam;
+    const want = Math.min(rate * dt, m.fluid.water, room);
+    if (want <= 1e-6 || !this.fire(m)) return;
+    m.fluid.water -= want;
+    m.fluid.steam += want;
+    this.burn(m, dt * (want / (rate * dt)));
   }
 
   /** Laboratoire : a-t-il des paquets et une étude à mener ? */

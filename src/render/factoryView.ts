@@ -10,7 +10,15 @@ import {
   machineDef,
   type MachineType,
 } from '../core/data/machines';
-import { dims, outputCell, ports, type Factory, type Machine } from '../core/factory/factory';
+import {
+  dims,
+  outputCell,
+  ports,
+  sideCell,
+  type Factory,
+  type Machine,
+} from '../core/factory/factory';
+import { fluidPorts } from '../core/factory/fluids';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
@@ -67,6 +75,26 @@ function flatArrow(
   flatTri(mb, at(-0.2, -0.04), at(0.02, -0.04), at(0.02, 0.04), y, color);
   flatTri(mb, at(-0.2, -0.04), at(0.02, 0.04), at(-0.2, 0.04), y, color);
   flatTri(mb, at(0.02, -0.14), at(0.2, 0), at(0.02, 0.14), y, color);
+}
+
+const WATER_ARROW: Rgb = hexToRgb('#3fa9f5');
+const STEAM_ARROW: Rgb = hexToRgb('#f2f5f7');
+
+/** Flèches des prises de fluide (eau en bleu, vapeur en blanc) : entrée vers la machine, sortie vers l'extérieur. */
+function fluidArrows(
+  mb: MeshBuilder,
+  type: MachineType,
+  gx: number,
+  gz: number,
+  rot: number,
+  tint?: (c: Rgb) => Rgb,
+): void {
+  for (const p of fluidPorts(type, rot)) {
+    if (p.mode === 'both') continue;
+    const cell = sideCell(type, gx, gz, rot, p.side);
+    const base = p.fluid === 'water' ? WATER_ARROW : STEAM_ARROW;
+    flatArrow(mb, cell, p.mode === 'out' ? p.side : (p.side + 2) % 4, tint ? tint(base) : base);
+  }
 }
 
 /** Côté d'où arrivent les objets sur un tapis : un tapis ou une machine qui débouche sur lui. */
@@ -148,7 +176,8 @@ export class FactoryView {
         this.entries.set(m.id, entry);
         addBelt(mb, m.gx, m.gz, m.rot, entry, hexToRgb(machineDef('conveyor').color));
       } else {
-        addMachineBody(mb, m.type, m.gx, m.gz, m.rot);
+        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m));
+        fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
         for (const i of io.ins) flatArrow(mb, i.cell, i.dir, IN_ARROW);
@@ -205,6 +234,23 @@ export class FactoryView {
         mb.box(x, BELT_H, z, 0.15, 0.13, 0.15, hexToRgb(itemById(b.item).color), true);
       }
     }
+    // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
+    for (const m of this.factory.machines) {
+      if (m.type !== 'pipe') continue;
+      const amount = m.fluid.water + m.fluid.steam;
+      if (amount < 1) continue;
+      const color = m.fluid.water >= m.fluid.steam ? hexToRgb('#3fa9f5') : hexToRgb('#f2f5f7');
+      mb.box(
+        center(m.gx),
+        0.2,
+        center(m.gz),
+        0.1,
+        0.02 + 0.08 * Math.min(1, amount / 100),
+        0.1,
+        color,
+        true,
+      );
+    }
     this.items.geometry.dispose();
     this.items.geometry = geometryOf(mb);
   }
@@ -230,6 +276,9 @@ export class FactoryView {
           mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
         // Flèches : sorties vers l'extérieur, entrées vers l'intérieur.
         const io = ports(g.type, g.gx, g.gz, g.rot);
+        fluidArrows(mb, g.type, g.gx, g.gz, g.rot, (c) =>
+          shade(color, (c.r + c.g + c.b) / 3 + 0.3),
+        );
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, shade(color, 0.85));
         for (const i of io.ins) flatArrow(mb, i.cell, i.dir, shade(color, 1.3));
       }
@@ -305,6 +354,7 @@ function addMachineBody(
   gx: number,
   gz: number,
   rot: number,
+  sides: number[] = [],
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -338,6 +388,82 @@ function addMachineBody(
       hexToRgb('#2a2d31'),
       true,
     );
+    return;
+  }
+  if (type === 'pipe') {
+    // Tuyau : moyeu central et un manchon vers chaque voisin raccordé.
+    mb.box(x, 0.04, z, 0.18, 0.18, 0.18, shade(color, 1.1), true);
+    for (const side of sides) {
+      const [dx, dz] = RISE_DIR[side];
+      mb.box(
+        x + dx * 0.17,
+        0.05,
+        z + dz * 0.17,
+        dx !== 0 ? 0.2 : 0.14,
+        0.16,
+        dz !== 0 ? 0.2 : 0.14,
+        color,
+        true,
+      );
+    }
+    return;
+  }
+  if (type === 'pump') {
+    // Pompe : socle, corps bleu, moteur dessus, bec de sortie devant.
+    mb.box(x, 0, z, 0.42, 0.16, 0.42, shade(color, 0.7), true);
+    mb.box(x, 0.16, z, 0.34, 0.4, 0.34, color, true);
+    mb.box(x, 0.56, z, 0.22, 0.18, 0.22, hexToRgb('#2f3a40'), true);
+    mb.box(
+      x + fx * 0.22,
+      0.2,
+      z + fz * 0.22,
+      fx !== 0 ? 0.14 : 0.12,
+      0.12,
+      fz !== 0 ? 0.14 : 0.12,
+      shade(color, 1.2),
+      true,
+    );
+    return;
+  }
+  if (type === 'boiler') {
+    // Chaudière : socle de brique, cuve, dôme et cheminée à l'arrière ; porte de chauffe sur les côtés.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.8), true);
+    mb.box(x, 0.3, z, sx - 0.1, 0.9, sz - 0.1, color, true);
+    mb.box(x, 1.2, z, sx - 0.3, 0.14, sz - 0.3, shade(color, 1.3), true);
+    mb.box(x - fx * 0.28, 1.34, z - fz * 0.28, 0.18, 0.55, 0.18, hexToRgb('#3d3a38'), true);
+    for (const side of [(rot + 1) % 4, (rot + 3) % 4]) {
+      const [dx, dz] = RISE_DIR[side];
+      mb.box(
+        x + dx * (sx / 2),
+        0.35,
+        z + dz * (sz / 2),
+        dx !== 0 ? 0.04 : 0.28,
+        0.28,
+        dz !== 0 ? 0.04 : 0.28,
+        hexToRgb('#e0702a'),
+        true,
+      );
+    }
+    return;
+  }
+  if (type === 'turbine') {
+    // Turbine : carter long, brides aux deux bouts, axe de rotor visible dessus.
+    const long = Math.max(sx, sz);
+    mb.box(x, 0, z, fx !== 0 ? long : 0.42, 0.7, fz !== 0 ? long : 0.42, color, true);
+    for (const k of [-1, 1]) {
+      mb.box(
+        x + fx * k * (long / 2 - 0.06),
+        0.02,
+        z + fz * k * (long / 2 - 0.06),
+        fx !== 0 ? 0.1 : 0.5,
+        0.66,
+        fz !== 0 ? 0.1 : 0.5,
+        shade(color, 0.75),
+        true,
+      );
+    }
+    mb.box(x, 0.7, z, 0.16, 0.2, 0.16, hexToRgb('#3d3a38'), true);
+    mb.box(x, 0.9, z, fx !== 0 ? 0.5 : 0.1, 0.06, fz !== 0 ? 0.5 : 0.1, hexToRgb('#e6c84a'), true);
     return;
   }
   if (type === 'lab') {

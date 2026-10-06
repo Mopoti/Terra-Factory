@@ -57,6 +57,9 @@ import {
   isChest,
   isArm,
   isAssembler,
+  hasWindow,
+  isFluid,
+  isLinear,
   isDrill,
   isLab,
   isRouter,
@@ -282,8 +285,21 @@ export function startGameView(
     }
     return cells.get(cellKey(gx, gz)) ?? null;
   };
+  const waterCache = new Map<string, Set<string>>();
+  const waterCellAt = (gx: number, gz: number): boolean => {
+    const cx = Math.floor(gx / CHUNK_CELLS);
+    const cz = Math.floor(gz / CHUNK_CELLS);
+    const key = `${cx},${cz}`;
+    let cells = waterCache.get(key);
+    if (!cells) {
+      cells = new Set(generator.chunk(cx, cz).water.map((w) => cellKey(w.gx, w.gz)));
+      waterCache.set(key, cells);
+    }
+    return cells.has(cellKey(gx, gz));
+  };
   const dirtyChunks = new Set<string>();
   const factoryWorld: FactoryWorld = {
+    waterAt: waterCellAt,
     oreAt: (gx, gz) => {
       const ore = oreCellAt(gx, gz);
       if (!ore) return null;
@@ -348,7 +364,7 @@ export function startGameView(
         buildRot === null
           ? t('build.rotationAuto')
           : t('build.rotation', { deg: String(buildRot * 90) });
-      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(def.id === 'conveyor' ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
+      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
       return;
     }
     const rooms = options.state.rooms().length;
@@ -651,8 +667,8 @@ export function startGameView(
       return {
         id: `machine:${m.id}`,
         name: t(`item.${machineDef(m.type).item}` as TranslationKey),
-        seconds: m.type === 'conveyor' ? 0.4 : 1.2,
-        usable: m.type !== 'conveyor' && !isRouter(m.type),
+        seconds: isLinear(m.type) ? 0.4 : 1.2,
+        usable: hasWindow(m.type),
         distance: hitM.t,
         box: machineBox(m),
       };
@@ -718,7 +734,7 @@ export function startGameView(
     const within = (cell: Cell): boolean => near(cell) || pathReached.has(`${cell.gx},${cell.gz}`);
     const baseRot = buildRot ?? autoRot();
 
-    if (def.id !== 'conveyor') {
+    if (!isLinear(def.id)) {
       const { w, d } = dims(def.id, baseRot);
       const gx = c.gx - Math.floor(w / 2);
       const gz = c.gz - Math.floor(d / 2);
@@ -734,7 +750,9 @@ export function startGameView(
       ) {
         ok = false;
         why = t('factory.needOre');
-      } else if (!ok && stock > 0) why = t('factory.cannotPlace');
+      } else if (!ok && stock > 0) {
+        why = def.id === 'pump' ? t('factory.needWater') : t('factory.cannotPlace');
+      }
       factoryView.showGhost([{ type: def.id, gx, gz, rot: baseRot, ok }]);
       if (down && !machineWasDown) {
         if (
@@ -790,11 +808,10 @@ export function startGameView(
           : path.length > 1
             ? dirIndex(path[i - 1], cell)
             : baseRot;
-      const free =
-        factory.canPlace('conveyor', cell.gx, cell.gz, rot, machineBlocked) && within(cell);
+      const free = factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && within(cell);
       const ok = free && left > 0;
       if (ok) left--;
-      return { type: 'conveyor' as const, gx: cell.gx, gz: cell.gz, rot, ok };
+      return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok };
     });
     factoryView.showGhost(ghosts);
     if (!down && machinePath.length > 0) {
@@ -802,8 +819,7 @@ export function startGameView(
       for (const g of ghosts) {
         if (
           g.ok &&
-          options.state.placeMachine(factory, 'conveyor', g.gx, g.gz, g.rot, machineBlocked) ===
-            'ok'
+          options.state.placeMachine(factory, def.id, g.gx, g.gz, g.rot, machineBlocked) === 'ok'
         )
           placed++;
       }
@@ -870,6 +886,21 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (isFluid(m.type)) {
+      rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
+      const cap = def.fluidCap ?? 100;
+      const fmt = (v: number): string =>
+        v < 0.5 ? t('factory.fluid.empty') : `${Math.round(v)} / ${cap}`;
+      if (m.type !== 'turbine')
+        rows.push(`<div>${t('factory.fluid.water', { v: fmt(m.fluid.water) })}</div>`);
+      if (m.type !== 'pump')
+        rows.push(`<div>${t('factory.fluid.steam', { v: fmt(m.fluid.steam) })}</div>`);
+      if (m.type === 'turbine') {
+        rows.push(
+          `<div>${t('factory.fluid.pressure', { v: String(Math.round((m.fluid.steam / cap) * 100)) })}</div>`,
+          `<div>${t('factory.turbine.output', { kw: String(Math.round(factory.turbineKw(m))) })}</div>`,
+        );
+      }
     } else if (isLab(m.type)) {
       const id = options.state.changes.researching;
       rows.push(`<div class="sub">${t('factory.router.lab')}</div>`);
@@ -1585,7 +1616,14 @@ export function startGameView(
       else updateAimedMachine();
       refreshMachinePanel();
     }
-    if (!paused && !uiOpen && !building && pressed('use') && aimedMachine)
+    if (
+      !paused &&
+      !uiOpen &&
+      !building &&
+      pressed('use') &&
+      aimedMachine &&
+      hasWindow(aimedMachine.type)
+    )
       options.onOpenMachine?.(aimedMachine.id);
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.

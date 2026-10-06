@@ -340,6 +340,45 @@
         "iron_ingot": 10,
         "copper_ingot": 8
       }
+    },
+    {
+      "id": "machine_pipe",
+      "weightKg": 0.8,
+      "volumeL": 1,
+      "color": "#7d8791",
+      "recipe": {
+        "iron_ingot": 1
+      }
+    },
+    {
+      "id": "machine_pump",
+      "weightKg": 6,
+      "volumeL": 8,
+      "color": "#3f7fb5",
+      "recipe": {
+        "iron_ingot": 5,
+        "copper_ingot": 3
+      }
+    },
+    {
+      "id": "machine_boiler",
+      "weightKg": 20,
+      "volumeL": 30,
+      "color": "#8a5a44",
+      "recipe": {
+        "iron_ingot": 10,
+        "stone": 5
+      }
+    },
+    {
+      "id": "machine_turbine",
+      "weightKg": 18,
+      "volumeL": 25,
+      "color": "#a9b4bd",
+      "recipe": {
+        "iron_ingot": 12,
+        "copper_ingot": 8
+      }
     }
   ]
 }

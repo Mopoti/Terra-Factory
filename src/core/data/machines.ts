@@ -14,7 +14,11 @@ export type MachineType =
   | 'arm'
   | 'arm_electric'
   | 'assembler'
-  | 'lab';
+  | 'lab'
+  | 'pipe'
+  | 'pump'
+  | 'boiler'
+  | 'turbine';
 
 export interface MachineDef {
   id: MachineType;
@@ -40,6 +44,14 @@ export interface MachineDef {
   /** Poteau : portée du fil vers un autre poteau (m) et vers une machine (m, bord de la machine). */
   wireReachM?: number;
   linkReachM?: number;
+  /** Fluides : capacité de la machine (unités). */
+  fluidCap?: number;
+  /** Pompe : eau pompée (unités/s) à pleine puissance. */
+  pumpRate?: number;
+  /** Chaudière : eau transformée en vapeur (unités/s) à pleine chauffe. */
+  boilRate?: number;
+  /** Turbine : vapeur consommée (unités/s) à pleine charge. */
+  steamUse?: number;
   /** Assembleur : secondes par objet fabriqué (à pleine puissance). */
   craftSeconds?: number;
   /** Bras robotique : durée d'un aller-retour (s). */
@@ -75,6 +87,25 @@ export const isArm = (type: MachineType): boolean => type === 'arm' || type === 
 
 /** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
 export const isLab = (type: MachineType): boolean => type === 'lab';
+
+/** Machine du réseau de fluides (tuyau, pompe, chaudière, turbine). */
+export const isFluid = (type: MachineType): boolean =>
+  type === 'pipe' || type === 'pump' || type === 'boiler' || type === 'turbine';
+
+/** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
+export const isLinear = (type: MachineType): boolean => type === 'conveyor' || type === 'pipe';
+
+/** La machine a une fenêtre d'interface (touche F) : ni tapis, séparateur, groupeur, poteau, ni éléments à fluide sauf la chaudière. */
+export const hasWindow = (type: MachineType): boolean =>
+  !(
+    type === 'conveyor' ||
+    type === 'splitter' ||
+    type === 'merger' ||
+    type === 'pole' ||
+    type === 'pipe' ||
+    type === 'pump' ||
+    type === 'turbine'
+  );
 
 export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';

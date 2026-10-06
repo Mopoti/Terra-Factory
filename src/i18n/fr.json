@@ -574,5 +574,22 @@
   "tech.studying": "Étude en cours…",
   "tech.stop": "Arrêter l'étude",
   "tech.labHint": "Pose un laboratoire alimenté en paquets de science (tapis, bras ou à la main) : il consomme les paquets pour cette technologie.",
-  "tech.studyStarted": "Étude lancée : {tech}"
+  "tech.studyStarted": "Étude lancée : {tech}",
+  "item.machine_pipe": "Tuyau",
+  "item.machine_pump": "Pompe à eau électrique",
+  "item.machine_boiler": "Chaudière",
+  "item.machine_turbine": "Turbine à vapeur",
+  "tech.steam": "Vapeur",
+  "factory.status.noSteam": "Pression de vapeur insuffisante",
+  "factory.status.noWater": "Pas d'eau",
+  "factory.router.pipe": "Transporte l'eau ou la vapeur (un seul fluide à la fois). Se raccorde aux machines à fluide voisines.",
+  "factory.router.pump": "Pompe l'eau d'un étang voisin (posée au bord de l'eau) : 100 unités/s, 20 kW. Sortie devant.",
+  "factory.router.boiler": "Eau en entrée (derrière), vapeur en sortie (devant), combustible par les côtés (tapis, bras). 60 vapeur/s à pleine chauffe.",
+  "factory.router.turbine": "Vapeur en entrée (derrière), le reste ressort devant (turbine suivante). Produit jusqu'à 200 kW si la pression est assez haute.",
+  "factory.fluid.water": "Eau : {v}",
+  "factory.fluid.steam": "Vapeur : {v}",
+  "factory.fluid.empty": "vide",
+  "factory.fluid.pressure": "Pression : {v} %",
+  "factory.needWater": "Une pompe se pose au bord de l'eau (une case d'étang voisine).",
+  "factory.turbine.output": "Production : {kw} kW"
 }

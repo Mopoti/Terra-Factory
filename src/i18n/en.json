@@ -574,5 +574,22 @@
   "tech.studying": "Studying…",
   "tech.stop": "Stop studying",
   "tech.labHint": "Place a laboratory fed with science packs (belt, arm or by hand): it uses the packs for this technology.",
-  "tech.studyStarted": "Study started: {tech}"
+  "tech.studyStarted": "Study started: {tech}",
+  "item.machine_pipe": "Pipe",
+  "item.machine_pump": "Electric water pump",
+  "item.machine_boiler": "Boiler",
+  "item.machine_turbine": "Steam turbine",
+  "tech.steam": "Steam",
+  "factory.status.noSteam": "Steam pressure too low",
+  "factory.status.noWater": "No water",
+  "factory.router.pipe": "Carries water or steam (one fluid at a time). Connects to neighbouring fluid machines.",
+  "factory.router.pump": "Pumps water from a neighbouring pond (place it at the water's edge): 100 units/s, 20 kW. Output in front.",
+  "factory.router.boiler": "Water in (back), steam out (front), fuel from the sides (belts, arms). 60 steam/s at full heat.",
+  "factory.router.turbine": "Steam in (back), the rest leaves in front (next turbine). Up to 200 kW if pressure stays high enough.",
+  "factory.fluid.water": "Water: {v}",
+  "factory.fluid.steam": "Steam: {v}",
+  "factory.fluid.empty": "empty",
+  "factory.fluid.pressure": "Pressure: {v} %",
+  "factory.needWater": "A pump goes at the water's edge (a neighbouring pond cell).",
+  "factory.turbine.output": "Output: {kw} kW"
 }

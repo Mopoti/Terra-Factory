@@ -600,3 +600,72 @@ describe('laboratoire', () => {
     expect(m.input?.count).toBe(1);
   });
 });
+
+describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
+  const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 });
+  const plant = (
+    turbines: number,
+    boilerCoal: number,
+  ): { f: Factory; ms: Record<string, Machine> } => {
+    const gen = emptyMachine(1, 'generator', 15, 0, 0);
+    gen.fuel = { item: 'coal', count: 10 };
+    const pole = emptyMachine(2, 'pole', 13, 3, 0);
+    const pump = emptyMachine(3, 'pump', 11, 0, 0);
+    const p1 = emptyMachine(4, 'pipe', 11, 1, 0);
+    const p2 = emptyMachine(5, 'pipe', 11, 2, 0);
+    const boiler = emptyMachine(6, 'boiler', 10, 3, 0);
+    if (boilerCoal > 0) boiler.fuel = { item: 'coal', count: boilerCoal };
+    const p3 = emptyMachine(7, 'pipe', 11, 5, 0);
+    const list = [gen, pole, pump, p1, p2, boiler, p3];
+    const ms: Record<string, Machine> = { pump, boiler, p3 };
+    for (let i = 0; i < turbines; i++) {
+      const t = emptyMachine(10 + i, 'turbine', 11, 6 + 2 * i, 0);
+      ms[`t${i}`] = t;
+      list.push(t);
+    }
+    // De la demande électrique : plusieurs laboratoires alimentés.
+    for (let i = 0; i < 3; i++) {
+      const lab = emptyMachine(30 + i, 'lab', 14, 5 + 3 * i, 0);
+      lab.input = { item: 'science_pack', count: 20 };
+      list.push(lab);
+    }
+    const f = new Factory(list, world());
+    f.labDemand = 1000;
+    return { f, ms };
+  };
+
+  it('une pompe ne se pose qu’au bord de l’eau', () => {
+    const f = new Factory([], world());
+    expect(f.canPlace('pump', 11, 0, 0, () => false)).toBe(true);
+    expect(f.canPlace('pump', 11, 3, 0, () => false)).toBe(false);
+  });
+
+  it('l’eau va de la pompe à la chaudière par les tuyaux, la vapeur de la chaudière à la turbine', () => {
+    const { f, ms } = plant(1, 5);
+    run(f, 20);
+    expect(ms.boiler.fluid.water).toBeGreaterThan(20);
+    expect(ms.p3.fluid.steam).toBeGreaterThan(20);
+    expect(ms.p3.fluid.water).toBeLessThan(0.5); // un tuyau = un seul fluide
+    expect(f.turbineEfficiency(ms.t0)).toBeGreaterThan(0.5);
+    expect(f.status(ms.t0)).toBe('running');
+    // le réseau électrique compte la turbine
+    expect(f.gridInfo(ms.t0)!.capacityKw).toBeGreaterThan(200);
+  });
+
+  it('sans combustible la chaudière ne produit pas de vapeur : la turbine reste à l’arrêt', () => {
+    const { f, ms } = plant(1, 0);
+    run(f, 15);
+    expect(ms.boiler.fluid.water).toBeGreaterThan(20);
+    expect(ms.boiler.fluid.steam).toBe(0);
+    expect(f.status(ms.t0)).toBe('noSteam');
+    expect(f.status(ms.boiler)).toBe('noFuel');
+  });
+
+  it('en file indienne, la pression baisse le long de la file quand la vapeur manque', () => {
+    const { f, ms } = plant(6, 20);
+    run(f, 40);
+    const eff = [0, 1, 2, 3, 4, 5].map((i) => f.turbineEfficiency(ms[`t${i}`]));
+    expect(eff[0]).toBeGreaterThanOrEqual(eff[5]);
+    expect(eff[0]).toBeGreaterThan(0);
+  });
+});

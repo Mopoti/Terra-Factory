@@ -33,6 +33,16 @@
       },
       "requires": ["electricity", "logistics"],
       "unlocks": ["machine_arm_electric", "machine_assembler"]
+    },
+    {
+      "id": "steam",
+      "cost": {
+        "iron_ingot": 30,
+        "copper_ingot": 15,
+        "stone": 10
+      },
+      "requires": ["electricity"],
+      "unlocks": ["machine_pipe", "machine_pump", "machine_boiler", "machine_turbine"]
     }
   ]
 }
