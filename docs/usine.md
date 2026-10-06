@@ -223,3 +223,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 67 — pile posée dans une case vide (fenêtre de machine), séparateur / groupeur sur un tapis
 - **Piles** : dans la colonne « sac » de la **fenêtre d'une machine / d'un coffre**, poser la pile du curseur dans une case vide la refusionnait avec la première pile (ancien code). Elle utilise maintenant `placeHand` comme le sac : case vide = nouvelle pile, même objet = on complète, autre objet = échange.
 - **Séparateur / groupeur sur une ligne** : on peut les poser **sur des tapis à plat** ; les tapis recouverts sont **remplacés** (ils reviennent dans le sac avec leur contenu) et la chaîne continue de part et d'autre (`Factory.replacedBelts`, `canPlace` accepte les tapis pour les routeurs). Test : un objet traverse un groupeur posé au milieu d'une ligne. Les autres machines et les tapis surélevés / rampes / tunnels ne sont pas remplaçables.
+
+## Tour 68 — continuer un chemin en l'air
+- **Cause** : la case visée était toujours celle du **sol** sous le curseur ; un tapis à 1 m de haut se projette ailleurs (perspective), donc le patron ne se calait pas à sa suite. Maintenant : le rayon de visée est testé contre les tapis en l'air / rampes (`pickMachine`) et, en traçant en l'air, la case visée est celle du **plan à 1 m**.
+- Viser un tapis en l'air ou une rampe cale le patron sur la **première tuile libre au bout de la ligne** déjà posée (même sens, forme qui prolonge : surélevé après une montée ou un surélevé, sol après une descente). Le tracé en l'air ne dérive plus.
+- Vérifié en navigateur : vue du dessus et 3e personne (patron vert calé juste après le dernier tapis surélevé). 1ère personne : même code, non vérifié visuellement.

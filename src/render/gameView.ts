@@ -71,6 +71,8 @@ import {
 } from '../core/data/machines';
 import {
   Factory,
+  LEVEL_M,
+  LIFTS,
   LIFT_COUNT,
   LIFT_NEXT,
   TUNNEL_MAX_TILES,
@@ -889,40 +891,61 @@ export function startGameView(
         ) ?? options[0]
       );
     };
-    /** Viser une rampe : le patron se cale à sa suite (au sommet d'une montée, au pied d'une descente). */
+    /** Viser une rampe ou un tapis en l'air : le patron se cale à sa suite (même niveau, même sens). */
     const rampSnap = (cell: Cell): { cell: Cell; rot: number; lift: number } | null => {
       if (def.id !== 'conveyor') return null;
-      for (const layer of [0, 1]) {
-        const m = factory.machineAt(cell.gx, cell.gz, layer);
-        if (m && m.type === 'conveyor' && (m.lift === 1 || m.lift === 3)) {
-          const [dx, dz] = RISE_DIR[m.rot];
-          return {
-            cell: { gx: m.gx + dx * 2, gz: m.gz + dz * 2 },
-            rot: m.rot,
-            lift: LIFT_NEXT[m.lift],
-          };
-        }
+      const shaped = (m: Machine | null): m is Machine =>
+        !!m && m.type === 'conveyor' && m.lift >= 1 && m.lift <= 3;
+      // Le rayon peut traverser un tapis en l'air bien avant d'atteindre la case visée au sol.
+      const hit = pickMachine(factory, rayOrigin, rayDir, 80)?.machine ?? null;
+      const found =
+        (shaped(hit) ? hit : null) ??
+        [0, 1].map((layer) => factory.machineAt(cell.gx, cell.gz, layer)).find(shaped) ??
+        null;
+      if (!found) return null;
+      // On suit la ligne déjà posée jusqu'à sa fin : le patron se cale sur la première tuile libre.
+      const [dx, dz] = RISE_DIR[found.rot];
+      let last: Machine = found;
+      for (let guard = 0; guard < MAX_BELT_PATH; guard++) {
+        const next = factory.machineAt(
+          last.gx + dx * 2,
+          last.gz + dz * 2,
+          LIFTS[LIFT_NEXT[last.lift]].from === 1 ? 1 : 0,
+        );
+        if (!next || next.type !== 'conveyor' || next.rot !== found.rot) break;
+        last = next;
       }
-      return null;
+      return {
+        cell: { gx: last.gx + dx * 2, gz: last.gz + dz * 2 },
+        rot: found.rot,
+        lift: LIFT_NEXT[last.lift],
+      };
     };
-    const snap = rampSnap(c);
+    // En l'air, la case visée est celle du plan à 1 m (sinon le tracé dérive à cause de la perspective).
+    const aimLevel =
+      machinePath.length > 0
+        ? levelAfter(dragLifts[dragLifts.length - 1] ?? 0)
+        : (LIFTS[buildLift]?.from ?? 0);
+    const cAir = aimLevel === 1 ? cellOnPlane(rayOrigin, rayDir, LEVEL_M) : null;
+    const snap = rampSnap(cAir ?? c);
+    const aim = snap && machinePath.length === 0 ? c : (cAir ?? c);
     if (down) {
       const last = machinePath[machinePath.length - 1];
       if (!last) {
-        const first = snap?.cell ?? tileAround(c);
+        const first = snap?.cell ?? tileAround(aim);
         dragLift = snap?.lift ?? buildLift;
         liftOverride.clear();
         machinePath = [first];
         pathReached.clear();
         if (tileNear(first)) pathReached.add(`${first.gx},${first.gz}`);
-      } else if (!contains(last, c)) {
-        const back = machinePath.findIndex((p) => contains(p, c));
+      } else if (!contains(last, aim)) {
+        const back = machinePath.findIndex((p) => contains(p, aim));
         if (back >= 0) machinePath.length = back + 1;
         else {
           const cur = { ...last };
-          for (let guard = 0; guard < MAX_BELT_PATH && !contains(cur, c); guard++) {
-            const dx = c.gx - (cur.gx + 0.5);
-            const dz = c.gz - (cur.gz + 0.5);
+          for (let guard = 0; guard < MAX_BELT_PATH && !contains(cur, aim); guard++) {
+            const dx = aim.gx - (cur.gx + 0.5);
+            const dz = aim.gz - (cur.gz + 0.5);
             if (Math.abs(dx) >= Math.abs(dz)) cur.gx += 2 * Math.sign(dx);
             else cur.gz += 2 * Math.sign(dz);
             machinePath.push({ ...cur });
@@ -932,7 +955,7 @@ export function startGameView(
         }
       }
     }
-    const path = machinePath.length > 0 ? machinePath : [snap?.cell ?? tileAround(c)];
+    const path = machinePath.length > 0 ? machinePath : [snap?.cell ?? tileAround(aim)];
     for (const k of [...liftOverride.keys()]) if (k >= path.length) liftOverride.delete(k);
     const lifts: number[] = [];
     path.forEach((_, i) => {
@@ -999,6 +1022,7 @@ export function startGameView(
       buildMessage =
         placed === 0 ? (stock > 0 ? t('factory.cannotPlace') : t('build.missing')) : '';
       machinePath = [];
+      dragLifts = [];
       liftOverride.clear();
       pathReached.clear();
       renderBuildHud();
