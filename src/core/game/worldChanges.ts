@@ -32,6 +32,8 @@ export interface WorldChanges {
   rotations: Record<string, number>;
   /** Barre de raccourcis du joueur (rangée avec le reste de la partie) : objet par case, ou null. */
   hotbar: (string | null)[];
+  /** Case(s) d'outils à droite de la barre : outil de récolte ou pistolet (utilisé quand l'action le demande). */
+  tools: (string | null)[];
   /** Machines et tapis posés (voir `core/factory`). */
   machines: Machine[];
   nextMachineId: number;
@@ -58,6 +60,8 @@ export const FOOTPRINT_VERSION = 2;
 export const MAGAZINE_ROUNDS = 12;
 
 export const HOTBAR_SLOTS = 9;
+/** Cases d'outils (plus tard, un vêtement pourra en ajouter). */
+export const TOOL_SLOTS = 1;
 
 export const cellKey = (gx: number, gz: number): string => `${gx},${gz}`;
 
@@ -69,6 +73,7 @@ export function emptyChanges(): WorldChanges {
     pieces: {},
     rotations: {},
     hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
+    tools: Array.from({ length: TOOL_SLOTS }, () => null),
     machines: [],
     nextMachineId: 1,
     equipment: {},
@@ -164,6 +169,17 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       try {
         itemById(id);
         result.hotbar[i] = result.hotbar.includes(id) ? null : id;
+      } catch {
+        /* objet inconnu : case vide */
+      }
+    });
+  }
+  if (Array.isArray(r.tools)) {
+    r.tools.slice(0, TOOL_SLOTS).forEach((rawId, i) => {
+      if (typeof rawId !== 'string') return;
+      try {
+        const def = itemById(rawId);
+        if (def.tool || def.id === 'pistol') result.tools[i] = rawId;
       } catch {
         /* objet inconnu : case vide */
       }

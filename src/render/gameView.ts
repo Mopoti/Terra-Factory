@@ -194,11 +194,14 @@ export function startGameView(
   // dessus) et, en 1ère personne, fixé à la caméra.
   const handle = new THREE.MeshStandardMaterial({ color: 0x7a4e24 });
   const metal = new THREE.MeshStandardMaterial({ color: 0xa9b2bb });
+  const woodHead = new THREE.MeshStandardMaterial({ color: 0xa9743a });
+  const toolHeads: THREE.Mesh[] = [];
   function makeTool(): THREE.Group {
     const tool = new THREE.Group();
     const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), handle);
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.1), metal);
     head.position.z = 0.32;
+    toolHeads.push(head);
     tool.add(shaft, head);
     tool.traverse((o) => {
       if (o instanceof THREE.Mesh) o.castShadow = true;
@@ -211,6 +214,14 @@ export function startGameView(
   hand.rotation.set(0.5, Math.PI + 0.35, 0);
   hand.scale.setScalar(0.85);
   camera.add(hand);
+  // Main nue (1ère personne) : une petite forme couleur peau, en bas à droite.
+  const bareHand = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.09, 0.17),
+    new THREE.MeshStandardMaterial({ color: 0xe0b38a }),
+  );
+  bareHand.position.set(0.3, -0.3, -0.55);
+  bareHand.rotation.set(0.3, -0.2, 0);
+  camera.add(bareHand);
   const bodyTool = makeTool();
   bodyTool.scale.setScalar(1.15);
   // Le personnage regarde vers +z (son repère local) : l'outil est à droite et devant.
@@ -714,6 +725,7 @@ export function startGameView(
     } else if (id.startsWith('machine:')) {
       options.state.removeMachine(factory, Number(id.slice(8)), at);
     }
+    demolishChain = true;
     playSfx('demolish');
   }
 
@@ -733,6 +745,10 @@ export function startGameView(
     lift === HIDDEN || lift === 4 ? HIDDEN : LIFT_NEXT[lift];
   const pathReached = new Set<string>();
   const MACHINE_REACH_M = 20;
+  /** Un tapis emporte le joueur à CARRY_BOOST fois la vitesse des objets (on le sent mieux en marchant dessus). */
+  const CARRY_BOOST = 2;
+  /** Série de poteaux : le dernier posé pendant que le clic gauche reste maintenu. */
+  let poleChain: Machine | null = null;
   const MAX_BELT_PATH = 150;
   let machineWasDown = false;
   const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
@@ -746,6 +762,46 @@ export function startGameView(
     RISE_DIR.findIndex(
       ([dx, dz]) => dx === Math.sign(to.gx - from.gx) && dz === Math.sign(to.gz - from.gz),
     );
+
+  function extendPoleLine(down: boolean, blockedHere: (c: Cell) => boolean): void {
+    if (!down || !poleChain || !factory.machines.includes(poleChain)) {
+      poleChain = null;
+      return;
+    }
+    const reach = machineDef('pole').wireReachM ?? 8;
+    const from = centerOf(poleChain);
+    const dist = Math.hypot(playerX - from.x, playerZ - from.z);
+    // Le joueur dépasse la portée du câble de ~1 m : le poteau se pose à la limite, derrière lui.
+    if (dist < reach + 0.9 || (options.state.inventory[machineDef('pole').item] ?? 0) < 1) return;
+    const k = (reach - 0.3) / dist;
+    const px = from.x + (playerX - from.x) * k;
+    const pz = from.z + (playerZ - from.z) * k;
+    const { w, d } = dims('pole', 0);
+    const gx = Math.floor(px / CELL_SIZE_M) - Math.floor(w / 2);
+    const gz = Math.floor(pz / CELL_SIZE_M) - Math.floor(d / 2);
+    // Un peu de marge si la case est prise : on cherche autour.
+    for (const [ox, oz] of [
+      [0, 0],
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [-1, -1],
+      [1, 1],
+      [-1, 1],
+      [1, -1],
+    ]) {
+      const c = { gx: gx + ox, gz: gz + oz };
+      const at = { x: (c.gx + w / 2) * CELL_SIZE_M, z: (c.gz + d / 2) * CELL_SIZE_M };
+      if (Math.hypot(at.x - from.x, at.z - from.z) > reach) continue;
+      if (options.state.placeMachine(factory, 'pole', c.gx, c.gz, 0, blockedHere) === 'ok') {
+        poleChain = factory.machines[factory.machines.length - 1];
+        playSfx('placeStone');
+        renderBuildHud();
+        return;
+      }
+    }
+  }
 
   function updateMachineBuild(): void {
     const def = selectedMachine();
@@ -797,6 +853,7 @@ export function startGameView(
           ok &&
           options.state.placeMachine(factory, def.id, gx, gz, baseRot, blockedHere) === 'ok'
         ) {
+          if (def.id === 'pole') poleChain = factory.machines[factory.machines.length - 1];
           playSfx('placeStone');
           buildMessage = '';
         } else {
@@ -805,6 +862,8 @@ export function startGameView(
         }
         renderBuildHud();
       }
+      // Poteaux : en gardant le clic et en marchant, un nouveau se pose à la limite du câble.
+      if (def.id === 'pole') extendPoleLine(down, blockedHere);
       machineWasDown = down;
       return;
     }
@@ -1218,6 +1277,8 @@ export function startGameView(
   const isLocked = (): boolean => document.pointerLockElement === renderer.domElement;
 
   let rightMoved = 0;
+  /** Après une démolition, le clic droit toujours maintenu continue de démolir les suivants (même en bougeant la souris). */
+  let demolishChain = false;
   const onMouseMove = (e: MouseEvent): void => {
     mouseX = e.clientX;
     mouseY = e.clientY;
@@ -1230,7 +1291,28 @@ export function startGameView(
     }
   };
   window.addEventListener('mousemove', onMouseMove);
-  const onMouseUp = (): void => rig.endLook(getSettings().views);
+  let rightDownAt = 0;
+  const onMouseDown = (e: MouseEvent): void => {
+    if (e.button === 2) rightDownAt = performance.now();
+  };
+  window.addEventListener('mousedown', onMouseDown);
+  const onMouseUp = (e?: Event): void => {
+    rig.endLook(getSettings().views);
+    // Un clic droit bref, sans bouger : l'objet tenu en main est rangé (mains vides).
+    if (
+      e instanceof MouseEvent &&
+      e.button === 2 &&
+      !paused &&
+      !uiOpen &&
+      options.state.held &&
+      performance.now() - rightDownAt < 300 &&
+      rightMoved < 10 &&
+      !demolishChain
+    ) {
+      options.state.setHeld(null);
+      building = false;
+    }
+  };
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('blur', onMouseUp);
 
@@ -1410,7 +1492,9 @@ export function startGameView(
     );
     if (!m || m.type !== 'conveyor' || m.lift !== 0) return;
     const [dx, dz] = RISE_DIR[m.rot];
-    const dist = (machineDef('conveyor').cellsPerSecond ?? 0.75) * 2 * CELL_SIZE_M * dt;
+    // Le tapis emporte un peu plus que la vitesse des objets : on le sent en marchant dessus.
+    const dist =
+      (machineDef('conveyor').cellsPerSecond ?? 0.75) * 2 * CELL_SIZE_M * dt * CARRY_BOOST;
     const nx = playerX + dx * dist;
     const nz = playerZ + dz * dist;
     if (canStand(nx, nz)) {
@@ -1589,6 +1673,9 @@ export function startGameView(
   // Pistolet : en main (1ère personne) et au bout du bras du personnage.
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x4a4f57 });
   const gripMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22 });
+  /** Un pistolet est prêt : dans la case d'outils, ou choisi dans la barre de raccourcis. */
+  const pistolReady = (): boolean =>
+    options.state.toolItem() === 'pistol' || options.state.selectedItem() === 'pistol';
   function makeGun(): THREE.Group {
     const g = new THREE.Group();
     const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.34), gunMat);
@@ -1678,9 +1765,12 @@ export function startGameView(
     attackCooldown = Math.max(0, attackCooldown - dt);
     tracerLife = Math.max(0, tracerLife - dt);
     tracer.visible = tracerLife > 0;
-    const armed = options.state.selectedItem() === 'pistol' && !building;
-    gun.visible = armed && rig.view === 'first';
-    gunBody.visible = armed && rig.view !== 'first';
+    const armed = pistolReady() && !building;
+    // Le pistolet de la case d'outils ne sort que pendant l'action de tir ; celui de la barre reste en main.
+    const gunOut =
+      armed && (options.state.selectedItem() === 'pistol' || input.isActionActive('interact'));
+    gun.visible = gunOut && rig.view === 'first';
+    gunBody.visible = gunOut && rig.view !== 'first';
     if (armed) {
       if (pressed('rotate')) {
         const result = options.state.reload();
@@ -1689,7 +1779,9 @@ export function startGameView(
           options.onMessage?.(t('weapon.reloaded'));
         } else if (result === 'noMagazine') options.onMessage?.(t('weapon.noMagazine'));
       }
-      if (attackCooldown <= 0 && input.isActionActive('interact')) {
+      // Pistolet de la case d'outils : on tire quand il n'y a rien à récolter sous la visée.
+      const canShoot = options.state.selectedItem() === 'pistol' || !interaction.aimed;
+      if (attackCooldown <= 0 && canShoot && input.isActionActive('interact')) {
         attackCooldown = 0.35;
         if (!options.state.fire()) {
           playSfx('deny');
@@ -1951,9 +2043,14 @@ export function startGameView(
     player.visible = rig.view !== 'first';
     player.position.set(playerX, playerY + PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
-    const armedNow = options.state.selectedItem() === 'pistol' && !building;
-    hand.visible = rig.view === 'first' && views.first.showHands && !armedNow;
-    bodyTool.visible = rig.view !== 'first' && !armedNow;
+    const armedNow = pistolReady() && !building;
+    // L'outil n'apparaît dans les mains que pendant l'action qui en a besoin (couper, casser, miner).
+    const usingTool = interaction.working === 'tool' && !armedNow;
+    const toolId = options.state.toolItem();
+    for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : woodHead;
+    hand.visible = rig.view === 'first' && views.first.showHands && usingTool;
+    bodyTool.visible = rig.view !== 'first' && usingTool;
+    bareHand.visible = rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';
@@ -2017,6 +2114,7 @@ export function startGameView(
     }
     if (!paused && !uiOpen && pressed('use') && aimedMachine && hasWindow(aimedMachine.type))
       options.onOpenMachine?.(aimedMachine.id);
+    if (!input.isActionActive('secondary')) demolishChain = false;
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,
@@ -2027,7 +2125,11 @@ export function startGameView(
         !building &&
         options.state.selectedItem() !== 'pistol' &&
         input.isActionActive('interact'),
-      demolishing: !paused && !uiOpen && input.isActionActive('secondary') && rightMoved < 10,
+      demolishing:
+        !paused &&
+        !uiOpen &&
+        input.isActionActive('secondary') &&
+        (rightMoved < 10 || demolishChain),
       // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
       paused: paused || uiOpen,
       structuresOnly: building,

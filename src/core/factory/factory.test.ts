@@ -521,7 +521,7 @@ describe('assembleur', () => {
   it('fabrique la recette choisie avec courant, ingrédients et place pour le produit', () => {
     const asm = emptyMachine(1, 'assembler', 10, 10, 0);
     asm.recipe = 'machine_conveyor';
-    asm.slots.push({ item: 'iron_ingot', count: 3 });
+    asm.slots.push({ item: 'iron_ingot', count: 6 });
     const out = emptyMachine(2, 'chest_wood', 11, 12, 0);
     const f = powered(asm, [out]);
     run(f, 8);

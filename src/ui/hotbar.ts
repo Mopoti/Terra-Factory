@@ -73,6 +73,53 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
       });
       bar.append(slot);
     }
+    bar.append(toolSlot());
+  }
+
+  /** Case d'outils, après un petit espace : l'outil (ou le pistolet) s'utilise quand l'action en a besoin. */
+  function toolSlot(): HTMLElement {
+    const id = state.changes.tools[0] ?? null;
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'hot-slot tool-slot';
+    const key = document.createElement('span');
+    key.className = 'hot-key';
+    key.textContent = '🛠';
+    slot.append(key);
+    if (id) {
+      const count = state.inventory[id] ?? 0;
+      slot.style.setProperty('--item', itemById(id).color);
+      slot.classList.toggle('poor', count === 0);
+      const name = document.createElement('span');
+      name.className = 'hot-name';
+      name.textContent = t(`item.${id}` as TranslationKey);
+      const qty = document.createElement('span');
+      qty.className = 'hot-count';
+      qty.textContent = String(count);
+      slot.append(name, qty);
+      slot.title = t(`item.${id}` as TranslationKey);
+    } else {
+      slot.classList.add('empty');
+      slot.title = t('hotbar.tool');
+    }
+    slot.addEventListener('click', () => {
+      if (state.carried && state.assignTool(0, state.carried)) playSfx('select');
+      else playSfx('deny');
+    });
+    slot.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      state.assignTool(0, null);
+    });
+    slot.addEventListener('dragover', (e) => {
+      if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+    });
+    slot.addEventListener('drop', (e) => {
+      const dropped = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+      if (!dropped) return;
+      e.preventDefault();
+      if (!state.assignTool(0, dropped)) playSfx('deny');
+    });
+    return slot;
   }
 
   render();

@@ -218,15 +218,7 @@ export function mountMachineWindow(
         `${(used.weightG / 1000).toFixed(1)} / ${state.limits.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${state.limits.maxVolumeMl / 1000} L`,
       ),
     );
-    const slots: { item: string; count: number }[] = [];
-    for (const item of ITEMS) {
-      let left = state.inventory[item.id] ?? 0;
-      while (left > 0) {
-        const n = Math.min(left, state.limits.stackMax);
-        slots.push({ item: item.id, count: n });
-        left -= n;
-      }
-    }
+    const slots = state.bagSlots();
     const grid = el('div', 'slot-grid');
     for (let i = 0; i < state.limits.maxSlots; i++) {
       const slot = slots[i];
@@ -260,7 +252,7 @@ export function mountMachineWindow(
             return;
           }
           if (e.ctrlKey || e.metaKey) {
-            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e).then(render);
+            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e, i).then(render);
             return;
           }
           selected = selected === slot.item ? null : slot.item;
@@ -268,7 +260,7 @@ export function mountMachineWindow(
         });
         cell.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          takeHalf(state, slot.item, slot.count, e);
+          takeHalf(state, slot.item, slot.count, e, i);
           render();
         });
       } else {

@@ -14,7 +14,7 @@ import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
-import { BAG_LIMITS, itemById, type BagLimits, type EquipSlot } from '../data/items';
+import { BAG_LIMITS, ITEMS, itemById, type BagLimits, type EquipSlot } from '../data/items';
 import {
   add,
   maxAddable,
@@ -60,6 +60,8 @@ export class GameState {
   selectedSlot: number | null = null;
   /** Objet « en main » depuis le sac, à poser dans une case de la barre au prochain clic. */
   carried: string | null = null;
+  /** Objet posable tenu en main (choisi dans le sac) : clic droit = mains vides. */
+  held: string | null = null;
   /** Pile tenue au bout du curseur (retirée du sac) pour la déplacer dans une case de machine ou un coffre. */
   hand: { item: string; count: number } | null = null;
   private roomCache: Room[] | null = null;
@@ -110,11 +112,147 @@ export class GameState {
     };
   }
 
+  // --- Cases du sac : des piles de quantités différentes, déplaçables ----------------------------
+
+  /** Cases du sac (l'ordre et le découpage des piles). Le contenu total reste `inventory`. */
+  private bag: ({ item: string; count: number } | null)[] = [];
+
+  /** Les cases du sac, remises d'accord avec le contenu (ajouts : piles entamées d'abord, puis cases libres). */
+  bagSlots(): ({ item: string; count: number } | null)[] {
+    const n = this.limits.maxSlots;
+    const max = this.limits.stackMax;
+    while (this.bag.length < n) this.bag.push(null);
+    for (let i = n; i < this.bag.length; i++) this.bag[i] = null;
+    this.bag.length = n;
+    const sum = new Map<string, number>();
+    for (const s of this.bag) if (s) sum.set(s.item, (sum.get(s.item) ?? 0) + s.count);
+    // Trop dans les cases : on retire depuis la dernière.
+    for (const [item, have] of sum) {
+      let extra = have - (this.inventory[item] ?? 0);
+      for (let i = n - 1; i >= 0 && extra > 0; i--) {
+        const s = this.bag[i];
+        if (!s || s.item !== item) continue;
+        const cut = Math.min(extra, s.count);
+        s.count -= cut;
+        extra -= cut;
+        if (s.count <= 0) this.bag[i] = null;
+      }
+    }
+    // Pas assez : on complète les piles entamées, puis on prend des cases libres (dans l'ordre du catalogue).
+    for (const def of ITEMS) {
+      let need =
+        (this.inventory[def.id] ?? 0) -
+        this.bag.reduce((a, s) => a + (s && s.item === def.id ? s.count : 0), 0);
+      for (let i = 0; i < n && need > 0; i++) {
+        const s = this.bag[i];
+        if (s && s.item === def.id && s.count < max) {
+          const put = Math.min(need, max - s.count);
+          s.count += put;
+          need -= put;
+        }
+      }
+      while (need > 0) {
+        let free = this.bag.indexOf(null);
+        if (free < 0) {
+          this.compactBag();
+          free = this.bag.indexOf(null);
+          if (free < 0) break;
+        }
+        const put = Math.min(need, max);
+        this.bag[free] = { item: def.id, count: put };
+        need -= put;
+      }
+    }
+    return this.bag;
+  }
+
+  /** Regroupe les piles du même objet (quand il n'y a plus de case libre). */
+  private compactBag(): void {
+    const max = this.limits.stackMax;
+    const totals = new Map<string, number>();
+    for (const s of this.bag) if (s) totals.set(s.item, (totals.get(s.item) ?? 0) + s.count);
+    this.bag = this.bag.map(() => null);
+    let i = 0;
+    for (const [item, total] of totals) {
+      for (let left = total; left > 0; left -= max)
+        this.bag[i++] = { item, count: Math.min(left, max) };
+    }
+  }
+
+  /** Déplace une pile d'une case à l'autre : case vide = déplacée, même objet = fusionnée, sinon échange. */
+  moveBagSlot(from: number, to: number): void {
+    const bag = this.bagSlots();
+    const a = bag[from];
+    if (!a || from === to || to < 0 || to >= bag.length) return;
+    const b = bag[to];
+    const max = this.limits.stackMax;
+    if (!b) {
+      bag[to] = a;
+      bag[from] = null;
+    } else if (b.item === a.item) {
+      const put = Math.min(a.count, max - b.count);
+      b.count += put;
+      a.count -= put;
+      if (a.count <= 0) bag[from] = null;
+    } else {
+      bag[to] = a;
+      bag[from] = b;
+    }
+    this.emit({ type: 'inventory' });
+  }
+
+  /** Vide la case du sac (avant de retirer ses objets du contenu, par exemple pour les jeter). */
+  clearBagSlot(index: number): { item: string; count: number } | null {
+    const bag = this.bagSlots();
+    const s = bag[index] ?? null;
+    if (s) bag[index] = null;
+    return s;
+  }
+
+  /** Pose la pile tenue au curseur dans cette case du sac (vide : nouvelle pile ; même objet : on complète ; sinon échange). */
+  placeHand(index: number): number {
+    const h = this.hand;
+    if (!h) return 0;
+    const bag = this.bagSlots();
+    if (index < 0 || index >= bag.length) return 0;
+    const max = this.limits.stackMax;
+    const slot = bag[index];
+    const room = maxAddable(this.inventory, h.item, this.limits);
+    if (slot && slot.item !== h.item) {
+      // Échange : la pile de la case passe au curseur.
+      if (h.count > max) return 0;
+      const old = { ...slot };
+      bag[index] = { item: h.item, count: h.count };
+      this.inventory = add(this.inventory, h.item, h.count);
+      this.inventory = remove(this.inventory, old.item, old.count).inventory;
+      this.hand = old;
+    } else {
+      const n = Math.min(h.count, room, max - (slot?.count ?? 0));
+      if (n <= 0) return 0;
+      if (slot) slot.count += n;
+      else bag[index] = { item: h.item, count: n };
+      this.inventory = add(this.inventory, h.item, n);
+      h.count -= n;
+      if (h.count <= 0) this.hand = null;
+    }
+    this.emit({ type: 'inventory' });
+    return 1;
+  }
+
   /** Prend `count` unités du sac au bout du curseur (la pile tenue est d'abord rangée si c'est un autre objet). */
-  takeToHand(item: string, count: number): number {
+  takeToHand(item: string, count: number, slot?: number): number {
     if (this.hand && this.hand.item !== item) this.returnHand();
-    const n = Math.min(count, this.inventory[item] ?? 0);
+    let n = Math.min(count, this.inventory[item] ?? 0);
     if (n <= 0) return 0;
+    if (slot !== undefined) {
+      // La pile cliquée est celle qui diminue.
+      const s = this.bagSlots()[slot];
+      if (s && s.item === item) {
+        n = Math.min(n, s.count);
+        s.count -= n;
+        if (s.count <= 0) this.bag[slot] = null;
+      }
+    }
     this.inventory = remove(this.inventory, item, n).inventory;
     this.hand = { item, count: (this.hand?.count ?? 0) + n };
     this.emit({ type: 'inventory' });
@@ -267,13 +405,49 @@ export class GameState {
   /** Sélectionne la case (ou la désélectionne si elle l'était déjà). Une case vide ne se sélectionne pas. */
   selectSlot(index: number): void {
     if (index < 0 || index >= this.changes.hotbar.length) return;
+    this.held = null;
     this.selectedSlot = this.selectedSlot === index || !this.changes.hotbar[index] ? null : index;
     this.emit({ type: 'hotbar' });
   }
 
   /** Objet de la case sélectionnée. */
   selectedItem(): string | null {
+    if (this.held) {
+      if ((this.inventory[this.held] ?? 0) > 0) return this.held;
+      this.held = null;
+    }
     return this.selectedSlot === null ? null : this.changes.hotbar[this.selectedSlot];
+  }
+
+  /** Prend en main un objet posable choisi dans le sac (prioritaire sur la barre de raccourcis). */
+  setHeld(item: string | null): void {
+    this.held = item && (this.inventory[item] ?? 0) > 0 ? item : null;
+    this.emit({ type: 'hotbar' });
+  }
+
+  /** Outil rangé dans la case d'outils (s'il en reste dans le sac), ou null : mains nues. */
+  toolItem(index = 0): string | null {
+    const id = this.changes.tools[index] ?? null;
+    return id && (this.inventory[id] ?? 0) > 0 ? id : null;
+  }
+
+  /** Bonus de récolte de l'outil en place (null = mains nues). */
+  harvestTool(): { speed: number; yield: number } | null {
+    const id = this.toolItem();
+    return id ? itemById(id).tool : null;
+  }
+
+  /** Range un outil (ou le pistolet) dans la case d'outils, ou la vide (`null`). */
+  assignTool(index: number, item: string | null): boolean {
+    if (index < 0 || index >= this.changes.tools.length) return false;
+    if (item !== null) {
+      const def = itemById(item);
+      if (!def.tool && def.id !== 'pistol') return false;
+    }
+    this.changes.tools[index] = item;
+    this.carried = null;
+    this.emit({ type: 'hotbar' });
+    return true;
   }
 
   /** Range un objet dans une case (un objet n'occupe qu'une case) ou la vide (`null`). */

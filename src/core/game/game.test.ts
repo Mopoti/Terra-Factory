@@ -333,9 +333,9 @@ describe('fabrication et cases du sac', () => {
   it('fabrique 1 ou 5 unités selon les ressources', () => {
     const s = new GameState({ inventory: { stone: 6 } });
     expect(s.craft('piece_wall_stone', 1)).toEqual({ made: 1, stopped: null });
-    expect(s.inventory).toEqual({ stone: 5, piece_wall_stone: 1 });
-    expect(s.craft('piece_wall_stone', 8)).toEqual({ made: 5, stopped: 'resources' });
-    expect(s.inventory).toEqual({ piece_wall_stone: 6 });
+    expect(s.inventory).toEqual({ stone: 4, piece_wall_stone: 1 });
+    expect(s.craft('piece_wall_stone', 8)).toEqual({ made: 2, stopped: 'resources' });
+    expect(s.inventory).toEqual({ piece_wall_stone: 3 });
   });
   it('ne fabrique pas une ressource brute ni sans ingrédients', () => {
     const s = new GameState({ inventory: {} });
@@ -1052,12 +1052,12 @@ describe('équipement et sac à dos', () => {
 
 describe('technologies', () => {
   it('fabriquer un objet verrouillé est refusé tant que la technologie n’est pas recherchée', () => {
-    const s = new GameState({ inventory: { iron_ingot: 25 } });
+    const s = new GameState({ inventory: { iron_ingot: 35 } });
     expect(s.isUnlocked('machine_splitter')).toBe(false);
     expect(s.craft('machine_splitter', 1)).toEqual({ made: 0, stopped: 'locked' });
     expect(s.isUnlocked('machine_conveyor')).toBe(true);
     expect(s.research('logistics')).toBe('ok');
-    expect(s.inventory.iron_ingot).toBe(5);
+    expect(s.inventory.iron_ingot).toBe(15);
     expect(s.research('logistics')).toBe('done');
     expect(s.craft('machine_splitter', 1).made).toBe(1);
   });
@@ -1117,5 +1117,46 @@ describe('anciennes parties : emprises des machines', () => {
       changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 2 },
     });
     expect(t.changes.machines[0]).toMatchObject({ gx: 5, gz: 7 });
+  });
+});
+
+describe('piles du sac, objet en main et outils', () => {
+  it('on peut avoir plusieurs piles du même objet, déplacées et jetées au choix', () => {
+    const s = new GameState({ inventory: { stone: 40 } });
+    expect(s.bagSlots().filter(Boolean)).toEqual([{ item: 'stone', count: 40 }]);
+    s.takeToHand('stone', 20, 0);
+    expect(s.bagSlots()[0]).toEqual({ item: 'stone', count: 20 });
+    expect(s.placeHand(5)).toBe(1);
+    expect(s.hand).toBeNull();
+    expect(s.bagSlots()[5]).toEqual({ item: 'stone', count: 20 });
+    expect(s.inventory.stone).toBe(40);
+    s.moveBagSlot(5, 7);
+    expect(s.bagSlots()[7]?.count).toBe(20);
+    s.moveBagSlot(7, 0); // fusion
+    expect(s.bagSlots()[0]?.count).toBe(40);
+    const cleared = s.clearBagSlot(0);
+    expect(cleared?.count).toBe(40);
+    s.drop('stone', 40, 0, 0);
+    expect(s.bagSlots().filter(Boolean)).toHaveLength(0);
+  });
+
+  it("l'objet posable tenu en main passe avant la barre, jusqu'à ce qu'on le range", () => {
+    const s = new GameState({ inventory: { machine_conveyor: 3 } });
+    expect(s.selectedItem()).toBeNull();
+    s.setHeld('machine_conveyor');
+    expect(s.selectedItem()).toBe('machine_conveyor');
+    s.setHeld(null);
+    expect(s.selectedItem()).toBeNull();
+  });
+
+  it("l'outil de la case d'outils change la récolte ; seuls outils et pistolet y vont", () => {
+    const s = new GameState({ inventory: { tool_wood: 1, tool_iron: 1, stone: 1 } });
+    expect(s.harvestTool()).toBeNull();
+    expect(s.assignTool(0, 'stone')).toBe(false);
+    expect(s.assignTool(0, 'tool_wood')).toBe(true);
+    expect(s.harvestTool()?.speed).toBe(2);
+    s.assignTool(0, 'tool_iron');
+    expect(s.harvestTool()?.yield).toBe(2);
+    expect(s.snapshot().changes.tools[0]).toBe('tool_iron');
   });
 });

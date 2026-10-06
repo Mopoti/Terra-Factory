@@ -1091,6 +1091,10 @@
   justify-content: flex-end;
   text-align: left;
 }
+.tool-slot {
+  margin-left: 14px;
+  border-color: #5a6b7c;
+}
 .hot-slot.empty {
   background: #141b22;
   border-bottom-color: #28333e;

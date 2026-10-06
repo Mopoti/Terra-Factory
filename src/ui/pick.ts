@@ -38,9 +38,15 @@ export function updateHandCursor(state: GameState): void {
 }
 
 /** Clic droit sur une pile du sac : on en prend la moitié (arrondie au-dessus) au bout du curseur. */
-export function takeHalf(state: GameState, item: string, stackCount: number, at: MouseEvent): void {
+export function takeHalf(
+  state: GameState,
+  item: string,
+  stackCount: number,
+  at: MouseEvent,
+  slot?: number,
+): void {
   last = { x: at.clientX, y: at.clientY };
-  state.takeToHand(item, Math.max(1, Math.ceil(stackCount / 2)));
+  state.takeToHand(item, Math.max(1, Math.ceil(stackCount / 2)), slot);
 }
 
 /** Ctrl + clic gauche : le joueur choisit la quantité à prendre. */
@@ -50,6 +56,7 @@ export async function takeAsked(
   itemName: string,
   stackCount: number,
   at: MouseEvent,
+  slot?: number,
 ): Promise<void> {
   last = { x: at.clientX, y: at.clientY };
   const value = await promptModal({
@@ -66,5 +73,5 @@ export async function takeAsked(
         : t('inv.pickInvalid', { max: String(stackCount) });
     },
   });
-  if (value !== null) state.takeToHand(item, Number(value));
+  if (value !== null) state.takeToHand(item, Number(value), slot);
 }

@@ -11,6 +11,8 @@ import { t, type TranslationKey } from '../i18n';
 
 /** Temps pour ramasser une pile posée au sol (s). */
 const PICKUP_SECONDS = 0.35;
+/** Durée de la récolte à mains nues, par rapport à la durée de base (qui suppose un outil de vitesse 3). */
+const BARE_HANDS_FACTOR = 3;
 const FEED_SECONDS = 2.2;
 const ORE_HEIGHT_M = 0.1;
 const TREE_HEIGHT_M = 4.2;
@@ -104,6 +106,10 @@ export class Interaction {
   private feedTimer = 0;
   private wasActive = false;
   private holdingId: string | null = null;
+  /** En train de récolter une ressource : avec l'outil, à mains nues, ou rien. */
+  working: 'tool' | 'hands' | null = null;
+  /** Quelque chose de récoltable, de ramassable ou de démolissable est à portée sous la visée. */
+  aimed = false;
   private holdingTime = 0;
   private unsubscribe: () => void;
 
@@ -346,6 +352,8 @@ export class Interaction {
         this.renderFeed();
       }
     }
+    this.working = null;
+    this.aimed = false;
     if (frame.paused) {
       this.hud.hidden = true;
       this.highlight.visible = false;
@@ -360,6 +368,7 @@ export class Interaction {
         this.reach(hit, frame.player),
         hit.type === 'structure' ? STRUCTURE_REACH_M : REACH_M,
       );
+    this.aimed = reachable;
     this.showHighlight(hit, reachable);
     // En première personne le réticule suffit : pas de boîte blanche autour de la cible.
     if (frame.aimAtCenter) this.highlight.visible = false;
@@ -378,12 +387,17 @@ export class Interaction {
           : hit.target.key;
     const item =
       hit.type === 'drop' ? hit.stack.item : hit.type === 'structure' ? '' : hit.target.item;
+    // À mains nues, abattre, casser ou miner est long ; l'outil de la case d'outils va plus vite (et le fer donne plus).
+    const needsTool = hit.type === 'target' && hit.target.resId !== 'fiber_bush';
+    const tool = needsTool ? this.state.harvestTool() : null;
     const seconds =
       hit.type === 'drop'
         ? PICKUP_SECONDS
         : hit.type === 'structure'
           ? hit.structure.seconds
-          : hit.target.secondsPerUnit;
+          : needsTool
+            ? (hit.target.secondsPerUnit * BARE_HANDS_FACTOR) / (tool?.speed ?? 1)
+            : hit.target.secondsPerUnit;
     let bagFull = false;
 
     // Clic gauche sur une machine ou un coffre : on ouvre son interface.
@@ -394,6 +408,7 @@ export class Interaction {
     // Les constructions se démolissent au clic droit maintenu ; le reste se récolte au clic gauche.
     const holdingNow = hit.type === 'structure' ? frame.demolishing : frame.active;
     if (reachable && holdingNow) {
+      this.working = hit.type === 'target' ? (tool ? 'tool' : 'hands') : null;
       if (this.holdingId !== id) {
         this.holdingId = id;
         this.holdingTime = 0;
@@ -411,7 +426,12 @@ export class Interaction {
         const result =
           hit.type === 'drop'
             ? this.state.pickUp(hit.stack.id)
-            : this.state.harvest(hit.target.key, hit.target.total, hit.target.item, 1);
+            : this.state.harvest(
+                hit.target.key,
+                hit.target.total,
+                hit.target.item,
+                tool?.yield ?? 1,
+              );
         if (result.gained > 0) {
           this.addFeed(item, result.gained);
           if (hit.type === 'drop') playSfx('pickup');

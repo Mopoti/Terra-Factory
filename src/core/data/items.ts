@@ -13,6 +13,8 @@ export interface ItemDef {
   fuelSeconds: number | null;
   /** Équipement porté : emplacement du corps et bonus de capacité du sac. */
   equip: { slot: EquipSlot; bonus: { slots: number; weightG: number; volumeMl: number } } | null;
+  /** Outil (case d'outils) : multiplicateur de vitesse de récolte et unités obtenues par coup. */
+  tool: { speed: number; yield: number } | null;
 }
 
 export type EquipSlot = 'head' | 'torso' | 'legs' | 'feet' | 'hands';
@@ -34,6 +36,7 @@ interface RawItem {
   color: string;
   recipe?: Record<string, number>;
   fuelSeconds?: number;
+  tool?: { speed: number; yield: number };
   equip?: { slot: EquipSlot; bag?: { slots?: number; weightKg?: number; volumeL?: number } };
 }
 
@@ -44,6 +47,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   color: i.color,
   recipe: i.recipe ?? null,
   fuelSeconds: i.fuelSeconds ?? null,
+  tool: i.tool ?? null,
   equip: i.equip
     ? {
         slot: i.equip.slot,

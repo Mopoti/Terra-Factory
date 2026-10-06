@@ -14,8 +14,17 @@ import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { getSettings } from '../settings/store';
 import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
+import { PIECES } from '../core/data/buildings';
+import { machineForItem } from '../core/data/machines';
 import { takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
+
+/** Type MIME d'une pile du sac que l'on déplace (numéro de case). */
+const BAG_SLOT_TYPE = 'text/x-terra-bag-slot';
+
+/** Objet que l'on peut poser (machine ou pièce de construction). */
+const isPlaceable = (item: string): boolean =>
+  machineForItem(item) !== null || PIECES.some((p) => p.item === item);
 
 export interface InventoryActions {
   /** Jette des objets du sac au sol. */
@@ -72,19 +81,8 @@ export function mountInventory(
 
   const itemName = (id: string): string => t(`item.${id}` as TranslationKey);
 
-  /** Cases du sac : une pile de 100 max par case, dans l'ordre du catalogue. */
-  function slotList(): { item: string; count: number }[] {
-    const slots: { item: string; count: number }[] = [];
-    for (const item of ITEMS) {
-      let left = state.inventory[item.id] ?? 0;
-      while (left > 0) {
-        const n = Math.min(left, state.limits.stackMax);
-        slots.push({ item: item.id, count: n });
-        left -= n;
-      }
-    }
-    return slots;
-  }
+  /** Cases du sac : des piles de 100 max, déplaçables ; les cases vides sont `null`. */
+  const slotList = (): ({ item: string; count: number } | null)[] => state.bagSlots();
 
   /** Colonne d'équipement : tête, tronc (+ mains à côté), jambes, pieds. */
   function equipmentColumn(): HTMLElement {
@@ -252,6 +250,7 @@ export function mountInventory(
     panel.setAttribute('aria-label', t('inv.title'));
     panel.append(el('h2', undefined, t('inv.title')));
     const slots = slotList();
+    const usedSlots = slots.filter(Boolean).length;
     panel.append(
       gauge(
         t('inv.weight'),
@@ -265,8 +264,8 @@ export function mountInventory(
       ),
       gauge(
         t('inv.slots'),
-        `${slots.length} / ${state.limits.maxSlots}`,
-        slots.length / state.limits.maxSlots,
+        `${usedSlots} / ${state.limits.maxSlots}`,
+        usedSlots / state.limits.maxSlots,
       ),
     );
 
@@ -288,17 +287,27 @@ export function mountInventory(
           el('span', 'slot-count', String(slot.count)),
         );
         cell.draggable = true;
-        cell.addEventListener('dragstart', (e) =>
-          e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item),
-        );
+        cell.addEventListener('dragstart', (e) => {
+          e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item);
+          e.dataTransfer?.setData(BAG_SLOT_TYPE, String(i));
+        });
+        // Lâchée hors de la fenêtre (ou sur le fond), la pile tombe par terre.
+        cell.addEventListener('dragend', (e) => {
+          const over = document.elementFromPoint(e.clientX, e.clientY);
+          if (e.dataTransfer?.dropEffect !== 'none' || over?.closest('.panel')) return;
+          const dropped = state.clearBagSlot(i);
+          if (dropped) actions.drop(dropped.item, dropped.count);
+          render();
+        });
         cell.addEventListener('click', (e) => {
           if (state.hand) {
-            state.returnHand();
+            if (!state.placeHand(i)) playSfx('deny');
             render();
             return;
           }
+          if (e.shiftKey) return;
           if (e.ctrlKey || e.metaKey) {
-            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e).then(render);
+            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e, i).then(render);
             return;
           }
           selected = selected === slot.item ? null : slot.item;
@@ -308,7 +317,7 @@ export function mountInventory(
         });
         cell.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          takeHalf(state, slot.item, slot.count, e);
+          takeHalf(state, slot.item, slot.count, e, i);
           render();
         });
         cell.addEventListener('mouseenter', () => {
@@ -322,10 +331,21 @@ export function mountInventory(
       } else {
         cell.addEventListener('click', () => {
           if (!state.hand) return;
-          state.returnHand();
+          state.placeHand(i);
           render();
         });
       }
+      // Glisser une pile sur une autre case : on la déplace (vide), la fusionne (même objet) ou l'échange.
+      cell.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(BAG_SLOT_TYPE)) e.preventDefault();
+      });
+      cell.addEventListener('drop', (e) => {
+        const from = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+        if (from === undefined || from === '') return;
+        e.preventDefault();
+        state.moveBagSlot(Number(from), i);
+        render();
+      });
       grid.append(cell);
     }
     bag.append(grid);
@@ -338,25 +358,9 @@ export function mountInventory(
           t('inv.selected', { item: itemName(selected), n: String(count) }),
         ),
       );
-      const buttons = el('span', 'inv-actions');
-      for (const [text, n] of [
-        [t('inv.drop1'), 1],
-        [t('inv.drop10'), 10],
-        [t('inv.dropAll'), count],
-      ] as [string, number][]) {
-        const b = el('button', undefined, text);
-        b.type = 'button';
-        b.disabled = n > count;
-        b.addEventListener('click', () => {
-          actions.drop(selected as string, n);
-          render();
-        });
-        buttons.append(b);
-      }
-      bag.append(buttons);
     } else {
       selected = null;
-      bag.append(el('small', 'help', slots.length === 0 ? t('inv.empty') : t('inv.selectHint')));
+      bag.append(el('small', 'help', usedSlots === 0 ? t('inv.empty') : t('inv.selectHint')));
     }
 
     // Droite : tous les objets, à fabriquer.
@@ -438,6 +442,9 @@ export function mountInventory(
   function closeWindow(): void {
     if (!isOpenNow) return;
     isOpenNow = false;
+    // Un objet posable choisi dans le sac reste en main (clic droit : mains vides).
+    if (selected && isPlaceable(selected) && (state.inventory[selected] ?? 0) > 0)
+      state.setHeld(selected);
     state.carried = null;
     state.returnHand();
     updateHandCursor(state);
