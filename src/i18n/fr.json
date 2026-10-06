@@ -597,6 +597,16 @@
   "threat.knockedOut": "Tu as été assommé : te voilà de retour au point de départ.",
   "threat.pollution": "Pollution émise : {v} / min",
   "threat.pollutionHere": "Pollution ici : {v}",
-  "map.pollution": "Pollution",
-  "map.enemies": "Ennemis"
+  "map.pollution": "Fumées (air)",
+  "map.enemies": "Ennemis",
+  "item.pistol": "Pistolet",
+  "item.magazine": "Chargeur (12 balles)",
+  "weapon.ammo": "Balles {n} / {max} · chargeurs : {mags}",
+  "weapon.reloaded": "Rechargé",
+  "weapon.noMagazine": "Plus de chargeur dans le sac",
+  "weapon.empty": "Chargeur vide : R pour recharger",
+  "weapon.hint": "Pistolet : clic gauche = tirer, R = recharger",
+  "threat.pollution.air": "Fumées émises (air) : {v} / min",
+  "threat.pollution.ground": "Pollution du sol émise : {v} / min",
+  "map.ground": "Pollution du sol"
 }

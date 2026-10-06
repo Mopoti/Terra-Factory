@@ -46,6 +46,8 @@ export interface MachineDef {
   linkReachM?: number;
   /** Pollution émise (points par seconde) quand la machine travaille. */
   pollution?: number;
+  /** Fumées (air : se répandent, les arbres les absorbent) ou pollution du sol (reste sur place). */
+  pollutionKind?: 'air' | 'ground';
   /** Fluides : capacité de la machine (unités). */
   fluidCap?: number;
   /** Pompe : eau pompée (unités/s) à pleine puissance. */

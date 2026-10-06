@@ -42,7 +42,14 @@ export interface WorldChanges {
   progress: Record<string, number>;
   /** Pollution par cellule de 32 m (« pcx,pcz »). */
   pollution: Record<string, number>;
+  /** Pollution du sol, par cellule de 32 m. */
+  groundPollution: Record<string, number>;
+  /** Balles dans le pistolet. */
+  ammo: number;
 }
+
+/** Balles d'un chargeur. */
+export const MAGAZINE_ROUNDS = 12;
 
 export const HOTBAR_SLOTS = 9;
 
@@ -63,6 +70,8 @@ export function emptyChanges(): WorldChanges {
     researching: null,
     progress: {},
     pollution: {},
+    groundPollution: {},
+    ammo: 0,
   };
 }
 
@@ -125,6 +134,12 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];
       if (isNum(v) && v > 0) result.progress[t.id] = Math.floor(v);
+    }
+  }
+  if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));
+  if (typeof r.groundPollution === 'object' && r.groundPollution !== null) {
+    for (const [k, v] of Object.entries(r.groundPollution as Record<string, unknown>)) {
+      if (/^-?\d+,-?\d+$/.test(k) && isNum(v) && v > 0) result.groundPollution[k] = v;
     }
   }
   if (typeof r.pollution === 'object' && r.pollution !== null) {

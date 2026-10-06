@@ -597,6 +597,16 @@
   "threat.knockedOut": "You were knocked out: back at the starting point.",
   "threat.pollution": "Pollution emitted: {v} / min",
   "threat.pollutionHere": "Pollution here: {v}",
-  "map.pollution": "Pollution",
-  "map.enemies": "Enemies"
+  "map.pollution": "Smoke (air)",
+  "map.enemies": "Enemies",
+  "item.pistol": "Pistol",
+  "item.magazine": "Magazine (12 rounds)",
+  "weapon.ammo": "Rounds {n} / {max} · magazines: {mags}",
+  "weapon.reloaded": "Reloaded",
+  "weapon.noMagazine": "No magazine left in the bag",
+  "weapon.empty": "Magazine empty: R to reload",
+  "weapon.hint": "Pistol: left click = shoot, R = reload",
+  "threat.pollution.air": "Smoke emitted (air): {v} / min",
+  "threat.pollution.ground": "Ground pollution emitted: {v} / min",
+  "map.ground": "Ground pollution"
 }

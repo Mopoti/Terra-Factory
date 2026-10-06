@@ -18,6 +18,8 @@ export interface Enemy {
   idle: number;
   /** Cible suivie (identifiant), ou null. */
   target: string | null;
+  /** Gardien d'un nid : reste près de chez lui et ne s'en prend qu'au joueur qui s'approche. */
+  home?: { x: number; z: number };
 }
 
 export interface ThreatWorld {
@@ -25,6 +27,8 @@ export interface ThreatWorld {
   nestsIn(pcx: number, pcz: number): { x: number; z: number }[];
   /** Arbres dans une cellule de pollution (ils absorbent). */
   treesIn(pcx: number, pcz: number): number;
+  /** Nids (positions en mètres) à moins de `radiusM` mètres du point. */
+  nestsNear(x: number, z: number, radiusM: number): { x: number; z: number }[];
 }
 
 export interface ThreatTarget {
@@ -65,6 +69,12 @@ const MACHINE_DPS = 6;
 const PLAYER_HIT = 10;
 const PLAYER_HIT_EVERY_S = 1.2;
 const GIVE_UP_S = 90;
+const GROUND_ABSORB = 0.01;
+const GUARDS_PER_NEST = 3;
+const GUARD_WAKE_M = 90;
+const GUARD_SEE_M = 14;
+const GUARD_LEASH_M = 40;
+const GUARD_RESPAWN_S = 120;
 
 export const cellOf = (m: number): number => Math.floor(m / POLLUTION_CELL_M);
 const key = (pcx: number, pcz: number): string => `${pcx},${pcz}`;
@@ -77,12 +87,16 @@ export class Threat {
   private spreadClock = 0;
   private rngState = 12345;
 
-  /** `pollution` est l'objet enregistré avec la partie (modifié sur place). */
+  /** `pollution` (air) et `ground` (sol) sont les objets enregistrés avec la partie (modifiés sur place). */
   constructor(
     readonly pollution: Record<string, number>,
+    readonly ground: Record<string, number>,
     private readonly world: ThreatWorld,
     private readonly options: ThreatOptions,
   ) {}
+
+  /** Secondes avant que le nid (clé) refasse un gardien. */
+  private readonly guardTimer = new Map<string, number>();
 
   private random(): number {
     // Petit générateur déterministe : pas de Math.random() dans la simulation.
@@ -94,15 +108,23 @@ export class Threat {
     return this.pollution[key(pcx, pcz)] ?? 0;
   }
 
-  /** Une machine pollue à l'endroit (x, z) en mètres. */
-  emit(x: number, z: number, amount: number): void {
+  /** Une machine pollue à l'endroit (x, z) en mètres : `air` (fumées, se répand) ou `ground` (sol, reste sur place). */
+  emit(x: number, z: number, amount: number, kind: 'air' | 'ground' = 'air'): void {
     if (amount <= 0) return;
+    const map = kind === 'air' ? this.pollution : this.ground;
     const k = key(cellOf(x), cellOf(z));
-    this.pollution[k] = (this.pollution[k] ?? 0) + amount;
+    map[k] = (map[k] ?? 0) + amount;
+  }
+
+  groundAt(pcx: number, pcz: number): number {
+    return this.ground[key(pcx, pcz)] ?? 0;
   }
 
   total(): number {
-    return Object.values(this.pollution).reduce((a, b) => a + b, 0);
+    return (
+      Object.values(this.pollution).reduce((a, b) => a + b, 0) +
+      Object.values(this.ground).reduce((a, b) => a + b, 0)
+    );
   }
 
   /** Le joueur frappe : touche l'ennemi le plus proche à portée. Renvoie 'kill', 'hit' ou null. */
@@ -125,6 +147,39 @@ export class Threat {
     return 'hit';
   }
 
+  /** Un tir (rayon) : touche l'ennemi le plus proche sur la ligne de tir. Renvoie le résultat et la distance parcourue. */
+  shoot(
+    origin: { x: number; y: number; z: number },
+    dir: { x: number; y: number; z: number },
+    range: number,
+    damage: number,
+  ): { result: 'kill' | 'hit' | null; distance: number } {
+    let best: Enemy | null = null;
+    let bestAlong = range;
+    for (const e of this.enemies) {
+      // Le corps de l'ennemi est autour de (x, 0,3, z) ; on cherche le point du rayon le plus proche.
+      const wx = e.x - origin.x;
+      const wy = 0.3 - origin.y;
+      const wz = e.z - origin.z;
+      const along = wx * dir.x + wy * dir.y + wz * dir.z;
+      if (along < 0 || along > bestAlong) continue;
+      const cx = origin.x + dir.x * along - e.x;
+      const cy = origin.y + dir.y * along - 0.3;
+      const cz = origin.z + dir.z * along - e.z;
+      if (Math.hypot(cx, cy, cz) <= 0.6) {
+        best = e;
+        bestAlong = along;
+      }
+    }
+    if (!best) return { result: null, distance: range };
+    best.hp -= damage;
+    if (best.hp <= 0) {
+      this.enemies.splice(this.enemies.indexOf(best), 1);
+      return { result: 'kill', distance: bestAlong };
+    }
+    return { result: 'hit', distance: bestAlong };
+  }
+
   /** Avance de `dt` secondes ; renvoie les dégâts infligés par les ennemis. */
   update(dt: number, targets: ThreatTarget[]): Damage[] {
     this.clock += dt;
@@ -139,6 +194,7 @@ export class Threat {
   /** Une seconde de pollution : absorption naturelle, nids, étalement. */
   private secondStep(): void {
     const cost = this.options.aggressive ? SPAWN_COST_AGGRESSIVE : SPAWN_COST;
+    this.groundStep(cost);
     const cells = Object.keys(this.pollution);
     for (const k of cells) {
       const [pcx, pcz] = k.split(',').map(Number);
@@ -185,7 +241,56 @@ export class Threat {
     }
   }
 
-  private spawn(x: number, z: number): void {
+  /** Pollution du sol : ne se répand pas, le sol l'absorbe très lentement, les nids voisins s'en nourrissent aussi. */
+  private groundStep(cost: number): void {
+    for (const k of Object.keys(this.ground)) {
+      const [pcx, pcz] = k.split(',').map(Number);
+      let p = this.ground[k];
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (const nest of this.world.nestsIn(pcx + dx, pcz + dz)) {
+            if (p <= 0) break;
+            const take = Math.min(p, NEST_ABSORB_PER_S * 0.5);
+            p -= take;
+            const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
+            const c = (this.charge.get(nk) ?? 0) + take;
+            if (c >= cost && this.enemies.length < MAX_ENEMIES) {
+              this.charge.set(nk, c - cost);
+              this.spawn(nest.x, nest.z);
+            } else this.charge.set(nk, c);
+          }
+        }
+      }
+      p -= GROUND_ABSORB;
+      if (p < 0.05) delete this.ground[k];
+      else this.ground[k] = p;
+    }
+  }
+
+  /** Les nids proches du joueur gardent quelques gardiens ; un gardien tué revient après un moment. */
+  keepGuards(playerX: number, playerZ: number, dt: number): void {
+    for (const nest of this.world.nestsNear(playerX, playerZ, GUARD_WAKE_M)) {
+      const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
+      const mine = this.enemies.filter(
+        (e) => e.home && `${Math.round(e.home.x)},${Math.round(e.home.z)}` === nk,
+      );
+      if (mine.length >= GUARDS_PER_NEST) {
+        this.guardTimer.set(nk, GUARD_RESPAWN_S);
+        continue;
+      }
+      const wait = this.guardTimer.get(nk);
+      if (wait === undefined) {
+        // Première visite : tous les gardiens sont là.
+        for (let i = mine.length; i < GUARDS_PER_NEST; i++) this.spawn(nest.x, nest.z, true);
+        this.guardTimer.set(nk, GUARD_RESPAWN_S);
+      } else if (wait - dt <= 0) {
+        this.spawn(nest.x, nest.z, true);
+        this.guardTimer.set(nk, GUARD_RESPAWN_S);
+      } else this.guardTimer.set(nk, wait - dt);
+    }
+  }
+
+  private spawn(x: number, z: number, guard = false): void {
     this.enemies.push({
       id: this.nextId++,
       x: x + (this.random() - 0.5) * 2,
@@ -194,6 +299,7 @@ export class Threat {
       cooldown: 0,
       idle: 0,
       target: null,
+      ...(guard ? { home: { x, z } } : {}),
     });
   }
 
@@ -203,6 +309,28 @@ export class Threat {
     const seePlayer = this.options.aggressive ? SEE_PLAYER_AGGRESSIVE_M : SEE_PLAYER_M;
     for (const e of [...this.enemies]) {
       e.cooldown = Math.max(0, e.cooldown - dt);
+      if (e.home) {
+        const player = targets.find((t) => t.id === 'player');
+        const dHome = Math.hypot(e.x - e.home.x, e.z - e.home.z);
+        const dPlayer = player ? Math.hypot(player.x - e.x, player.z - e.z) : Infinity;
+        const chase = player && dPlayer <= GUARD_SEE_M && dHome <= GUARD_LEASH_M;
+        const goal = chase ? player : { id: 'home', x: e.home.x, z: e.home.z };
+        e.target = chase ? 'player' : null;
+        const dx = goal.x - e.x;
+        const dz = goal.z - e.z;
+        const d = Math.hypot(dx, dz);
+        if (chase && d <= REACH_M) {
+          if (e.cooldown <= 0) {
+            damage.push({ target: 'player', amount: PLAYER_HIT });
+            e.cooldown = PLAYER_HIT_EVERY_S;
+          }
+        } else if (d > (chase ? REACH_M : 1.5)) {
+          const step = Math.min(d, speed * dt);
+          e.x += (dx / d) * step;
+          e.z += (dz / d) * step;
+        }
+        continue;
+      }
       // Cible : le joueur s'il est proche, sinon l'installation polluante la plus proche.
       let best: ThreatTarget | null = null;
       let bestD = Infinity;

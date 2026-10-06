@@ -25,6 +25,7 @@ import {
   type Inventory,
 } from './inventory';
 import {
+  MAGAZINE_ROUNDS,
   emptyChanges,
   normalizeChanges,
   type DroppedStack,
@@ -537,6 +538,23 @@ export class GameState {
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return moved;
+  }
+
+  /** Recharge le pistolet avec un chargeur du sac. */
+  reload(): 'ok' | 'noMagazine' | 'full' {
+    if (this.changes.ammo >= MAGAZINE_ROUNDS) return 'full';
+    if ((this.inventory.magazine ?? 0) <= 0) return 'noMagazine';
+    this.inventory = remove(this.inventory, 'magazine', 1).inventory;
+    this.changes.ammo = MAGAZINE_ROUNDS;
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Tire une balle ; renvoie faux si le pistolet est vide. */
+  fire(): boolean {
+    if (this.changes.ammo <= 0) return false;
+    this.changes.ammo--;
+    return true;
   }
 
   /** Une machine détruite (par des ennemis) : elle disparaît avec son contenu, sans rien rendre. */

@@ -379,6 +379,24 @@
         "iron_ingot": 12,
         "copper_ingot": 8
       }
+    },
+    {
+      "id": "pistol",
+      "weightKg": 1.1,
+      "volumeL": 1.2,
+      "color": "#4a4f57",
+      "recipe": {
+        "iron_ingot": 8
+      }
+    },
+    {
+      "id": "magazine",
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "color": "#8d96a0",
+      "recipe": {
+        "iron_ingot": 2
+      }
     }
   ]
 }

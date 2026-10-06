@@ -13,7 +13,7 @@ import { t, type TranslationKey } from '../i18n';
 const PICKUP_SECONDS = 0.35;
 const FEED_SECONDS = 2.2;
 const ORE_HEIGHT_M = 0.1;
-const TREE_HEIGHT_M = 2.6;
+const TREE_HEIGHT_M = 4.2;
 const ROCK_HEIGHT_M = 0.8;
 const BUSH_HEIGHT_M = 0.6;
 const DROP_PICK_RADIUS_M = 0.5;

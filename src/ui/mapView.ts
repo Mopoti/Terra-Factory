@@ -189,6 +189,11 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       ctx.fillStyle = `rgba(214, 48, 49, ${Math.min(0.6, 0.1 + v / 200)})`;
       ctx.fillRect(sx(pcx * cellCells), sz(pcz * cellCells), cellCells * zoom, cellCells * zoom);
     }
+    for (const [k, v] of Object.entries(options.threat.ground)) {
+      const [pcx, pcz] = k.split(',').map(Number);
+      ctx.fillStyle = `rgba(150, 90, 30, ${Math.min(0.65, 0.12 + v / 200)})`;
+      ctx.fillRect(sx(pcx * cellCells), sz(pcz * cellCells), cellCells * zoom, cellCells * zoom);
+    }
     ctx.fillStyle = '#ff3b3b';
     for (const e of options.threat.enemies) {
       ctx.beginPath();
@@ -264,6 +269,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(OBJECT_COLORS.rock, t('map.rocks')),
       legendItem(OBJECT_COLORS.nest, t('map.nests')),
       legendItem('rgba(214,48,49,0.6)', t('map.pollution')),
+      legendItem('rgba(150,90,30,0.65)', t('map.ground')),
       legendItem('#ff3b3b', t('map.enemies')),
       legendItem('#c79a5d', t('map.buildings')),
       legendItem('#e2e6ea', t('map.belts')),

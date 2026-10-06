@@ -28,7 +28,10 @@ export type SfxId =
   | 'doorOpen'
   | 'doorClose'
   | 'select'
-  | 'deny';
+  | 'deny'
+  | 'shot'
+  | 'reload'
+  | 'enemyHurt';
 
 let ctx: AudioContext | null = null;
 let noiseBuffer: AudioBuffer | null = null;
@@ -170,6 +173,26 @@ const RECIPES: Record<SfxId, Recipe> = {
       { dur: 0.35, vol: 0.25, freq: 1250, wave: 'triangle' },
       { dur: 0.2, vol: 0.3, freq: 110, freqEnd: 50 },
     ],
+  },
+  shot: {
+    noise: [
+      { dur: 0.12, vol: 0.7, filter: 'bandpass', freq: 1800, q: 0.7 },
+      { dur: 0.25, vol: 0.45, filter: 'lowpass', freq: 600 },
+    ],
+    tones: [{ dur: 0.12, vol: 0.3, freq: 260, freqEnd: 70, wave: 'square' }],
+    minGap: 0.05,
+  },
+  reload: {
+    noise: [
+      { dur: 0.05, vol: 0.4, filter: 'bandpass', freq: 3000, q: 2 },
+      { at: 0.18, dur: 0.06, vol: 0.5, filter: 'bandpass', freq: 2200, q: 2 },
+    ],
+    tones: [{ at: 0.18, dur: 0.05, vol: 0.2, freq: 420, freqEnd: 300, wave: 'square' }],
+  },
+  enemyHurt: {
+    noise: [{ dur: 0.1, vol: 0.35, filter: 'bandpass', freq: 900, q: 1.5 }],
+    tones: [{ dur: 0.12, vol: 0.2, freq: 330, freqEnd: 160, wave: 'sawtooth' }],
+    minGap: 0.06,
   },
   pickup: {
     tones: [

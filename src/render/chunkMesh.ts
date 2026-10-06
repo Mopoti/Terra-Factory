@@ -127,7 +127,12 @@ function buildProps(
     const cxm = (o.gx + o.cells / 2) * CELL_SIZE_M - ox;
     const czm = (o.gz + o.cells / 2) * CELL_SIZE_M - oz;
     // Un buisson de fibres se traverse (comme de l'herbe haute) ; le reste bloque.
-    if (o.id !== 'fiber_bush') markBlocked(o.gx, o.gz, o.cells);
+    if (o.id === 'tree') {
+      // Seul le tronc bloque (une case) : on passe sous les branches.
+      const tx = cxm + Math.cos(o.rotation) * 0.2 + ox;
+      const tz = czm + Math.sin(o.rotation) * 0.2 + oz;
+      blocked.push(`${Math.floor(tx / CELL_SIZE_M)},${Math.floor(tz / CELL_SIZE_M)}`);
+    } else if (o.id !== 'fiber_bush') markBlocked(o.gx, o.gz, o.cells);
     // La caméra traverse le feuillage (l'aura de transparence gère la visibilité) ; elle ne traverse
     // pas les obstacles solides (rochers, nids, et plus tard les murs).
     if (o.id !== 'tree' && o.id !== 'fiber_bush') {
@@ -138,10 +143,11 @@ function buildProps(
     if (o.id === 'tree') {
       const x = cxm + Math.cos(o.rotation) * 0.2;
       const z = czm + Math.sin(o.rotation) * 0.2;
-      b.cone(x, 0, z, 0.12 * o.scale, 0.5 * o.scale, 5, TRUNK, 0.09 * o.scale);
+      // Tronc haut et fin (le personnage de 1,70 m passe dessous), feuillage au-dessus de 2 m.
+      b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
       const green = shade(base, jitter);
-      b.cone(x, 0.35 * o.scale, z, 0.6 * o.scale, 1.3 * o.scale, 7, green);
-      b.cone(x, 0.95 * o.scale, z, 0.42 * o.scale, 1.0 * o.scale, 7, shade(green, 1.12));
+      b.cone(x, 2.0 * o.scale, z, 0.95 * o.scale, 1.7 * o.scale, 8, green);
+      b.cone(x, 2.9 * o.scale, z, 0.65 * o.scale, 1.4 * o.scale, 8, shade(green, 1.12));
     } else if (o.id === 'fiber_bush') {
       // Touffe de brins clairs.
       const x = cxm + Math.cos(o.rotation) * 0.1;

@@ -5,6 +5,7 @@ import { Threat, cellOf, type ThreatWorld } from './threat';
 const world: ThreatWorld = {
   nestsIn: (pcx, pcz) => (pcx === cellOf(100) && pcz === cellOf(0) ? [{ x: 100, z: 0 }] : []),
   treesIn: () => 0,
+  nestsNear: (x, z, r) => (Math.hypot(x - 100, z) <= r ? [{ x: 100, z: 0 }] : []),
 };
 
 const run = (
@@ -17,7 +18,7 @@ const run = (
 
 describe('pollution', () => {
   it('s’accumule, se répand et disparaît peu à peu (absorption)', () => {
-    const t = new Threat({}, world, { aggressive: false });
+    const t = new Threat({}, {}, world, { aggressive: false });
     t.emit(0, 0, 100);
     expect(t.at(0, 0)).toBe(100);
     run(t, 4, []);
@@ -29,8 +30,8 @@ describe('pollution', () => {
 
   it('les arbres absorbent', () => {
     const woods: ThreatWorld = { ...world, treesIn: () => 40 };
-    const a = new Threat({}, world, { aggressive: false });
-    const b = new Threat({}, woods, { aggressive: false });
+    const a = new Threat({}, {}, world, { aggressive: false });
+    const b = new Threat({}, {}, woods, { aggressive: false });
     a.emit(0, 0, 50);
     b.emit(0, 0, 50);
     run(a, 20);
@@ -41,7 +42,7 @@ describe('pollution', () => {
 
 describe('nids et ennemis', () => {
   it('un nid qui absorbe assez de pollution fabrique un ennemi ; sans pollution, rien', () => {
-    const t = new Threat({}, world, { aggressive: false });
+    const t = new Threat({}, {}, world, { aggressive: false });
     run(t, 60);
     expect(t.enemies).toHaveLength(0);
     // pollution dans la cellule du nid : 3 points/s pendant 30 s
@@ -53,7 +54,7 @@ describe('nids et ennemis', () => {
   });
 
   it('les ennemis vont vers l’installation polluante et la détruisent à coups de dégâts', () => {
-    const t = new Threat({}, world, { aggressive: false });
+    const t = new Threat({}, {}, world, { aggressive: false });
     t.enemies.push({ id: 1, x: 100, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
     const targets = [{ id: 'machine:7', x: 60, z: 0 }];
     let dealt = 0;
@@ -65,11 +66,11 @@ describe('nids et ennemis', () => {
   });
 
   it('un ennemi peu agressif ignore le joueur lointain ; le joueur peut les frapper', () => {
-    const calm = new Threat({}, world, { aggressive: false });
+    const calm = new Threat({}, {}, world, { aggressive: false });
     calm.enemies.push({ id: 1, x: 0, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
     calm.update(0.05, [{ id: 'player', x: 20, z: 0 }]);
     expect(calm.enemies[0].target).toBeNull();
-    const fierce = new Threat({}, world, { aggressive: true });
+    const fierce = new Threat({}, {}, world, { aggressive: true });
     fierce.enemies.push({ id: 1, x: 0, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
     fierce.update(0.05, [{ id: 'player', x: 20, z: 0 }]);
     expect(fierce.enemies[0].target).toBe('player');
@@ -80,8 +81,45 @@ describe('nids et ennemis', () => {
 
   it('la pollution est enregistrée avec la partie', () => {
     const saved = { '0,0': 12 };
-    const t = new Threat(saved, world, { aggressive: false });
+    const t = new Threat(saved, {}, world, { aggressive: false });
     t.emit(1, 1, 5);
     expect(saved['0,0']).toBe(17);
+  });
+});
+
+describe('pollution du sol et gardiens', () => {
+  it('la pollution du sol ne se répand pas et s’efface très lentement', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    t.emit(0, 0, 50, 'ground');
+    run(t, 10);
+    expect(t.groundAt(0, 0)).toBeGreaterThan(48);
+    expect(t.at(0, 0) + t.at(1, 0)).toBe(0);
+    expect(t.groundAt(1, 0) + t.groundAt(-1, 0)).toBe(0);
+  });
+
+  it('un nid nourri de pollution du sol fabrique aussi des ennemis', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    for (let s = 0; s < 80; s++) {
+      t.emit(100, 0, 2, 'ground');
+      run(t, 1);
+    }
+    expect(t.enemies.length).toBeGreaterThan(0);
+  });
+
+  it('un nid garde 3 gardiens quand le joueur approche ; ils ne poursuivent que le joueur proche', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    t.keepGuards(1000, 1000, 1);
+    expect(t.enemies).toHaveLength(0);
+    t.keepGuards(60, 0, 1);
+    expect(t.enemies).toHaveLength(3);
+    t.update(0.05, [{ id: 'player', x: 160, z: 0 }]);
+    expect(t.enemies.every((e) => e.target === null)).toBe(true);
+    t.update(0.05, [{ id: 'player', x: 108, z: 0 }]);
+    expect(t.enemies.every((e) => e.target === 'player')).toBe(true);
+    // un gardien tué est remplacé au bout de 2 minutes
+    t.hit(100, 0, 10, 100);
+    expect(t.enemies).toHaveLength(2);
+    for (let i = 0; i < 125; i++) t.keepGuards(60, 0, 1);
+    expect(t.enemies).toHaveLength(3);
   });
 });

@@ -84,6 +84,7 @@ import { FactoryView } from './factoryView';
 import type { Structure } from './interaction';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
+import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
 import { POLLUTION_CELL_M, Threat, type ThreatTarget, type ThreatWorld } from '../core/game/threat';
 
@@ -990,7 +991,7 @@ export function startGameView(
     }
     if ((def.pollution ?? 0) > 0) {
       rows.push(
-        `<div class="sub">${t('threat.pollution', { v: String(Math.round(factory.pollutionRate(m) * 60)) })}</div>`,
+        `<div class="sub">${t(`threat.pollution.${def.pollutionKind ?? 'air'}` as TranslationKey, { v: String(Math.round(factory.pollutionRate(m) * 60)) })}</div>`,
       );
     }
     if (def.fuel) {
@@ -1402,13 +1403,34 @@ export function startGameView(
     nestCache.set(k, nests);
     treeCache.set(k, trees);
   };
+  const nestsNear = (x: number, z: number, radiusM: number): { x: number; z: number }[] => {
+    const out: { x: number; z: number }[] = [];
+    const r = Math.ceil(radiusM / POLLUTION_CELL_M);
+    const cx = Math.floor(x / POLLUTION_CELL_M);
+    const cz = Math.floor(z / POLLUTION_CELL_M);
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        scanCell(cx + dx, cz + dz);
+        for (const n of nestCache.get(`${cx + dx},${cz + dz}`) ?? []) {
+          if (Math.hypot(n.x - x, n.z - z) <= radiusM) out.push(n);
+        }
+      }
+    }
+    return out;
+  };
   const threatWorld: ThreatWorld = {
+    nestsNear,
     nestsIn: (pcx, pcz) => (scanCell(pcx, pcz), nestCache.get(`${pcx},${pcz}`) ?? []),
     treesIn: (pcx, pcz) => (scanCell(pcx, pcz), treeCache.get(`${pcx},${pcz}`) ?? 0),
   };
-  const threat = new Threat(options.state.changes.pollution, threatWorld, {
-    aggressive: game.options.enemies.aggressive,
-  });
+  const threat = new Threat(
+    options.state.changes.pollution,
+    options.state.changes.groundPollution,
+    threatWorld,
+    {
+      aggressive: game.options.enemies.aggressive,
+    },
+  );
   const enemyView = new EnemyView(scene);
   const MAX_HEALTH = 100;
   const MACHINE_HEALTH = 120;
@@ -1416,6 +1438,49 @@ export function startGameView(
   let sinceHurt = 99;
   let attackCooldown = 0;
   let pollutionClock = 0;
+  let tracerLife = 0;
+  const tracer = new THREE.Line(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: 0xffe28a }),
+  );
+  tracer.visible = false;
+  tracer.frustumCulled = false;
+  scene.add(tracer);
+  // Pistolet : en main (1ère personne) et au bout du bras du personnage.
+  const gunMat = new THREE.MeshStandardMaterial({ color: 0x4a4f57 });
+  const gripMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22 });
+  function makeGun(): THREE.Group {
+    const g = new THREE.Group();
+    const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.34), gunMat);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.07), gripMat);
+    grip.position.set(0, -0.1, -0.1);
+    grip.rotation.x = 0.25;
+    g.add(barrel, grip);
+    g.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = true;
+    });
+    return g;
+  }
+  const gun = makeGun();
+  gun.position.set(0.26, -0.24, -0.6);
+  gun.visible = false;
+  camera.add(gun);
+  const gunBody = makeGun();
+  gunBody.scale.setScalar(1.4);
+  gunBody.position.set(-0.3, 0.1, 0.4);
+  gunBody.visible = false;
+  player.add(gunBody);
+  const ammoBox = document.createElement('div');
+  ammoBox.className = 'ammo-box';
+  ammoBox.hidden = true;
+  container.appendChild(ammoBox);
+  function renderAmmo(): void {
+    ammoBox.textContent = t('weapon.ammo', {
+      n: String(options.state.changes.ammo),
+      max: String(MAGAZINE_ROUNDS),
+      mags: String(options.state.inventory.magazine ?? 0),
+    });
+  }
   let targetClock = 0;
   let threatTargets: ThreatTarget[] = [];
   const machineHealth = new Map<number, number>();
@@ -1438,7 +1503,7 @@ export function startGameView(
         const rate = factory.pollutionRate(m);
         if (rate > 0) {
           const c = machineCenter(m);
-          threat.emit(c.x, c.z, rate);
+          threat.emit(c.x, c.z, rate, machineDef(m.type).pollutionKind ?? 'air');
         }
       }
     }
@@ -1467,9 +1532,43 @@ export function startGameView(
         } else machineHealth.set(id, left);
       }
     }
-    // Le joueur frappe les ennemis proches (clic gauche).
+    // Les nids proches gardent leurs gardiens.
+    threat.keepGuards(playerX, playerZ, dt);
+    // Le joueur combat : au pistolet (clic gauche pour tirer, R pour recharger) ou, sinon, au corps à corps.
     attackCooldown = Math.max(0, attackCooldown - dt);
-    if (attackCooldown <= 0 && !building && input.isActionActive('interact')) {
+    tracerLife = Math.max(0, tracerLife - dt);
+    tracer.visible = tracerLife > 0;
+    const armed = options.state.selectedItem() === 'pistol' && !building;
+    gun.visible = armed && rig.view === 'first';
+    gunBody.visible = armed && rig.view !== 'first';
+    if (armed) {
+      if (pressed('rotate')) {
+        const result = options.state.reload();
+        if (result === 'ok') {
+          playSfx('reload');
+          options.onMessage?.(t('weapon.reloaded'));
+        } else if (result === 'noMagazine') options.onMessage?.(t('weapon.noMagazine'));
+      }
+      if (attackCooldown <= 0 && input.isActionActive('interact')) {
+        attackCooldown = 0.35;
+        if (!options.state.fire()) {
+          playSfx('deny');
+          options.onMessage?.(t('weapon.empty'));
+        } else {
+          computeRay();
+          const shot = threat.shoot(rayOrigin, rayDir, 40, 10);
+          playSfx('shot');
+          const end = rayOrigin.clone().addScaledVector(rayDir, shot.distance);
+          const start = rayOrigin.clone().addScaledVector(rayDir, 0.6);
+          if (rig.view !== 'first') start.set(playerX, playerY + 1.1, playerZ);
+          tracer.geometry.setFromPoints([start, end]);
+          tracerLife = 0.07;
+          if (shot.result === 'kill') playSfx('rockBreak');
+          else if (shot.result === 'hit') playSfx('enemyHurt');
+          renderAmmo();
+        }
+      }
+    } else if (attackCooldown <= 0 && !building && input.isActionActive('interact')) {
       const result = threat.hit(playerX, playerZ, 2.6, 12);
       if (result) {
         attackCooldown = 0.45;
@@ -1690,8 +1789,11 @@ export function startGameView(
     player.visible = rig.view !== 'first';
     player.position.set(playerX, playerY + PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
-    hand.visible = rig.view === 'first' && views.first.showHands;
-    bodyTool.visible = rig.view !== 'first';
+    const armedNow = options.state.selectedItem() === 'pistol' && !building;
+    hand.visible = rig.view === 'first' && views.first.showHands && !armedNow;
+    bodyTool.visible = rig.view !== 'first' && !armedNow;
+    ammoBox.hidden = !armedNow;
+    if (armedNow) renderAmmo();
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';
     hint.hidden = !(rig.view === 'first' && !paused && !uiOpen && !isLocked());
     sun.position.set(playerX + 8, 16, playerZ + 6);
@@ -1764,7 +1866,12 @@ export function startGameView(
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,
       player: { x: playerX, z: playerZ },
-      active: !paused && !uiOpen && !building && input.isActionActive('interact'),
+      active:
+        !paused &&
+        !uiOpen &&
+        !building &&
+        options.state.selectedItem() !== 'pistol' &&
+        input.isActionActive('interact'),
       demolishing:
         !paused && !uiOpen && !building && input.isActionActive('secondary') && rightMoved < 10,
       // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
