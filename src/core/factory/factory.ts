@@ -63,7 +63,29 @@ export interface Machine {
   recipe: string | null;
   /** Fluides contenus (tuyau, pompe, chaudière, turbine). */
   fluid: Record<FluidKind, number>;
+  /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol. */
+  lift: number;
 }
+
+/**
+ * Formes verticales d'un tapis. `from` / `to` : niveau (0 = sol, 1 = en l'air à 1 m, −1 = sous terre) à l'entrée et à
+ * la sortie ; `layers` : couches d'espace occupées (un tapis surélevé laisse libre le sol sous lui, un tunnel aussi).
+ * Les pentes font 45° : 1 m de dénivelé sur une tuile de 1 m.
+ */
+export const LIFTS: ReadonlyArray<{ from: number; to: number; layers: readonly number[] }> = [
+  { from: 0, to: 0, layers: [0] }, // 0 : à plat, au sol
+  { from: 0, to: 1, layers: [0] }, // 1 : rampe montante
+  { from: 1, to: 1, layers: [1] }, // 2 : surélevé
+  { from: 1, to: 0, layers: [1, 0] }, // 3 : rampe descendante
+  { from: 0, to: -1, layers: [0, -1] }, // 4 : entrée de tunnel
+  { from: -1, to: -1, layers: [-1] }, // 5 : souterrain
+  { from: -1, to: 0, layers: [-1] }, // 6 : sortie de tunnel
+];
+export const LIFT_COUNT = LIFTS.length;
+/** Hauteur d'un niveau (m). */
+export const LEVEL_M = 1;
+export const liftStart = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].from : 0);
+export const liftEnd = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].to : 0);
 
 /** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */
 export const recipeOf = (m: Machine): Record<string, number> | null =>
@@ -262,6 +284,7 @@ export function emptyMachine(
   gx: number,
   gz: number,
   rot: number,
+  lift = 0,
 ): Machine {
   return {
     id,
@@ -278,6 +301,7 @@ export function emptyMachine(
     slots: [],
     recipe: null,
     fluid: emptyFluid(),
+    lift: type === 'conveyor' && Number.isInteger(lift) && lift > 0 && lift < LIFT_COUNT ? lift : 0,
   };
 }
 
@@ -312,6 +336,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
       Math.floor(m.gx),
       Math.floor(m.gz),
       Math.floor(m.rot),
+      isNum(m.lift) ? m.lift : 0,
     );
     machine.fuelLeft = isNum(m.fuelLeft) && m.fuelLeft > 0 ? m.fuelLeft : 0;
     machine.fuel = normalizeStack(m.fuel);
@@ -410,7 +435,9 @@ export class Factory {
 
   reindex(): void {
     this.cells.clear();
-    this.linearCells.clear();
+    this.upper.clear();
+    this.lower.clear();
+    this.occupied.clear();
     // Les machines d'abord : un tapis ou un tuyau posé à cheval sur une machine ne « possède » que ses cases libres
     // (la partie dans la machine est cachée et la machine reste celle qu'on trouve sur ces cases).
     for (const m of this.machines) {
@@ -419,10 +446,19 @@ export class Factory {
     }
     for (const m of this.machines) {
       if (!isLinear(m.type)) continue;
+      const start = liftStart(m);
       for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
         const k = `${c.gx},${c.gz}`;
-        this.linearCells.add(k);
-        if (!this.cells.has(k)) this.cells.set(k, m);
+        for (const layer of m.type === 'conveyor' ? LIFTS[m.lift].layers : [0]) {
+          let set = this.occupied.get(layer);
+          if (!set) this.occupied.set(layer, (set = new Set()));
+          set.add(k);
+        }
+        if (start === 1) this.upper.set(k, m);
+        else if (start === -1) this.lower.set(k, m);
+        // Au sol : les tapis qui partent du sol et la rampe qui y arrive (visée par le joueur).
+        if ((start === 0 || liftEnd(m) === 0) && !this.cells.has(k)) this.cells.set(k, m);
+        if (start === 1 && liftEnd(m) === 0) this.upper.set(k, m);
       }
     }
     this.buildGrids();
@@ -438,8 +474,12 @@ export class Factory {
     );
   }
 
-  /** Cases couvertes par un tapis ou un tuyau (même celles cachées dans une machine). */
-  private readonly linearCells = new Set<string>();
+  /** Cases prises par les tapis et tuyaux, par couche (0 = sol, 1 = en l'air, −1 = sous terre). */
+  private readonly occupied = new Map<number, Set<string>>();
+  /** Tapis qui partent d'en l'air / de sous terre, par case. */
+  private readonly upper = new Map<string, Machine>();
+  private readonly lower = new Map<string, Machine>();
+
   private links: FluidLink[] = [];
   private pumpsOk = new Set<number>();
 
@@ -540,19 +580,54 @@ export class Factory {
     return this.neighbors(m, dir)[0] ?? null;
   }
 
-  /** Toutes les machines qui touchent le côté `dir` de `m` (la case du milieu d'abord, puis les autres). */
+  /** Toutes les machines qui reçoivent ce que `m` pousse par son côté `dir` (la case du milieu d'abord). */
   neighbors(m: Machine, dir: number): Machine[] {
-    const mid = sideCell(m.type, m.gx, m.gz, m.rot, dir);
+    const level = liftEnd(m);
     const out: Machine[] = [];
-    for (const c of [mid, ...sideCells(m.type, m.gx, m.gz, m.rot, dir)]) {
-      const found = this.machineAt(c.gx, c.gz);
-      if (found && found !== m && !out.includes(found)) out.push(found);
+    for (const f of this.sideCandidates(m, dir)) {
+      const found = this.layerAt(level, f.gx, f.gz);
+      if (!found || found === m || out.includes(found)) continue;
+      // Un tapis ne reçoit que par son niveau d'entrée ; les machines sont toutes au sol.
+      if (found.type === 'conveyor' ? liftStart(found) !== level : level !== 0) continue;
+      out.push(found);
     }
     return out;
   }
 
-  machineAt(gx: number, gz: number): Machine | null {
-    return this.cells.get(`${gx},${gz}`) ?? null;
+  /** Tout ce qui touche le côté `dir` de `m` et lui amène des objets (un tapis dont la sortie est à notre niveau). */
+  feeders(m: Machine, dir: number): Machine[] {
+    const level = liftStart(m);
+    const out: Machine[] = [];
+    for (const f of this.sideCandidates(m, dir)) {
+      for (const found of [
+        this.cells.get(`${f.gx},${f.gz}`),
+        this.upper.get(`${f.gx},${f.gz}`),
+        this.lower.get(`${f.gx},${f.gz}`),
+      ]) {
+        if (!found || found === m || out.includes(found)) continue;
+        if (found.type === 'conveyor' ? liftEnd(found) !== level : level !== 0) continue;
+        out.push(found);
+      }
+    }
+    return out;
+  }
+
+  private sideCandidates(m: Machine, dir: number): Cell[] {
+    return [sideCell(m.type, m.gx, m.gz, m.rot, dir), ...sideCells(m.type, m.gx, m.gz, m.rot, dir)];
+  }
+
+  /** Pièce (machine ou tapis) qui démarre à ce niveau sur cette case. */
+  private layerAt(level: number, gx: number, gz: number): Machine | null {
+    const k = `${gx},${gz}`;
+    const found =
+      level === 0 ? this.cells.get(k) : level === 1 ? this.upper.get(k) : this.lower.get(k);
+    return found ?? null;
+  }
+
+  /** Ce qu'il y a sur cette case : au sol par défaut, ou en l'air (1) / sous terre (−1). */
+  machineAt(gx: number, gz: number, layer = 0): Machine | null {
+    const k = `${gx},${gz}`;
+    return (layer === 0 ? this.cells : layer === 1 ? this.upper : this.lower).get(k) ?? null;
   }
 
   /** La machine peut-elle se poser là (cases libres, sol praticable) ? */
@@ -562,16 +637,23 @@ export class Factory {
     gz: number,
     rot: number,
     blocked: (c: Cell) => boolean,
+    lift = 0,
   ): boolean {
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
     const cells = footprint(type, gx, gz, rot);
     if (isLinear(type)) {
-      // Un tapis / tuyau peut chevaucher une machine (la moitié cachée dedans), mais pas un autre tapis / tuyau,
-      // et au moins une de ses cases doit être visible (libre).
+      const layers = type === 'conveyor' ? (LIFTS[lift]?.layers ?? [0]) : [0];
+      if (type === 'conveyor' && !LIFTS[lift]) return false;
+      // Aucune place déjà prise dans les couches qu'il occupe (un tapis peut passer sur ou sous un autre).
+      const taken = (c: Cell): boolean =>
+        layers.some((l) => this.occupied.get(l)?.has(`${c.gx},${c.gz}`));
+      // Un tapis / tuyau au sol peut chevaucher une machine (la moitié cachée dedans), mais au moins une de ses
+      // cases doit être visible (libre). En l'air ou sous terre, les machines ne gênent pas.
+      const onGround = layers.includes(0);
       const free = cells.filter((c) => !this.cells.has(`${c.gx},${c.gz}`));
       return (
-        free.length > 0 &&
-        cells.every((c) => !this.linearCells.has(`${c.gx},${c.gz}`) && !blocked(c))
+        (!onGround || free.length > 0) &&
+        cells.every((c) => !taken(c) && (!onGround || !blocked(c)))
       );
     }
     return cells.every((c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c));
@@ -1080,7 +1162,7 @@ export class Factory {
       for (let i = 0; i < 3; i++) {
         const k = (Math.floor(m.progress) + i) % 3;
         const side = (m.rot + [2, 3, 1][k]) % 4;
-        const src = this.neighbors(m, side).find(
+        const src = this.feeders(m, side).find(
           (c) => c.type === 'conveyor' && (c.rot + 2) % 4 === side && c.belt[0]?.pos >= 1,
         );
         const head = src?.belt[0];
@@ -1226,7 +1308,9 @@ export class Factory {
   }
 
   private tickBelt(m: Machine, dt: number): void {
-    const speed = machineDef('conveyor').cellsPerSecond ?? 0.75;
+    // Une pente à 45° est plus longue qu'une tuile plate (√2) : on y avance moins vite.
+    const slope = liftStart(m) !== liftEnd(m) ? Math.SQRT1_2 : 1;
+    const speed = (machineDef('conveyor').cellsPerSecond ?? 0.75) * slope;
     for (let i = 0; i < m.belt.length; i++) {
       const limit = i === 0 ? 1 : m.belt[i - 1].pos - GAP;
       m.belt[i].pos = Math.min(limit, m.belt[i].pos + speed * dt);
@@ -1249,17 +1333,30 @@ export function pickMachine(
   for (let t = 0.1; t <= maxDist; t += 0.05) {
     const y = origin.y + dir.y * t;
     if (y < 0) return null;
-    const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
-    const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
+    const px = origin.x + dir.x * t;
+    const pz = origin.z + dir.z * t;
+    const gx = Math.floor(px / CELL_SIZE_M);
+    const gz = Math.floor(pz / CELL_SIZE_M);
+    // En l'air : tapis surélevés et rampes (entre 0,85 m et 1,3 m).
+    if (y >= 0.85 && y <= 1.3) {
+      const up = factory.machineAt(gx, gz, 1);
+      if (up) return { machine: up, t };
+    }
     const m = factory.machineAt(gx, gz);
-    if (m && y <= visualHeight(m.type)) {
+    const top =
+      m && m.type === 'conveyor' && m.lift !== 0 ? LEVEL_M + 0.15 : m ? visualHeight(m.type) : 0;
+    if (m && y <= top) {
       // Le poteau est fin : on ne le vise que près de son mât (au milieu de son emprise).
       if (m.type === 'pole') {
         const c = centerOf(m);
-        if (Math.hypot(origin.x + dir.x * t - c.x, origin.z + dir.z * t - c.z) > POLE_HIT_M)
-          continue;
+        if (Math.hypot(px - c.x, pz - c.z) > POLE_HIT_M) continue;
       }
       return { machine: m, t };
+    }
+    // Sous terre : on vise la plaque du tunnel à ras du sol.
+    if (y <= 0.1) {
+      const under = factory.machineAt(gx, gz, -1);
+      if (under) return { machine: under, t };
     }
   }
   return null;

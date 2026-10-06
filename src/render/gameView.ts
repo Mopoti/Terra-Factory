@@ -71,6 +71,7 @@ import {
 } from '../core/data/machines';
 import {
   Factory,
+  LIFT_COUNT,
   POLE_HIT_M,
   centerOf,
   dims,
@@ -342,6 +343,8 @@ export function startGameView(
   let buildLevel = 0;
   /** Orientation en quarts de tour (touche R), `null` = automatique (le bord le plus proche, contre le mur visé). Pour un mur : pair = le long de x, impair = le long de z. */
   let buildRot: number | null = null;
+  /** Forme verticale du tapis qu'on pose (PageUp / PageDown) : voir `LIFTS`. */
+  let buildLift = 0;
   /** Axe du dernier bord visé (pour que R parte de l'orientation actuelle d'un mur). */
   let lastAimAxis: 'x' | 'z' = 'x';
   let lastBuildItem: string | null = null;
@@ -375,7 +378,9 @@ export function startGameView(
         buildRot === null
           ? t('build.rotationAuto')
           : t('build.rotation', { deg: String(buildRot * 90) });
-      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
+      const lift =
+        def.id === 'conveyor' ? ` · ${t(`factory.lift.${buildLift}` as TranslationKey)}` : '';
+      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
       return;
     }
     const rooms = options.state.rooms().length;
@@ -808,8 +813,9 @@ export function startGameView(
         { gx: cell.gx - 1, gz: cell.gz - 1 },
       ];
       return (
-        options.find((o) => factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked)) ??
-        options[0]
+        options.find((o) =>
+          factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked, buildLift),
+        ) ?? options[0]
       );
     };
     if (down) {
@@ -846,10 +852,11 @@ export function startGameView(
             ? dirIndex(path[i - 1], cell)
             : baseRot;
       const free =
-        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && tileWithin(cell);
+        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked, buildLift) &&
+        tileWithin(cell);
       const ok = free && left > 0;
       if (ok) left--;
-      return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok };
+      return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok, lift: buildLift };
     });
     factoryView.showGhost(ghosts);
     if (!down && machinePath.length > 0) {
@@ -857,7 +864,15 @@ export function startGameView(
       for (const g of ghosts) {
         if (
           g.ok &&
-          options.state.placeMachine(factory, def.id, g.gx, g.gz, g.rot, machineBlocked) === 'ok'
+          options.state.placeMachine(
+            factory,
+            def.id,
+            g.gx,
+            g.gz,
+            g.rot,
+            machineBlocked,
+            buildLift,
+          ) === 'ok'
         )
           placed++;
       }
@@ -1249,7 +1264,9 @@ export function startGameView(
   /** Les machines et les tuyaux sont pleins (on ne les traverse pas) ; les tapis se marchent. */
   const machineSolidAt = (xM: number, zM: number): boolean => {
     const m = factory.machineAt(Math.floor(xM / CELL_SIZE_M), Math.floor(zM / CELL_SIZE_M));
-    if (m === null || m.type === 'conveyor') return false;
+    // Les tapis à plat se marchent ; les rampes sont pleines.
+    if (m !== null && m.type === 'conveyor') return m.lift === 1 || m.lift === 3;
+    if (m === null) return false;
     // Un poteau ne bloque que près de son mât.
     if (m.type === 'pole') {
       const c = centerOf(m);
@@ -1331,7 +1348,7 @@ export function startGameView(
       Math.floor(playerX / CELL_SIZE_M),
       Math.floor(playerZ / CELL_SIZE_M),
     );
-    if (!m || m.type !== 'conveyor') return;
+    if (!m || m.type !== 'conveyor' || m.lift !== 0) return;
     const [dx, dz] = RISE_DIR[m.rot];
     const dist = (machineDef('conveyor').cellsPerSecond ?? 0.75) * 2 * CELL_SIZE_M * dt;
     const nx = playerX + dx * dist;
@@ -1811,11 +1828,18 @@ export function startGameView(
             buildRot = ((buildRot ?? base) + 1) % 4;
             renderBuildHud();
           }
-          if (pressed('levelUp')) {
+          const up = pressed('levelUp');
+          const down = pressed('levelDown');
+          if (buildingMachine) {
+            // Tapis : change de forme (plat, rampe, surélevé, descente, tunnel).
+            if ((up || down) && selectedMachine()?.id === 'conveyor') {
+              buildLift = (buildLift + (up ? 1 : LIFT_COUNT - 1)) % LIFT_COUNT;
+              renderBuildHud();
+            }
+          } else if (up) {
             buildLevel = Math.min(9, buildLevel + 1);
             renderBuildHud();
-          }
-          if (pressed('levelDown')) {
+          } else if (down) {
             buildLevel = Math.max(0, buildLevel - 1);
             renderBuildHud();
           }

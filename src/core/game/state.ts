@@ -480,12 +480,13 @@ export class GameState {
     gz: number,
     rot: number,
     blocked: (c: Cell) => boolean,
+    lift = 0,
   ): 'ok' | 'missing' | 'blocked' {
     const def = machineDef(type);
     if ((this.inventory[def.item] ?? 0) < 1) return 'missing';
-    if (!factory.canPlace(type, gx, gz, rot, blocked)) return 'blocked';
+    if (!factory.canPlace(type, gx, gz, rot, blocked, lift)) return 'blocked';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
-    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot));
+    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift));
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return 'ok';

@@ -13,8 +13,12 @@ import {
   type MachineType,
 } from '../core/data/machines';
 import {
+  LEVEL_M,
+  LIFTS,
   dims,
   footprint,
+  liftEnd,
+  liftStart,
   outputCell,
   ports,
   sideCell,
@@ -112,6 +116,7 @@ export function beltEntry(
   const lands = (c: { gx: number; gz: number }): boolean => mine.has(`${c.gx},${c.gz}`);
   const feeds = (n: Machine | null): boolean => {
     if (!n || n === m) return false;
+    if (n.type === 'conveyor' && liftEnd(n) !== liftStart(m)) return false;
     if (n.type === 'splitter') {
       // Trois sorties : devant, gauche, droite (pas derrière).
       const back = (n.rot + 2) % 4;
@@ -125,14 +130,17 @@ export function beltEntry(
         : outputCell(n.type, n.gx, n.gz, n.rot);
     return lands(front);
   };
+  const feeder = (dir: number): boolean => factory.feeders(m, dir).some(feeds);
   // Derrière : tout droit.
-  if (feeds(factory.neighbor(m, (m.rot + 2) % 4))) return { ex: -dx, ez: -dz, curved: false };
+  if (feeder((m.rot + 2) % 4)) return { ex: -dx, ez: -dz, curved: false };
+  // Les pentes et les tunnels restent droits.
+  if (m.lift !== 0) return { ex: -dx, ez: -dz, curved: false };
   // Sur les côtés : virage.
   for (const [dir, sx, sz] of [
     [(m.rot + 3) % 4, -dz, dx],
     [(m.rot + 1) % 4, dz, -dx],
   ] as const) {
-    if (feeds(factory.neighbor(m, dir))) return { ex: sx, ez: sz, curved: true };
+    if (feeder(dir)) return { ex: sx, ez: sz, curved: true };
   }
   return { ex: -dx, ez: -dz, curved: false };
 }
@@ -181,7 +189,7 @@ export class FactoryView {
       if (m.type === 'conveyor') {
         const entry = beltEntry(this.factory, m);
         this.entries.set(m.id, entry);
-        addBelt(mb, m.gx, m.gz, m.rot, entry, hexToRgb(machineDef('conveyor').color));
+        addBelt(mb, m, entry, hexToRgb(machineDef('conveyor').color), this.factory);
       } else {
         const start = mb.positions.length;
         addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m));
@@ -240,7 +248,9 @@ export class FactoryView {
           x = cx + dx * k;
           z = cz + dz * k;
         }
-        mb.box(x, BELT_H, z, 0.22, 0.16, 0.22, hexToRgb(itemById(b.item).color), true);
+        const y = itemHeight(m, b.pos);
+        if (y === null) continue;
+        mb.box(x, y, z, 0.22, 0.16, 0.22, hexToRgb(itemById(b.item).color), true);
       }
     }
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
@@ -265,12 +275,16 @@ export class FactoryView {
   }
 
   /** Aperçu d'une ou plusieurs machines à poser : vert si possible, rouge sinon. */
-  showGhost(list: { type: MachineType; gx: number; gz: number; rot: number; ok: boolean }[]): void {
+  showGhost(
+    list: { type: MachineType; gx: number; gz: number; rot: number; ok: boolean; lift?: number }[],
+  ): void {
     if (list.length === 0) {
       this.hideGhost();
       return;
     }
-    const key = list.map((g) => `${g.type}${g.gx},${g.gz},${g.rot}${g.ok ? '+' : '-'}`).join(';');
+    const key = list
+      .map((g) => `${g.type}${g.gx},${g.gz},${g.rot}${g.lift ?? 0}${g.ok ? '+' : '-'}`)
+      .join(';');
     if (key !== this.ghostKey) {
       this.ghostKey = key;
       const mb = new MeshBuilder();
@@ -279,7 +293,7 @@ export class FactoryView {
         const { w, d } = dims(g.type, g.rot);
         const x = (g.gx + w / 2) * CELL_SIZE_M;
         const z = (g.gz + d / 2) * CELL_SIZE_M;
-        if (g.type === 'conveyor') mb.box(x, 0, z, BELT_W, 0.14, BELT_W, color, true);
+        if (g.type === 'conveyor') ghostBelt(mb, x, z, g.rot, g.lift ?? 0, color);
         else
           mb.box(
             x,
@@ -321,13 +335,180 @@ export class FactoryView {
   }
 }
 
+/** Hauteur (m) d'un objet sur un tapis à l'avancement `pos`, ou null s'il est caché sous terre. */
+function itemHeight(m: Machine, pos: number): number | null {
+  switch (m.lift) {
+    case 1:
+      return BELT_H + LEVEL_M * pos;
+    case 2:
+      return BELT_H + LEVEL_M;
+    case 3:
+      return BELT_H + LEVEL_M * (1 - pos);
+    case 4:
+      return pos < 0.5 ? BELT_H * (1 - 2 * pos) : null;
+    case 5:
+      return null;
+    case 6:
+      return pos > 0.5 ? BELT_H * (2 * pos - 1) : null;
+    default:
+      return BELT_H;
+  }
+}
+
+/** Dalle inclinée sur une tuile : de la hauteur `y0` au bord arrière à `y1` au bord avant. */
+function slope(
+  mb: MeshBuilder,
+  cx: number,
+  cz: number,
+  rot: number,
+  y0: number,
+  y1: number,
+  thick: number,
+  color: Rgb,
+): void {
+  const [dx, dz] = RISE_DIR[rot];
+  const px = -dz;
+  const pz = dx;
+  const h = TILE_M / 2;
+  const w = BELT_W / 2;
+  const at = (along: number, across: number, y: number): [number, number, number] => [
+    cx + dx * along + px * across,
+    y,
+    cz + dz * along + pz * across,
+  ];
+  const yy = (along: number): number => (along < 0 ? y0 : y1);
+  const a = at(-h, -w, yy(-h) + thick);
+  const b = at(-h, w, yy(-h) + thick);
+  const c = at(h, w, yy(h) + thick);
+  const d = at(h, -w, yy(h) + thick);
+  const a0 = at(-h, -w, yy(-h));
+  const b0 = at(-h, w, yy(-h));
+  const c0 = at(h, w, yy(h));
+  const d0 = at(h, -w, yy(h));
+  // Dessus (visible des deux côtés pour ne pas dépendre du sens des faces), dessous, côtés.
+  mb.quad(a, b, c, d, color);
+  mb.quad(d, c, b, a, color);
+  mb.quad(a0, d0, c0, b0, shade(color, 0.6));
+  mb.quad(a0, a, d, d0, shade(color, 0.75));
+  mb.quad(d0, d, c, c0, shade(color, 0.75));
+  mb.quad(c0, c, b, b0, shade(color, 0.75));
+  mb.quad(b0, b, a, a0, shade(color, 0.75));
+}
+
+/** Aperçu d'un tapis selon sa forme. */
+function ghostBelt(
+  mb: MeshBuilder,
+  x: number,
+  z: number,
+  rot: number,
+  lift: number,
+  color: Rgb,
+): void {
+  const { from, to } = LIFTS[lift] ?? LIFTS[0];
+  if (from === to) {
+    mb.box(x, from === 1 ? LEVEL_M : 0, z, BELT_W, 0.14, BELT_W, color, true);
+    return;
+  }
+  slope(mb, x, z, rot, Math.max(0, from) * LEVEL_M, Math.max(0, to) * LEVEL_M, 0.14, color);
+}
+
+const PORTAL: Rgb = hexToRgb('#2b2d33');
+
+/** Un pilier sous un tapis surélevé, tous les 5 tuiles dans l'axe du tapis, sauf là où un tapis passe dessous. */
+function pillar(mb: MeshBuilder, m: Machine, factory: Factory, color: Rgb): void {
+  const along = m.rot % 2 === 0 ? m.gz / 2 : m.gx / 2;
+  if (Math.floor(along) % 5 !== 0) return;
+  for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
+    const under = factory.machineAt(c.gx, c.gz);
+    if (under && under.type !== 'conveyor') return;
+    if (under && under.lift === 0) return;
+  }
+  mb.box(
+    (m.gx + 1) * CELL_SIZE_M,
+    0,
+    (m.gz + 1) * CELL_SIZE_M,
+    0.14,
+    LEVEL_M,
+    0.14,
+    shade(color, 0.7),
+    true,
+  );
+}
+
 function addBelt(
+  mb: MeshBuilder,
+  m: Machine,
+  entry: { ex: number; ez: number; curved: boolean },
+  color: Rgb,
+  factory: Factory,
+): void {
+  const { gx, gz, rot, lift } = m;
+  const cxm = (gx + 1) * CELL_SIZE_M;
+  const czm = (gz + 1) * CELL_SIZE_M;
+  const [fx, fz] = RISE_DIR[rot];
+  if (lift === 1 || lift === 3) {
+    const [y0, y1] = lift === 1 ? [0, LEVEL_M] : [LEVEL_M, 0];
+    slope(mb, cxm, czm, rot, y0, y1, BELT_H, color);
+    // Flèche de sens sur la pente.
+    return void arrowOnSlope(mb, cxm, czm, rot, y0, y1, shade(color, 1.9));
+  }
+  if (lift >= 4) {
+    // Tunnel : une plaque sombre au ras du sol, et un portail du côté où le tapis plonge ou émerge.
+    const dark = shade(PORTAL, 1.6);
+    mb.box(cxm, 0, czm, BELT_W, lift === 5 ? 0.04 : 0.1, BELT_W, dark, true);
+    if (lift !== 5) {
+      const edge = lift === 4 ? -1 : 1; // plonge par l'arrière, émerge par l'avant
+      mb.box(
+        cxm + fx * edge * (TILE_M / 2 - 0.05),
+        0,
+        czm + fz * edge * (TILE_M / 2 - 0.05),
+        Math.abs(fx) > 0 ? 0.1 : BELT_W,
+        0.4,
+        Math.abs(fz) > 0 ? 0.1 : BELT_W,
+        PORTAL,
+        true,
+      );
+    }
+    arrowOnSlope(mb, cxm, czm, rot, 0.1, 0.1, shade(color, 1.9));
+    return;
+  }
+  if (lift === 2) pillar(mb, m, factory, color);
+  addFlatBelt(mb, gx, gz, rot, entry, color, lift === 2 ? LEVEL_M : 0);
+}
+
+/** Flèche de sens à plat sur une dalle (ou inclinée). */
+function arrowOnSlope(
+  mb: MeshBuilder,
+  cx: number,
+  cz: number,
+  rot: number,
+  y0: number,
+  y1: number,
+  color: Rgb,
+): void {
+  const [dx, dz] = RISE_DIR[rot];
+  const px = -dz;
+  const pz = dx;
+  const at = (along: number, across: number): [number, number, number] => {
+    const t = (along + TILE_M / 2) / TILE_M;
+    return [
+      cx + dx * along + px * across,
+      y0 + (y1 - y0) * t + BELT_H + 0.008,
+      cz + dz * along + pz * across,
+    ];
+  };
+  mb.tri(at(0.36, 0), at(-0.1, 0.2), at(-0.1, -0.2), color);
+  mb.tri(at(0.36, 0), at(-0.1, -0.2), at(-0.1, 0.2), color);
+}
+
+function addFlatBelt(
   mb: MeshBuilder,
   gx: number,
   gz: number,
   rot: number,
   entry: { ex: number; ez: number; curved: boolean },
   color: Rgb,
+  lift: number,
 ): void {
   const [dx, dz] = RISE_DIR[rot];
   // Un tapis occupe 2 × 2 cases : on le dessine centré sur sa tuile.
@@ -335,11 +516,11 @@ function addBelt(
   const cz = (gz + 1) * CELL_SIZE_M;
   const half = TILE_M / 2;
   // Corps : le centre, la moitié de sortie, et la moitié d'entrée (côté ou derrière).
-  mb.box(cx, 0, cz, BELT_W, BELT_H, BELT_W, color, true);
+  mb.box(cx, lift, cz, BELT_W, BELT_H, BELT_W, color, true);
   const arm = (ux: number, uz: number): void => {
     mb.box(
       cx + (ux * half) / 2,
-      0,
+      lift,
       cz + (uz * half) / 2,
       Math.abs(ux) > 0 ? half : BELT_W,
       BELT_H,
@@ -359,7 +540,7 @@ function addBelt(
     const len = to - from;
     mb.box(
       cx + ux * mid,
-      BELT_H,
+      lift + BELT_H,
       cz + uz * mid,
       Math.abs(ux) > 0 ? len : 0.14,
       0.003,
@@ -381,7 +562,7 @@ function addBelt(
     [tipX, tipZ],
     [cx - dx * 0.1 + px * 0.2, cz - dz * 0.1 + pz * 0.2],
     [cx - dx * 0.1 - px * 0.2, cz - dz * 0.1 - pz * 0.2],
-    BELT_H + 0.006,
+    lift + BELT_H + 0.006,
     light,
   );
 }

@@ -729,3 +729,69 @@ describe('raccords décalés et poteau fin', () => {
     expect(pickMachine(f, { x: 0.1, y: 3, z: 0.1 }, down, 5)).toBeNull();
   });
 });
+
+describe('tapis en hauteur et tunnels', () => {
+  const belt = (id: number, gx: number, gz: number, rot: number, lift = 0): Machine =>
+    emptyMachine(id, 'conveyor', gx, gz, rot, lift);
+
+  it('un pont de tapis passe au-dessus d’un autre tapis et amène ses objets', () => {
+    const { world } = makeWorld();
+    // Tapis au sol vers +x (rot 1) le long de gz = 10, et un pont vers +z (rot 0) le long de gx = 4.
+    const ground = [0, 2, 4, 6, 8].map((x, i) => belt(10 + i, x, 10, 1));
+    const bridge = [
+      belt(1, 4, 6, 0, 1), // rampe montante
+      belt(2, 4, 8, 0, 2),
+      belt(3, 4, 10, 0, 2), // au-dessus du tapis au sol
+      belt(4, 4, 12, 0, 3), // rampe descendante
+      belt(5, 4, 14, 0, 0),
+    ];
+    const f = new Factory([...ground, ...bridge], world);
+    expect(f.canPlace('conveyor', 4, 10, 0, () => false, 2)).toBe(false); // déjà pris en l'air
+    const fresh = new Factory(ground, world);
+    expect(fresh.canPlace('conveyor', 4, 10, 0, () => false, 2)).toBe(true); // libre en l'air
+    expect(fresh.canPlace('conveyor', 4, 10, 0, () => false, 0)).toBe(false); // occupé au sol
+    bridge[0].belt.push({ item: 'iron_ore', pos: 0 });
+    ground[0].belt.push({ item: 'copper_ore', pos: 0 });
+    run(f, 12);
+    expect(bridge[4].belt.map((b) => b.item)).toEqual(['iron_ore']);
+    expect(ground[4].belt.map((b) => b.item)).toEqual(['copper_ore']);
+  });
+
+  it('un tapis au sol ne se raccorde pas à un tapis en l’air sans rampe', () => {
+    const { world } = makeWorld();
+    const a = belt(1, 4, 4, 0);
+    const b = belt(2, 4, 6, 0, 2);
+    a.belt.push({ item: 'iron_ore', pos: 0 });
+    const f = new Factory([a, b], world);
+    run(f, 6);
+    expect(b.belt).toHaveLength(0);
+    expect(a.belt).toHaveLength(1);
+  });
+
+  it('un tunnel passe sous une machine', () => {
+    const { world } = makeWorld();
+    const chest = emptyMachine(9, 'chest_wood', 4, 11, 0);
+    const parts = [
+      belt(1, 4, 6, 0, 4), // entrée
+      belt(2, 4, 8, 0, 5),
+      belt(3, 4, 10, 0, 5), // sous le coffre
+      belt(4, 4, 12, 0, 5),
+      belt(5, 4, 14, 0, 6), // sortie
+      belt(6, 4, 16, 0, 0),
+    ];
+    parts[0].belt.push({ item: 'iron_ore', pos: 0 });
+    const f = new Factory([chest, ...parts], world);
+    run(f, 20);
+    expect(parts[5].belt.map((b) => b.item)).toEqual(['iron_ore']);
+    expect(chest.slots).toHaveLength(0);
+    expect(f.machineAt(4, 11, -1)?.id).toBe(3);
+    expect(f.machineAt(4, 11)?.id).toBe(9);
+  });
+
+  it('la forme du tapis est enregistrée', () => {
+    const m = belt(1, 0, 0, 0, 3);
+    const back = normalizeMachines(JSON.parse(JSON.stringify([m])));
+    expect(back[0].lift).toBe(3);
+    expect(normalizeMachines([{ ...m, lift: 99 }])[0].lift).toBe(0);
+  });
+});
