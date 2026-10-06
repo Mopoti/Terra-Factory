@@ -1,4 +1,5 @@
 import { itemById } from '../core/data/items';
+import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
 import { cellOnPlane } from '../core/build/aim';
@@ -57,6 +58,7 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  isLab,
   isRouter,
   machineDef,
   machineForItem,
@@ -868,6 +870,13 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (isLab(m.type)) {
+      const id = options.state.changes.researching;
+      rows.push(`<div class="sub">${t('factory.router.lab')}</div>`);
+      rows.push(
+        `<div>${t('factory.lab.target', { v: id ? `${t(`tech.${id}` as TranslationKey)} (${options.state.changes.progress[id] ?? 0} / ${scienceCost(techById(id))})` : t('factory.lab.none') })}</div>`,
+      );
+      rows.push(`<div>${t('factory.lab.packs', { v: stackText(m.input, def.stockMax) })}</div>`);
     } else if (isAssembler(m.type)) {
       const need = recipeOf(m);
       rows.push(
@@ -1549,7 +1558,9 @@ export function startGameView(
     if (!paused) {
       simAcc = Math.min(simAcc + dt, 0.5);
       while (simAcc >= 0.05) {
+        factory.labDemand = options.state.studyRemaining();
         factory.tick(0.05);
+        options.state.addStudy(factory.takeLabPacks());
         simAcc -= 0.05;
       }
     }

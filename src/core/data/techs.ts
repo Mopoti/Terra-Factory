@@ -20,3 +20,8 @@ export function techById(id: string): TechDef {
 /** Technologie qui débloque cet objet, ou null s'il est disponible dès le départ. */
 export const techFor = (item: string): TechDef | null =>
   TECHS.find((t) => t.unlocks.includes(item)) ?? null;
+
+export const SCIENCE_PACK = 'science_pack';
+
+/** Paquets de science qu'une technologie demande à étudier en laboratoire (0 = recherche à la main). */
+export const scienceCost = (tech: TechDef): number => tech.cost[SCIENCE_PACK] ?? 0;

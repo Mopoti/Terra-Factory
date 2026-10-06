@@ -24,13 +24,12 @@
         "copper_ingot": 20
       },
       "requires": [],
-      "unlocks": ["machine_pole", "machine_generator", "machine_drill_electric"]
+      "unlocks": ["machine_pole", "machine_generator", "machine_drill_electric", "machine_lab"]
     },
     {
       "id": "automation",
       "cost": {
-        "iron_ingot": 40,
-        "copper_ingot": 30
+        "science_pack": 20
       },
       "requires": ["electricity", "logistics"],
       "unlocks": ["machine_arm_electric", "machine_assembler"]

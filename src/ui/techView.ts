@@ -1,6 +1,6 @@
 import { playSfx } from '../audio/sfx';
 import { itemById } from '../core/data/items';
-import { TECHS, type TechDef } from '../core/data/techs';
+import { SCIENCE_PACK, TECHS, scienceCost, type TechDef } from '../core/data/techs';
 import type { GameState } from '../core/game/state';
 import { t, type TranslationKey } from '../i18n';
 import './menu.css';
@@ -42,11 +42,21 @@ export function mountTech(
     cost.className = 'tech-line';
     cost.append(`${t('tech.cost')} : `);
     for (const [item, n] of Object.entries(tech.cost)) {
+      if (item === SCIENCE_PACK) continue;
       const have = state.inventory[item] ?? 0;
       const span = document.createElement('span');
       span.className = have >= n ? 'ok' : 'lack';
       span.textContent = `${itemName(item)} ${t('tech.have', { have: String(have), need: String(n) })}  `;
       cost.append(span);
+    }
+    const science = scienceCost(tech);
+    if (science > 0) {
+      const line = document.createElement('span');
+      line.textContent = t('tech.science', {
+        have: String(state.changes.progress[tech.id] ?? 0),
+        need: String(science),
+      });
+      cost.append(line);
     }
     box.append(cost);
     const unlocks = document.createElement('div');
@@ -56,9 +66,25 @@ export function mountTech(
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'menu-btn';
-    button.textContent = done ? t('tech.done') : t('tech.research');
+    const studying = state.changes.researching === tech.id;
+    button.textContent = done
+      ? t('tech.done')
+      : science > 0
+        ? studying
+          ? t('tech.stop')
+          : t('tech.study')
+        : t('tech.research');
     button.disabled = done || blocked;
     button.addEventListener('click', () => {
+      if (science > 0) {
+        state.study(studying ? null : tech.id);
+        playSfx('craft');
+        message = studying
+          ? ''
+          : t('tech.studyStarted', { tech: t(`tech.${tech.id}` as TranslationKey) });
+        render();
+        return;
+      }
       const result = state.research(tech.id);
       playSfx(result === 'ok' ? 'craft' : 'deny');
       message =
@@ -72,6 +98,12 @@ export function mountTech(
       render();
     });
     box.append(button);
+    if (science > 0 && !done) {
+      const hint = document.createElement('small');
+      hint.className = 'help';
+      hint.textContent = t('tech.labHint');
+      box.append(hint);
+    }
     // Objets débloqués : couleur d'accent.
     box.style.setProperty('--item', itemById(tech.unlocks[0]).color);
     return box;

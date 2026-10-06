@@ -561,5 +561,18 @@
   "craft.cat.machines": "Machines",
   "craft.cat.tools": "Utensils",
   "craft.cat.buildings": "Buildings",
-  "craft.cat.equipment": "Equipment"
+  "craft.cat.equipment": "Equipment",
+  "item.science_pack": "Science pack",
+  "item.machine_lab": "Laboratory",
+  "factory.router.lab": "Studies the chosen technology (T key) using science packs brought by belts or arms. 30 kW.",
+  "factory.lab.target": "Studying: {v}",
+  "factory.lab.none": "no technology chosen (T key)",
+  "factory.lab.packs": "Packs in stock: {v}",
+  "machine.packs": "Science packs",
+  "tech.science": "Science packs: {have} / {need}",
+  "tech.study": "Study in a laboratory",
+  "tech.studying": "Studying…",
+  "tech.stop": "Stop studying",
+  "tech.labHint": "Place a laboratory fed with science packs (belt, arm or by hand): it uses the packs for this technology.",
+  "tech.studyStarted": "Study started: {tech}"
 }

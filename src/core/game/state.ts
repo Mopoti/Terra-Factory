@@ -9,7 +9,7 @@ import {
   type Machine,
   type Stack,
 } from '../factory/factory';
-import { techById, techFor } from '../data/techs';
+import { SCIENCE_PACK, scienceCost, techById, techFor } from '../data/techs';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
@@ -357,9 +357,10 @@ export class GameState {
   }
 
   /** Recherche une technologie : consomme son coût dans le sac. */
-  research(id: string): 'ok' | 'done' | 'locked' | 'missing' {
+  research(id: string): 'ok' | 'done' | 'locked' | 'missing' | 'lab' {
     const tech = techById(id);
     if (this.changes.unlocked.includes(id)) return 'done';
+    if (scienceCost(tech) > 0) return 'lab';
     if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) return 'locked';
     if (!Object.entries(tech.cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n))
       return 'missing';
@@ -368,6 +369,42 @@ export class GameState {
     this.changes.unlocked.push(id);
     this.emit({ type: 'inventory' });
     return 'ok';
+  }
+
+  /** Choisit (ou, avec null, arrête) la technologie étudiée par les laboratoires. */
+  study(id: string | null): 'ok' | 'done' | 'locked' | 'notLab' {
+    if (id === null) {
+      this.changes.researching = null;
+      this.emit({ type: 'factory' });
+      return 'ok';
+    }
+    const tech = techById(id);
+    if (scienceCost(tech) <= 0) return 'notLab';
+    if (this.changes.unlocked.includes(id)) return 'done';
+    if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) return 'locked';
+    this.changes.researching = id;
+    this.emit({ type: 'factory' });
+    return 'ok';
+  }
+
+  /** Paquets de science encore à étudier pour la technologie en cours. */
+  studyRemaining(): number {
+    const id = this.changes.researching;
+    if (!id) return 0;
+    return Math.max(0, scienceCost(techById(id)) - (this.changes.progress[id] ?? 0));
+  }
+
+  /** Les laboratoires ont étudié `n` paquets : la technologie avance, et se débloque à la fin. */
+  addStudy(n: number): void {
+    const id = this.changes.researching;
+    if (!id || n <= 0) return;
+    const cost = scienceCost(techById(id));
+    this.changes.progress[id] = Math.min(cost, (this.changes.progress[id] ?? 0) + n);
+    if (this.changes.progress[id] >= cost) {
+      this.changes.unlocked.push(id);
+      this.changes.researching = null;
+    }
+    this.emit({ type: 'inventory' });
   }
 
   craft(
@@ -522,7 +559,12 @@ export class GameState {
   loadMachine(m: Machine, slot: 'fuel' | 'input', item: string, count: number): number {
     const max = machineDef(m.type).stockMax ?? 100;
     if (slot === 'fuel' && (!machineDef(m.type).fuel || !itemById(item).fuelSeconds)) return 0;
-    if (slot === 'input' && (m.type !== 'furnace' || !smeltRecipe(item))) return 0;
+    if (
+      slot === 'input' &&
+      !(m.type === 'furnace' && smeltRecipe(item)) &&
+      !(m.type === 'lab' && item === SCIENCE_PACK)
+    )
+      return 0;
     const current: Stack | null = slot === 'fuel' ? m.fuel : m.input;
     if (current && current.item !== item) return 0;
     const moved = Math.min(count, this.inventory[item] ?? 0, max - (current?.count ?? 0));

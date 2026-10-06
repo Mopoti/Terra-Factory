@@ -555,3 +555,48 @@ describe('assembleur', () => {
     expect(normalizeMachines([{ ...asm, recipe: 'pas_un_objet' }])[0].recipe).toBeNull();
   });
 });
+
+describe('laboratoire', () => {
+  const lab = (): Machine => {
+    const m = emptyMachine(1, 'lab', 10, 10, 0);
+    m.input = { item: 'science_pack', count: 5 };
+    return m;
+  };
+  const power = (m: Machine): Factory => {
+    const gen = emptyMachine(90, 'generator', 14, 10, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    return new Factory([m, gen, emptyMachine(91, 'pole', 12, 10, 0)], makeWorld().world);
+  };
+
+  it('consomme un paquet toutes les 6 s, seulement pour une étude en cours et avec du courant', () => {
+    const m = lab();
+    const f = power(m);
+    f.labDemand = 0;
+    run(f, 7);
+    expect(m.input?.count).toBe(5); // rien à étudier
+    f.labDemand = 3;
+    run(f, 13);
+    expect(f.takeLabPacks()).toBe(2);
+    expect(m.input?.count).toBe(3);
+    expect(f.takeLabPacks()).toBe(0);
+    const g = new Factory([lab()], makeWorld().world);
+    g.labDemand = 3;
+    run(g, 7);
+    expect(g.takeLabPacks()).toBe(0);
+    expect(g.status(g.machines[0])).toBe('noPower');
+  });
+
+  it('reçoit seulement des paquets de science, par un bras ou un tapis', () => {
+    const m = emptyMachine(1, 'lab', 10, 10, 0);
+    const belt = emptyMachine(2, 'conveyor', 9, 10, 1);
+    belt.belt.push({ item: 'iron_ingot', pos: 1 });
+    const f = power(m);
+    f.machines.push(belt);
+    f.reindex();
+    run(f, 0.5);
+    expect(belt.belt).toHaveLength(1);
+    belt.belt[0].item = 'science_pack';
+    run(f, 0.5);
+    expect(m.input?.count).toBe(1);
+  });
+});

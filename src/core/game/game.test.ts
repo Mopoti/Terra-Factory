@@ -1064,13 +1064,32 @@ describe('technologies', () => {
 
   it('prérequis et coût sont vérifiés ; la recherche est enregistrée', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
-    expect(s.research('automation')).toBe('locked');
+    expect(s.research('automation')).toBe('lab');
+    expect(s.study('automation')).toBe('locked');
     expect(s.research('logistics')).toBe('ok');
     expect(s.research('electricity')).toBe('ok');
-    expect(s.research('automation')).toBe('ok');
+    expect(s.study('automation')).toBe('ok');
+    s.addStudy(20);
     expect(s.research('textile')).toBe('missing');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
+  });
+
+  it('l’étude en laboratoire avance par paquets, se débloque à la fin et se sauvegarde', () => {
+    const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
+    s.research('logistics');
+    s.research('electricity');
+    expect(s.studyRemaining()).toBe(0);
+    expect(s.study('textile')).toBe('notLab');
+    expect(s.study('automation')).toBe('ok');
+    expect(s.studyRemaining()).toBe(20);
+    s.addStudy(8);
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.researching).toBe('automation');
+    expect(copy.studyRemaining()).toBe(12);
+    copy.addStudy(30);
+    expect(copy.isUnlocked('machine_assembler')).toBe(true);
+    expect(copy.changes.researching).toBeNull();
   });
 
   it('une ancienne sauvegarde (sans recherche) garde tout débloqué', () => {

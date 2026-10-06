@@ -13,7 +13,8 @@ export type MachineType =
   | 'merger'
   | 'arm'
   | 'arm_electric'
-  | 'assembler';
+  | 'assembler'
+  | 'lab';
 
 export interface MachineDef {
   id: MachineType;
@@ -71,6 +72,9 @@ export const isRouter = (type: MachineType): boolean => type === 'splitter' || t
 
 /** Bras robotique (à combustible ou électrique). */
 export const isArm = (type: MachineType): boolean => type === 'arm' || type === 'arm_electric';
+
+/** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
+export const isLab = (type: MachineType): boolean => type === 'lab';
 
 export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';

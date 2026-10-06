@@ -89,7 +89,8 @@ export function mountMachineWindow(
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && machineDef(m.type).fuel && !!itemById(item).fuelSeconds) ||
-    (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item));
+    (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item)) ||
+    (slot === 'input' && m.type === 'lab' && item === 'science_pack');
 
   function drop(m: Machine, slot: SlotName, item: string): void {
     if (!accepts(m, slot, item)) {
@@ -458,6 +459,7 @@ export function mountMachineWindow(
     }
     if (isAssembler(m.type)) rows.append(...assemblerRows(m));
     if (m.type === 'furnace') rows.append(machineSlot(m, 'input', t('machine.input'), m.input));
+    if (m.type === 'lab') rows.append(machineSlot(m, 'input', t('machine.packs'), m.input));
     if (isDrill(m.type) || m.type === 'furnace' || isAssembler(m.type)) {
       rows.append(
         machineSlot(

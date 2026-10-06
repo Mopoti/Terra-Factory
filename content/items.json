@@ -320,6 +320,26 @@
       "equip": {
         "slot": "hands"
       }
+    },
+    {
+      "id": "science_pack",
+      "weightKg": 0.1,
+      "volumeL": 0.2,
+      "color": "#4fc3a1",
+      "recipe": {
+        "iron_ingot": 1,
+        "copper_ingot": 1
+      }
+    },
+    {
+      "id": "machine_lab",
+      "weightKg": 12,
+      "volumeL": 25,
+      "color": "#5d8a8a",
+      "recipe": {
+        "iron_ingot": 10,
+        "copper_ingot": 8
+      }
     }
   ]
 }

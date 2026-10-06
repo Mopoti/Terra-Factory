@@ -7,6 +7,7 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  isLab,
   isRouter,
   machineDef,
   smeltRecipe,
@@ -199,6 +200,8 @@ export function ports(
     case 'arm_electric':
     case 'assembler':
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
+    case 'lab':
+      return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     default:
       return { ins: [], outs: [] };
   }
@@ -315,6 +318,7 @@ const MACHINE_TYPES: MachineType[] = [
   'arm',
   'arm_electric',
   'assembler',
+  'lab',
 ];
 
 /** Centre d'une machine (m). */
@@ -480,6 +484,10 @@ export class Factory {
         return 'full';
       return this.hasIngredients(m, need) ? 'running' : 'idle';
     }
+    if (isLab(m.type)) {
+      if (this.powerFactor(m) <= 0) return 'noPower';
+      return this.labWorking(m) ? 'running' : 'idle';
+    }
     if (isArm(m.type)) {
       if (def.consumesKw) {
         if (this.powerFactor(m) <= 0) return 'noPower';
@@ -520,6 +528,7 @@ export class Factory {
       else if (isRouter(m.type)) this.tickRouter(m);
       else if (isArm(m.type)) this.tickArm(m, dt);
       else if (isAssembler(m.type)) this.tickAssembler(m, dt);
+      else if (isLab(m.type)) this.tickLab(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -532,6 +541,7 @@ export class Factory {
   /** Une machine électrique a-t-elle quelque chose à faire (donc demande du courant) ? */
   private wantsToWork(m: Machine): boolean {
     if (isAssembler(m.type)) return this.canCraft(m);
+    if (isLab(m.type)) return this.labWorking(m);
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (!isDrill(m.type)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
@@ -539,6 +549,18 @@ export class Factory {
   }
 
   /** Puissance disponible et demandée sur chaque réseau, puis part satisfaite. */
+  /** Paquets de science que les laboratoires peuvent encore utiliser (fixé par la partie selon la recherche en cours). */
+  labDemand = 0;
+  /** Paquets consommés depuis la dernière lecture (la partie les ajoute à la recherche). */
+  private labDone = 0;
+
+  /** Renvoie (et remet à zéro) le nombre de paquets étudiés depuis le dernier appel. */
+  takeLabPacks(): number {
+    const n = this.labDone;
+    this.labDone = 0;
+    return n;
+  }
+
   /** Bras robotiques : prochain côté à servir (pas sauvegardé). */
   private readonly armTurn = new Map<number, number>();
 
@@ -674,6 +696,11 @@ export class Factory {
     }
     if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
+    if (isLab(target.type))
+      return (
+        item === 'science_pack' &&
+        (target.input?.count ?? 0) < (machineDef(target.type).stockMax ?? 20)
+      );
     return false;
   }
 
@@ -717,7 +744,10 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
-    else if (isAssembler(target.type)) {
+    else if (isLab(target.type)) {
+      if (target.input) target.input.count++;
+      else target.input = { item, count: 1 };
+    } else if (isAssembler(target.type)) {
       const stack = target.slots.find((x) => x.item === item);
       if (stack) stack.count++;
       else target.slots.push({ item, count: 1 });
@@ -726,6 +756,29 @@ export class Factory {
       else target.input = { item, count: 1 };
     } else this.addFuel(target, item);
     return true;
+  }
+
+  /** Laboratoire : a-t-il des paquets et une étude à mener ? */
+  private labWorking(m: Machine): boolean {
+    return (m.input?.count ?? 0) > 0 && this.labDemand > 0;
+  }
+
+  private tickLab(m: Machine, dt: number): void {
+    const speed = this.powerFactor(m);
+    if (!this.labWorking(m) || speed <= 0) {
+      if (!this.labWorking(m)) m.progress = 0;
+      return;
+    }
+    m.progress += dt * speed;
+    const seconds = machineDef(m.type).craftSeconds ?? 6;
+    if (m.progress < seconds) return;
+    m.progress -= seconds;
+    if (m.input) {
+      m.input.count--;
+      if (m.input.count <= 0) m.input = null;
+    }
+    this.labDemand--;
+    this.labDone++;
   }
 
   private ingredientRoom(m: Machine, item: string): boolean {

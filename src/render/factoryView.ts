@@ -340,6 +340,15 @@ function addMachineBody(
     );
     return;
   }
+  if (type === 'lab') {
+    // Laboratoire : paillasse basse, cornue (cône) et éprouvette lumineuse.
+    mb.box(x, 0, z, sx, 0.55, sz, color, true);
+    mb.box(x, 0.55, z, sx - 0.12, 0.1, sz - 0.12, shade(color, 1.3), true);
+    mb.cone(x - 0.18, 0.65, z - 0.1, 0.17, 0.3, 8, hexToRgb('#cfe9ef'));
+    mb.box(x + 0.2, 0.65, z + 0.15, 0.08, 0.28, 0.08, hexToRgb('#4fc3a1'), true);
+    mb.box(x + 0.2, 0.65, z - 0.2, 0.18, 0.12, 0.14, hexToRgb('#2f3a40'), true);
+    return;
+  }
   if (isAssembler(type)) {
     // Assembleur : socle, caisson, plateau de travail et bras de montage ; bec sombre côté sortie.
     mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);

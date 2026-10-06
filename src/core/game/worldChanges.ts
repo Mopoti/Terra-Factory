@@ -37,6 +37,9 @@ export interface WorldChanges {
   equipment: Partial<Record<EquipSlot, string>>;
   /** Technologies déjà recherchées. */
   unlocked: string[];
+  /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
+  researching: string | null;
+  progress: Record<string, number>;
 }
 
 export const HOTBAR_SLOTS = 9;
@@ -55,6 +58,8 @@ export function emptyChanges(): WorldChanges {
     nextMachineId: 1,
     equipment: {},
     unlocked: [],
+    researching: null,
+    progress: {},
   };
 }
 
@@ -113,6 +118,15 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.unlocked = Array.isArray(r.unlocked)
     ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
     : TECHS.map((t) => t.id);
+  if (typeof r.progress === 'object' && r.progress !== null) {
+    for (const t of TECHS) {
+      const v = (r.progress as Record<string, unknown>)[t.id];
+      if (isNum(v) && v > 0) result.progress[t.id] = Math.floor(v);
+    }
+  }
+  if (typeof r.researching === 'string' && TECHS.some((t) => t.id === r.researching)) {
+    if (!result.unlocked.includes(r.researching)) result.researching = r.researching;
+  }
   if (Array.isArray(r.hotbar)) {
     r.hotbar.slice(0, HOTBAR_SLOTS).forEach((rawId, i) => {
       if (typeof rawId !== 'string') return;

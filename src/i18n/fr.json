@@ -561,5 +561,18 @@
   "craft.cat.machines": "Machines",
   "craft.cat.tools": "Ustensiles",
   "craft.cat.buildings": "Constructions",
-  "craft.cat.equipment": "Équipements"
+  "craft.cat.equipment": "Équipements",
+  "item.science_pack": "Paquet de science",
+  "item.machine_lab": "Laboratoire",
+  "factory.router.lab": "Étudie la technologie choisie (touche T) en consommant des paquets de science amenés par tapis ou bras. 30 kW.",
+  "factory.lab.target": "Étude : {v}",
+  "factory.lab.none": "aucune technologie choisie (touche T)",
+  "factory.lab.packs": "Paquets en réserve : {v}",
+  "machine.packs": "Paquets de science",
+  "tech.science": "Paquets de science : {have} / {need}",
+  "tech.study": "Étudier en laboratoire",
+  "tech.studying": "Étude en cours…",
+  "tech.stop": "Arrêter l'étude",
+  "tech.labHint": "Pose un laboratoire alimenté en paquets de science (tapis, bras ou à la main) : il consomme les paquets pour cette technologie.",
+  "tech.studyStarted": "Étude lancée : {tech}"
 }

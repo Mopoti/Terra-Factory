@@ -376,7 +376,7 @@ export function mountInventory(
     }
     craftBox.append(tabs);
     const catalog = el('div', 'slot-grid craft-grid');
-    for (const def of ITEMS.filter((i) => categoryOf(i) === craftTab)) {
+    for (const def of ITEMS.filter((i) => i.recipe !== null && categoryOf(i) === craftTab)) {
       const cell = el('button', 'slot craft');
       cell.type = 'button';
       cell.style.setProperty('--item', def.color);
