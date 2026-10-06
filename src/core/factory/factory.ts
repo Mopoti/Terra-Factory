@@ -80,9 +80,12 @@ export const LIFTS: ReadonlyArray<{ from: number; to: number; layers: readonly n
   { from: 1, to: 0, layers: [1, 0] }, // 3 : rampe descendante
   { from: 0, to: 0, layers: [0] }, // 4 : entrée de tunnel (les objets disparaissent)
   { from: 0, to: 0, layers: [0] }, // 5 : sortie de tunnel (ils réapparaissent)
+  { from: 1, to: 2, layers: [1] }, // 6 : rampe montante du niveau 1 au niveau 2
+  { from: 2, to: 2, layers: [2] }, // 7 : surélevé niveau 2 (2 m : on passe dessous)
+  { from: 2, to: 1, layers: [2, 1] }, // 8 : rampe descendante du niveau 2 au niveau 1
 ];
 /** Forme qui prolonge celle-ci (ce qu'on pose à sa suite). */
-export const LIFT_NEXT = [0, 2, 2, 0, 0, 0] as const;
+export const LIFT_NEXT = [0, 2, 2, 0, 0, 0, 7, 7, 2] as const;
 /** Longueur maximale d'un tunnel (en tuiles entre l'entrée et la sortie). */
 export const TUNNEL_MAX_TILES = 8;
 export const LIFT_COUNT = LIFTS.length;
@@ -442,8 +445,7 @@ export class Factory {
 
   reindex(): void {
     this.cells.clear();
-    this.upper.clear();
-    this.lower.clear();
+    this.air.clear();
     this.occupied.clear();
     // Les machines d'abord : un tapis ou un tuyau posé à cheval sur une machine ne « possède » que ses cases libres
     // (la partie dans la machine est cachée et la machine reste celle qu'on trouve sur ces cases).
@@ -461,11 +463,13 @@ export class Factory {
           if (!set) this.occupied.set(layer, (set = new Set()));
           set.add(k);
         }
-        if (start === 1) this.upper.set(k, m);
-        else if (start === -1) this.lower.set(k, m);
+        if (start >= 1) {
+          let level = this.air.get(start);
+          if (!level) this.air.set(start, (level = new Map()));
+          level.set(k, m);
+        }
         // Au sol : les tapis qui partent du sol et la rampe qui y arrive (visée par le joueur).
         if ((start === 0 || liftEnd(m) === 0) && !this.cells.has(k)) this.cells.set(k, m);
-        if (start === 1 && liftEnd(m) === 0) this.upper.set(k, m);
       }
     }
     this.linkTunnels();
@@ -511,8 +515,7 @@ export class Factory {
   /** Cases prises par les tapis et tuyaux, par couche (0 = sol, 1 = en l'air, −1 = sous terre). */
   private readonly occupied = new Map<number, Set<string>>();
   /** Tapis qui partent d'en l'air / de sous terre, par case. */
-  private readonly upper = new Map<string, Machine>();
-  private readonly lower = new Map<string, Machine>();
+  private readonly air = new Map<number, Map<string, Machine>>();
 
   private links: FluidLink[] = [];
   private pumpsOk = new Set<number>();
@@ -633,11 +636,8 @@ export class Factory {
     const level = liftStart(m);
     const out: Machine[] = [];
     for (const f of this.sideCandidates(m, dir)) {
-      for (const found of [
-        this.cells.get(`${f.gx},${f.gz}`),
-        this.upper.get(`${f.gx},${f.gz}`),
-        this.lower.get(`${f.gx},${f.gz}`),
-      ]) {
+      const k = `${f.gx},${f.gz}`;
+      for (const found of [this.cells.get(k), ...[...this.air.values()].map((l) => l.get(k))]) {
         if (!found || found === m || out.includes(found)) continue;
         if (found.type === 'conveyor' ? liftEnd(found) !== level : level !== 0) continue;
         out.push(found);
@@ -653,15 +653,22 @@ export class Factory {
   /** Pièce (machine ou tapis) qui démarre à ce niveau sur cette case. */
   private layerAt(level: number, gx: number, gz: number): Machine | null {
     const k = `${gx},${gz}`;
-    const found =
-      level === 0 ? this.cells.get(k) : level === 1 ? this.upper.get(k) : this.lower.get(k);
-    return found ?? null;
+    return (level === 0 ? this.cells : this.air.get(level))?.get(k) ?? null;
   }
 
-  /** Ce qu'il y a sur cette case : au sol par défaut, ou en l'air (1) / sous terre (−1). */
+  /** Ce qu'il y a sur cette case : au sol par défaut, ou en l'air (niveau 1 ou 2). */
   machineAt(gx: number, gz: number, layer = 0): Machine | null {
+    return this.layerAt(layer, gx, gz);
+  }
+
+  /** Un tapis plein (rampe, tapis surélevé à 1 m) bloque le passage du joueur ; à 2 m on passe dessous. */
+  solidAt(gx: number, gz: number): boolean {
     const k = `${gx},${gz}`;
-    return (layer === 0 ? this.cells : layer === 1 ? this.upper : this.lower).get(k) ?? null;
+    const low = this.cells.get(k);
+    if (low && low.type === 'conveyor' && low.lift !== 0 && low.lift < 4) return true;
+    if (this.air.get(1)?.has(k)) return true;
+    const high = this.air.get(2)?.get(k);
+    return !!high && high.lift === 8;
   }
 
   /** La machine peut-elle se poser là (cases libres, sol praticable) ? */
@@ -1406,14 +1413,20 @@ export function pickMachine(
     const pz = origin.z + dir.z * t;
     const gx = Math.floor(px / CELL_SIZE_M);
     const gz = Math.floor(pz / CELL_SIZE_M);
-    // En l'air : tapis surélevés et rampes (entre 0,85 m et 1,3 m).
-    if (y >= 0.85 && y <= 1.3) {
-      const up = factory.machineAt(gx, gz, 1);
-      if (up) return { machine: up, t };
+    // En l'air : tapis surélevés (niveaux 1 et 2) et rampes.
+    if (y >= 0.85 && y <= 2.3) {
+      const one = factory.machineAt(gx, gz, 1);
+      if (one && y <= (one.lift === 6 ? 2.3 : 1.3)) return { machine: one, t };
+      const two = factory.machineAt(gx, gz, 2);
+      if (two && (two.lift === 7 ? y >= 1.85 : true)) return { machine: two, t };
     }
     const m = factory.machineAt(gx, gz);
     const top =
-      m && m.type === 'conveyor' && m.lift !== 0 ? LEVEL_M + 0.15 : m ? visualHeight(m.type) : 0;
+      m && m.type === 'conveyor' && m.lift !== 0
+        ? Math.max(LIFTS[m.lift].from, LIFTS[m.lift].to) * LEVEL_M + 0.15
+        : m
+          ? visualHeight(m.type)
+          : 0;
     if (m && y <= top) {
       // Le poteau est fin : on ne le vise que près de son mât (au milieu de son emprise).
       if (m.type === 'pole') {

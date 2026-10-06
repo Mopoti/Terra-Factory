@@ -742,7 +742,7 @@ export function startGameView(
   let dragLifts: number[] = [];
   const HIDDEN = -1;
   /** Niveau (0 sol, 1 en l'air, −1 sous terre) où l'on se trouve après un tapis de cette forme. */
-  const levelAfter = (lift: number): number => [0, 1, 1, 0, -1, 0][lift] ?? -1;
+  const levelAfter = (lift: number): number => [0, 1, 1, 0, -1, 0, 2, 2, 1][lift] ?? -1;
   const nextLift = (lift: number): number =>
     lift === HIDDEN || lift === 4 ? HIDDEN : LIFT_NEXT[lift];
   const pathReached = new Set<string>();
@@ -895,12 +895,12 @@ export function startGameView(
     const rampSnap = (cell: Cell): { cell: Cell; rot: number; lift: number } | null => {
       if (def.id !== 'conveyor') return null;
       const shaped = (m: Machine | null): m is Machine =>
-        !!m && m.type === 'conveyor' && m.lift >= 1 && m.lift <= 3;
+        !!m && m.type === 'conveyor' && m.lift !== 0 && m.lift !== 4 && m.lift !== 5;
       // Le rayon peut traverser un tapis en l'air bien avant d'atteindre la case visée au sol.
       const hit = pickMachine(factory, rayOrigin, rayDir, 80)?.machine ?? null;
       const found =
         (shaped(hit) ? hit : null) ??
-        [0, 1].map((layer) => factory.machineAt(cell.gx, cell.gz, layer)).find(shaped) ??
+        [0, 1, 2].map((layer) => factory.machineAt(cell.gx, cell.gz, layer)).find(shaped) ??
         null;
       if (!found) return null;
       // On suit la ligne déjà posée jusqu'à sa fin : le patron se cale sur la première tuile libre.
@@ -910,7 +910,7 @@ export function startGameView(
         const next = factory.machineAt(
           last.gx + dx * 2,
           last.gz + dz * 2,
-          LIFTS[LIFT_NEXT[last.lift]].from === 1 ? 1 : 0,
+          LIFTS[LIFT_NEXT[last.lift]].from,
         );
         if (!next || next.type !== 'conveyor' || next.rot !== found.rot) break;
         last = next;
@@ -926,7 +926,7 @@ export function startGameView(
       machinePath.length > 0
         ? levelAfter(dragLifts[dragLifts.length - 1] ?? 0)
         : (LIFTS[buildLift]?.from ?? 0);
-    const cAir = aimLevel === 1 ? cellOnPlane(rayOrigin, rayDir, LEVEL_M) : null;
+    const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, aimLevel * LEVEL_M) : null;
     const snap = rampSnap(cAir ?? c);
     const aim = snap && machinePath.length === 0 ? c : (cAir ?? c);
     if (down) {
@@ -1429,9 +1429,12 @@ export function startGameView(
 
   /** Les machines et les tuyaux sont pleins (on ne les traverse pas) ; les tapis se marchent. */
   const machineSolidAt = (xM: number, zM: number): boolean => {
-    const m = factory.machineAt(Math.floor(xM / CELL_SIZE_M), Math.floor(zM / CELL_SIZE_M));
-    // Les tapis à plat se marchent ; les rampes sont pleines.
-    if (m !== null && m.type === 'conveyor') return m.lift === 1 || m.lift === 3;
+    const gx = Math.floor(xM / CELL_SIZE_M);
+    const gz = Math.floor(zM / CELL_SIZE_M);
+    // Les tapis à plat se marchent ; les rampes et les tapis à 1 m sont pleins ; à 2 m on passe dessous.
+    if (factory.solidAt(gx, gz)) return true;
+    const m = factory.machineAt(gx, gz);
+    if (m !== null && m.type === 'conveyor') return false;
     if (m === null) return false;
     // Un poteau ne bloque que près de son mât.
     if (m.type === 'pole') {
@@ -2015,12 +2018,15 @@ export function startGameView(
                 const before = i === 0 ? 0 : levelAfter(dragLifts[i - 1]);
                 const set = liftOverride.get(i);
                 if (up) {
-                  if (set === 4) liftOverride.delete(i);
+                  // Monter : rampe (sol → 1 → 2) ou sortie de tunnel ; annule une descente choisie sur cette tuile.
+                  if (set === 4 || set === 3 || set === 8) liftOverride.delete(i);
                   else if (before === 0) liftOverride.set(i, 1);
+                  else if (before === 1) liftOverride.set(i, 6);
                   else if (before === -1) liftOverride.set(i, 5);
-                } else if (set === 1) liftOverride.delete(i);
+                } else if (set === 1 || set === 6) liftOverride.delete(i);
                 else if (before === 0) liftOverride.set(i, 4);
                 else if (before === 1) liftOverride.set(i, 3);
+                else if (before === 2) liftOverride.set(i, 8);
               } else {
                 buildLift = (buildLift + (up ? 1 : LIFT_COUNT - 1)) % LIFT_COUNT;
               }

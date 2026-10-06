@@ -134,7 +134,8 @@ export function beltEntry(
   // Derrière : tout droit.
   if (feeder((m.rot + 2) % 4)) return { ex: -dx, ez: -dz, curved: false };
   // Les pentes et les tunnels restent droits.
-  if (m.lift !== 0) return { ex: -dx, ez: -dz, curved: false };
+  if (LIFTS[m.lift].from !== LIFTS[m.lift].to || (m.lift >= 4 && m.lift <= 5))
+    return { ex: -dx, ez: -dz, curved: false };
   // Sur les côtés : virage.
   for (const [dir, sx, sz] of [
     [(m.rot + 3) % 4, -dz, dx],
@@ -338,21 +339,11 @@ export class FactoryView {
 
 /** Hauteur (m) d'un objet sur un tapis à l'avancement `pos`, ou null s'il est caché sous terre. */
 function itemHeight(m: Machine, pos: number): number | null {
-  switch (m.lift) {
-    case 1:
-      return BELT_H + LEVEL_M * pos;
-    case 2:
-      return BELT_H + LEVEL_M;
-    case 3:
-      return BELT_H + LEVEL_M * (1 - pos);
-    // Tunnel : l'objet disparaît dans le portail de l'entrée et réapparaît à celui de la sortie.
-    case 4:
-      return pos < 0.8 ? BELT_H : null;
-    case 5:
-      return pos > 0.2 ? BELT_H : null;
-    default:
-      return BELT_H;
-  }
+  // Tunnel : l'objet disparaît dans le portail de l'entrée et réapparaît à celui de la sortie.
+  if (m.lift === 4) return pos < 0.8 ? BELT_H : null;
+  if (m.lift === 5) return pos > 0.2 ? BELT_H : null;
+  const { from, to } = LIFTS[m.lift];
+  return BELT_H + LEVEL_M * (from + (to - from) * pos);
 }
 
 /** Dalle inclinée sur une tuile : de la hauteur `y0` au bord arrière à `y1` au bord avant. */
@@ -406,7 +397,7 @@ function ghostBelt(
 ): void {
   const { from, to } = LIFTS[lift] ?? LIFTS[0];
   if (from === to) {
-    mb.box(x, from === 1 ? LEVEL_M : 0, z, BELT_W, 0.14, BELT_W, color, true);
+    mb.box(x, from * LEVEL_M, z, BELT_W, 0.14, BELT_W, color, true);
     return;
   }
   slope(mb, x, z, rot, Math.max(0, from) * LEVEL_M, Math.max(0, to) * LEVEL_M, 0.14, color);
@@ -415,20 +406,21 @@ function ghostBelt(
 const PORTAL: Rgb = hexToRgb('#2b2d33');
 
 /** Un pilier sous un tapis surélevé, tous les 5 tuiles dans l'axe du tapis, sauf là où un tapis passe dessous. */
-function pillar(mb: MeshBuilder, m: Machine, factory: Factory, color: Rgb): void {
+function pillar(mb: MeshBuilder, m: Machine, factory: Factory, color: Rgb, height: number): void {
   const along = m.rot % 2 === 0 ? m.gz / 2 : m.gx / 2;
   if (Math.floor(along) % 5 !== 0) return;
   for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
+    // Rien ne doit traverser le pilier : un tapis ou une machine dessous (sol, ou niveau 1 sous un tapis de niveau 2).
     const under = factory.machineAt(c.gx, c.gz);
-    if (under && under.type !== 'conveyor') return;
-    if (under && under.lift === 0) return;
+    if (under && (under.type !== 'conveyor' || under.lift === 0)) return;
+    if (height > LEVEL_M && factory.machineAt(c.gx, c.gz, 1)) return;
   }
   mb.box(
     (m.gx + 1) * CELL_SIZE_M,
     0,
     (m.gz + 1) * CELL_SIZE_M,
     0.14,
-    LEVEL_M,
+    height,
     0.14,
     shade(color, 0.7),
     true,
@@ -446,13 +438,14 @@ function addBelt(
   const cxm = (gx + 1) * CELL_SIZE_M;
   const czm = (gz + 1) * CELL_SIZE_M;
   const [fx, fz] = RISE_DIR[rot];
-  if (lift === 1 || lift === 3) {
-    const [y0, y1] = lift === 1 ? [0, LEVEL_M] : [LEVEL_M, 0];
+  const shape = LIFTS[lift];
+  if (shape.from !== shape.to) {
+    const [y0, y1] = [shape.from * LEVEL_M, shape.to * LEVEL_M];
     slope(mb, cxm, czm, rot, y0, y1, BELT_H, color);
     // Flèche de sens sur la pente.
     return void arrowOnSlope(mb, cxm, czm, rot, y0, y1, shade(color, 1.9));
   }
-  if (lift >= 4) {
+  if (lift === 4 || lift === 5) {
     // Tunnel : une dalle sombre avec un portail du côté où les objets entrent (entrée : devant) ou sortent (sortie : derrière).
     mb.box(cxm, 0, czm, BELT_W, 0.1, BELT_W, shade(PORTAL, 1.6), true);
     const edge = lift === 4 ? 1 : -1;
@@ -469,8 +462,9 @@ function addBelt(
     arrowOnSlope(mb, cxm, czm, rot, 0.1, 0.1, shade(color, 1.9));
     return;
   }
-  if (lift === 2) pillar(mb, m, factory, color);
-  addFlatBelt(mb, gx, gz, rot, entry, color, lift === 2 ? LEVEL_M : 0);
+  const height = shape.from * LEVEL_M;
+  if (height > 0) pillar(mb, m, factory, color, height);
+  addFlatBelt(mb, gx, gz, rot, entry, color, height);
 }
 
 /** Flèche de sens à plat sur une dalle (ou inclinée). */

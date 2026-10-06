@@ -824,3 +824,37 @@ describe('séparateur posé sur un tapis', () => {
     expect(end.belt.map((b) => b.item)).toEqual(['iron_ore']);
   });
 });
+
+describe('niveau 2 (2 m)', () => {
+  const belt = (id: number, gx: number, gz: number, rot: number, lift = 0): Machine =>
+    emptyMachine(id, 'conveyor', gx, gz, rot, lift);
+
+  it('un pont de niveau 2 passe au-dessus d’un tapis de niveau 1, et le joueur passe dessous', () => {
+    const { world } = makeWorld();
+    // Pont niveau 1 vers +x (rot 1) le long de gz = 10 : rampe, 3 tapis à 1 m, rampe descendante.
+    const low = [
+      belt(1, 0, 10, 1, 1),
+      belt(2, 2, 10, 1, 2),
+      belt(3, 4, 10, 1, 2),
+      belt(4, 6, 10, 1, 2),
+      belt(5, 8, 10, 1, 3),
+    ];
+    // Pont niveau 2 vers +z (rot 0) le long de gx = 4, qui passe au-dessus de (4, 10).
+    const high = [
+      belt(11, 4, 4, 0, 1),
+      belt(12, 4, 6, 0, 6),
+      belt(13, 4, 8, 0, 7),
+      belt(14, 4, 10, 0, 7),
+      belt(15, 4, 12, 0, 8),
+      belt(16, 4, 14, 0, 3),
+      belt(17, 4, 16, 0, 0),
+    ];
+    const f = new Factory([...low, ...high], world);
+    expect(f.solidAt(4, 10)).toBe(true); // le niveau 1 en dessous bloque
+    expect(f.solidAt(4, 8)).toBe(false); // seul le niveau 2 au-dessus : on passe dessous
+    expect(f.machineAt(4, 8, 2)?.id).toBe(13);
+    high[0].belt.push({ item: 'iron_ore', pos: 0 });
+    run(f, 25);
+    expect(high[6].belt.map((b) => b.item)).toEqual(['iron_ore']);
+  });
+});
