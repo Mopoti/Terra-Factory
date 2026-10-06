@@ -59,6 +59,15 @@
       }
     },
     {
+      "id": "piece_door_stone",
+      "weightKg": 4.0,
+      "volumeL": 4.0,
+      "color": "#7a7f86",
+      "recipe": {
+        "stone": 8
+      }
+    },
+    {
       "id": "piece_wall_stone",
       "weightKg": 1.0,
       "volumeL": 1.0,

@@ -382,6 +382,7 @@
   "build.material.stone": "Pierre",
   "item.piece_wall_wood": "Mur en bois",
   "item.piece_door_wood": "Porte en bois",
+  "item.piece_door_stone": "Porte en pierre",
   "item.piece_wall_stone": "Mur en pierre",
   "build.plan": "{ok} à poser · {lack} sans stock",
   "action.layerUp": "Mur : bloc au-dessus",

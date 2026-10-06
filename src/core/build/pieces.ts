@@ -2,7 +2,6 @@ import {
   LAYERS_PER_STOREY,
   isPieceKind,
   pieceDef,
-  RISE_DIR,
   resolveKind,
   slotOf,
   type PieceKind,
@@ -119,13 +118,11 @@ export function isFree(pieces: Pieces, kindIn: PieceKind, pos: PiecePos): boolea
     for (let r = 0; r < 4; r++) if (pieces[pieceKey({ ...pos, rot: r })]) return false;
     return true;
   }
-  if (pos.slot === 'ceiling') {
-    // Une seule dalle de plafond par case, à n'importe quelle hauteur.
-    for (let l = 0; l < LAYERS_PER_STOREY; l++)
-      if (pieces[pieceKey({ ...pos, layer: l })]) return false;
-    return true;
+  if (pos.slot === 'ceiling' || pos.slot === 'floor') {
+    // Une dalle par face : le sol d'un étage et le plafond posé sur le dernier bloc de l'étage du dessous
+    // sont la même face.
+    return !slabAt(pieces, slabFace(pos), pos.gx, pos.gz);
   }
-  if (pos.slot !== 'edge') return !pieces[pieceKey(pos)];
   if (pieceDef(kind).type === 'door') {
     for (let l = 0; l < LAYERS_PER_STOREY; l++) if (pieces[edgeKey(pos, l)]) return false;
     return true;
@@ -196,173 +193,35 @@ export function normalizePieces(raw: unknown): Pieces {
   return result;
 }
 
-const hasBlock = (
-  pieces: Pieces,
-  level: number,
-  gx: number,
-  gz: number,
-  axis: 'x' | 'z',
-  layer: number,
-): boolean => {
-  const base: PiecePos = { slot: 'edge', level, gx, gz, axis };
-  // Une porte occupe tout l'étage.
-  return !!pieces[edgeKey(base, layer)] || !!pieces[edgeKey(base, 0)]?.startsWith('door');
-};
-
-/**
- * Un mur ne tient pas dans le vide : un bloc de mur doit reposer sur le sol (rez-de-chaussée), sur un sol
- * posé à l'étage ou sur le mur de l'étage d'en dessous, ou être accolé à un autre bloc (au-dessus, en
- * dessous, à côté, ou dans l'angle perpendiculaire) pour faire des encadrements.
- */
-export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
-  if (pos.slot === 'ceiling') return ceilingSupported(pieces, pos);
-  if (pos.slot === 'stairs') return stairsSupported(pieces, pos);
-  if (pos.slot !== 'edge') return true;
-  const { level, gx, gz } = pos;
-  const axis = pos.axis ?? 'x';
-  const layer = pos.layer ?? 0;
-  if (layer === 0) {
-    if (level === 0) return true;
-    const cells =
-      axis === 'x'
-        ? [
-            [gx, gz - 1],
-            [gx, gz],
-          ]
-        : [
-            [gx - 1, gz],
-            [gx, gz],
-          ];
-    if (cells.some(([cx, cz]) => pieces[pieceKey({ slot: 'floor', level, gx: cx, gz: cz })]))
-      return true;
-    if (hasBlock(pieces, level - 1, gx, gz, axis, LAYERS_PER_STOREY - 1)) return true;
-  }
-  if (layer > 0) {
-    // Un mur peut aussi reposer sur une dalle de plafond posée juste en dessous, d'un côté ou de l'autre.
-    const cells =
-      axis === 'x'
-        ? [
-            [gx, gz - 1],
-            [gx, gz],
-          ]
-        : [
-            [gx - 1, gz],
-            [gx, gz],
-          ];
-    if (
-      cells.some(
-        ([cx, cz]) =>
-          pieces[pieceKey({ slot: 'ceiling', level, gx: cx, gz: cz, layer: layer - 1 })],
-      )
-    ) {
-      return true;
-    }
-  }
-  if (pieceDef(kind).type === 'door') return false;
-  const has = (g: number, h: number, a: 'x' | 'z', l: number): boolean =>
-    hasBlock(pieces, level, g, h, a, l);
-  if (layer > 0 && has(gx, gz, axis, layer - 1)) return true;
-  if (layer < LAYERS_PER_STOREY - 1 && has(gx, gz, axis, layer + 1)) return true;
-  if (axis === 'x') {
-    if (has(gx - 1, gz, 'x', layer) || has(gx + 1, gz, 'x', layer)) return true;
-    return [gx, gx + 1].some((x) => has(x, gz - 1, 'z', layer) || has(x, gz, 'z', layer));
-  }
-  if (has(gx, gz - 1, 'z', layer) || has(gx, gz + 1, 'z', layer)) return true;
-  return [gz, gz + 1].some((z) => has(gx - 1, z, 'x', layer) || has(gx, z, 'x', layer));
+/** Hauteur (en blocs de 50 cm) de la face d'une dalle : un sol est à la base de son étage, un plafond sur son bloc. */
+export function slabFace(pos: { slot: PieceSlot; level: number; layer?: number }): number {
+  return pos.slot === 'floor'
+    ? pos.level * LAYERS_PER_STOREY
+    : pos.level * LAYERS_PER_STOREY + (pos.layer ?? TOP_LAYER) + 1;
 }
 
-/** Jusqu'où (en cases) une dalle de plafond peut s'étendre depuis un mur qui la porte. */
-export const MAX_CEILING_SPAN = 3;
-
-/**
- * La case a-t-elle, à l'un de ses 4 bords, un mur dont le bloc `layer` est le dernier (le plafond se pose
- * sur la tranche haute du mur, à la hauteur de ce mur, même s'il ne fait qu'un bloc de haut) ?
- */
-function carriedByWall(
-  pieces: Pieces,
-  level: number,
-  gx: number,
-  gz: number,
-  layer: number,
-): boolean {
-  const top = (g: number, h: number, axis: 'x' | 'z'): boolean =>
-    hasBlock(pieces, level, g, h, axis, layer) &&
-    (layer === TOP_LAYER || !hasBlock(pieces, level, g, h, axis, layer + 1));
-  return (
-    top(gx, gz, 'x') ||
-    top(gx, gz + 1, 'x') ||
-    top(gx, gz, 'z') ||
-    top(gx + 1, gz, 'z') ||
-    carriedByStairs(pieces, level, gx, gz, layer)
-  );
+/** Position d'une dalle à la face `face` (blocs depuis le sol) : un sol si la face est à la base d'un étage. */
+export function slabPos(face: number, gx: number, gz: number): PiecePos {
+  if (face % LAYERS_PER_STOREY === 0)
+    return { slot: 'floor', level: face / LAYERS_PER_STOREY, gx, gz };
+  const below = face - 1;
+  return {
+    slot: 'ceiling',
+    level: Math.floor(below / LAYERS_PER_STOREY),
+    gx,
+    gz,
+    layer: below % LAYERS_PER_STOREY,
+  };
 }
 
-/** Le haut d'une marche (bloc `layer`) touche cette case : la dalle se pose au bout de l'escalier, à la même hauteur. */
-function carriedByStairs(
-  pieces: Pieces,
-  level: number,
-  gx: number,
-  gz: number,
-  layer: number,
-): boolean {
-  return RISE_DIR.some(([dx, dz], rot) =>
-    pieces[pieceKey({ slot: 'stairs', level, gx: gx - dx, gz: gz - dz, layer, rot })]
-      ? true
-      : false,
-  );
-}
-
-/**
- * Un plafond s'accroche à la tranche haute d'un mur, à la hauteur de ce mur, sans autre condition, ou
- * prolonge une dalle déjà posée à la même hauteur, à moins de `MAX_CEILING_SPAN` cases d'un mur porteur.
- */
-function ceilingSupported(pieces: Pieces, pos: PiecePos): boolean {
-  const layer = pos.layer ?? TOP_LAYER;
-  const seen = new Set<string>([`${pos.gx},${pos.gz}`]);
-  let frontier: [number, number][] = [[pos.gx, pos.gz]];
-  for (let depth = 0; depth <= MAX_CEILING_SPAN; depth++) {
-    const next: [number, number][] = [];
-    for (const [gx, gz] of frontier) {
-      if (carriedByWall(pieces, pos.level, gx, gz, layer)) return true;
-      for (const [nx, nz] of [
-        [gx - 1, gz],
-        [gx + 1, gz],
-        [gx, gz - 1],
-        [gx, gz + 1],
-      ]) {
-        const k = `${nx},${nz}`;
-        if (seen.has(k)) continue;
-        if (!pieces[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz, layer })])
-          continue;
-        seen.add(k);
-        next.push([nx, nz]);
-      }
-    }
-    frontier = next;
+/** Y a-t-il une dalle sur cette face de cette case ? (clé du sol ou du plafond équivalent) */
+export function slabAt(pieces: Pieces, face: number, gx: number, gz: number): string | null {
+  const pos = slabPos(face, gx, gz);
+  if (pieces[pieceKey(pos)]) return pieceKey(pos);
+  // Ancien plafond posé sur le dernier bloc de l'étage du dessous : même face que le sol de l'étage.
+  if (pos.slot === 'floor' && pos.level > 0) {
+    const old = pieceKey({ slot: 'ceiling', level: pos.level - 1, gx, gz, layer: TOP_LAYER });
+    if (pieces[old]) return old;
   }
-  return false;
-}
-
-/**
- * Un escalier (marche de 50 cm de haut qui monte dans le sens `rot`) se pose au sol (rez-de-chaussée), sur un
- * sol d'étage, ou dans le prolongement d'un autre escalier de même sens, un bloc plus bas, côté bas.
- */
-function stairsSupported(pieces: Pieces, pos: PiecePos): boolean {
-  const layer = pos.layer ?? 0;
-  const rot = pos.rot ?? 0;
-  if (layer === 0) {
-    if (pos.level === 0) return true;
-    return !!pieces[pieceKey({ slot: 'floor', level: pos.level, gx: pos.gx, gz: pos.gz })];
-  }
-  const [dx, dz] = RISE_DIR[rot];
-  return !!pieces[
-    pieceKey({
-      slot: 'stairs',
-      level: pos.level,
-      gx: pos.gx - dx,
-      gz: pos.gz - dz,
-      layer: layer - 1,
-      rot,
-    })
-  ];
+  return null;
 }

@@ -82,6 +82,13 @@
       "material": "stone",
       "color": "#868b91",
       "item": "piece_stairs_stone"
+    },
+    {
+      "id": "door_stone",
+      "type": "door",
+      "material": "stone",
+      "color": "#7a7f86",
+      "item": "piece_door_stone"
     }
   ]
 }

@@ -1,6 +1,12 @@
 import { CELL_SIZE_M } from '../constants';
-import { LAYERS_PER_STOREY, LAYER_HEIGHT_M, pieceDef, type PieceKind } from '../data/buildings';
-import { isFree, isSupported, pieceKey, posFor, type PiecePos, type Pieces } from './pieces';
+import {
+  LAYERS_PER_STOREY,
+  LAYER_HEIGHT_M,
+  pieceDef,
+  resolveKind,
+  type PieceKind,
+} from '../data/buildings';
+import { isFree, pieceKey, posFor, slabPos, type PiecePos, type Pieces } from './pieces';
 
 /** Centre d'une position (m), pour mesurer la portée. */
 export function posCenter(pos: PiecePos): { x: number; z: number } {
@@ -24,6 +30,28 @@ export function planRect(
   for (let gx = Math.min(a.gx, b.gx); gx <= Math.max(a.gx, b.gx); gx++) {
     for (let gz = Math.min(a.gz, b.gz); gz <= Math.max(a.gz, b.gz); gz++) {
       out.push(posFor(kind, level, gx, gz, undefined, layer));
+    }
+  }
+  return out.sort(
+    (p, q) =>
+      Math.hypot(p.gx - a.gx, p.gz - a.gz) - Math.hypot(q.gx - a.gx, q.gz - a.gz) ||
+      p.gx - q.gx ||
+      p.gz - q.gz,
+  );
+}
+
+/** Dalles d'un rectangle de cases, à la face `face` (en blocs de 50 cm depuis le sol), des plus proches du départ aux plus éloignées. */
+export function planSlabs(
+  kind: PieceKind,
+  face: number,
+  a: { gx: number; gz: number },
+  b: { gx: number; gz: number },
+): PiecePos[] {
+  const out: PiecePos[] = [];
+  for (let gx = Math.min(a.gx, b.gx); gx <= Math.max(a.gx, b.gx); gx++) {
+    for (let gz = Math.min(a.gz, b.gz); gz <= Math.max(a.gz, b.gz); gz++) {
+      const s = slabPos(face, gx, gz);
+      out.push(posFor(resolveKind(kind, s.slot), s.level, gx, gz, undefined, s.layer));
     }
   }
   return out.sort(
@@ -62,17 +90,17 @@ export function planLine(
   return out;
 }
 
-export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied' | 'unsupported';
+export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied';
 export interface PlanItem {
   pos: PiecePos;
   status: PlanStatus;
-  /** Ordre de pose des éléments `ok` : un bloc ne se pose qu'une fois celui qui le soutient posé. */
+  /** Ordre de pose des éléments `ok`. */
   seq?: number;
 }
 
 /**
- * Ce qui sera posé (`ok`), ce qui manque de stock (`lack`), est hors de portée (`far`), déjà occupé, ou
- * flotterait dans le vide (`unsupported`). Un bloc peut s'appuyer sur un autre bloc du même tracé.
+ * Ce qui sera posé (`ok`), ce qui manque de stock (`lack`), est hors de portée (`far`) ou déjà occupé.
+ * Aucune condition d'appui : une pièce peut se poser n'importe où (même dans le vide).
  */
 export function evaluatePlan(
   kind: PieceKind,
@@ -82,38 +110,21 @@ export function evaluatePlan(
   player: { x: number; z: number },
   reachM: number,
 ): PlanItem[] {
-  const result: PlanItem[] = positions.map((pos) => ({ pos, status: 'unsupported' as PlanStatus }));
-  const working: Pieces = { ...pieces };
   let left = stock;
   let seq = 0;
-  const pending: number[] = [];
-  positions.forEach((pos, i) => {
-    if (!isFree(pieces, kind, pos)) result[i].status = 'occupied';
-    else {
-      const c = posCenter(pos);
-      if (Math.hypot(c.x - player.x, c.z - player.z) > reachM) result[i].status = 'far';
-      else pending.push(i);
-    }
+  const taken = new Set<string>();
+  return positions.map((pos) => {
+    const key = pieceKey(pos);
+    if (!isFree(pieces, kind, pos) || taken.has(key))
+      return { pos, status: 'occupied' as PlanStatus };
+    const c = posCenter(pos);
+    if (Math.hypot(c.x - player.x, c.z - player.z) > reachM)
+      return { pos, status: 'far' as PlanStatus };
+    if (left <= 0) return { pos, status: 'lack' as PlanStatus };
+    left--;
+    taken.add(key);
+    return { pos, status: 'ok' as PlanStatus, seq: seq++ };
   });
-  let progress = true;
-  while (progress && pending.length > 0) {
-    progress = false;
-    for (let k = 0; k < pending.length; k++) {
-      const i = pending[k];
-      if (!isSupported(working, kind, positions[i])) continue;
-      pending.splice(k--, 1);
-      progress = true;
-      if (left <= 0) {
-        result[i].status = 'lack';
-        continue;
-      }
-      left--;
-      result[i].status = 'ok';
-      result[i].seq = seq++;
-      working[pieceKey(positions[i])] = kind;
-    }
-  }
-  return result;
 }
 
 export interface WallCoord {

@@ -382,6 +382,7 @@
   "build.material.stone": "Stone",
   "item.piece_wall_wood": "Wooden wall",
   "item.piece_door_wood": "Wooden door",
+  "item.piece_door_stone": "Stone door",
   "item.piece_wall_stone": "Stone wall",
   "build.plan": "{ok} to place · {lack} missing",
   "action.layerUp": "Wall: block above",

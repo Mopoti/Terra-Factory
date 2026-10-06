@@ -5,14 +5,14 @@ import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
 import { cellOnPlane } from '../core/build/aim';
 import {
   evaluatePlan,
-  planRect,
+  planSlabs,
   planWall,
   posCenter,
   rayOnEdgePlane,
   type PlanItem,
   type WallCoord,
 } from '../core/build/plan';
-import { edgeKeysToRemove, parseKey, type PiecePos } from '../core/build/pieces';
+import { edgeKeysToRemove, parseKey, slabAt, slabFace, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   PIECES,
@@ -439,9 +439,7 @@ export function startGameView(
         ? `<div>${t('build.wallHeight', { n: String(wallHeight), cm: String(wallHeight * 50) })}</div>`
         : '';
     const ok = lastPlan.filter((i) => i.status === 'ok').length;
-    const lack = lastPlan.filter(
-      (i) => i.status === 'lack' || i.status === 'far' || i.status === 'unsupported',
-    ).length;
+    const lack = lastPlan.filter((i) => i.status === 'lack' || i.status === 'far').length;
     const plan = dragStart
       ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
       : '';
@@ -493,7 +491,7 @@ export function startGameView(
     if (rig.view === 'top') return null;
     const axis = edge.pos.axis ?? 'x';
     const line = axis === 'x' ? edge.pos.gz : edge.pos.gx;
-    return rayOnEdgePlane(rayOrigin, rayDir, axis, line, buildLevel * STOREY_HEIGHT_M);
+    return rayOnEdgePlane(rayOrigin, rayDir, axis, line, edge.pos.level * STOREY_HEIGHT_M);
   }
   let dragLayer = 0;
 
@@ -501,28 +499,14 @@ export function startGameView(
   function planFor(aim: BuildAim): PiecePos[] {
     const start = dragStart ?? aim;
     const kind = resolveKind(buildKind(), start.pos.slot);
+    const level = start.pos.level;
     if (start.pos.slot === 'stairs') return [aim.pos];
     if (start.pos.slot !== 'edge') {
-      if (start.pos.slot === 'ceiling' && dragStart) {
-        // La dalle reste à la hauteur du mur choisi au départ : on prolonge dans ce plan.
-        const layer = start.pos.layer ?? 0;
-        const end =
-          cellOnPlane(
-            rayOrigin,
-            rayDir,
-            buildLevel * STOREY_HEIGHT_M + (layer + 1) * LAYER_HEIGHT_M,
-          ) ?? aim.cell;
-        return planRect(kind, buildLevel, start.cell, end, layer);
-      }
-      // Un seul sol : là où le curseur s'accroche ; en glissant, un rectangle jusqu'à la case sous le curseur.
+      // Dalle : un seul emplacement avant d'appuyer ; en glissant, un rectangle dans le plan de la face de départ.
       if (!dragStart) return [aim.pos];
-      return planRect(
-        kind,
-        buildLevel,
-        { gx: start.pos.gx, gz: start.pos.gz },
-        aim.cell,
-        aim.pos.layer,
-      );
+      const face = slabFace(start.pos);
+      const end = cellOnPlane(rayOrigin, rayDir, face * LAYER_HEIGHT_M + 0.05) ?? aim.cell;
+      return planSlabs(buildKind(), face, { gx: start.pos.gx, gz: start.pos.gz }, end);
     }
     const axis = start.pos.axis ?? 'x';
     const i0 = axis === 'x' ? start.pos.gx : start.pos.gz;
@@ -531,17 +515,17 @@ export function startGameView(
     if (!dragStart) {
       // Avant d'appuyer : le seul bloc visé.
       const layer = aim.pos.layer ?? 0;
-      return planWall(kind, buildLevel, axis, line, { i: i0, layer }, { i: i0, layer });
+      return planWall(kind, level, axis, line, { i: i0, layer }, { i: i0, layer });
     }
     const a = { i: i0, layer: dragLayer };
     if (rig.view === 'top') {
       // Vue du dessus : on ne vise pas en hauteur, la hauteur est celle réglée avec Début / Fin.
       const upTo = Math.min(LAYERS_PER_STOREY - 1, dragLayer + wallHeight - 1);
-      return planWall(kind, buildLevel, axis, line, a, { i: iGround, layer: upTo });
+      return planWall(kind, level, axis, line, a, { i: iGround, layer: upTo });
     }
     // 1ère / 3ème personne : le pan de mur va du bloc de départ au bloc visé.
     const over = hoverCoord(start);
-    return planWall(kind, buildLevel, axis, line, a, over ?? { i: iGround, layer: dragLayer });
+    return planWall(kind, level, axis, line, a, over ?? { i: iGround, layer: dragLayer });
   }
 
   let removeCooldown = 0;
@@ -606,7 +590,6 @@ export function startGameView(
         .sort((p, q) => (p.seq ?? 0) - (q.seq ?? 0))
         .map((i) => i.pos);
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
-      const floating = lastPlan.filter((i) => i.status === 'unsupported').length;
       const placed = options.state.placeMany(kind, ok, buildRot ?? 0);
       if (placed > 0) {
         const def = pieceDef(kind);
@@ -621,19 +604,11 @@ export function startGameView(
       buildMessage =
         placed > 0
           ? ''
-          : floating > 0
-            ? t(
-                buildType() === 'ceiling' || buildType() === 'slab'
-                  ? 'build.unsupportedCeiling'
-                  : buildType() === 'stairs'
-                    ? 'build.unsupportedStairs'
-                    : 'build.unsupported',
-              )
-            : lacking > 0
-              ? t('build.missing')
-              : lastPlan.length > 0
-                ? t('build.tooFar')
-                : '';
+          : lacking > 0
+            ? t('build.missing')
+            : lastPlan.length > 0
+              ? t('build.tooFar')
+              : '';
       dragStart = null;
       lastPlan = [];
       renderBuildHud();
@@ -862,7 +837,7 @@ export function startGameView(
       // Une pompe se pose à moitié dans l'eau : ses cases dans l'étang ne comptent pas comme bloquées.
       const pieces = options.state.changes.pieces;
       const blockedHere = upper
-        ? (cell: Cell): boolean => !pieces[`f:1:${cell.gx},${cell.gz}`]
+        ? (cell: Cell): boolean => !slabAt(pieces, LAYERS_PER_STOREY, cell.gx, cell.gz)
         : def.id === 'pump'
           ? (cell: Cell): boolean => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz)
           : machineBlocked;

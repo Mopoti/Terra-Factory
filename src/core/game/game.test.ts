@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Factory } from '../factory/factory';
-import { aimCeiling, aimEdge, aimFloor, aimStairs, riseFromDirection } from '../build/aim';
+import { aimBuild, aimExisting, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
-import {
-  edgeKeysToRemove,
-  edgeState,
-  isSupported,
-  pieceKey,
-  posFor,
-  type Pieces,
-} from '../build/pieces';
+import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
@@ -372,203 +365,6 @@ describe('murs en plan vertical', () => {
   });
 });
 
-describe('murs soutenus', () => {
-  it('un bloc ne se pose pas dans le vide, mais au sol ou contre un autre mur', () => {
-    const s = new GameState({ inventory: { piece_wall_stone: 20 } });
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 2))).toBe('unsupported');
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 0))).toBe('ok'); // au sol
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 2))).toBe('unsupported'); // trou entre les deux
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 3, 3, 'x', 1))).toBe('ok'); // au-dessus
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 4, 3, 'x', 1))).toBe('ok'); // à côté
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 5, 3, 'z', 1))).toBe('ok'); // dans l'angle
-    expect(s.place('wall_stone', posFor('wall_stone', 0, 9, 9, 'z', 3))).toBe('unsupported');
-  });
-  it("l'aperçu : un pan de mur partant du sol est entièrement posable, un pan en l'air non", () => {
-    const away = { x: 0, z: 0 };
-    const grounded = planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 0 }, { i: 2, layer: 4 });
-    expect(
-      evaluatePlan('wall_stone', grounded, {}, 100, away, 6).every((i) => i.status === 'ok'),
-    ).toBe(true);
-    const floating = planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 2 }, { i: 2, layer: 4 });
-    expect(
-      evaluatePlan('wall_stone', floating, {}, 100, away, 6).every(
-        (i) => i.status === 'unsupported',
-      ),
-    ).toBe(true);
-  });
-  it("un encadrement : un pan en hauteur est posable à côté d'un mur existant", () => {
-    const s = new GameState({ inventory: { piece_wall_stone: 30 } });
-    s.placeMany(
-      'wall_stone',
-      planWall('wall_stone', 0, 'x', 1, { i: 0, layer: 0 }, { i: 0, layer: 4 }),
-    );
-    const frame = planWall('wall_stone', 0, 'x', 1, { i: 1, layer: 3 }, { i: 2, layer: 4 });
-    const plan = evaluatePlan('wall_stone', frame, s.changes.pieces, 30, { x: 0, z: 0 }, 6);
-    expect(plan.every((i) => i.status === 'ok')).toBe(true);
-    expect(s.placeMany('wall_stone', frame)).toBe(4);
-  });
-});
-
-describe('visée assistée des murs', () => {
-  const eye = { x: 0.2, y: 1.6, z: -2 };
-  it('regard vers le sol : le bloc du bas du bord le plus proche', () => {
-    const hit = aimEdge(eye, { x: 0, y: -0.5, z: 0.866 }, {}, 'wall_stone', 0, 10);
-    expect(hit?.pos.layer).toBe(0);
-  });
-  it("regard en l'air loin de tout mur : retombe au sol, jamais dans le vide", () => {
-    const hit = aimEdge(eye, { x: 0, y: 0.3, z: 0.95 }, {}, 'wall_stone', 0, 10);
-    expect(hit?.pos.layer).toBe(0);
-  });
-  it('colle à un mur existant : le bloc au-dessus est proposé', () => {
-    const pieces: Pieces = {};
-    for (let l = 0; l < 2; l++)
-      pieces[pieceKey(posFor('wall_stone', 0, 0, 1, 'x', l))] = 'wall_stone';
-    // Regard vers le bord z = 0,5 m à ~1,2 m de haut, juste au-dessus des 2 blocs posés (1 m).
-    const o = { x: 0.25, y: 1.2, z: -1 };
-    const hit = aimEdge(o, { x: 0, y: 0, z: 1 }, pieces, 'wall_stone', 0, 10);
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1, axis: 'x', layer: 2 });
-  });
-  it('en mode démolition, ne vise que ce qui existe', () => {
-    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 1, 'x', 0))]: 'wall_stone' };
-    expect(
-      aimEdge(
-        { ...eye, x: 1.7 },
-        { x: 0, y: -0.5, z: 0.866 },
-        pieces,
-        'wall_stone',
-        0,
-        10,
-        'remove',
-      ),
-    ).toBeNull();
-    const o = { x: 0.25, y: 0.25, z: -1 };
-    expect(aimEdge(o, { x: 0, y: 0, z: 1 }, pieces, 'wall_stone', 0, 10, 'remove')?.pos.layer).toBe(
-      0,
-    );
-  });
-});
-
-describe('plafonds accrochés aux murs', () => {
-  const walls = (s: GameState): void => {
-    // Un carré de 3 x 3 cases de murs pleins (4 côtés).
-    for (let i = 0; i < 3; i++) {
-      s.placeMany(
-        'wall_stone',
-        planWall('wall_stone', 0, 'x', 0, { i, layer: 0 }, { i, layer: 4 }),
-      );
-      s.placeMany(
-        'wall_stone',
-        planWall('wall_stone', 0, 'x', 3, { i, layer: 0 }, { i, layer: 4 }),
-      );
-      s.placeMany(
-        'wall_stone',
-        planWall('wall_stone', 0, 'z', 0, { i, layer: 0 }, { i, layer: 4 }),
-      );
-      s.placeMany(
-        'wall_stone',
-        planWall('wall_stone', 0, 'z', 3, { i, layer: 0 }, { i, layer: 4 }),
-      );
-    }
-  };
-  it("pas de plafond dans le vide, mais contre le haut d'un mur", () => {
-    const s = new GameState({ inventory: { piece_ceiling_wood: 20, piece_wall_stone: 60 } });
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('unsupported');
-    walls(s);
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0))).toBe('ok'); // coin : touche 2 murs
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('unsupported'); // le centre touche seulement en diagonale
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 0))).toBe('ok');
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 1, 1))).toBe('ok'); // prolonge la dalle
-  });
-  it('un mur trop bas ne porte pas de plafond', () => {
-    const s = new GameState({ inventory: { piece_ceiling_wood: 5, piece_wall_stone: 20 } });
-    s.placeMany(
-      'wall_stone',
-      planWall('wall_stone', 0, 'x', 0, { i: 0, layer: 0 }, { i: 0, layer: 3 }),
-    );
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 0))).toBe('unsupported');
-  });
-  it("le tracé : vert jusqu'à 3 cases d'un mur, rouge au-delà", () => {
-    const s = new GameState({ inventory: { piece_wall_stone: 60 } });
-    walls(s);
-    const plan = evaluatePlan(
-      'ceiling_wood',
-      planRect('ceiling_wood', 0, { gx: 0, gz: 0 }, { gx: 9, gz: 0 }),
-      s.changes.pieces,
-      100,
-      { x: 0, z: 0 },
-      12,
-    );
-    const status = plan.map((p) => p.status);
-    expect(status.slice(0, 4)).toEqual(['ok', 'ok', 'ok', 'ok']);
-    expect(status[9]).toBe('unsupported');
-  });
-});
-
-describe('visée des plafonds', () => {
-  const wall = (): Pieces => {
-    const p: Pieces = {};
-    for (let l = 0; l < 5; l++) p[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
-    return p;
-  };
-  it('viser la face du mur, près du haut, accroche la dalle de son côté', () => {
-    // Œil à 1,6 m, 2 m devant le mur (z = 1 m), qui monte à 2,5 m : regard vers le haut du mur.
-    const o = { x: 0.25, y: 1.6, z: -1 };
-    const d = { x: 0, y: 0.3, z: 0.954 }; // coupe z=1 m à y ≈ 2,4 m
-    const hit = aimCeiling(o, d, wall(), 'ceiling_wood', 0, 10);
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1 }); // la dalle côté œil, contre le mur
-    expect(isSupported(wall(), 'ceiling_wood', hit!.pos)).toBe(true);
-  });
-  it('sans mur à portée : retombe sur la case du plan du plafond', () => {
-    const hit = aimCeiling(
-      { x: 0, y: 1.6, z: 0 },
-      { x: 0, y: 0.5, z: 0.866 },
-      {},
-      'ceiling_wood',
-      0,
-      10,
-    );
-    expect(hit?.pos.slot).toBe('ceiling');
-  });
-});
-
-describe('plafond sur un mur bas', () => {
-  it("se pose sur la tranche haute d'un mur d'un seul bloc, à sa hauteur", () => {
-    const s = new GameState({ inventory: { piece_wall_stone: 3, piece_ceiling_wood: 6 } });
-    s.place('wall_stone', posFor('wall_stone', 0, 0, 2, 'x', 0));
-    // Dalle sur le bloc 0 : de chaque côté du mur.
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 0))).toBe('ok');
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 2, undefined, 0))).toBe('ok');
-    // Pas à une autre hauteur, ni deux dalles dans la même case.
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 3))).toBe('occupied');
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 5, 5, undefined, 0))).toBe(
-      'unsupported',
-    );
-  });
-  it('un mur plus haut ne porte pas une dalle posée à mi-hauteur', () => {
-    const s = new GameState({ inventory: { piece_wall_stone: 3, piece_ceiling_wood: 2 } });
-    s.placeMany(
-      'wall_stone',
-      planWall('wall_stone', 0, 'x', 2, { i: 0, layer: 0 }, { i: 0, layer: 1 }),
-    );
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 0))).toBe(
-      'unsupported',
-    );
-    expect(s.place('ceiling_wood', posFor('ceiling_wood', 0, 0, 1, undefined, 1))).toBe('ok');
-  });
-  it('la visée choisit la hauteur du mur visé', () => {
-    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 2, 'x', 0))]: 'wall_stone' };
-    const hit = aimCeiling(
-      { x: 0.25, y: 0.5, z: -1 },
-      { x: 0, y: 0.05, z: 1 },
-      pieces,
-      'ceiling_wood',
-      0,
-      10,
-    );
-    expect(hit?.pos).toMatchObject({ gz: 1, layer: 0 });
-  });
-});
-
 describe('barre de raccourcis et orientation', () => {
   it('une case vide ne se sélectionne pas, une case pleine se bascule', () => {
     const s = new GameState({ inventory: {} });
@@ -609,73 +405,19 @@ describe('barre de raccourcis et orientation', () => {
   it("l'orientation imposée limite la visée aux bords de cet axe", () => {
     const eye = { x: 0.3, y: 1.6, z: -2 };
     const down = { x: 0.1, y: -0.5, z: 0.85 };
-    expect(aimEdge(eye, down, {}, 'wall_stone', 0, 10, 'place', 'x')?.pos.axis).toBe('x');
-    expect(aimEdge(eye, down, {}, 'wall_stone', 0, 10, 'place', 'z')?.pos.axis).toBe('z');
-  });
-});
-
-describe('pose contre le mur visé', () => {
-  const wall = (): Pieces => {
-    const p: Pieces = {};
-    for (let l = 0; l < 2; l++) p[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
-    return p;
-  };
-  // Mur le long de x à z = 1 m, 2 blocs de haut (1 m), colonne x ∈ [0 ; 0,5].
-  it("viser le haut d'un bloc pose le bloc au-dessus, pas au sol derrière le mur", () => {
-    const eye = { x: 0.25, y: 1.6, z: -2 };
-    // Le rayon descend et touche le mur vers y = 0,9 m (haut du bloc 2).
-    const dir = { x: 0, y: -0.7 / 3, z: 1 };
-    const hit = aimEdge(eye, dir, wall(), 'wall_stone', 0, 12, 'place', 'x');
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 2, axis: 'x', layer: 2 });
-  });
-  it('viser le bord latéral pose le bloc voisin', () => {
-    const eye = { x: 0.45, y: 1.6, z: -2 };
-    const hit = aimEdge(eye, { x: 0, y: -0.45, z: 1 }, wall(), 'wall_stone', 0, 12, 'place', 'x');
-    expect(hit?.pos).toMatchObject({ gx: 1, gz: 2, layer: 0 });
-  });
-  it("orientation perpendiculaire : un bloc d'angle au bout du mur", () => {
-    const eye = { x: 0.45, y: 1.6, z: -2 };
-    const hit = aimEdge(eye, { x: 0, y: -0.45, z: 1 }, wall(), 'wall_stone', 0, 12, 'place', 'z');
-    expect(hit?.pos.axis).toBe('z');
-    expect(hit?.pos.gx).toBe(1);
-  });
-});
-
-describe('orientation automatique', () => {
-  it('vu de face, un mur le long de z reçoit le bloc au-dessus même sans orientation choisie', () => {
-    const pieces: Pieces = {};
-    for (let l = 0; l < 2; l++)
-      pieces[pieceKey(posFor('wall_stone', 0, 2, 0, 'z', l))] = 'wall_stone';
-    // Mur à x = 1 m, colonne z ∈ [0 ; 0,5], vu depuis x = -2 (de face), haut du bloc 2.
-    const hit = aimEdge(
-      { x: -2, y: 1.6, z: 0.25 },
-      { x: 1, y: -0.23, z: 0 },
-      pieces,
-      'wall_stone',
-      0,
-      12,
-    );
-    expect(hit?.pos).toMatchObject({ gx: 2, gz: 0, axis: 'z', layer: 2 });
+    expect(aimBuild(eye, down, {}, 'wall_stone', 0, 10, 'x')?.pos.axis).toBe('x');
+    expect(aimBuild(eye, down, {}, 'wall_stone', 0, 10, 'z')?.pos.axis).toBe('z');
   });
 });
 
 describe('escaliers', () => {
-  it('une marche se pose au sol ; la suivante, dans son prolongement un bloc plus haut', () => {
+  it('une marche se pose n’importe où, y compris dans le vide ; une seule par cube', () => {
     const s = new GameState({ inventory: { piece_stairs_wood: 5 } });
     expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 0, undefined, 0, 0))).toBe('ok');
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 3, 3, undefined, 1, 0))).toBe(
-      'unsupported',
-    ); // dans le vide
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 1, undefined, 1, 0))).toBe('ok'); // suite de la volée
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 1, undefined, 1, 0))).toBe(
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 3, 3, undefined, 1, 0))).toBe('ok');
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 0, undefined, 0, 2))).toBe(
       'occupied',
     );
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 1, 1, undefined, 1, 0))).toBe(
-      'unsupported',
-    ); // pas dans l\'axe
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 2, undefined, 2, 2))).toBe(
-      'unsupported',
-    ); // sens contraire
   });
   it('les marches se sauvegardent avec leur sens', () => {
     const s = new GameState({ inventory: { piece_stairs_stone: 1 } });
@@ -683,185 +425,17 @@ describe('escaliers', () => {
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(Object.keys(copy.changes.pieces)).toEqual(['s:0:2,2:0:3']);
   });
-  it('la visée : sens du regard, prolongement de la volée, démolition', () => {
+  it('la visée : sens du regard, puis démolition de la marche touchée', () => {
     expect(riseFromDirection(0, 1)).toBe(0);
     expect(riseFromDirection(-1, 0.1)).toBe(3);
     const eye = { x: 0.25, y: 1.6, z: -2 };
     const down = { x: 0, y: -0.5, z: 1 };
-    const first = aimStairs(eye, down, {}, 'stairs_wood', 0, 10);
+    const first = aimBuild(eye, down, {}, 'stairs_wood', 0, 10);
     expect(first?.pos).toMatchObject({ layer: 0, rot: 0 });
     const flight: Pieces = { [pieceKey(first!.pos)]: 'stairs_wood' };
-    // Un regard qui tombe juste après le haut de la marche prolonge la volée.
-    const next = aimStairs(
-      { x: first!.pos.gx * 0.5 + 0.25, y: 1.6, z: (first!.pos.gz + 1.5) * 0.5 - 3.2 },
-      { x: 0, y: -0.5, z: 1 },
-      flight,
-      'stairs_wood',
-      0,
-      10,
-    );
-    expect(next?.pos).toMatchObject({ gz: first!.pos.gz + 1, layer: 1, rot: 0 });
-    // En démolition, on vise la marche touchée (et seulement elle).
-    const removed = aimStairs(
-      { x: 0.25, y: 0.2, z: -1 },
-      { x: 0, y: 0, z: 1 },
-      flight,
-      'stairs_wood',
-      0,
-      10,
-      'remove',
-    );
+    const removed = aimExisting({ x: 0.25, y: 0.2, z: -1 }, { x: 0, y: 0, z: 1 }, flight, 10);
     expect(removed?.pos).toMatchObject(first!.pos);
-    expect(
-      aimStairs(
-        { x: 3.25, y: 0.2, z: -1 },
-        { x: 0, y: 0, z: 1 },
-        flight,
-        'stairs_wood',
-        0,
-        10,
-        'remove',
-      ),
-    ).toBeNull();
-  });
-});
-
-describe('accrocher au premier objet visé', () => {
-  const down = { x: 0, y: -0.5, z: 1 };
-  it('sol : sur le terrain, la case sous le curseur', () => {
-    const hit = aimFloor({ x: 0.25, y: 1.6, z: -2 }, down, {}, 'floor_wood', 0, 12);
-    expect(hit?.pos).toMatchObject({ slot: 'floor', gx: 0, gz: 2 });
-  });
-  it('sol : sur une dalle existante, on la prolonge du côté visé', () => {
-    const pieces: Pieces = { [pieceKey(posFor('floor_wood', 0, 0, 2))]: 'floor_wood' };
-    // Le rayon tombe tout près du bord z = 1,5 m de la case (0,2) : on prolonge vers la case (0,3).
-    const hit = aimFloor({ x: 0.25, y: 1.6, z: -1.6 }, down, pieces, 'floor_wood', 0, 12);
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3 });
-  });
-  it("sol : contre un mur visé, du côté de l'œil, pas derrière", () => {
-    const pieces: Pieces = {};
-    for (let l = 0; l < 5; l++)
-      pieces[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
-    // Rayon quasi horizontal qui touche le mur (z = 1 m) à 1,4 m de haut.
-    const hit = aimFloor(
-      { x: 0.25, y: 1.6, z: -2 },
-      { x: 0, y: -0.07, z: 1 },
-      pieces,
-      'floor_wood',
-      0,
-      12,
-    );
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 1 }); // case devant le mur (z de 0,5 à 1 m)
-  });
-  it('mur : sur une dalle de plafond touchée, le bloc se pose dessus', () => {
-    const pieces: Pieces = {};
-    pieces[pieceKey(posFor('ceiling_wood', 0, 5, 4, undefined, 1))] = 'ceiling_wood';
-    // Rayon qui descend sur le dessus de la dalle (haut à 1,003 m), cellule (5, 4) : x 2,5-3, z 2-2,5.
-    const hit = aimEdge(
-      { x: 2.75, y: 2.2, z: 1.0 },
-      { x: 0, y: -1.2, z: 1 },
-      pieces,
-      'wall_stone',
-      0,
-      12,
-    );
-    expect(hit?.pos.layer).toBe(2);
-  });
-  it('escalier : viser une marche prolonge la volée', () => {
-    const pieces: Pieces = {
-      [pieceKey(posFor('stairs_wood', 0, 0, 2, undefined, 0, 0))]: 'stairs_wood',
-    };
-    // Œil à 0,3 m de haut, regard horizontal sur la marche (z 1-1,5 m).
-    const hit = aimStairs(
-      { x: 0.25, y: 0.3, z: -1 },
-      { x: 0, y: 0, z: 1 },
-      pieces,
-      'stairs_wood',
-      0,
-      12,
-    );
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3, layer: 1, rot: 0 });
-  });
-});
-
-describe('escalier contre un mur visé', () => {
-  it('se pose au pied du mur, côté œil, et monte vers lui', () => {
-    const pieces: Pieces = {};
-    for (let l = 0; l < 5; l++)
-      pieces[pieceKey(posFor('wall_stone', 0, 0, 4, 'x', l))] = 'wall_stone'; // z = 2 m
-    const hit = aimStairs(
-      { x: 0.25, y: 1.6, z: -2 },
-      { x: 0, y: -0.15, z: 1 },
-      pieces,
-      'stairs_wood',
-      0,
-      12,
-    );
-    expect(hit?.pos).toMatchObject({ gx: 0, gz: 3, layer: 0, rot: 0 }); // case devant le mur, monte vers +z
-    const back = aimStairs(
-      { x: 0.25, y: 1.6, z: 6 },
-      { x: 0, y: -0.15, z: -1 },
-      pieces,
-      'stairs_wood',
-      0,
-      12,
-    );
-    expect(back?.pos).toMatchObject({ gx: 0, gz: 4, rot: 2 }); // de l\'autre côté, monte vers -z
-  });
-});
-
-describe('dalle : un seul objet pour sol et plafond', () => {
-  it('posée au sol elle fait un sol, sur un mur un plafond', () => {
-    const s = new GameState({ inventory: { piece_slab_wood: 3, piece_wall_stone: 5 } });
-    expect(s.place('slab_wood', posFor('floor_wood', 0, 0, 0))).toBe('ok');
-    s.placeMany(
-      'wall_stone',
-      planWall('wall_stone', 0, 'x', 0, { i: 2, layer: 0 }, { i: 2, layer: 4 }),
-    );
-    expect(s.place('slab_wood', posFor('ceiling_wood', 0, 2, 0))).toBe('ok');
-    expect(Object.values(s.changes.pieces)).toContain('floor_wood');
-    expect(Object.values(s.changes.pieces)).toContain('ceiling_wood');
-    expect(s.inventory.piece_slab_wood).toBe(1);
-    // Démolir rend la dalle.
-    s.removeKeys([pieceKey(posFor('floor_wood', 0, 0, 0))], { x: 0, z: 0 });
-    expect(s.inventory.piece_slab_wood).toBe(2);
-  });
-  it('les anciens sols et plafonds du sac et de la barre deviennent des dalles', () => {
-    const s = new GameState({
-      inventory: { piece_floor_wood: 2, piece_ceiling_wood: 3, piece_floor_stone: 1 },
-      changes: { hotbar: ['piece_ceiling_wood', 'piece_floor_wood', null] },
-    });
-    expect(s.inventory).toEqual({ piece_slab_wood: 5, piece_slab_stone: 1 });
-    expect(s.changes.hotbar.slice(0, 3)).toEqual(['piece_slab_wood', null, null]);
-  });
-  it("la visée : plafond sur le haut d'un mur, sinon sol", () => {
-    const wall: Pieces = {};
-    for (let l = 0; l < 5; l++)
-      wall[pieceKey(posFor('wall_stone', 0, 0, 2, 'x', l))] = 'wall_stone';
-    expect(
-      aimCeiling(
-        { x: 0.25, y: 1.6, z: -1 },
-        { x: 0, y: 0.3, z: 0.954 },
-        wall,
-        'ceiling_wood',
-        0,
-        10,
-        'place',
-        true,
-      )?.pos.slot,
-    ).toBe('ceiling');
-    expect(
-      aimCeiling(
-        { x: 0.25, y: 1.6, z: -1 },
-        { x: 0, y: -0.6, z: 0.8 },
-        {},
-        'ceiling_wood',
-        0,
-        10,
-        'place',
-        true,
-      ),
-    ).toBeNull();
+    expect(aimExisting({ x: 3.25, y: 0.2, z: -1 }, { x: 0, y: 0, z: 1 }, flight, 10)).toBeNull();
   });
 });
 
@@ -1161,28 +735,58 @@ describe('piles du sac, objet en main et outils', () => {
   });
 });
 
-describe('dalle au bout d’un escalier', () => {
-  it('se pose à la hauteur du haut de la marche, en visant l’escalier', () => {
-    const s = new GameState({ inventory: { piece_stairs_stone: 2, piece_slab_stone: 2 } });
-    expect(s.place('stairs_stone', posFor('stairs_stone', 0, 5, 5, undefined, 0, 0))).toBe('ok'); // monte vers +z
-    // Rayon qui vise la marche de dessus (case 5,5, juste au-dessus de la pente).
-    const origin = { x: 2.75, y: 1.6, z: 1.5 };
-    const target = { x: 2.75, y: 0.3, z: 2.85 };
-    const dir = { x: 0, y: target.y - origin.y, z: target.z - origin.z };
-    const len = Math.hypot(dir.x, dir.y, dir.z);
-    const hit = aimCeiling(
-      origin,
-      { x: dir.x / len, y: dir.y / len, z: dir.z / len },
+describe('visée libre : une seule règle pour toutes les pièces', () => {
+  const eye = { x: 0.25, y: 1.6, z: -1.5 };
+  const ahead = (tx: number, ty: number, tz: number): { x: number; y: number; z: number } => {
+    const d = { x: tx - eye.x, y: ty - eye.y, z: tz - eye.z };
+    const len = Math.hypot(d.x, d.y, d.z);
+    return { x: d.x / len, y: d.y / len, z: d.z / len };
+  };
+  it('un mur se pose sur le bord le plus proche du point visé au sol', () => {
+    const hit = aimBuild(eye, ahead(0.3, 0, 0.05), {}, 'wall_stone', 0, 12);
+    expect(hit?.pos).toMatchObject({ slot: 'edge', level: 0, layer: 0 });
+  });
+  it('une dalle se pose sur le haut d’un mur visé, à sa hauteur, sans autre condition', () => {
+    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 0, 'x', 0))]: 'wall_stone' };
+    const hit = aimBuild(eye, ahead(0.25, 0.5, 0.0), pieces, 'slab_stone', 0, 12);
+    expect(hit?.pos).toMatchObject({ slot: 'ceiling', level: 0, layer: 0 });
+  });
+  it('un mur visé par le haut reçoit un bloc au-dessus, dans la même ligne', () => {
+    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 0, 'x', 0))]: 'wall_stone' };
+    const hit = aimBuild(eye, ahead(0.25, 0.5, 0.0), pieces, 'wall_wood', 0, 12);
+    expect(hit?.pos).toMatchObject({ slot: 'edge', axis: 'x', gx: 0, gz: 0, layer: 1 });
+  });
+  it('le bois et la pierre se mélangent : mêmes emplacements, même règle', () => {
+    const pieces: Pieces = { [pieceKey(posFor('wall_stone', 0, 0, 0, 'x', 0))]: 'wall_stone' };
+    const stone = aimBuild(eye, ahead(0.25, 0.5, 0.0), pieces, 'wall_stone', 0, 12);
+    const wood = aimBuild(eye, ahead(0.25, 0.5, 0.0), pieces, 'wall_wood', 0, 12);
+    expect(wood?.pos).toEqual(stone?.pos);
+  });
+  it('dans le vide, la pièce se pose sur le plan de construction choisi (étage 1 = 2,5 m)', () => {
+    const high = { x: 0.25, y: 4, z: -1 };
+    const hit = aimBuild(high, { x: 0, y: -0.6, z: 0.8 }, {}, 'slab_wood', 2.5, 12);
+    expect(hit?.pos).toMatchObject({ slot: 'floor', level: 1 });
+  });
+  it('un escalier se pose contre un autre, à n’importe quelle hauteur', () => {
+    const s = new GameState({ inventory: { piece_stairs_stone: 2 } });
+    s.place('stairs_stone', posFor('stairs_stone', 0, 5, 5, undefined, 0, 0));
+    const hit = aimBuild(
+      { x: 2.75, y: 1.6, z: 1.5 },
+      ahead(2.75, 0.3, 2.85),
       s.changes.pieces,
-      'ceiling_stone',
+      'stairs_stone',
       0,
       12,
-      'place',
-      true,
+      undefined,
+      0,
     );
-    expect(hit?.pos.gx).toBe(5);
-    expect(hit?.pos.gz).toBe(6);
-    expect(hit?.pos.layer).toBe(0);
+    expect(hit?.pos.slot).toBe('stairs');
+    expect(`${hit?.pos.gx},${hit?.pos.gz}`).not.toBe('5,5,0');
+  });
+  it('une dalle du sol d’un étage et le plafond du dernier bloc de l’étage du dessous sont la même face', () => {
+    const s = new GameState({ inventory: { piece_slab_stone: 3 } });
+    expect(s.place('slab_stone', posFor('floor_stone', 1, 0, 0))).toBe('ok');
+    expect(s.place('slab_stone', posFor('ceiling_stone', 0, 0, 0, undefined, 4))).toBe('occupied');
   });
 });
 

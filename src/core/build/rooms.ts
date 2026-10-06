@@ -39,7 +39,10 @@ export function detectRooms(pieces: Pieces): Room[] {
     const doorEdges = new Set<string>();
     while (queue.length > 0 && closed) {
       const [gx, gz] = queue.pop() as [number, number];
-      if (!pieces[cellAt('floor', level, gx, gz)] || !pieces[cellAt('ceiling', level, gx, gz)]) {
+      // Sol sous la case et dalle au-dessus (plafond sur le bloc du haut, ou sol de l'étage du dessus).
+      const roof =
+        pieces[cellAt('ceiling', level, gx, gz)] || pieces[cellAt('floor', level + 1, gx, gz)];
+      if (!pieces[cellAt('floor', level, gx, gz)] || !roof) {
         closed = false;
         break;
       }

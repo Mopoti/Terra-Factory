@@ -128,3 +128,7 @@ Règle générale : la pose part du **premier objet que le rayon du curseur touc
 ### Tour 35 — battant de porte
 
 Les portes ont un **battant** : fermé il remplit le passage et **bloque** le joueur ; **clic gauche** dessus l'ouvre (le battant pivote à angle droit) ou le ferme, avec un grincement / un claquement. L'état est enregistré (clé `o:étage:gx,gz:axe`), un battant ouvert ne compte pas comme un mur pour la collision, et démolir la porte efface son état. Pour la détection des pièces fermées, une porte (ouverte ou fermée) reste un élément de clôture. Les anciennes portes sont donc fermées au chargement.
+
+### Tour 76 — refonte : visée libre et pièces sans appui
+
+Voir `docs/construction-refonte.md` : une seule visée pour toutes les pièces (emplacement libre le plus proche de la surface touchée), plus de règle d'appui, une seule dalle (sol = plafond), porte en pierre ajoutée, bois et pierre entièrement compatibles. Les règles de fixation des Tours 17 à 29 (soutien des murs, plafonds à 3 cases d'un mur, volées d'escalier) sont abandonnées.

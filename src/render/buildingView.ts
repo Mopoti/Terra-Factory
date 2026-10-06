@@ -8,11 +8,10 @@ import {
   STOREY_HEIGHT_M,
   THICKNESS_M,
   pieceDef,
-  slotOf,
   type PieceKind,
 } from '../core/data/buildings';
 import { SLAB_LIFT_M } from '../core/game/physics';
-import { aimCeiling, aimEdge, aimFloor, aimStairs } from '../core/build/aim';
+import { aimBuild, aimExisting } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -275,7 +274,11 @@ export class BuildingView {
     }
   }
 
-  /** Emplacement visé par un rayon, pour poser une pièce de ce type à cet étage. */
+  /**
+   * Emplacement visé par un rayon pour poser (ou démolir) une pièce : une seule règle pour tous les types
+   * (`aimBuild` : l'emplacement libre le plus proche de la première surface touchée), à la hauteur du plan de
+   * construction `level` si rien n'est touché.
+   */
   aim(
     origin: THREE.Vector3,
     dir: THREE.Vector3,
@@ -288,85 +291,34 @@ export class BuildingView {
     /** Escalier : sens de montée imposé (quarts de tour), sinon dans le sens du regard. */
     forcedRot?: number | null,
   ): BuildAim | null {
-    const def = pieceDef(kind);
-    if (def.type === 'slab') {
-      // Une dalle : plafond si le curseur touche le haut d'un mur / d'une dalle, sinon sol.
-      const ceiling = aimCeiling(
-        origin,
-        dir,
-        pieces,
-        `ceiling_${def.material}`,
-        level,
-        maxDist,
-        mode,
-        true,
-      );
-      if (ceiling) {
-        return {
-          pos: ceiling.pos,
-          key: pieceKey(ceiling.pos),
-          cell: ceiling.cell,
-          x: (ceiling.pos.gx + 0.5) * CELL_SIZE_M,
-          z: (ceiling.pos.gz + 0.5) * CELL_SIZE_M,
-        };
-      }
-      return this.aim(
-        origin,
-        dir,
-        `floor_${def.material}`,
-        level,
-        pieces,
-        maxDist,
-        mode,
-        lockAxis,
-        forcedRot,
-      );
-    }
-    const slot = slotOf(def.type);
-    if (slot === 'edge') {
-      const hit = aimEdge(origin, dir, pieces, kind, level, maxDist, mode, lockAxis);
-      if (!hit) return null;
-      const alongX = hit.pos.axis === 'x';
-      return {
-        pos: hit.pos,
-        key: pieceKey(hit.pos),
-        cell: hit.cell,
-        x: alongX ? (hit.pos.gx + 0.5) * CELL_SIZE_M : hit.pos.gx * CELL_SIZE_M,
-        z: alongX ? hit.pos.gz * CELL_SIZE_M : (hit.pos.gz + 0.5) * CELL_SIZE_M,
-      };
-    }
-    if (slot === 'stairs') {
-      const hit = aimStairs(origin, dir, pieces, kind, level, maxDist, mode, forcedRot);
-      if (!hit) return null;
-      return {
-        pos: hit.pos,
-        key: pieceKey(hit.pos),
-        cell: hit.cell,
-        x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
-        z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
-      };
-    }
-    if (slot === 'ceiling') {
-      const hit = aimCeiling(origin, dir, pieces, kind, level, maxDist, mode);
-      if (!hit) return null;
-      return {
-        pos: hit.pos,
-        key: pieceKey(hit.pos),
-        cell: hit.cell,
-        x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
-        z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
-      };
-    }
-    // Sol : s'accroche au premier objet touché (dalle, mur) ou au sol sous le curseur.
-    const hit = aimFloor(origin, dir, pieces, kind, level, maxDist, mode);
+    const hit =
+      mode === 'remove'
+        ? aimExisting(origin, dir, pieces, maxDist)
+        : aimBuild(
+            origin,
+            dir,
+            pieces,
+            kind,
+            level * STOREY_HEIGHT_M,
+            maxDist,
+            lockAxis,
+            forcedRot,
+          );
     if (!hit) return null;
-    return {
-      pos: hit.pos,
-      key: pieceKey(hit.pos),
-      cell: hit.cell,
-      x: (hit.pos.gx + 0.5) * CELL_SIZE_M,
-      z: (hit.pos.gz + 0.5) * CELL_SIZE_M,
-    };
+    const { pos } = hit;
+    const x =
+      pos.slot === 'edge'
+        ? pos.axis === 'x'
+          ? (pos.gx + 0.5) * CELL_SIZE_M
+          : pos.gx * CELL_SIZE_M
+        : (pos.gx + 0.5) * CELL_SIZE_M;
+    const z =
+      pos.slot === 'edge'
+        ? pos.axis === 'x'
+          ? pos.gz * CELL_SIZE_M
+          : (pos.gz + 0.5) * CELL_SIZE_M
+        : (pos.gz + 0.5) * CELL_SIZE_M;
+    return { pos, key: pieceKey(pos), cell: hit.cell, x, z };
   }
 
   /** Aperçu des pièces à poser : vert si elles seront posées, rouge si elles ne peuvent pas l'être. */

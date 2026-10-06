@@ -11,7 +11,7 @@ import {
 } from '../factory/factory';
 import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
-import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
+import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import { BAG_LIMITS, ITEMS, itemById, type BagLimits, type EquipSlot } from '../data/items';
@@ -507,17 +507,12 @@ export class GameState {
   }
 
   /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
-  place(
-    kind: PieceKind,
-    pos: PiecePos,
-    rotation = 0,
-  ): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
+  place(kind: PieceKind, pos: PiecePos, rotation = 0): 'ok' | 'occupied' | 'missing' | 'invalid' {
     const def = pieceDef(kind);
     // Une dalle devient un sol ou un plafond selon l'emplacement.
     const placed = resolveKind(kind, pos.slot);
     if (slotOf(pieceDef(placed).type) !== pos.slot) return 'invalid';
     if (!isFree(this.changes.pieces, placed, pos)) return 'occupied';
-    if (!isSupported(this.changes.pieces, placed, pos)) return 'unsupported';
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[pieceKey(pos)] = placed;
@@ -528,25 +523,10 @@ export class GameState {
     return 'ok';
   }
 
-  /**
-   * Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock, les emplacements
-   * libres et le soutien : un bloc peut s'appuyer sur un autre posé juste avant).
-   */
+  /** Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock et les emplacements libres). */
   placeMany(kind: PieceKind, positions: PiecePos[], rotation = 0): number {
-    let remaining = positions;
     let n = 0;
-    for (let progress = true; progress && remaining.length > 0;) {
-      progress = false;
-      const next: PiecePos[] = [];
-      for (const pos of remaining) {
-        const r = this.place(kind, pos, rotation);
-        if (r === 'ok') {
-          n++;
-          progress = true;
-        } else if (r === 'unsupported') next.push(pos);
-      }
-      remaining = next;
-    }
+    for (const pos of positions) if (this.place(kind, pos, rotation) === 'ok') n++;
     return n;
   }
 
