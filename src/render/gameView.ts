@@ -57,6 +57,7 @@ import {
   isChest,
   isArm,
   isAssembler,
+  GROW_M,
   hasWindow,
   isFluid,
   isLinear,
@@ -65,6 +66,7 @@ import {
   isRouter,
   machineDef,
   machineForItem,
+  visualHeight,
   type MachineDef,
 } from '../core/data/machines';
 import {
@@ -653,14 +655,15 @@ export function startGameView(
 
   function machineBox(m: Machine): Structure['box'] {
     const { w, d } = dims(m.type, m.rot);
-    const h = machineDef(m.type).height;
+    const h = visualHeight(m.type);
+    const grow = m.type === 'conveyor' ? 0 : GROW_M;
     return {
       x: (m.gx + w / 2) * CELL_SIZE_M,
       y: h / 2,
       z: (m.gz + d / 2) * CELL_SIZE_M,
-      sx: w * CELL_SIZE_M,
+      sx: w * CELL_SIZE_M + grow,
       sy: h,
-      sz: d * CELL_SIZE_M,
+      sz: d * CELL_SIZE_M + grow,
     };
   }
 

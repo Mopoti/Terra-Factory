@@ -111,6 +111,13 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'turbine'
   );
 
+/** Les machines (sauf les tapis) sont dessinées 10 cm plus larges, plus longues et plus hautes que leur emprise. */
+export const GROW_M = 0.1;
+
+/** Hauteur dessinée (et visée) d'une machine. */
+export const visualHeight = (type: MachineType): number =>
+  type === 'conveyor' ? machineDef(type).height : machineDef(type).height + GROW_M;
+
 export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';
 

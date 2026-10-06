@@ -12,6 +12,7 @@ import {
   isRouter,
   machineDef,
   smeltRecipe,
+  visualHeight,
   type MachineType,
 } from '../data/machines';
 import {
@@ -1170,7 +1171,7 @@ export function pickMachine(
     const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
     const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
     const m = factory.machineAt(gx, gz);
-    if (m && y <= machineDef(m.type).height) return { machine: m, t };
+    if (m && y <= visualHeight(m.type)) return { machine: m, t };
   }
   return null;
 }

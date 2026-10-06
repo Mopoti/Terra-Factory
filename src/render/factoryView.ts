@@ -7,7 +7,9 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  GROW_M,
   machineDef,
+  visualHeight,
   type MachineType,
 } from '../core/data/machines';
 import {
@@ -23,7 +25,7 @@ import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
 const BELT_H = 0.12;
-const BELT_W = 0.42;
+const BELT_W = 0.52;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
@@ -176,7 +178,9 @@ export class FactoryView {
         this.entries.set(m.id, entry);
         addBelt(mb, m.gx, m.gz, m.rot, entry, hexToRgb(machineDef('conveyor').color));
       } else {
+        const start = mb.positions.length;
         addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m));
+        growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
@@ -189,7 +193,7 @@ export class FactoryView {
     const pts: number[] = [];
     const top = (m: Machine): [number, number, number] => {
       const { w, d } = dims(m.type, m.rot);
-      const h = m.type === 'pole' ? 2.1 : machineDef(m.type).height;
+      const h = m.type === 'pole' ? 2.1 + GROW_M : visualHeight(m.type);
       return [(m.gx + w / 2) * CELL_SIZE_M, h, (m.gz + d / 2) * CELL_SIZE_M];
     };
     for (const { from, to } of this.factory.wires) {
@@ -267,13 +271,21 @@ export class FactoryView {
       const mb = new MeshBuilder();
       for (const g of list) {
         const color = g.ok ? GREEN : RED;
-        const def = machineDef(g.type);
         const { w, d } = dims(g.type, g.rot);
         const x = (g.gx + w / 2) * CELL_SIZE_M;
         const z = (g.gz + d / 2) * CELL_SIZE_M;
-        if (g.type === 'conveyor') mb.box(x, 0, z, 0.46, 0.14, 0.46, color, true);
+        if (g.type === 'conveyor') mb.box(x, 0, z, 0.56, 0.14, 0.56, color, true);
         else
-          mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
+          mb.box(
+            x,
+            0,
+            z,
+            w * CELL_SIZE_M + GROW_M - 0.04,
+            visualHeight(g.type),
+            d * CELL_SIZE_M + GROW_M - 0.04,
+            color,
+            true,
+          );
         // Flèches : sorties vers l'extérieur, entrées vers l'intérieur.
         const io = ports(g.type, g.gx, g.gz, g.rot);
         fluidArrows(mb, g.type, g.gx, g.gz, g.rot, (c) =>
@@ -346,6 +358,25 @@ function addBelt(
     BELT_H + 0.004,
     light,
   );
+}
+
+/** Agrandit le corps d'une machine de 10 cm en largeur, longueur et hauteur (autour de son centre au sol). */
+function growBody(mb: MeshBuilder, start: number, m: Machine): void {
+  const { w, d } = dims(m.type, m.rot);
+  const W = w * CELL_SIZE_M;
+  const D = d * CELL_SIZE_M;
+  const H = machineDef(m.type).height;
+  const cx = (m.gx + w / 2) * CELL_SIZE_M;
+  const cz = (m.gz + d / 2) * CELL_SIZE_M;
+  const kx = (W + GROW_M) / W;
+  const kz = (D + GROW_M) / D;
+  const ky = (H + GROW_M) / H;
+  const p = mb.positions;
+  for (let i = start; i < p.length; i += 3) {
+    p[i] = cx + (p[i] - cx) * kx;
+    p[i + 1] *= ky;
+    p[i + 2] = cz + (p[i + 2] - cz) * kz;
+  }
 }
 
 function addMachineBody(

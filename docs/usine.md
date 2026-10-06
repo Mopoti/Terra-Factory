@@ -146,3 +146,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Deux pollutions** (`pollutionKind` dans `machines.json`) : **fumées (air)** pour fourneaux, générateurs et chaudières : elles se répandent et les arbres les absorbent ; **pollution du sol** pour foreuses, assembleur, laboratoire : elle reste sur place (cellule de 32 m) et ne s'efface que très lentement (0,01/s). Les deux nourrissent les nids. Carte : voile rouge pour l'air, brun pour le sol. Les panneaux d'infos indiquent le type.
 - **Arbres** : tronc haut et fin, **feuillage au-dessus de 2 m** : le personnage (1,70 m) passe sous les branches et ne **bute que sur le tronc** (une case de 50 cm). Hauteur de visée portée à 4,2 m.
 - Vérifié : tests (gardiens, pollution du sol, tir par rayon via `Threat.shoot` indirectement par le jeu) + scène navigateur (barre de santé car gardiens proches, tir 12 → 7 balles, R remet 12 et décompte un chargeur).
+
+## Tour 55 — machines plus grandes (+10 cm)
+- Toutes les machines (sauf les tapis) sont **dessinées 10 cm plus larges, plus longues et plus hautes** que leur emprise (`GROW_M` dans `machines.ts` ; `growBody` dans `factoryView.ts` agrandit le modèle autour de son centre au sol). L'emprise sur la grille (cases de 50 cm), les collisions et les raccords ne changent pas ; la hauteur de visée suit (`visualHeight`).
+- Les **tapis** gardent leur hauteur et sont **10 cm plus larges** (52 cm : ils se touchent d'une case à l'autre).
