@@ -171,6 +171,32 @@ export interface Port {
 }
 
 /** Case voisine au milieu du côté `dir` (0 = +z, 1 = +x, 2 = −z, 3 = −x) d'une machine posée avec l'orientation `rot`. */
+/** Toutes les cases voisines le long du côté `dir` d'une machine. */
+export function sideCells(
+  type: MachineType,
+  gx: number,
+  gz: number,
+  rot: number,
+  dir: number,
+): Cell[] {
+  const { w, d } = dims(type, rot);
+  const out: Cell[] = [];
+  switch (dir % 4) {
+    case 0:
+      for (let x = 0; x < w; x++) out.push({ gx: gx + x, gz: gz + d });
+      break;
+    case 1:
+      for (let z = 0; z < d; z++) out.push({ gx: gx + w, gz: gz + z });
+      break;
+    case 2:
+      for (let x = 0; x < w; x++) out.push({ gx: gx + x, gz: gz - 1 });
+      break;
+    default:
+      for (let z = 0; z < d; z++) out.push({ gx: gx - 1, gz: gz + z });
+  }
+  return out;
+}
+
 export function sideCell(
   type: MachineType,
   gx: number,
@@ -358,6 +384,9 @@ const MACHINE_TYPES: MachineType[] = [
 ];
 
 /** Centre d'une machine (m). */
+/** Rayon (m) dans lequel on vise ou on bute sur un poteau (le mât est fin, son emprise est de 2 × 2 cases). */
+export const POLE_HIT_M = 0.18;
+
 export function centerOf(m: Machine): { x: number; z: number } {
   const { w, d } = dims(m.type, m.rot);
   return { x: (m.gx + w / 2) * CELL_SIZE_M, z: (m.gz + d / 2) * CELL_SIZE_M };
@@ -400,7 +429,7 @@ export class Factory {
     this.links = fluidLinks(
       this.machines.filter((m) => isFluid(m.type)),
       (gx, gz) => this.machineAt(gx, gz),
-      (m, side) => sideCell(m.type, m.gx, m.gz, m.rot, side),
+      (m, side) => sideCells(m.type, m.gx, m.gz, m.rot, side),
     );
     this.pumpsOk = new Set(
       this.machines
@@ -508,8 +537,18 @@ export class Factory {
 
   /** La machine voisine de `m` par son côté `dir` (au milieu du côté ; 0 = +z, 1 = +x, 2 = −z, 3 = −x). */
   neighbor(m: Machine, dir: number): Machine | null {
-    const c = sideCell(m.type, m.gx, m.gz, m.rot, dir);
-    return this.machineAt(c.gx, c.gz);
+    return this.neighbors(m, dir)[0] ?? null;
+  }
+
+  /** Toutes les machines qui touchent le côté `dir` de `m` (la case du milieu d'abord, puis les autres). */
+  neighbors(m: Machine, dir: number): Machine[] {
+    const mid = sideCell(m.type, m.gx, m.gz, m.rot, dir);
+    const out: Machine[] = [];
+    for (const c of [mid, ...sideCells(m.type, m.gx, m.gz, m.rot, dir)]) {
+      const found = this.machineAt(c.gx, c.gz);
+      if (found && found !== m && !out.includes(found)) out.push(found);
+    }
+    return out;
   }
 
   machineAt(gx: number, gz: number): Machine | null {
@@ -1024,12 +1063,13 @@ export class Factory {
   /** Foreuse / fourneau : pousse un objet du stock vers la case de sortie. */
   private pushOutput(m: Machine): void {
     if (!m.stock || m.stock.count <= 0) return;
-    const out = outputCell(m.type, m.gx, m.gz, m.rot);
-    const target = this.machineAt(out.gx, out.gz);
-    if (!target || target === m) return;
-    if (this.deliver(target, m, m.stock.item)) {
-      m.stock.count--;
-      if (m.stock.count <= 0) m.stock = null;
+    // Toute machine qui touche le côté de sortie convient (pas seulement celle de la case du milieu).
+    for (const target of this.neighbors(m, m.rot)) {
+      if (this.deliver(target, m, m.stock.item)) {
+        m.stock.count--;
+        if (m.stock.count <= 0) m.stock = null;
+        return;
+      }
     }
   }
 
@@ -1040,10 +1080,11 @@ export class Factory {
       for (let i = 0; i < 3; i++) {
         const k = (Math.floor(m.progress) + i) % 3;
         const side = (m.rot + [2, 3, 1][k]) % 4;
-        const src = this.neighbor(m, side);
-        if (!src || src.type !== 'conveyor' || (src.rot + 2) % 4 !== side) continue;
-        const head = src.belt[0];
-        if (!head || head.pos < 1) continue;
+        const src = this.neighbors(m, side).find(
+          (c) => c.type === 'conveyor' && (c.rot + 2) % 4 === side && c.belt[0]?.pos >= 1,
+        );
+        const head = src?.belt[0];
+        if (!src || !head) continue;
         m.stock = { item: head.item, count: 1 };
         src.belt.shift();
         m.progress = (k + 1) % 3;
@@ -1055,8 +1096,8 @@ export class Factory {
     for (let i = 0; i < outs.length; i++) {
       const k = m.type === 'splitter' ? (Math.floor(m.progress) + i) % 3 : 0;
       const dir = outs[k];
-      const target = this.neighbor(m, dir);
-      if (!target || target === m || !this.deliver(target, m, m.stock.item, dir)) continue;
+      const target = this.neighbors(m, dir).find((t) => this.deliver(t, m, m.stock!.item, dir));
+      if (!target) continue;
       m.stock = null;
       if (m.type === 'splitter') m.progress = (k + 1) % 3;
       break;
@@ -1117,32 +1158,34 @@ export class Factory {
 
   /** Ce que le bras pourrait prendre maintenant : un objet des 3 côtés (à tour de rôle) que la destination accepte. */
   private armCandidate(m: Machine): { item: string; take: () => void; side: number } | null {
-    const dest = this.neighbor(m, m.rot);
-    if (!dest) return null;
+    const dests = this.neighbors(m, m.rot);
+    if (dests.length === 0) return null;
     const turn = this.armTurn.get(m.id) ?? 0;
     for (let i = 0; i < 3; i++) {
       const side = (turn + i) % 3;
-      const src = this.neighbor(m, (m.rot + [2, 1, 3][side]) % 4);
-      const found =
-        src && src !== dest
-          ? this.peekSources(src).find((f) => this.canAccept(dest, m, f.item, m.rot))
-          : undefined;
-      if (found) return { ...found, side };
+      for (const src of this.neighbors(m, (m.rot + [2, 1, 3][side]) % 4)) {
+        if (dests.includes(src)) continue;
+        const found = this.peekSources(src).find((f) =>
+          dests.some((d) => this.canAccept(d, m, f.item, m.rot)),
+        );
+        if (found) return { ...found, side };
+      }
     }
     return null;
   }
 
   /** Pourquoi un bras ne travaille pas (pour le panneau d'infos). */
   armDiagnosis(m: Machine): 'ok' | 'noDest' | 'noSource' | 'refused' {
-    const dest = this.neighbor(m, m.rot);
-    if (!dest) return 'noDest';
+    const dests = this.neighbors(m, m.rot);
+    if (dests.length === 0) return 'noDest';
     let any = false;
     for (const side of [2, 1, 3]) {
-      const src = this.neighbor(m, (m.rot + side) % 4);
-      if (!src || src === dest) continue;
-      for (const f of this.peekSources(src)) {
-        any = true;
-        if (this.canAccept(dest, m, f.item, m.rot)) return 'ok';
+      for (const src of this.neighbors(m, (m.rot + side) % 4)) {
+        if (dests.includes(src)) continue;
+        for (const f of this.peekSources(src)) {
+          any = true;
+          if (dests.some((d) => this.canAccept(d, m, f.item, m.rot))) return 'ok';
+        }
       }
     }
     return any ? 'refused' : 'noSource';
@@ -1153,7 +1196,6 @@ export class Factory {
     const def = machineDef(m.type);
     const electric = !!def.consumesKw;
     const swing = def.swingSeconds ?? 0.9;
-    const dest = this.neighbor(m, m.rot);
     const speed = electric ? this.powerFactor(m) : 1;
     if (!m.stock) {
       if (!electric && this.fuelSecondsLeft(m) < ARM_LOW_FUEL_S) this.armRefuel(m);
@@ -1173,7 +1215,11 @@ export class Factory {
       this.burn(m, dt);
     }
     m.progress = Math.min(swing, m.progress + dt * speed);
-    if (m.progress >= swing && dest && this.deliver(dest, m, m.stock.item, m.rot)) {
+    const item = m.stock.item;
+    if (
+      m.progress >= swing &&
+      this.neighbors(m, m.rot).some((d) => this.deliver(d, m, item, m.rot))
+    ) {
       m.stock = null;
       m.progress = 0;
     }
@@ -1187,8 +1233,7 @@ export class Factory {
     }
     const front = m.belt[0];
     if (front && front.pos >= 1) {
-      const target = this.neighbor(m, m.rot);
-      if (target && target !== m && this.deliver(target, m, front.item)) m.belt.shift();
+      if (this.neighbors(m, m.rot).some((t) => this.deliver(t, m, front.item))) m.belt.shift();
     }
   }
 }
@@ -1207,7 +1252,15 @@ export function pickMachine(
     const gx = Math.floor((origin.x + dir.x * t) / CELL_SIZE_M);
     const gz = Math.floor((origin.z + dir.z * t) / CELL_SIZE_M);
     const m = factory.machineAt(gx, gz);
-    if (m && y <= visualHeight(m.type)) return { machine: m, t };
+    if (m && y <= visualHeight(m.type)) {
+      // Le poteau est fin : on ne le vise que près de son mât (au milieu de son emprise).
+      if (m.type === 'pole') {
+        const c = centerOf(m);
+        if (Math.hypot(origin.x + dir.x * t - c.x, origin.z + dir.z * t - c.z) > POLE_HIT_M)
+          continue;
+      }
+      return { machine: m, t };
+    }
   }
   return null;
 }

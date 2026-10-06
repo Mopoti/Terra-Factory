@@ -71,6 +71,8 @@ import {
 } from '../core/data/machines';
 import {
   Factory,
+  POLE_HIT_M,
+  centerOf,
   dims,
   emptyMachine,
   recipeOf,
@@ -657,13 +659,15 @@ export function startGameView(
     const { w, d } = dims(m.type, m.rot);
     const h = visualHeight(m.type);
     const grow = m.type === 'conveyor' ? 0 : GROW_M;
+    // Le poteau a une emprise de 2 × 2 cases mais un mât fin : sa boîte de visée l'est aussi.
+    const thin = m.type === 'pole';
     return {
       x: (m.gx + w / 2) * CELL_SIZE_M,
       y: h / 2,
       z: (m.gz + d / 2) * CELL_SIZE_M,
-      sx: w * CELL_SIZE_M + grow,
+      sx: thin ? 0.3 : w * CELL_SIZE_M + grow,
       sy: h,
-      sz: d * CELL_SIZE_M + grow,
+      sz: thin ? 0.3 : d * CELL_SIZE_M + grow,
     };
   }
 
@@ -1245,7 +1249,13 @@ export function startGameView(
   /** Les machines et les tuyaux sont pleins (on ne les traverse pas) ; les tapis se marchent. */
   const machineSolidAt = (xM: number, zM: number): boolean => {
     const m = factory.machineAt(Math.floor(xM / CELL_SIZE_M), Math.floor(zM / CELL_SIZE_M));
-    return m !== null && m.type !== 'conveyor';
+    if (m === null || m.type === 'conveyor') return false;
+    // Un poteau ne bloque que près de son mât.
+    if (m.type === 'pole') {
+      const c = centerOf(m);
+      return Math.hypot(xM - c.x, zM - c.z) <= POLE_HIT_M + 0.05;
+    }
+    return true;
   };
   const isBlockedAt = (xM: number, zM: number): boolean =>
     blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`) ||

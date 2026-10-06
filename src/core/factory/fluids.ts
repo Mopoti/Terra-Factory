@@ -51,28 +51,26 @@ export interface FluidLink {
 }
 
 /**
- * Raccords entre machines à fluide voisines : deux prises se raccordent quand elles se font face, la prise de
- * chacune donnant sur une case de l'autre. `sideCellOf` donne la case voisine au milieu d'un côté.
+ * Raccords entre machines à fluide voisines : deux machines se raccordent quand leurs côtés se touchent et que
+ * chacune a une prise sur le côté qui fait face à l'autre (peu importe de combien elles sont décalées).
+ * `sideCellsOf` donne les cases voisines tout le long d'un côté.
  */
 export function fluidLinks(
   machines: Machine[],
   machineAt: (gx: number, gz: number) => Machine | null,
-  sideCellOf: (m: Machine, side: number) => Cell,
+  sideCellsOf: (m: Machine, side: number) => Cell[],
 ): FluidLink[] {
   const links: FluidLink[] = [];
   for (const a of machines) {
-    const ports = fluidPorts(a.type, a.rot);
-    for (const pa of ports) {
-      const cell = sideCellOf(a, pa.side);
-      const b = machineAt(cell.gx, cell.gz);
-      if (!b || b === a || b.id < a.id) continue;
-      const opposite = (pa.side + 2) % 4;
-      const pb = fluidPorts(b.type, b.rot).find((p) => p.side === opposite);
-      if (!pb) continue;
-      // La prise de b doit donner sur une case de a (sinon elles ne se touchent pas par leurs prises).
-      const back = sideCellOf(b, pb.side);
-      if (machineAt(back.gx, back.gz) !== a) continue;
-      links.push({ a, pa, b, pb });
+    for (const pa of fluidPorts(a.type, a.rot)) {
+      const seen = new Set<number>();
+      for (const cell of sideCellsOf(a, pa.side)) {
+        const b = machineAt(cell.gx, cell.gz);
+        if (!b || b === a || b.id < a.id || seen.has(b.id)) continue;
+        seen.add(b.id);
+        const pb = fluidPorts(b.type, b.rot).find((p) => p.side === (pa.side + 2) % 4);
+        if (pb) links.push({ a, pa, b, pb });
+      }
     }
   }
   return links;

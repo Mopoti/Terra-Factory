@@ -198,7 +198,7 @@ export class FactoryView {
     const pts: number[] = [];
     const top = (m: Machine): [number, number, number] => {
       const { w, d } = dims(m.type, m.rot);
-      const h = m.type === 'pole' ? 2.1 + GROW_M : visualHeight(m.type);
+      const h = m.type === 'pole' ? 3.3 + GROW_M : visualHeight(m.type);
       return [(m.gx + w / 2) * CELL_SIZE_M, h, (m.gz + d / 2) * CELL_SIZE_M];
     };
     for (const { from, to } of this.factory.wires) {
@@ -353,20 +353,23 @@ function addBelt(
   // Voie centrale (là où passent les objets) : de l'entrée au centre puis du centre à la sortie ; elle dessine
   // aussi les angles.
   const lane = shade(color, 0.7);
-  const laneBox = (ux: number, uz: number): void => {
+  // Deux morceaux qui ne se recouvrent pas (sinon les faces coplanaires scintillent) : la sortie couvre le centre.
+  const laneBox = (ux: number, uz: number, from: number, to: number): void => {
+    const mid = (from + to) / 2;
+    const len = to - from;
     mb.box(
-      cx + (ux * half) / 2,
+      cx + ux * mid,
       BELT_H,
-      cz + (uz * half) / 2,
-      Math.abs(ux) > 0 ? half + 0.14 : 0.14,
-      0.004,
-      Math.abs(uz) > 0 ? half + 0.14 : 0.14,
+      cz + uz * mid,
+      Math.abs(ux) > 0 ? len : 0.14,
+      0.003,
+      Math.abs(uz) > 0 ? len : 0.14,
       lane,
       false,
     );
   };
-  laneBox(dx, dz);
-  laneBox(entry.ex, entry.ez);
+  laneBox(dx, dz, -0.07, half);
+  laneBox(entry.ex, entry.ez, 0.07, half);
   // Flèche de sens, claire, sur le dessus (au milieu du tapis, là où passent les objets).
   const light = shade(color, 1.9);
   const tipX = cx + dx * 0.36;
@@ -378,7 +381,7 @@ function addBelt(
     [tipX, tipZ],
     [cx - dx * 0.1 + px * 0.2, cz - dz * 0.1 + pz * 0.2],
     [cx - dx * 0.1 - px * 0.2, cz - dz * 0.1 - pz * 0.2],
-    BELT_H + 0.004,
+    BELT_H + 0.006,
     light,
   );
 }
@@ -445,17 +448,17 @@ function addMachineBody(
     return;
   }
   if (type === 'pipe') {
-    // Tuyau : moyeu central et un manchon vers chaque voisin raccordé.
-    mb.box(x, 0.04, z, 0.18, 0.18, 0.18, shade(color, 1.1), true);
+    // Tuyau : moyeu central et un manchon jusqu'au bord de la tuile vers chaque voisin raccordé (tuyau continu).
+    mb.box(x, 0.02, z, 0.36, 0.32, 0.36, shade(color, 1.1), true);
     for (const side of sides) {
       const [dx, dz] = RISE_DIR[side];
       mb.box(
-        x + dx * 0.17,
-        0.05,
-        z + dz * 0.17,
-        dx !== 0 ? 0.2 : 0.14,
-        0.16,
-        dz !== 0 ? 0.2 : 0.14,
+        x + dx * 0.25,
+        0.04,
+        z + dz * 0.25,
+        dx !== 0 ? 0.52 : 0.28,
+        0.28,
+        dz !== 0 ? 0.52 : 0.28,
         color,
         true,
       );
@@ -575,10 +578,11 @@ function addMachineBody(
   }
   if (type === 'pole') {
     // Poteau : mât, bras, deux isolateurs.
-    mb.box(x, 0, z, 0.12, 2.2, 0.12, color, true);
-    mb.box(x, 2.0, z, 0.7, 0.07, 0.1, shade(color, 0.8), true);
-    mb.box(x - 0.3, 2.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
-    mb.box(x + 0.3, 2.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+    mb.box(x, 0, z, 0.12, 3.4, 0.12, color, true);
+    mb.box(x, 3.15, z, 0.7, 0.07, 0.1, shade(color, 0.8), true);
+    mb.box(x, 2.85, z, 0.5, 0.06, 0.08, shade(color, 0.8), true);
+    mb.box(x - 0.3, 3.22, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+    mb.box(x + 0.3, 3.22, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
     return;
   }
   if (type === 'generator') {

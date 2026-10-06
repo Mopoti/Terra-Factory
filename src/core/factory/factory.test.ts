@@ -7,6 +7,7 @@ import {
   footprint,
   normalizeMachines,
   outputCell,
+  pickMachine,
   type FactoryWorld,
   type Machine,
 } from './factory';
@@ -697,5 +698,34 @@ describe('tapis et tuyaux à cheval sur une machine', () => {
     expect(f.machineAt(4, 4)?.type).toBe('conveyor');
     // les tuyaux suivent la même règle
     expect(f.canPlace('pipe', -1, 1, 0, () => false)).toBe(true);
+  });
+});
+
+describe('raccords décalés et poteau fin', () => {
+  it('un tuyau relié à la chaudière par un côté qui ne fait que se toucher alimente quand même', () => {
+    const world = { ...makeWorld().world, waterAt: (_gx: number, gz: number) => gz < 0 };
+    const pipe = emptyMachine(1, 'pipe', 11, 3, 0); // touche seulement la case (11,4) du côté arrière
+    pipe.fluid.water = 100;
+    const boiler = emptyMachine(2, 'boiler', 9, 5, 0);
+    const f = new Factory([pipe, boiler], world);
+    run(f, 3);
+    expect(boiler.fluid.water).toBeGreaterThan(20);
+  });
+
+  it('un tapis débite dans une machine qui touche son côté de sortie, même décalée', () => {
+    const belt = emptyMachine(1, 'conveyor', 10, 8, 0); // sortie : cases (10..11, 10)
+    belt.belt.push({ item: 'iron_ore', pos: 1 });
+    const chest = emptyMachine(2, 'chest_wood', 11, 10, 0); // ne touche que la case (11,10)
+    const f = new Factory([belt, chest], makeWorld().world);
+    run(f, 0.5);
+    expect(chest.slots[0]?.count).toBe(1);
+  });
+
+  it('on ne vise le poteau que près de son mât', () => {
+    const pole = emptyMachine(1, 'pole', 0, 0, 0); // emprise (0..1, 0..1), mât au centre (0,5 ; 0,5)
+    const f = new Factory([pole], makeWorld().world);
+    const down = { x: 0, y: -1, z: 0 };
+    expect(pickMachine(f, { x: 0.5, y: 3, z: 0.5 }, down, 5)).not.toBeNull();
+    expect(pickMachine(f, { x: 0.1, y: 3, z: 0.1 }, down, 5)).toBeNull();
   });
 });
