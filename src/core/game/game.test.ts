@@ -955,3 +955,32 @@ describe('prendre une quantité', () => {
     expect(s.takeFromChest(c, 0)).toBe(15);
   });
 });
+
+describe('pile au bout du curseur', () => {
+  it('prendre, ranger, déposer dans une machine (le reste reste en main) et sauvegarder', () => {
+    const s = new GameState({ inventory: { coal: 40, machine_furnace: 1 } });
+    expect(s.takeToHand('coal', 20)).toBe(20);
+    expect(s.inventory.coal).toBe(20);
+    expect(s.hand).toEqual({ item: 'coal', count: 20 });
+    // la pile tenue fait partie du sac dans la sauvegarde
+    expect(s.snapshot().inventory.coal).toBe(40);
+    expect(s.returnHand()).toBe(20);
+    expect(s.inventory.coal).toBe(40);
+    expect(s.hand).toBeNull();
+
+    const f = new Factory(s.changes.machines, { oreAt: () => null, mineOre: () => 0 });
+    s.placeMachine(f, 'furnace', 4, 4, 0, () => false);
+    const m = s.changes.machines[0];
+    s.takeToHand('coal', 40);
+    // la case de combustible accepte 100 : tout passe
+    expect(s.useHand((item, n) => s.loadMachine(m, 'fuel', item, n))).toBe(40);
+    expect(s.hand).toBeNull();
+    expect(m.fuel?.count).toBe(40);
+    // un objet refusé reste en main
+    s.inventory = { iron_ingot: 5 };
+    s.takeToHand('iron_ingot', 5);
+    expect(s.useHand((item, n) => s.loadMachine(m, 'fuel', item, n))).toBe(0);
+    expect(s.hand).toEqual({ item: 'iron_ingot', count: 5 });
+    expect(s.inventory.iron_ingot ?? 0).toBe(0);
+  });
+});

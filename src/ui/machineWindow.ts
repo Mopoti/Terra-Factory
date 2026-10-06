@@ -6,7 +6,7 @@ import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
-import { pickAsked, pickHalf, pickedCount } from './pick';
+import { takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
 
 export interface MachineWindow {
@@ -71,7 +71,7 @@ export function mountMachineWindow(
       m.stock?.item ?? null,
       m.slots.map((x) => x.item),
       selected,
-      state.pick,
+      state.hand,
     ]);
 
   const machine = (): Machine | null =>
@@ -88,9 +88,22 @@ export function mountMachineWindow(
       return;
     }
     const max = machineDef(m.type).stockMax ?? 100;
-    const n = pickedCount(state, item, max);
-    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, n) > 0 ? 'pickup' : 'deny');
-    state.pick = null;
+    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, max) > 0 ? 'pickup' : 'deny');
+    render();
+  }
+
+  /** Dépose la pile tenue au bout du curseur dans une case de la machine (le reste reste en main). */
+  function dropHand(m: Machine, slot: SlotName): void {
+    const hand = state.hand;
+    if (!hand || !accepts(m, slot, hand.item)) {
+      playSfx('deny');
+      return;
+    }
+    const max = machineDef(m.type).stockMax ?? 100;
+    const moved = state.useHand((item, n) =>
+      state.loadMachine(m, slot as 'fuel' | 'input', item, Math.min(n, max)),
+    );
+    playSfx(moved > 0 ? 'pickup' : 'deny');
     render();
   }
 
@@ -137,6 +150,7 @@ export function mountMachineWindow(
         drop(m, slot, item);
       });
       box.addEventListener('click', () => {
+        if (state.hand) return dropHand(m, slot);
         if (selected) drop(m, slot, selected);
       });
     }
@@ -200,24 +214,30 @@ export function mountMachineWindow(
           render();
         });
         cell.addEventListener('click', (e) => {
+          if (state.hand) {
+            state.returnHand();
+            render();
+            return;
+          }
           if (e.ctrlKey || e.metaKey) {
-            void pickAsked(state, slot.item, itemName(slot.item), slot.count).then((ok) => {
-              if (ok) selected = slot.item;
-              render();
-            });
+            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e).then(render);
             return;
           }
           selected = selected === slot.item ? null : slot.item;
-          state.pick = null;
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          pickHalf(state, slot.item, slot.count);
-          selected = slot.item;
+          takeHalf(state, slot.item, slot.count, e);
           render();
         });
-      } else cell.disabled = true;
+      } else {
+        cell.addEventListener('click', () => {
+          if (!state.hand) return;
+          state.returnHand();
+          render();
+        });
+      }
       grid.append(cell);
     }
     grid.addEventListener('dragover', (e) => {
@@ -261,6 +281,7 @@ export function mountMachineWindow(
           render();
         });
         cell.addEventListener('click', () => {
+          if (state.hand) return putInChest(m, state.hand.item);
           if (state.takeFromChest(m, i) > 0) playSfx('pickup');
           render();
         });
@@ -272,6 +293,7 @@ export function mountMachineWindow(
         });
       } else {
         cell.addEventListener('click', () => {
+          if (state.hand) return putInChest(m, state.hand.item);
           if (selected) putInChest(m, selected);
         });
       }
@@ -291,8 +313,12 @@ export function mountMachineWindow(
   }
 
   function putInChest(m: Machine, item: string): void {
-    playSfx(state.putInChest(m, item, pickedCount(state, item, 100)) > 0 ? 'pickup' : 'deny');
-    state.pick = null;
+    const hand = state.hand;
+    const moved =
+      hand && hand.item === item
+        ? state.useHand((it, n) => state.putInChest(m, it, n))
+        : state.putInChest(m, item, 100);
+    playSfx(moved > 0 ? 'pickup' : 'deny');
     render();
   }
 
@@ -379,6 +405,7 @@ export function mountMachineWindow(
     x.addEventListener('click', close);
     panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel);
+    updateHandCursor(state);
   }
 
   function open(id: number): void {
@@ -397,6 +424,8 @@ export function mountMachineWindow(
     current = null;
     selected = null;
     dragging = false;
+    state.returnHand();
+    updateHandCursor(state);
     window.clearInterval(timer);
     root.hidden = true;
     root.replaceChildren();

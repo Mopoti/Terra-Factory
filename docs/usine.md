@@ -53,7 +53,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Les fenêtres (sac, machine) n'ont plus de bouton « Fermer » : une croix ✕ en haut à droite (Échap fonctionne toujours).
 - Détruire une construction ou une machine rend **l'objet** (ex. Mur en pierre, Fourneau) et non plus ses ressources de fabrication ; le contenu des machines/coffres revient aussi. Ce qui ne tient pas dans le sac tombe au sol.
 
-## Tour 40 — prendre une partie d'une pile
-- Sac et fenêtre machine : **clic droit** sur une pile = en prendre la moitié (arrondie au-dessus) ; **Ctrl + clic gauche** = fenêtre pour choisir la quantité. La quantité choisie (« En main : … ×N ») est celle déposée ensuite dans une case de machine ou un coffre (clic sur la case) ; clic gauche normal = toute la pile comme avant.
-- Dans la fenêtre machine, clic droit sur une case de la machine ou du coffre = reprendre la moitié.
-- Limite : le glisser-déposer à la souris déplace toujours la pile selon l'ancien comportement, sauf si une quantité a été choisie juste avant (elle est alors utilisée). Non vérifié visuellement.
+## Tour 40 — pile au bout du curseur
+- Sac et fenêtre machine : **clic droit** sur une pile = en prendre la moitié (arrondie au-dessus) ; **Ctrl + clic gauche** = fenêtre pour choisir la quantité. La quantité est retirée du sac et **suit le curseur** (« Bois ×10 », `GameState.hand`).
+- Avec une pile au curseur : clic sur une case de machine (combustible/minerai) ou sur le coffre = dépôt (le reste demeure en main si la case est pleine ou refuse) ; clic dans le sac = on range ; fermer la fenêtre = on range aussi. Une sauvegarde compte la pile tenue dans le sac.
+- Dans la fenêtre machine, clic droit sur une case de machine/coffre = en reprendre la moitié.
+- Vérifié par test unitaire et script navigateur (curseur, dépôt dans un coffre, Ctrl+clic, fermeture).

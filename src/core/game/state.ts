@@ -48,8 +48,8 @@ export class GameState {
   selectedSlot: number | null = null;
   /** Objet « en main » depuis le sac, à poser dans une case de la barre au prochain clic. */
   carried: string | null = null;
-  /** Quantité choisie (moitié de la pile, ou saisie) sur l'objet « en main » ; null = toute la pile. */
-  pick: { item: string; count: number } | null = null;
+  /** Pile tenue au bout du curseur (retirée du sac) pour la déplacer dans une case de machine ou un coffre. */
+  hand: { item: string; count: number } | null = null;
   private roomCache: Room[] | null = null;
   private readonly listeners = new Set<(e: StateEvent) => void>();
 
@@ -72,7 +72,51 @@ export class GameState {
 
   /** Copie à enregistrer dans une sauvegarde. */
   snapshot(): { inventory: Inventory; changes: WorldChanges } {
-    return { inventory: structuredClone(this.inventory), changes: structuredClone(this.changes) };
+    // Ce que le joueur tient au bout du curseur fait partie de son sac.
+    const inventory = structuredClone(this.inventory);
+    return {
+      inventory: this.hand ? add(inventory, this.hand.item, this.hand.count) : inventory,
+      changes: structuredClone(this.changes),
+    };
+  }
+
+  /** Prend `count` unités du sac au bout du curseur (la pile tenue est d'abord rangée si c'est un autre objet). */
+  takeToHand(item: string, count: number): number {
+    if (this.hand && this.hand.item !== item) this.returnHand();
+    const n = Math.min(count, this.inventory[item] ?? 0);
+    if (n <= 0) return 0;
+    this.inventory = remove(this.inventory, item, n).inventory;
+    this.hand = { item, count: (this.hand?.count ?? 0) + n };
+    this.emit({ type: 'inventory' });
+    return n;
+  }
+
+  /** Range dans le sac la pile tenue (tout ce qui tient). Renvoie la quantité rangée. */
+  returnHand(): number {
+    if (!this.hand) return 0;
+    const n = Math.min(this.hand.count, maxAddable(this.inventory, this.hand.item, this.limits));
+    if (n > 0) this.inventory = add(this.inventory, this.hand.item, n);
+    this.hand.count -= n;
+    if (this.hand.count <= 0) this.hand = null;
+    this.emit({ type: 'inventory' });
+    return n;
+  }
+
+  /** Dépose la pile tenue via `use(item, count)` (qui renvoie la quantité acceptée) ; le reste reste en main. */
+  useHand(use: (item: string, count: number) => number): number {
+    const h = this.hand;
+    if (!h) return 0;
+    // Les actions de la machine puisent dans le sac : on y remet la pile le temps du geste.
+    this.hand = null;
+    this.inventory = add(this.inventory, h.item, h.count);
+    const moved = use(h.item, h.count);
+    const left = h.count - moved;
+    if (left > 0) {
+      this.inventory = remove(this.inventory, h.item, left).inventory;
+      this.hand = { item: h.item, count: left };
+    }
+    this.emit({ type: 'inventory' });
+    return moved;
   }
 
   /** Le sac peut-il encore recevoir au moins une unité de cet objet ? */
@@ -167,7 +211,6 @@ export class GameState {
       this.selectedSlot = null;
     }
     this.carried = null;
-    this.pick = null;
     this.emit({ type: 'hotbar' });
   }
 

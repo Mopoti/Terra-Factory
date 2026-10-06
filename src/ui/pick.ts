@@ -1,20 +1,57 @@
 import type { GameState } from '../core/game/state';
-import { t } from '../i18n';
+import { itemById } from '../core/data/items';
+import { t, type TranslationKey } from '../i18n';
 import { promptModal } from './modal';
 
-/** Clic droit sur une pile du sac : on en prend la moitié (arrondie au-dessus). */
-export function pickHalf(state: GameState, item: string, stackCount: number): void {
-  state.carried = item;
-  state.pick = { item, count: Math.max(1, Math.ceil(stackCount / 2)) };
+let cursor: HTMLElement | null = null;
+let last = { x: 0, y: 0 };
+
+function place(): void {
+  if (cursor) cursor.style.transform = `translate(${last.x + 14}px, ${last.y + 14}px)`;
 }
 
-/** Ctrl + clic gauche : le joueur choisit la quantité. Renvoie vrai si une quantité a été retenue. */
-export async function pickAsked(
+window.addEventListener(
+  'mousemove',
+  (e) => {
+    last = { x: e.clientX, y: e.clientY };
+    place();
+  },
+  true,
+);
+
+/** Affiche (ou cache) la pile tenue au bout du curseur. */
+export function updateHandCursor(state: GameState): void {
+  const hand = state.hand;
+  if (!hand) {
+    cursor?.remove();
+    cursor = null;
+    return;
+  }
+  if (!cursor) {
+    cursor = document.createElement('div');
+    cursor.className = 'hand-cursor';
+    document.body.append(cursor);
+  }
+  cursor.style.setProperty('--item', itemById(hand.item).color);
+  cursor.textContent = `${t(`item.${hand.item}` as TranslationKey)} ×${hand.count}`;
+  place();
+}
+
+/** Clic droit sur une pile du sac : on en prend la moitié (arrondie au-dessus) au bout du curseur. */
+export function takeHalf(state: GameState, item: string, stackCount: number, at: MouseEvent): void {
+  last = { x: at.clientX, y: at.clientY };
+  state.takeToHand(item, Math.max(1, Math.ceil(stackCount / 2)));
+}
+
+/** Ctrl + clic gauche : le joueur choisit la quantité à prendre. */
+export async function takeAsked(
   state: GameState,
   item: string,
   itemName: string,
   stackCount: number,
-): Promise<boolean> {
+  at: MouseEvent,
+): Promise<void> {
+  last = { x: at.clientX, y: at.clientY };
   const value = await promptModal({
     title: itemName,
     label: t('inv.pickLabel', { max: String(stackCount) }),
@@ -29,12 +66,5 @@ export async function pickAsked(
         : t('inv.pickInvalid', { max: String(stackCount) });
     },
   });
-  if (value === null) return false;
-  state.carried = item;
-  state.pick = { item, count: Number(value) };
-  return true;
+  if (value !== null) state.takeToHand(item, Number(value));
 }
-
-/** Quantité à déplacer pour cet objet : celle choisie, sinon `fallback`. */
-export const pickedCount = (state: GameState, item: string, fallback: number): number =>
-  state.pick && state.pick.item === item ? state.pick.count : fallback;

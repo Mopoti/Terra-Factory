@@ -6,7 +6,7 @@ import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { getSettings } from '../settings/store';
 import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
-import { pickAsked, pickHalf } from './pick';
+import { takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
 
 export interface InventoryActions {
@@ -167,23 +167,23 @@ export function mountInventory(
           e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item),
         );
         cell.addEventListener('click', (e) => {
+          if (state.hand) {
+            state.returnHand();
+            render();
+            return;
+          }
           if (e.ctrlKey || e.metaKey) {
-            void pickAsked(state, slot.item, itemName(slot.item), slot.count).then((ok) => {
-              if (ok) selected = slot.item;
-              render();
-            });
+            void takeAsked(state, slot.item, itemName(slot.item), slot.count, e).then(render);
             return;
           }
           selected = selected === slot.item ? null : slot.item;
           // L'objet choisi peut être rangé dans une case de la barre de raccourcis d'un clic.
           state.carried = selected;
-          state.pick = null;
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          pickHalf(state, slot.item, slot.count);
-          selected = slot.item;
+          takeHalf(state, slot.item, slot.count, e);
           render();
         });
         cell.addEventListener('mouseenter', () => {
@@ -195,7 +195,11 @@ export function mountInventory(
           showTooltip();
         });
       } else {
-        cell.disabled = true;
+        cell.addEventListener('click', () => {
+          if (!state.hand) return;
+          state.returnHand();
+          render();
+        });
       }
       grid.append(cell);
     }
@@ -206,9 +210,7 @@ export function mountInventory(
         el(
           'div',
           'inv-selected',
-          state.pick && state.pick.item === selected
-            ? t('inv.picked', { item: itemName(selected), n: String(state.pick.count) })
-            : t('inv.selected', { item: itemName(selected), n: String(count) }),
+          t('inv.selected', { item: itemName(selected), n: String(count) }),
         ),
       );
       const buttons = el('span', 'inv-actions');
@@ -277,6 +279,7 @@ export function mountInventory(
     panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel, tooltip);
     showTooltip();
+    updateHandCursor(state);
   }
 
   const onMove = (e: MouseEvent): void => {
@@ -297,7 +300,8 @@ export function mountInventory(
     if (!isOpenNow) return;
     isOpenNow = false;
     state.carried = null;
-    state.pick = null;
+    state.returnHand();
+    updateHandCursor(state);
     hovered = null;
     message = '';
     root.hidden = true;
