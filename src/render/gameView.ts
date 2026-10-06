@@ -781,44 +781,50 @@ export function startGameView(
       return;
     }
 
-    // Tapis : en gardant le clic, on trace un chemin case par case ; chaque élément s'oriente vers le suivant.
+    // Tapis et tuyaux : ils occupent des tuiles de 2 × 2 cases. En gardant le clic, on trace un chemin tuile par
+    // tuile ; chaque élément s'oriente vers le suivant.
+    const tc = { gx: Math.floor(c.gx / 2), gz: Math.floor(c.gz / 2) };
+    const tileNear = (t: Cell): boolean => near({ gx: t.gx * 2 + 1, gz: t.gz * 2 + 1 });
+    const tileWithin = (t: Cell): boolean => tileNear(t) || pathReached.has(`${t.gx},${t.gz}`);
     if (down) {
       const last = machinePath[machinePath.length - 1];
       if (!last) {
-        machinePath = [c];
+        machinePath = [tc];
         pathReached.clear();
-        if (near(c)) pathReached.add(`${c.gx},${c.gz}`);
-      } else if (last.gx !== c.gx || last.gz !== c.gz) {
-        const back = machinePath.findIndex((p) => p.gx === c.gx && p.gz === c.gz);
+        if (tileNear(tc)) pathReached.add(`${tc.gx},${tc.gz}`);
+      } else if (last.gx !== tc.gx || last.gz !== tc.gz) {
+        const back = machinePath.findIndex((p) => p.gx === tc.gx && p.gz === tc.gz);
         if (back >= 0) machinePath.length = back + 1;
         else {
           const cur = { ...last };
           for (
             let guard = 0;
-            guard < MAX_BELT_PATH && (cur.gx !== c.gx || cur.gz !== c.gz);
+            guard < MAX_BELT_PATH && (cur.gx !== tc.gx || cur.gz !== tc.gz);
             guard++
           ) {
-            const dx = c.gx - cur.gx;
-            const dz = c.gz - cur.gz;
+            const dx = tc.gx - cur.gx;
+            const dz = tc.gz - cur.gz;
             if (Math.abs(dx) >= Math.abs(dz)) cur.gx += Math.sign(dx);
             else cur.gz += Math.sign(dz);
             machinePath.push({ ...cur });
-            if (near(cur)) pathReached.add(`${cur.gx},${cur.gz}`);
+            if (tileNear(cur)) pathReached.add(`${cur.gx},${cur.gz}`);
           }
           if (machinePath.length > MAX_BELT_PATH) machinePath.length = MAX_BELT_PATH;
         }
       }
     }
-    const path = machinePath.length > 0 ? machinePath : [c];
+    const path = machinePath.length > 0 ? machinePath : [tc];
     let left = stock;
-    const ghosts = path.map((cell, i) => {
+    const ghosts = path.map((tile, i) => {
       const rot =
         i < path.length - 1
-          ? dirIndex(cell, path[i + 1])
+          ? dirIndex(tile, path[i + 1])
           : path.length > 1
-            ? dirIndex(path[i - 1], cell)
+            ? dirIndex(path[i - 1], tile)
             : baseRot;
-      const free = factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && within(cell);
+      const cell = { gx: tile.gx * 2, gz: tile.gz * 2 };
+      const free =
+        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && tileWithin(tile);
       const ok = free && left > 0;
       if (ok) left--;
       return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok };

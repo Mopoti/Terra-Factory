@@ -14,6 +14,7 @@ import {
 } from '../core/data/machines';
 import {
   dims,
+  footprint,
   outputCell,
   ports,
   sideCell,
@@ -25,7 +26,9 @@ import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
 const BELT_H = 0.12;
-const BELT_W = 0.52;
+/** Un tapis occupe une tuile de 2 × 2 cases (1 m) ; les objets passent par son milieu. */
+const TILE_M = 2 * CELL_SIZE_M;
+const BELT_W = TILE_M;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
@@ -105,29 +108,31 @@ export function beltEntry(
   m: Machine,
 ): { ex: number; ez: number; curved: boolean } {
   const [dx, dz] = RISE_DIR[m.rot];
+  const mine = new Set(footprint(m.type, m.gx, m.gz, m.rot).map((c) => `${c.gx},${c.gz}`));
+  const lands = (c: { gx: number; gz: number }): boolean => mine.has(`${c.gx},${c.gz}`);
   const feeds = (n: Machine | null): boolean => {
     if (!n || n === m) return false;
     if (n.type === 'splitter') {
       // Trois sorties : devant, gauche, droite (pas derrière).
       const back = (n.rot + 2) % 4;
-      return RISE_DIR.some(
-        ([ax, az], dir) => dir !== back && n.gx + ax === m.gx && n.gz + az === m.gz,
+      return [0, 1, 2, 3].some(
+        (dir) => dir !== back && lands(sideCell(n.type, n.gx, n.gz, n.rot, dir)),
       );
     }
     const front =
       n.type === 'conveyor' || n.type === 'merger' || isArm(n.type)
-        ? { gx: n.gx + RISE_DIR[n.rot][0], gz: n.gz + RISE_DIR[n.rot][1] }
+        ? sideCell(n.type, n.gx, n.gz, n.rot, n.rot)
         : outputCell(n.type, n.gx, n.gz, n.rot);
-    return front.gx === m.gx && front.gz === m.gz;
+    return lands(front);
   };
   // Derrière : tout droit.
-  if (feeds(factory.machineAt(m.gx - dx, m.gz - dz))) return { ex: -dx, ez: -dz, curved: false };
+  if (feeds(factory.neighbor(m, (m.rot + 2) % 4))) return { ex: -dx, ez: -dz, curved: false };
   // Sur les côtés : virage.
-  for (const [sx, sz] of [
-    [-dz, dx],
-    [dz, -dx],
-  ]) {
-    if (feeds(factory.machineAt(m.gx + sx, m.gz + sz))) return { ex: sx, ez: sz, curved: true };
+  for (const [dir, sx, sz] of [
+    [(m.rot + 1) % 4, -dz, dx],
+    [(m.rot + 3) % 4, dz, -dx],
+  ] as const) {
+    if (feeds(factory.neighbor(m, dir))) return { ex: sx, ez: sz, curved: true };
   }
   return { ex: -dx, ez: -dz, curved: false };
 }
@@ -222,20 +227,20 @@ export class FactoryView {
       const [dx, dz] = RISE_DIR[m.rot];
       for (const b of m.belt) {
         // Trajet : du bord d'entrée au centre, puis du centre au bord de sortie.
-        const cx = center(m.gx);
-        const cz = center(m.gz);
+        const cx = (m.gx + 1) * CELL_SIZE_M;
+        const cz = (m.gz + 1) * CELL_SIZE_M;
         let x: number;
         let z: number;
         if (b.pos < 0.5) {
-          const k = (0.5 - b.pos) * CELL_SIZE_M;
+          const k = (0.5 - b.pos) * TILE_M;
           x = cx + entry.ex * k;
           z = cz + entry.ez * k;
         } else {
-          const k = (b.pos - 0.5) * CELL_SIZE_M;
+          const k = (b.pos - 0.5) * TILE_M;
           x = cx + dx * k;
           z = cz + dz * k;
         }
-        mb.box(x, BELT_H, z, 0.15, 0.13, 0.15, hexToRgb(itemById(b.item).color), true);
+        mb.box(x, BELT_H, z, 0.22, 0.16, 0.22, hexToRgb(itemById(b.item).color), true);
       }
     }
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
@@ -274,7 +279,7 @@ export class FactoryView {
         const { w, d } = dims(g.type, g.rot);
         const x = (g.gx + w / 2) * CELL_SIZE_M;
         const z = (g.gz + d / 2) * CELL_SIZE_M;
-        if (g.type === 'conveyor') mb.box(x, 0, z, 0.56, 0.14, 0.56, color, true);
+        if (g.type === 'conveyor') mb.box(x, 0, z, BELT_W, 0.14, BELT_W, color, true);
         else
           mb.box(
             x,
@@ -325,9 +330,10 @@ function addBelt(
   color: Rgb,
 ): void {
   const [dx, dz] = RISE_DIR[rot];
-  const cx = center(gx);
-  const cz = center(gz);
-  const half = CELL_SIZE_M / 2;
+  // Un tapis occupe 2 × 2 cases : on le dessine centré sur sa tuile.
+  const cx = (gx + 1) * CELL_SIZE_M;
+  const cz = (gz + 1) * CELL_SIZE_M;
+  const half = TILE_M / 2;
   // Corps : le centre, la moitié de sortie, et la moitié d'entrée (côté ou derrière).
   mb.box(cx, 0, cz, BELT_W, BELT_H, BELT_W, color, true);
   const arm = (ux: number, uz: number): void => {
@@ -344,17 +350,17 @@ function addBelt(
   };
   arm(dx, dz);
   arm(entry.ex, entry.ez);
-  // Bords relevés et flèche de sens, claire, sur le dessus.
+  // Flèche de sens, claire, sur le dessus (au milieu du tapis, là où passent les objets).
   const light = shade(color, 1.9);
-  const tipX = cx + dx * 0.18;
-  const tipZ = cz + dz * 0.18;
+  const tipX = cx + dx * 0.36;
+  const tipZ = cz + dz * 0.36;
   const px = -dz;
   const pz = dx;
   flatTri(
     mb,
     [tipX, tipZ],
-    [cx - dx * 0.05 + px * 0.1, cz - dz * 0.05 + pz * 0.1],
-    [cx - dx * 0.05 - px * 0.1, cz - dz * 0.05 - pz * 0.1],
+    [cx - dx * 0.1 + px * 0.2, cz - dz * 0.1 + pz * 0.2],
+    [cx - dx * 0.1 - px * 0.2, cz - dz * 0.1 - pz * 0.2],
     BELT_H + 0.004,
     light,
   );

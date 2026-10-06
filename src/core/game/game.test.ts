@@ -1097,3 +1097,25 @@ describe('technologies', () => {
     expect(s.isUnlocked('machine_assembler')).toBe(true);
   });
 });
+
+describe('anciennes parties : emprises des machines', () => {
+  it('les tapis se recalent sur des tuiles de 2 x 2, les machines qui se chevauchent sont posées au sol', () => {
+    const machines = [
+      { id: 1, type: 'conveyor', gx: 5, gz: 7, rot: 0, belt: [], slots: [] },
+      { id: 2, type: 'conveyor', gx: 5, gz: 6, rot: 0, belt: [], slots: [] },
+      { id: 3, type: 'furnace', gx: 20, gz: 20, rot: 0, belt: [], slots: [] },
+    ];
+    const s = new GameState({ inventory: {}, changes: { machines } });
+    // les deux tapis (1 case chacun avant) tombent sur la même tuile : le 2e est retiré
+    expect(s.changes.machines.map((m) => m.id)).toEqual([1, 3]);
+    expect(s.changes.machines[0]).toMatchObject({ gx: 4, gz: 6 });
+    expect(s.changes.drops).toHaveLength(1);
+    expect(s.changes.drops[0].item).toBe('machine_conveyor');
+    // une partie déjà à la nouvelle version n'est pas touchée
+    const t = new GameState({
+      inventory: {},
+      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 2 },
+    });
+    expect(t.changes.machines[0]).toMatchObject({ gx: 5, gz: 7 });
+  });
+});

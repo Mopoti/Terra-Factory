@@ -37,13 +37,15 @@ const run = (f: Factory, seconds: number): void => {
 };
 
 describe('emprise et sorties', () => {
-  it('une foreuse fait 3 x 3 cases, la sortie est au milieu du côté choisi', () => {
-    expect(footprint('drill', 0, 0, 0)).toHaveLength(9);
-    expect(outputCell('drill', 0, 0, 0)).toEqual({ gx: 1, gz: 3 });
-    expect(outputCell('drill', 0, 0, 1)).toEqual({ gx: 3, gz: 1 });
-    expect(outputCell('drill', 0, 0, 2)).toEqual({ gx: 1, gz: -1 });
-    expect(outputCell('drill', 0, 0, 3)).toEqual({ gx: -1, gz: 1 });
-    expect(footprint('furnace', 2, 2, 1)).toHaveLength(4);
+  it('une foreuse fait 4 x 4 cases, la sortie est au milieu du côté choisi', () => {
+    expect(footprint('drill', 0, 0, 0)).toHaveLength(16);
+    expect(outputCell('drill', 0, 0, 0)).toEqual({ gx: 2, gz: 4 });
+    expect(outputCell('drill', 0, 0, 1)).toEqual({ gx: 4, gz: 2 });
+    expect(outputCell('drill', 0, 0, 2)).toEqual({ gx: 2, gz: -1 });
+    expect(outputCell('drill', 0, 0, 3)).toEqual({ gx: -1, gz: 2 });
+    expect(footprint('furnace', 2, 2, 1)).toHaveLength(9);
+    // Un tapis occupe une tuile de 2 x 2 cases.
+    expect(footprint('conveyor', 4, 6, 0)).toHaveLength(4);
   });
   it('on ne pose pas sur une autre machine ni sur un terrain bloqué', () => {
     const { world } = makeWorld();
@@ -128,8 +130,8 @@ describe('tapis et fourneau', () => {
     run(f, 3);
     const pos = b.belt.map((x) => x.pos);
     expect(pos[0]).toBe(1);
-    expect(pos[0] - pos[1]).toBeGreaterThanOrEqual(0.33);
-    expect(pos[1] - pos[2]).toBeGreaterThanOrEqual(0.33);
+    expect(pos[0] - pos[1]).toBeGreaterThanOrEqual(0.16);
+    expect(pos[1] - pos[2]).toBeGreaterThanOrEqual(0.16);
   });
   it("un fourneau cuit le minerai en lingots, 3 s pièce, et ne prend que ce qu'il sait cuire", () => {
     const { world } = makeWorld();
@@ -296,12 +298,12 @@ describe('séparateur et groupeur', () => {
   };
 
   it('le séparateur répartit sur ses 3 sorties, jamais derrière', () => {
-    // Séparateur en (10,10) tourné vers +z ; entrée par derrière (10,9).
-    const src = loaded(1, 10, 9, 0, 3);
+    // Séparateur (2 x 2) en (10,10) tourné vers +z ; entrée par derrière (tuile en (10,8)).
+    const src = loaded(1, 10, 8, 0, 3);
     const sp = emptyMachine(2, 'splitter', 10, 10, 0);
-    const front = emptyMachine(3, 'chest_wood', 10, 11, 0);
-    const left = emptyMachine(4, 'chest_wood', 11, 10, 0);
-    const right = emptyMachine(5, 'chest_wood', 9, 10, 0);
+    const front = emptyMachine(3, 'chest_wood', 10, 12, 0);
+    const left = emptyMachine(4, 'chest_wood', 12, 10, 0);
+    const right = emptyMachine(5, 'chest_wood', 8, 10, 0);
     const f = setup(src, sp, front, left, right);
     run(f, 3);
     expect([front, left, right].map((c) => c.slots[0]?.count ?? 0)).toEqual([1, 1, 1]);
@@ -355,11 +357,11 @@ describe('combustible par tapis', () => {
 
   it('un fourneau prend son combustible par les côtés et l’arrière, pas par sa sortie', () => {
     const furnace = emptyMachine(1, 'furnace', 10, 10, 0);
-    const back = emptyMachine(2, 'conveyor', 10, 9, 0);
+    const back = emptyMachine(2, 'conveyor', 10, 8, 0);
     back.belt.push({ item: 'coal', pos: 1 });
-    const side = emptyMachine(3, 'conveyor', 9, 10, 1);
+    const side = emptyMachine(3, 'conveyor', 8, 10, 1);
     side.belt.push({ item: 'coal', pos: 1 });
-    const front = emptyMachine(4, 'conveyor', 10, 11, 2);
+    const front = emptyMachine(4, 'conveyor', 10, 13, 2);
     front.belt.push({ item: 'coal', pos: 1 });
     const f = new Factory([furnace, back, side, front], makeWorld().world);
     run(f, 0.5);
@@ -607,25 +609,26 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     turbines: number,
     boilerCoal: number,
   ): { f: Factory; ms: Record<string, Machine> } => {
+    // Pompe et tuyaux en 2 x 2, chaudière 3 x 3, turbines 2 x 3, en colonne le long de +z.
     const gen = emptyMachine(1, 'generator', 15, 0, 0);
     gen.fuel = { item: 'coal', count: 10 };
-    const pole = emptyMachine(2, 'pole', 13, 3, 0);
-    const pump = emptyMachine(3, 'pump', 11, 0, 0);
-    const p1 = emptyMachine(4, 'pipe', 11, 1, 0);
-    const p2 = emptyMachine(5, 'pipe', 11, 2, 0);
-    const boiler = emptyMachine(6, 'boiler', 10, 3, 0);
+    const poles = [4, 12, 20, 28].map((z, i) => emptyMachine(2 + i, 'pole', 13, z, 0));
+    const pump = emptyMachine(20, 'pump', 10, 0, 0);
+    const p1 = emptyMachine(21, 'pipe', 10, 2, 0);
+    const p2 = emptyMachine(22, 'pipe', 10, 4, 0);
+    const boiler = emptyMachine(23, 'boiler', 9, 6, 0);
     if (boilerCoal > 0) boiler.fuel = { item: 'coal', count: boilerCoal };
-    const p3 = emptyMachine(7, 'pipe', 11, 5, 0);
-    const list = [gen, pole, pump, p1, p2, boiler, p3];
+    const p3 = emptyMachine(24, 'pipe', 10, 9, 0);
+    const list = [gen, ...poles, pump, p1, p2, boiler, p3];
     const ms: Record<string, Machine> = { pump, boiler, p3 };
     for (let i = 0; i < turbines; i++) {
-      const t = emptyMachine(10 + i, 'turbine', 11, 6 + 2 * i, 0);
+      const t = emptyMachine(40 + i, 'turbine', 10, 11 + 3 * i, 0);
       ms[`t${i}`] = t;
       list.push(t);
     }
     // De la demande électrique : plusieurs laboratoires alimentés.
     for (let i = 0; i < 3; i++) {
-      const lab = emptyMachine(30 + i, 'lab', 14, 5 + 3 * i, 0);
+      const lab = emptyMachine(60 + i, 'lab', 16, 8 + 5 * i, 0);
       lab.input = { item: 'science_pack', count: 20 };
       list.push(lab);
     }
@@ -636,8 +639,8 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
 
   it('une pompe ne se pose qu’au bord de l’eau', () => {
     const f = new Factory([], world());
-    expect(f.canPlace('pump', 11, 0, 0, () => false)).toBe(true);
-    expect(f.canPlace('pump', 11, 3, 0, () => false)).toBe(false);
+    expect(f.canPlace('pump', 10, 0, 0, () => false)).toBe(true);
+    expect(f.canPlace('pump', 10, 5, 0, () => false)).toBe(false);
   });
 
   it('l’eau va de la pompe à la chaudière par les tuyaux, la vapeur de la chaudière à la turbine', () => {

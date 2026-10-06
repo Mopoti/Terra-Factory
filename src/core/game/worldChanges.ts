@@ -1,5 +1,7 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
-import { normalizeMachines, type Machine } from '../factory/factory';
+import { CELL_SIZE_M } from '../constants';
+import { footprint, normalizeMachines, type Machine } from '../factory/factory';
+import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
 import { migrateItemId } from './inventory';
 import { resourceById } from '../data/resources';
@@ -46,7 +48,11 @@ export interface WorldChanges {
   groundPollution: Record<string, number>;
   /** Balles dans le pistolet. */
   ammo: number;
+  /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case). */
+  footprintVersion: number;
 }
+
+export const FOOTPRINT_VERSION = 2;
 
 /** Balles d'un chargeur. */
 export const MAGAZINE_ROUNDS = 12;
@@ -72,6 +78,7 @@ export function emptyChanges(): WorldChanges {
     pollution: {},
     groundPollution: {},
     ammo: 0,
+    footprintVersion: FOOTPRINT_VERSION,
   };
 }
 
@@ -180,5 +187,37 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   const maxId = result.drops.reduce((m, d) => Math.max(m, Number(d.id.replace(/\D/g, '')) || 0), 0);
   result.nextDropId = Math.max(isNum(r.nextDropId) ? Math.floor(r.nextDropId) : 1, maxId + 1);
+  if (r.footprintVersion !== FOOTPRINT_VERSION && result.machines.length > 0)
+    migrateFootprints(result);
   return result;
+}
+
+/**
+ * Anciennes parties (machines de l'ancienne taille) : les tapis se recalent sur la grille de tuiles de 2 × 2 cases
+ * et les machines gardent leur coin ; celles qui se chevauchent maintenant sont retirées et posées au sol (on
+ * peut les ramasser).
+ */
+function migrateFootprints(changes: WorldChanges): void {
+  const taken = new Set<string>();
+  const kept: Machine[] = [];
+  for (const m of [...changes.machines].sort((a, b) => a.id - b.id)) {
+    if (m.type === 'conveyor') {
+      m.gx = Math.floor(m.gx / 2) * 2;
+      m.gz = Math.floor(m.gz / 2) * 2;
+    }
+    const cells = footprint(m.type, m.gx, m.gz, m.rot).map((c) => `${c.gx},${c.gz}`);
+    if (cells.some((c) => taken.has(c))) {
+      changes.drops.push({
+        id: `drop-${changes.nextDropId++}`,
+        item: machineDef(m.type).item,
+        count: 1,
+        x: (m.gx + 0.5) * CELL_SIZE_M,
+        z: (m.gz + 0.5) * CELL_SIZE_M,
+      });
+      continue;
+    }
+    for (const c of cells) taken.add(c);
+    kept.push(m);
+  }
+  changes.machines = kept;
 }

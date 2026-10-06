@@ -1,5 +1,4 @@
 import { CELL_SIZE_M } from '../constants';
-import { RISE_DIR } from '../data/buildings';
 import { itemById } from '../data/items';
 import {
   hasOutput,
@@ -130,7 +129,8 @@ export interface Cell {
   gz: number;
 }
 
-const GAP = 0.34;
+/** Écart minimal entre deux objets sur un tapis (en longueurs de tuile de tapis). */
+const GAP = 0.17;
 
 /** Bras robotique : réserve de combustible (s) sous laquelle il se ravitaille. */
 const ARM_LOW_FUEL_S = 15;
@@ -390,23 +390,27 @@ export class Factory {
       (m, side) => sideCell(m.type, m.gx, m.gz, m.rot, side),
     );
     this.pumpsOk = new Set(
-      this.machines.filter((m) => m.type === 'pump' && this.waterNear(m.gx, m.gz)).map((m) => m.id),
+      this.machines
+        .filter((m) => m.type === 'pump' && this.waterNear(m.type, m.gx, m.gz, m.rot))
+        .map((m) => m.id),
     );
   }
 
   private links: FluidLink[] = [];
   private pumpsOk = new Set<number>();
 
-  /** Une case d'eau touche-t-elle cette case ? */
-  private waterNear(gx: number, gz: number): boolean {
+  /** Une case d'eau touche-t-elle l'emprise de cette machine ? */
+  private waterNear(type: MachineType, gx: number, gz: number, rot: number): boolean {
     const w = this.world.waterAt;
     if (!w) return false;
-    return [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ].some(([dx, dz]) => w.call(this.world, gx + dx, gz + dz));
+    return footprint(type, gx, gz, rot).some((c) =>
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].some(([dx, dz]) => w.call(this.world, c.gx + dx, c.gz + dz)),
+    );
   }
 
   /** Relie les poteaux entre eux (fil de 8 m) et les machines électriques au poteau le plus proche (4 m). */
@@ -474,6 +478,12 @@ export class Factory {
     return this.gridInfo(m)?.satisfaction ?? 0;
   }
 
+  /** La machine voisine de `m` par son côté `dir` (au milieu du côté ; 0 = +z, 1 = +x, 2 = −z, 3 = −x). */
+  neighbor(m: Machine, dir: number): Machine | null {
+    const c = sideCell(m.type, m.gx, m.gz, m.rot, dir);
+    return this.machineAt(c.gx, c.gz);
+  }
+
   machineAt(gx: number, gz: number): Machine | null {
     return this.cells.get(`${gx},${gz}`) ?? null;
   }
@@ -486,7 +496,7 @@ export class Factory {
     rot: number,
     blocked: (c: Cell) => boolean,
   ): boolean {
-    if (type === 'pump' && !this.waterNear(gx, gz)) return false;
+    if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
     return footprint(type, gx, gz, rot).every(
       (c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c),
     );
@@ -814,8 +824,7 @@ export class Factory {
   beltBlock(m: Machine): { item: string; target: Machine | null; reason: string | null } | null {
     const head = m.belt[0];
     if (m.type !== 'conveyor' || !head || head.pos < 1) return null;
-    const [dx, dz] = RISE_DIR[m.rot];
-    const target = this.machineAt(m.gx + dx, m.gz + dz);
+    const target = this.neighbor(m, m.rot);
     if (!target || target === m) return { item: head.item, target: null, reason: null };
     return { item: head.item, target, reason: this.refusal(target, m, head.item, m.rot) };
   }
@@ -995,8 +1004,7 @@ export class Factory {
       for (let i = 0; i < 3; i++) {
         const k = (Math.floor(m.progress) + i) % 3;
         const side = (m.rot + [2, 3, 1][k]) % 4;
-        const [dx, dz] = RISE_DIR[side];
-        const src = this.machineAt(m.gx + dx, m.gz + dz);
+        const src = this.neighbor(m, side);
         if (!src || src.type !== 'conveyor' || (src.rot + 2) % 4 !== side) continue;
         const head = src.belt[0];
         if (!head || head.pos < 1) continue;
@@ -1011,8 +1019,7 @@ export class Factory {
     for (let i = 0; i < outs.length; i++) {
       const k = m.type === 'splitter' ? (Math.floor(m.progress) + i) % 3 : 0;
       const dir = outs[k];
-      const [dx, dz] = RISE_DIR[dir];
-      const target = this.machineAt(m.gx + dx, m.gz + dz);
+      const target = this.neighbor(m, dir);
       if (!target || target === m || !this.deliver(target, m, m.stock.item, dir)) continue;
       m.stock = null;
       if (m.type === 'splitter') m.progress = (k + 1) % 3;
@@ -1059,8 +1066,7 @@ export class Factory {
   private armRefuel(m: Machine): void {
     const max = machineDef(m.type).stockMax ?? 10;
     for (const side of [2, 1, 3]) {
-      const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
-      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      const src = this.neighbor(m, (m.rot + side) % 4);
       const found = (src ? this.peekSources(src) : []).find(
         (f) =>
           itemById(f.item).fuelSeconds &&
@@ -1075,14 +1081,12 @@ export class Factory {
 
   /** Ce que le bras pourrait prendre maintenant : un objet des 3 côtés (à tour de rôle) que la destination accepte. */
   private armCandidate(m: Machine): { item: string; take: () => void; side: number } | null {
-    const [fx, fz] = RISE_DIR[m.rot];
-    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    const dest = this.neighbor(m, m.rot);
     if (!dest) return null;
     const turn = this.armTurn.get(m.id) ?? 0;
     for (let i = 0; i < 3; i++) {
       const side = (turn + i) % 3;
-      const [dx, dz] = RISE_DIR[(m.rot + [2, 1, 3][side]) % 4];
-      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      const src = this.neighbor(m, (m.rot + [2, 1, 3][side]) % 4);
       const found =
         src && src !== dest
           ? this.peekSources(src).find((f) => this.canAccept(dest, m, f.item, m.rot))
@@ -1094,13 +1098,11 @@ export class Factory {
 
   /** Pourquoi un bras ne travaille pas (pour le panneau d'infos). */
   armDiagnosis(m: Machine): 'ok' | 'noDest' | 'noSource' | 'refused' {
-    const [fx, fz] = RISE_DIR[m.rot];
-    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    const dest = this.neighbor(m, m.rot);
     if (!dest) return 'noDest';
     let any = false;
     for (const side of [2, 1, 3]) {
-      const [dx, dz] = RISE_DIR[(m.rot + side) % 4];
-      const src = this.machineAt(m.gx + dx, m.gz + dz);
+      const src = this.neighbor(m, (m.rot + side) % 4);
       if (!src || src === dest) continue;
       for (const f of this.peekSources(src)) {
         any = true;
@@ -1115,8 +1117,7 @@ export class Factory {
     const def = machineDef(m.type);
     const electric = !!def.consumesKw;
     const swing = def.swingSeconds ?? 0.9;
-    const [fx, fz] = RISE_DIR[m.rot];
-    const dest = this.machineAt(m.gx + fx, m.gz + fz);
+    const dest = this.neighbor(m, m.rot);
     const speed = electric ? this.powerFactor(m) : 1;
     if (!m.stock) {
       if (!electric && this.fuelSecondsLeft(m) < ARM_LOW_FUEL_S) this.armRefuel(m);
@@ -1143,15 +1144,14 @@ export class Factory {
   }
 
   private tickBelt(m: Machine, dt: number): void {
-    const speed = machineDef('conveyor').cellsPerSecond ?? 1.5;
+    const speed = machineDef('conveyor').cellsPerSecond ?? 0.75;
     for (let i = 0; i < m.belt.length; i++) {
       const limit = i === 0 ? 1 : m.belt[i - 1].pos - GAP;
       m.belt[i].pos = Math.min(limit, m.belt[i].pos + speed * dt);
     }
     const front = m.belt[0];
     if (front && front.pos >= 1) {
-      const [dx, dz] = RISE_DIR[m.rot];
-      const target = this.machineAt(m.gx + dx, m.gz + dz);
+      const target = this.neighbor(m, m.rot);
       if (target && target !== m && this.deliver(target, m, front.item)) m.belt.shift();
     }
   }
