@@ -148,6 +148,31 @@
         "desert": 1,
         "tundra": 1
       }
+    },
+    {
+      "id": "fiber_bush",
+      "family": "forests",
+      "kind": "object",
+      "amount": 3,
+      "color": "#9bbf5a",
+      "biomeDensity": {
+        "prairie": 0.12,
+        "forest": 0.1,
+        "desert": 0.02,
+        "tundra": 0.05
+      },
+      "biomeCover": {
+        "prairie": 0.6,
+        "forest": 0.6,
+        "desert": 0.2,
+        "tundra": 0.3
+      },
+      "clusterWavelengthM": 18,
+      "outsideFactor": 0.05,
+      "harvest": {
+        "item": "fiber",
+        "secondsPerUnit": 0.4
+      }
     }
   ]
 }

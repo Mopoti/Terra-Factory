@@ -15,6 +15,7 @@ const FEED_SECONDS = 2.2;
 const ORE_HEIGHT_M = 0.1;
 const TREE_HEIGHT_M = 2.6;
 const ROCK_HEIGHT_M = 0.8;
+const BUSH_HEIGHT_M = 0.6;
 const DROP_PICK_RADIUS_M = 0.5;
 /** Portée pour frapper une construction (m). */
 const STRUCTURE_REACH_M = 4;
@@ -169,7 +170,8 @@ export class Interaction {
         cells: o.cells,
         total: res.amount,
         left: o.amount,
-        height: o.id === 'tree' ? TREE_HEIGHT_M : ROCK_HEIGHT_M,
+        height:
+          o.id === 'tree' ? TREE_HEIGHT_M : o.id === 'fiber_bush' ? BUSH_HEIGHT_M : ROCK_HEIGHT_M,
         item: res.harvest.item,
         secondsPerUnit: res.harvest.secondsPerUnit,
       });
@@ -415,6 +417,7 @@ export class Interaction {
             const done = result.left === 0;
             const res = hit.target.resId;
             if (res === 'tree') playSfx(done ? 'treeFall' : 'woodChop');
+            else if (res === 'fiber_bush') playSfx('pickup');
             else if (hit.target.kind === 'ore') playSfx(done ? 'oreBreak' : 'oreHit');
             else playSfx(done ? 'rockBreak' : 'stoneHit');
           }

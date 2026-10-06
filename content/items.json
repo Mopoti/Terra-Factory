@@ -238,6 +238,88 @@
         "iron_ingot": 12,
         "copper_ingot": 6
       }
+    },
+    {
+      "id": "fiber",
+      "weightKg": 0.05,
+      "volumeL": 0.3,
+      "color": "#9bbf5a",
+      "fuelSeconds": 6
+    },
+    {
+      "id": "cloth",
+      "weightKg": 0.1,
+      "volumeL": 0.3,
+      "color": "#c9b48a",
+      "recipe": {
+        "fiber": 4
+      }
+    },
+    {
+      "id": "backpack",
+      "weightKg": 1.5,
+      "volumeL": 6,
+      "color": "#a0522d",
+      "recipe": {
+        "cloth": 6
+      },
+      "equip": {
+        "slot": "torso",
+        "bag": {
+          "slots": 10,
+          "weightKg": 20,
+          "volumeL": 30
+        }
+      }
+    },
+    {
+      "id": "hood",
+      "weightKg": 0.2,
+      "volumeL": 1,
+      "color": "#b9a37a",
+      "recipe": {
+        "cloth": 3
+      },
+      "equip": {
+        "slot": "head"
+      }
+    },
+    {
+      "id": "trousers",
+      "weightKg": 0.4,
+      "volumeL": 2,
+      "color": "#8c7a55",
+      "recipe": {
+        "cloth": 4
+      },
+      "equip": {
+        "slot": "legs"
+      }
+    },
+    {
+      "id": "boots",
+      "weightKg": 0.5,
+      "volumeL": 2,
+      "color": "#6b4a2b",
+      "recipe": {
+        "cloth": 3,
+        "wood": 1
+      },
+      "equip": {
+        "slot": "feet"
+      }
+    },
+    {
+      "id": "gloves",
+      "weightKg": 0.15,
+      "volumeL": 0.6,
+      "color": "#d1bf94",
+      "recipe": {
+        "cloth": 2
+      },
+      "equip": {
+        "slot": "hands"
+      }
     }
   ]
 }

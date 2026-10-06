@@ -126,10 +126,11 @@ function buildProps(
     const jitter = 0.85 + 0.3 * hash01(1, o.gx, o.gz, 5);
     const cxm = (o.gx + o.cells / 2) * CELL_SIZE_M - ox;
     const czm = (o.gz + o.cells / 2) * CELL_SIZE_M - oz;
-    markBlocked(o.gx, o.gz, o.cells);
+    // Un buisson de fibres se traverse (comme de l'herbe haute) ; le reste bloque.
+    if (o.id !== 'fiber_bush') markBlocked(o.gx, o.gz, o.cells);
     // La caméra traverse le feuillage (l'aura de transparence gère la visibilité) ; elle ne traverse
     // pas les obstacles solides (rochers, nids, et plus tard les murs).
-    if (o.id !== 'tree') {
+    if (o.id !== 'tree' && o.id !== 'fiber_bush') {
       for (let dx = 0; dx < o.cells; dx++) {
         for (let dz = 0; dz < o.cells; dz++) tall.push([`${o.gx + dx},${o.gz + dz}`, 0.9]);
       }
@@ -141,6 +142,23 @@ function buildProps(
       const green = shade(base, jitter);
       b.cone(x, 0.35 * o.scale, z, 0.6 * o.scale, 1.3 * o.scale, 7, green);
       b.cone(x, 0.95 * o.scale, z, 0.42 * o.scale, 1.0 * o.scale, 7, shade(green, 1.12));
+    } else if (o.id === 'fiber_bush') {
+      // Touffe de brins clairs.
+      const x = cxm + Math.cos(o.rotation) * 0.1;
+      const z = czm + Math.sin(o.rotation) * 0.1;
+      for (let i = 0; i < 6; i++) {
+        const a = o.rotation + (i / 6) * Math.PI * 2;
+        const r = 0.12 * o.scale;
+        b.cone(
+          x + Math.cos(a) * r,
+          0,
+          z + Math.sin(a) * r,
+          0.06 * o.scale,
+          (0.45 + 0.12 * (i % 3)) * o.scale,
+          4,
+          shade(base, jitter * (0.9 + 0.08 * (i % 2))),
+        );
+      }
     } else if (o.id === 'rock') {
       const x = cxm + Math.cos(o.rotation) * 0.15;
       const z = czm + Math.sin(o.rotation) * 0.15;

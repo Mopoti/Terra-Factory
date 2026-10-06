@@ -164,10 +164,11 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   session = s;
 
   /** Le jeu est figé tant que le menu pause ou le sac est ouvert. */
-  const syncPaused = (): void =>
-    view.setPaused(
-      s.pause.isOpen() || s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen(),
-    );
+  const syncPaused = (): void => {
+    view.setPaused(s.pause.isOpen() || s.machine.isOpen() || s.map.isOpen());
+    // Le sac laisse le jeu tourner et le joueur marcher (la souris est libre pour l'utiliser).
+    view.setUiOpen(s.inventory.isOpen());
+  };
   s.machine = mountMachineWindow(machineEl, state, view.factory, { onOpenChange: syncPaused });
   s.map = mountMap(mapEl, {
     world: game.world,

@@ -1,6 +1,6 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
 import { normalizeMachines, type Machine } from '../factory/factory';
-import { itemById } from '../data/items';
+import { itemById, type EquipSlot } from '../data/items';
 import { migrateItemId } from './inventory';
 import { resourceById } from '../data/resources';
 import type { ChunkData } from '../world/worldgen';
@@ -32,6 +32,8 @@ export interface WorldChanges {
   /** Machines et tapis posés (voir `core/factory`). */
   machines: Machine[];
   nextMachineId: number;
+  /** Équipement porté : un objet par emplacement du corps. */
+  equipment: Partial<Record<EquipSlot, string>>;
 }
 
 export const HOTBAR_SLOTS = 9;
@@ -48,6 +50,7 @@ export function emptyChanges(): WorldChanges {
     hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
     machines: [],
     nextMachineId: 1,
+    equipment: {},
   };
 }
 
@@ -90,6 +93,16 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   if (typeof r.rotations === 'object' && r.rotations !== null) {
     for (const [key, v] of Object.entries(r.rotations as Record<string, unknown>)) {
       if (result.pieces[key] && isNum(v) && v >= 1 && v <= 3) result.rotations[key] = Math.floor(v);
+    }
+  }
+  if (typeof r.equipment === 'object' && r.equipment !== null) {
+    for (const [slot, id] of Object.entries(r.equipment as Record<string, unknown>)) {
+      if (typeof id !== 'string') continue;
+      try {
+        if (itemById(id).equip?.slot === slot) result.equipment[slot as EquipSlot] = id;
+      } catch {
+        /* objet inconnu */
+      }
     }
   }
   if (Array.isArray(r.hotbar)) {

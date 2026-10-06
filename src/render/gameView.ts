@@ -118,6 +118,8 @@ export interface GameViewHandle {
   getState(): PlayerState;
   /** En pause, le joueur et la caméra ne bougent plus (le monde reste affiché). */
   setPaused(paused: boolean): void;
+  /** Une fenêtre (sac) est ouverte sans figer le jeu : la souris est libre, mais on peut continuer à marcher. */
+  setUiOpen(open: boolean): void;
   /** Jette des objets du sac au sol, devant le joueur. */
   dropItem(item: string, count: number): void;
   /** L'usine (machines et tapis) de la partie, pour l'interface des machines. */
@@ -993,6 +995,7 @@ export function startGameView(
   const input = new Input(renderer.domElement);
   input.attach();
   let paused = false;
+  let uiOpen = false;
   let mouseX = window.innerWidth / 2;
   let mouseY = window.innerHeight / 2;
 
@@ -1002,7 +1005,7 @@ export function startGameView(
   const onMouseMove = (e: MouseEvent): void => {
     mouseX = e.clientX;
     mouseY = e.clientY;
-    if (paused) return;
+    if (paused || uiOpen) return;
     // Clic droit maintenu sans bouger = démolir ; en bougeant, on tourne la caméra.
     if (input.isBindingActive('Mouse2')) rightMoved += Math.hypot(e.movementX, e.movementY);
     else rightMoved = 0;
@@ -1016,7 +1019,7 @@ export function startGameView(
   window.addEventListener('blur', onMouseUp);
 
   const requestLock = (): void => {
-    if (paused || rig.view !== 'first' || isLocked()) return;
+    if (paused || uiOpen || rig.view !== 'first' || isLocked()) return;
     void Promise.resolve(renderer.domElement.requestPointerLock()).catch(() => undefined);
   };
   renderer.domElement.addEventListener('click', requestLock);
@@ -1036,7 +1039,13 @@ export function startGameView(
     const locked = isLocked();
     if (!locked && releasingOnPurpose) {
       releasingOnPurpose = false;
-    } else if (wasLocked && !locked && !paused && performance.now() > ignoreUnlockUntil) {
+    } else if (
+      wasLocked &&
+      !locked &&
+      !paused &&
+      !uiOpen &&
+      performance.now() > ignoreUnlockUntil
+    ) {
       // Le navigateur a libéré la souris (le joueur a appuyé sur Échap) : on ouvre la pause.
       options.onRequestPause?.();
     }
@@ -1046,8 +1055,8 @@ export function startGameView(
   document.addEventListener('pointerlockchange', onLockChange);
   const retryLock = (e: KeyboardEvent | MouseEvent): void => {
     if (!wantLock) return;
-    if (isLocked() || paused || rig.view !== 'first') {
-      wantLock = isLocked() ? false : wantLock && !paused && rig.view === 'first';
+    if (isLocked() || paused || uiOpen || rig.view !== 'first') {
+      wantLock = isLocked() ? false : wantLock && !paused && !uiOpen && rig.view === 'first';
       return;
     }
     if (e instanceof KeyboardEvent && e.key === 'Escape') return;
@@ -1391,54 +1400,56 @@ export function startGameView(
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {
-      if (pressed('cycleView')) switchView('cycle');
-      if (pressed('viewFirst')) switchView('first');
-      if (pressed('viewThird')) switchView('third');
-      if (pressed('viewTop')) switchView('top');
+      if (!uiOpen) {
+        if (pressed('cycleView')) switchView('cycle');
+        if (pressed('viewFirst')) switchView('first');
+        if (pressed('viewThird')) switchView('third');
+        if (pressed('viewTop')) switchView('top');
 
-      const stepRotation = rig.view === 'top' && views.top.rotation === 'step';
-      if (stepRotation) {
-        if (pressed('rotateLeft')) rig.rotateStep(-1, views);
-        if (pressed('rotateRight')) rig.rotateStep(1, views);
-      } else {
-        if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
-        if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
+        const stepRotation = rig.view === 'top' && views.top.rotation === 'step';
+        if (stepRotation) {
+          if (pressed('rotateLeft')) rig.rotateStep(-1, views);
+          if (pressed('rotateRight')) rig.rotateStep(1, views);
+        } else {
+          if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
+          if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
+        }
+        // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
+        for (let i = 1; i <= 9; i++) {
+          if (pressed(`hotbar${i}` as ActionId)) {
+            options.state.selectSlot(i - 1);
+            playSfx('select');
+          }
+        }
+        if (building) {
+          if (pressed('rotate')) {
+            // Depuis l'automatique, on part de l'orientation actuelle : jamais deux fois la même.
+            const base =
+              buildingMachine || buildType() === 'stairs' ? autoRot() : lastAimAxis === 'z' ? 1 : 0;
+            buildRot = ((buildRot ?? base) + 1) % 4;
+            renderBuildHud();
+          }
+          if (pressed('levelUp')) {
+            buildLevel = Math.min(9, buildLevel + 1);
+            renderBuildHud();
+          }
+          if (pressed('levelDown')) {
+            buildLevel = Math.max(0, buildLevel - 1);
+            renderBuildHud();
+          }
+          // Hauteur du mur : tout l'étage, puis un bloc à la fois (pour les fenêtres et les trous).
+          if (pressed('layerUp')) {
+            wallHeight = Math.min(LAYERS_PER_STOREY, wallHeight + 1);
+            renderBuildHud();
+          }
+          if (pressed('layerDown')) {
+            wallHeight = Math.max(1, wallHeight - 1);
+            renderBuildHud();
+          }
+        }
+        if (repeating('zoomIn', dt)) rig.zoom(1, views);
+        if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       }
-      // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
-      for (let i = 1; i <= 9; i++) {
-        if (pressed(`hotbar${i}` as ActionId)) {
-          options.state.selectSlot(i - 1);
-          playSfx('select');
-        }
-      }
-      if (building) {
-        if (pressed('rotate')) {
-          // Depuis l'automatique, on part de l'orientation actuelle : jamais deux fois la même.
-          const base =
-            buildingMachine || buildType() === 'stairs' ? autoRot() : lastAimAxis === 'z' ? 1 : 0;
-          buildRot = ((buildRot ?? base) + 1) % 4;
-          renderBuildHud();
-        }
-        if (pressed('levelUp')) {
-          buildLevel = Math.min(9, buildLevel + 1);
-          renderBuildHud();
-        }
-        if (pressed('levelDown')) {
-          buildLevel = Math.max(0, buildLevel - 1);
-          renderBuildHud();
-        }
-        // Hauteur du mur : tout l'étage, puis un bloc à la fois (pour les fenêtres et les trous).
-        if (pressed('layerUp')) {
-          wallHeight = Math.min(LAYERS_PER_STOREY, wallHeight + 1);
-          renderBuildHud();
-        }
-        if (pressed('layerDown')) {
-          wallHeight = Math.max(1, wallHeight - 1);
-          renderBuildHud();
-        }
-      }
-      if (repeating('zoomIn', dt)) rig.zoom(1, views);
-      if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       motion = step(dt);
       stepBody(dt);
     }
@@ -1451,7 +1462,7 @@ export function startGameView(
     loadMissing();
 
     const edge =
-      rig.view === 'top' && views.top.edgeScroll && !paused && !isLocked()
+      rig.view === 'top' && views.top.edgeScroll && !paused && !uiOpen && !isLocked()
         ? edgePan(mouseX, mouseY, window.innerWidth, window.innerHeight)
         : { x: 0, y: 0 };
     rig.update(dt, { x: playerX, y: playerY, z: playerZ }, motion, views, edge, obstacleAt);
@@ -1462,7 +1473,7 @@ export function startGameView(
     hand.visible = rig.view === 'first' && views.first.showHands;
     bodyTool.visible = rig.view !== 'first';
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';
-    hint.hidden = !(rig.view === 'first' && !paused && !isLocked());
+    hint.hidden = !(rig.view === 'first' && !paused && !uiOpen && !isLocked());
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
     updateGhost(views);
@@ -1474,7 +1485,7 @@ export function startGameView(
       building ? buildLevel : 0,
       inRoom && !building ? inRoom.level : null,
     );
-    if (building && !paused) updateBuild(dt);
+    if (building && !paused && !uiOpen) updateBuild(dt);
     // Usine : 20 pas de simulation par seconde, affichage des objets sur les tapis 10 fois par seconde.
     if (!paused) {
       simAcc = Math.min(simAcc + dt, 0.5);
@@ -1500,20 +1511,21 @@ export function startGameView(
     panelTimer += realDt;
     if (panelTimer >= 0.2) {
       panelTimer = 0;
-      if (paused || building) aimedMachine = null;
+      if (paused || uiOpen || building) aimedMachine = null;
       else updateAimedMachine();
       refreshMachinePanel();
     }
-    if (!paused && !building && pressed('use') && aimedMachine)
+    if (!paused && !uiOpen && !building && pressed('use') && aimedMachine)
       options.onOpenMachine?.(aimedMachine.id);
     interaction.update({
       // Temps réel : sur un ordinateur lent, la récolte ne doit pas ralentir.
       dt: realDt,
       player: { x: playerX, z: playerZ },
-      active: !paused && !building && input.isActionActive('interact'),
-      demolishing: !paused && !building && input.isActionActive('secondary') && rightMoved < 10,
+      active: !paused && !uiOpen && !building && input.isActionActive('interact'),
+      demolishing:
+        !paused && !uiOpen && !building && input.isActionActive('secondary') && rightMoved < 10,
       // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
-      paused: paused || building,
+      paused: paused || uiOpen || building,
       aimAtCenter: rig.view === 'first',
       mouse: { x: mouseX, y: mouseY },
       viewport: { w: window.innerWidth, h: window.innerHeight },
@@ -1554,6 +1566,16 @@ export function startGameView(
       if (value) {
         releaseLock();
       } else {
+        ignoreUnlockUntil = performance.now() + 600;
+        wantLock = rig.view === 'first';
+        requestLock();
+      }
+    },
+    setUiOpen: (value) => {
+      uiOpen = value;
+      if (value) {
+        releaseLock();
+      } else if (!paused) {
         ignoreUnlockUntil = performance.now() + 600;
         wantLock = rig.view === 'first';
         requestLock();

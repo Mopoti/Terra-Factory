@@ -383,3 +383,14 @@ describe('performance', () => {
     expect(per).toBeLessThan(5);
   });
 });
+
+describe('buissons de fibres', () => {
+  it('il y en a près du départ, en quantité raisonnable (pour fabriquer du tissu)', () => {
+    const gen = new WorldGenerator(defaultWorldParams('terra'));
+    let bushes = 0;
+    for (let cx = -8; cx <= 8; cx++)
+      for (let cz = -8; cz <= 8; cz++)
+        bushes += gen.chunk(cx, cz).objects.filter((o) => o.id === 'fiber_bush').length;
+    expect(bushes).toBeGreaterThan(20);
+  });
+});

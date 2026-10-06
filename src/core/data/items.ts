@@ -11,7 +11,13 @@ export interface ItemDef {
   recipe: Record<string, number> | null;
   /** Combustible : secondes de fonctionnement d'une machine pour 1 unité (absent = n'est pas un combustible). */
   fuelSeconds: number | null;
+  /** Équipement porté : emplacement du corps et bonus de capacité du sac. */
+  equip: { slot: EquipSlot; bonus: { slots: number; weightG: number; volumeMl: number } } | null;
 }
+
+export type EquipSlot = 'head' | 'torso' | 'legs' | 'feet' | 'hands';
+/** Ordre d'affichage : de la tête aux pieds. */
+export const EQUIP_SLOTS: EquipSlot[] = ['head', 'torso', 'hands', 'legs', 'feet'];
 
 export interface BagLimits {
   maxWeightG: number;
@@ -28,6 +34,7 @@ interface RawItem {
   color: string;
   recipe?: Record<string, number>;
   fuelSeconds?: number;
+  equip?: { slot: EquipSlot; bag?: { slots?: number; weightKg?: number; volumeL?: number } };
 }
 
 export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
@@ -37,6 +44,16 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   color: i.color,
   recipe: i.recipe ?? null,
   fuelSeconds: i.fuelSeconds ?? null,
+  equip: i.equip
+    ? {
+        slot: i.equip.slot,
+        bonus: {
+          slots: i.equip.bag?.slots ?? 0,
+          weightG: Math.round((i.equip.bag?.weightKg ?? 0) * 1000),
+          volumeMl: Math.round((i.equip.bag?.volumeL ?? 0) * 1000),
+        },
+      }
+    : null,
 }));
 
 export const BAG_LIMITS: BagLimits = {

@@ -1,4 +1,4 @@
-import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
+import { ITEMS, itemById, type EquipSlot } from '../core/data/items';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
@@ -69,12 +69,92 @@ export function mountInventory(
     for (const item of ITEMS) {
       let left = state.inventory[item.id] ?? 0;
       while (left > 0) {
-        const n = Math.min(left, BAG_LIMITS.stackMax);
+        const n = Math.min(left, state.limits.stackMax);
         slots.push({ item: item.id, count: n });
         left -= n;
       }
     }
     return slots;
+  }
+
+  /** Colonne d'équipement : tête, tronc (+ mains à côté), jambes, pieds. */
+  function equipmentColumn(): HTMLElement {
+    const col = el('div', 'inv-equip');
+    col.append(el('h3', undefined, t('equip.title')));
+    const slotBox = (slot: EquipSlot): HTMLElement => {
+      const id = state.changes.equipment[slot];
+      const cell = el('button', id ? 'slot equip-slot' : 'slot equip-slot empty');
+      cell.type = 'button';
+      cell.title = t(`equip.${slot}` as TranslationKey);
+      cell.append(el('span', 'equip-label', t(`equip.${slot}` as TranslationKey)));
+      if (id) {
+        cell.style.setProperty('--item', itemById(id).color);
+        cell.append(el('span', 'slot-name', itemName(id)));
+        cell.addEventListener('mouseenter', () => {
+          hovered = id;
+          showTooltip();
+        });
+        cell.addEventListener('mouseleave', () => {
+          hovered = null;
+          showTooltip();
+        });
+      }
+      const equipItem = (item: string): void => {
+        state.returnHand();
+        if (itemById(item).equip?.slot !== slot) {
+          playSfx('deny');
+          message = t('equip.slotOf', {
+            slot: t(`equip.${itemById(item).equip?.slot ?? slot}` as TranslationKey),
+          });
+        } else {
+          const result = state.equip(item);
+          playSfx(result === 'ok' ? 'pickup' : 'deny');
+          message = result === 'bagFull' ? t('equip.bagFull') : '';
+          if (result === 'ok') selected = null;
+        }
+        render();
+      };
+      cell.addEventListener('click', () => {
+        const held = state.hand?.item ?? selected;
+        if (held) return equipItem(held);
+        if (id) {
+          const result = state.unequip(slot);
+          playSfx(result === 'ok' ? 'pickup' : 'deny');
+          message = result === 'bagFull' ? t('equip.bagFull') : '';
+          render();
+        }
+      });
+      cell.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+      });
+      cell.addEventListener('drop', (e) => {
+        const dropped = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+        if (!dropped) return;
+        e.preventDefault();
+        equipItem(dropped);
+      });
+      return cell;
+    };
+    const rows: EquipSlot[][] = [['head'], ['torso', 'hands'], ['legs'], ['feet']];
+    for (const row of rows) {
+      const r = el('div', 'equip-row');
+      for (const slot of row) r.append(slotBox(slot));
+      col.append(r);
+    }
+    const bonus = state.limits;
+    col.append(
+      el(
+        'small',
+        'help',
+        `${t('equip.bonus', {
+          slots: String(bonus.maxSlots - state.baseLimitsView().maxSlots),
+          kg: String((bonus.maxWeightG - state.baseLimitsView().maxWeightG) / 1000),
+          l: String((bonus.maxVolumeMl - state.baseLimitsView().maxVolumeMl) / 1000),
+        })}`,
+      ),
+      el('small', 'help', t('equip.hint')),
+    );
+    return col;
   }
 
   function showTooltip(): void {
@@ -94,6 +174,28 @@ export function mountInventory(
       }
     } else {
       tooltip.append(el('div', 'note', t('inv.raw')));
+    }
+    if (def.equip && (def.equip.bonus.slots || def.equip.bonus.weightG)) {
+      tooltip.append(
+        el(
+          'div',
+          'ok',
+          t('equip.bonus', {
+            slots: String(def.equip.bonus.slots),
+            kg: String(def.equip.bonus.weightG / 1000),
+            l: String(def.equip.bonus.volumeMl / 1000),
+          }),
+        ),
+      );
+    }
+    if (def.equip) {
+      tooltip.append(
+        el(
+          'div',
+          'note',
+          t('equip.slotOf', { slot: t(`equip.${def.equip.slot}` as TranslationKey) }),
+        ),
+      );
     }
     tooltip.append(el('small', undefined, `${t('inv.count')} : ${state.inventory[hovered] ?? 0}`));
     tooltip.hidden = false;
@@ -130,27 +232,27 @@ export function mountInventory(
     panel.append(
       gauge(
         t('inv.weight'),
-        `${formatMass(used.weightG / 1000, units, locale)} / ${formatMass(BAG_LIMITS.maxWeightG / 1000, units, locale)}`,
-        used.weightG / BAG_LIMITS.maxWeightG,
+        `${formatMass(used.weightG / 1000, units, locale)} / ${formatMass(state.limits.maxWeightG / 1000, units, locale)}`,
+        used.weightG / state.limits.maxWeightG,
       ),
       gauge(
         t('inv.volume'),
-        `${(used.volumeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} / ${(BAG_LIMITS.maxVolumeMl / 1000).toLocaleString(locale)} L`,
-        used.volumeMl / BAG_LIMITS.maxVolumeMl,
+        `${(used.volumeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} / ${(state.limits.maxVolumeMl / 1000).toLocaleString(locale)} L`,
+        used.volumeMl / state.limits.maxVolumeMl,
       ),
       gauge(
         t('inv.slots'),
-        `${slots.length} / ${BAG_LIMITS.maxSlots}`,
-        slots.length / BAG_LIMITS.maxSlots,
+        `${slots.length} / ${state.limits.maxSlots}`,
+        slots.length / state.limits.maxSlots,
       ),
     );
 
-    const layout = el('div', 'inv-layout');
+    const layout = el('div', 'inv-layout inv-layout-3');
 
     // Gauche : les cases du sac.
     const bag = el('div', 'inv-bag');
     const grid = el('div', 'slot-grid');
-    for (let i = 0; i < BAG_LIMITS.maxSlots; i++) {
+    for (let i = 0; i < state.limits.maxSlots; i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');
       cell.type = 'button';
@@ -268,7 +370,7 @@ export function mountInventory(
     craftBox.append(catalog, el('small', 'help', t('inv.craftHint')));
     craftBox.append(el('div', 'inv-message', message));
 
-    layout.append(bag, craftBox);
+    layout.append(equipmentColumn(), bag, craftBox);
     panel.append(layout);
     panel.append(el('small', 'help', t('inv.hint')), el('small', 'help', t('hotbar.hint')));
     const x = el('button', 'panel-close', '✕');

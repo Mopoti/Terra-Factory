@@ -13,8 +13,16 @@ import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, isSupported, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
-import { BAG_LIMITS, itemById, type BagLimits } from '../data/items';
-import { add, maxAddable, normalizeInventory, remove, type Inventory } from './inventory';
+import { BAG_LIMITS, itemById, type BagLimits, type EquipSlot } from '../data/items';
+import {
+  add,
+  maxAddable,
+  normalizeInventory,
+  remove,
+  slotsUsed,
+  totals,
+  type Inventory,
+} from './inventory';
 import {
   emptyChanges,
   normalizeChanges,
@@ -57,10 +65,28 @@ export class GameState {
 
   constructor(
     saved?: { inventory?: unknown; changes?: unknown },
-    readonly limits: BagLimits = BAG_LIMITS,
+    private readonly baseLimits: BagLimits = BAG_LIMITS,
   ) {
     this.inventory = normalizeInventory(saved?.inventory);
     this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
+  }
+
+  /** Capacité du sac : de base, plus les bonus de l'équipement porté (sac à dos…). */
+  get limits(): BagLimits {
+    const l = { ...this.baseLimits };
+    for (const id of Object.values(this.changes.equipment)) {
+      const bonus = itemById(id).equip?.bonus;
+      if (!bonus) continue;
+      l.maxSlots += bonus.slots;
+      l.maxWeightG += bonus.weightG;
+      l.maxVolumeMl += bonus.volumeMl;
+    }
+    return l;
+  }
+
+  /** Capacité de base du sac, sans équipement. */
+  baseLimitsView(): BagLimits {
+    return { ...this.baseLimits };
   }
 
   onChange(listener: (e: StateEvent) => void): () => void {
@@ -119,6 +145,49 @@ export class GameState {
     }
     this.emit({ type: 'inventory' });
     return moved;
+  }
+
+  /**
+   * Équipe 1 objet du sac sur son emplacement ; celui qui y était retourne au sac (échange).
+   * Renvoie 'ok', 'notEquipment' (pas un équipement) ou 'bagFull' (l'échange ne tient pas).
+   */
+  equip(item: string): 'ok' | 'notEquipment' | 'bagFull' {
+    const slot = itemById(item).equip?.slot;
+    if (!slot) return 'notEquipment';
+    if ((this.inventory[item] ?? 0) <= 0) return 'notEquipment';
+    const previous = this.changes.equipment[slot];
+    const saved = { inventory: this.inventory, equipment: { ...this.changes.equipment } };
+    this.inventory = remove(this.inventory, item, 1).inventory;
+    this.changes.equipment[slot] = item;
+    if (previous) {
+      if (maxAddable(this.inventory, previous, this.limits) < 1) {
+        this.inventory = saved.inventory;
+        this.changes.equipment = saved.equipment;
+        return 'bagFull';
+      }
+      this.inventory = add(this.inventory, previous, 1);
+    }
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Retire l'équipement d'un emplacement vers le sac, si le sac (sans le bonus de l'objet) le contient encore. */
+  unequip(slot: EquipSlot): 'ok' | 'empty' | 'bagFull' {
+    const item = this.changes.equipment[slot];
+    if (!item) return 'empty';
+    const saved = { ...this.changes.equipment };
+    delete this.changes.equipment[slot];
+    const lim = this.limits;
+    const withItem = add(this.inventory, item, 1);
+    const used = totals(withItem);
+    const slots = slotsUsed(withItem, lim);
+    if (used.weightG > lim.maxWeightG || used.volumeMl > lim.maxVolumeMl || slots > lim.maxSlots) {
+      this.changes.equipment = saved;
+      return 'bagFull';
+    }
+    this.inventory = withItem;
+    this.emit({ type: 'inventory' });
+    return 'ok';
   }
 
   /** Le sac peut-il encore recevoir au moins une unité de cet objet ? */

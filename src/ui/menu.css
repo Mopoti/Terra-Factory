@@ -970,6 +970,9 @@
   gap: 18px;
   margin: 10px 0;
 }
+.inv-layout-3 {
+  grid-template-columns: 170px 1fr 1fr;
+}
 @media (max-width: 760px) {
   .inv-layout {
     grid-template-columns: 1fr;
@@ -1364,4 +1367,36 @@
   height: 12px;
   display: inline-block;
   border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Colonne d'équipement du sac. */
+.inv-equip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.inv-equip h3 {
+  margin: 0;
+}
+.equip-row {
+  display: flex;
+  gap: 6px;
+}
+.equip-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 64px;
+  flex: 1;
+}
+.equip-row .equip-slot:nth-child(2) {
+  flex: 0 0 56px;
+}
+.equip-label {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 10px;
+  opacity: 0.6;
+  text-transform: uppercase;
 }

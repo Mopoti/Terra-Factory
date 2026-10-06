@@ -1,5 +1,5 @@
 import { playSfx } from '../audio/sfx';
-import { BAG_LIMITS, ITEMS, itemById } from '../core/data/items';
+import { ITEMS, itemById } from '../core/data/items';
 import { isAssembler, isChest, isDrill, machineDef, smeltRecipe } from '../core/data/machines';
 import {
   footprint,
@@ -189,20 +189,20 @@ export function mountMachineWindow(
       el(
         'div',
         'mach-info',
-        `${(used.weightG / 1000).toFixed(1)} / ${BAG_LIMITS.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${BAG_LIMITS.maxVolumeMl / 1000} L`,
+        `${(used.weightG / 1000).toFixed(1)} / ${state.limits.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${state.limits.maxVolumeMl / 1000} L`,
       ),
     );
     const slots: { item: string; count: number }[] = [];
     for (const item of ITEMS) {
       let left = state.inventory[item.id] ?? 0;
       while (left > 0) {
-        const n = Math.min(left, BAG_LIMITS.stackMax);
+        const n = Math.min(left, state.limits.stackMax);
         slots.push({ item: item.id, count: n });
         left -= n;
       }
     }
     const grid = el('div', 'slot-grid');
-    for (let i = 0; i < BAG_LIMITS.maxSlots; i++) {
+    for (let i = 0; i < state.limits.maxSlots; i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');
       cell.type = 'button';

@@ -1014,3 +1014,38 @@ describe('assembleur dans la partie', () => {
     expect(s.inventory.iron_ingot).toBe(10);
   });
 });
+
+describe('équipement et sac à dos', () => {
+  it('équiper un sac à dos agrandit le sac, le retirer le rend (si le sac tient encore)', () => {
+    const s = new GameState({ inventory: { backpack: 1, stone: 40 } });
+    const base = s.limits.maxSlots;
+    expect(s.equip('backpack')).toBe('ok');
+    expect(s.inventory.backpack ?? 0).toBe(0);
+    expect(s.limits.maxSlots).toBe(base + 10);
+    expect(s.limits.maxWeightG).toBeGreaterThan(s.baseLimitsView().maxWeightG);
+    // On remplit au-delà de la capacité de base : le sac à dos ne peut plus être retiré.
+    s.inventory = { stone: 48 };
+    expect(s.unequip('torso')).toBe('bagFull');
+    expect(s.changes.equipment.torso).toBe('backpack');
+    s.inventory = { stone: 10 };
+    expect(s.unequip('torso')).toBe('ok');
+    expect(s.inventory.backpack).toBe(1);
+    expect(s.limits.maxSlots).toBe(base);
+  });
+
+  it('un équipement va sur son emplacement ; l’ancien revient au sac ; sauvegardé', () => {
+    const s = new GameState({ inventory: { hood: 2, wood: 1 } });
+    expect(s.equip('wood')).toBe('notEquipment');
+    expect(s.equip('hood')).toBe('ok');
+    expect(s.equip('hood')).toBe('ok');
+    expect(s.inventory.hood).toBe(1);
+    expect(s.changes.equipment.head).toBe('hood');
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.equipment.head).toBe('hood');
+  });
+
+  it('une sauvegarde ne peut pas mettre un objet sur le mauvais emplacement', () => {
+    const s = new GameState({ changes: { equipment: { head: 'backpack', legs: 'trousers' } } });
+    expect(s.changes.equipment).toEqual({ legs: 'trousers' });
+  });
+});
