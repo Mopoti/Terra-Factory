@@ -51,7 +51,7 @@ Un bloc de mur ne se pose pas dans le vide : il doit être **posé au sol** (blo
 - **Visée assistée** (`core/build/aim.ts`) : le curseur suit le rayon et « colle » au premier bloc de mur réellement posable (au sol, ou accolé à un mur existant). Le bloc du bas est toujours calé au niveau du sol ; on n'a plus à viser précisément en l'air. Si rien n'est touché, retombée sur le bloc du bas du bord le plus proche.
 - **Hauteur** : un clic simple = 1 bloc ; en 1ère/3ème personne, glisser trace un pan largeur × hauteur (la hauteur jusqu'au bloc visé) ; si le rayon ne coupe pas le plan du mur, on reste sur la hauteur de départ (plus de mur géant d'un coup). En vue du dessus : **Début / Fin** règlent la hauteur (1 à 5 blocs, 50 cm chacun), 1 par défaut.
 - **Plus de jour** entre les blocs : ils font exactement 50 cm (seul le bloc du haut garde 1 cm de retrait sous le plafond).
-- **Démolition** (X maintenu) : vise les blocs existants un par un et rend les **ressources de fabrication** (pierre, bois), pas la pièce ; ce qui ne tient pas dans le sac tombe au sol.
+- **Démolition** (X maintenu) : vise les blocs existants un par un et rend **la pièce elle-même** (plus les ressources de fabrication, depuis le tour 39) ; ce qui ne tient pas dans le sac tombe au sol.
 - À préciser avec le PO : « blocs de 10 × 10 cm » (pas de 10 cm en hauteur/largeur de mur ?) — voir question posée.
 
 ### Tour 19 — plafonds accrochés aux murs, bande grise

@@ -341,10 +341,12 @@ export function mountMachineWindow(
     panel.append(
       el('small', 'help', `${footprint(m.type, m.gx, m.gz, m.rot).length} ${t('machine.cells')}`),
     );
-    const closeBtn = el('button', 'menu-btn', t('inv.close'));
-    closeBtn.type = 'button';
-    closeBtn.addEventListener('click', close);
-    panel.append(closeBtn);
+    const x = el('button', 'panel-close', '✕');
+    x.type = 'button';
+    x.title = t('inv.close');
+    x.setAttribute('aria-label', t('inv.close'));
+    x.addEventListener('click', close);
+    panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel);
   }
 

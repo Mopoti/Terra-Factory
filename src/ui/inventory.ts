@@ -252,10 +252,12 @@ export function mountInventory(
     layout.append(bag, craftBox);
     panel.append(layout);
     panel.append(el('small', 'help', t('inv.hint')), el('small', 'help', t('hotbar.hint')));
-    const close = el('button', 'menu-btn', t('inv.close'));
-    close.type = 'button';
-    close.addEventListener('click', closeWindow);
-    panel.append(close);
+    const x = el('button', 'panel-close', '✕');
+    x.type = 'button';
+    x.title = t('inv.close');
+    x.setAttribute('aria-label', t('inv.close'));
+    x.addEventListener('click', closeWindow);
+    panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel, tooltip);
     showTooltip();
   }

@@ -229,7 +229,7 @@ describe('portée de la récolte', () => {
 });
 
 describe('construction', () => {
-  it('pose consomme 1 objet, démolir rend les ressources de fabrication', () => {
+  it('pose consomme 1 objet, démolir rend la pièce', () => {
     const s = new GameState({ inventory: { piece_wall_stone: 2 } });
     const pos = posFor('wall_stone', 0, 1, 1, 'x', 0);
     expect(s.place('wall_stone', pos)).toBe('ok');
@@ -238,8 +238,8 @@ describe('construction', () => {
     expect(s.place('door_wood', posFor('door_wood', 0, 2, 2, 'x'))).toBe('missing');
     expect(s.place('wall_stone', posFor('floor_wood', 0, 1, 1))).toBe('invalid');
     expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(1);
-    // Démolir rend les ressources de fabrication, pas la pièce.
-    expect(s.inventory).toEqual({ piece_wall_stone: 1, stone: 1 });
+    // Démolir rend la pièce elle-même, pas ses ressources de fabrication.
+    expect(s.inventory).toEqual({ piece_wall_stone: 2 });
     expect(s.removeKeys([pieceKey(pos)], { x: 0, z: 0 })).toBe(0);
   });
   it('les pièces survivent à la sauvegarde', () => {
@@ -812,9 +812,9 @@ describe('dalle : un seul objet pour sol et plafond', () => {
     expect(Object.values(s.changes.pieces)).toContain('floor_wood');
     expect(Object.values(s.changes.pieces)).toContain('ceiling_wood');
     expect(s.inventory.piece_slab_wood).toBe(1);
-    // Démolir rend la ressource de fabrication.
+    // Démolir rend la dalle.
     s.removeKeys([pieceKey(posFor('floor_wood', 0, 0, 0))], { x: 0, z: 0 });
-    expect(s.inventory.wood).toBe(1);
+    expect(s.inventory.piece_slab_wood).toBe(2);
   });
   it('les anciens sols et plafonds du sac et de la barre deviennent des dalles', () => {
     const s = new GameState({
@@ -858,7 +858,7 @@ describe('dalle : un seul objet pour sol et plafond', () => {
 describe('machines et tapis dans la partie', () => {
   const none = (): boolean => false;
   const noWorld = { oreAt: () => null, mineOre: () => 0 };
-  it("poser consomme l'objet, démolir rend les ressources de fabrication et le contenu", () => {
+  it("poser consomme l'objet, démolir rend la machine et le contenu", () => {
     const s = new GameState({ inventory: { machine_furnace: 1, coal: 2, iron_ore: 3 } });
     const f = new Factory(s.changes.machines, noWorld);
     expect(s.placeMachine(f, 'furnace', 4, 4, 0, none)).toBe('ok');
@@ -869,8 +869,8 @@ describe('machines et tapis dans la partie', () => {
     expect(s.loadMachine(m, 'input', 'coal', 1)).toBe(0); // le charbon ne se cuit pas
     expect(s.inventory).toEqual({});
     expect(s.removeMachine(f, m.id, { x: 0, z: 0 })).toBe(true);
-    // 5 pierres (recette) + 2 charbon + 3 minerais
-    expect(s.inventory).toEqual({ stone: 5, coal: 2, iron_ore: 3 });
+    // la machine + 2 charbon + 3 minerais
+    expect(s.inventory).toEqual({ machine_furnace: 1, coal: 2, iron_ore: 3 });
     expect(s.changes.machines).toHaveLength(0);
   });
   it('on ne pose pas deux machines au même endroit ; reprendre le stock', () => {
@@ -915,7 +915,8 @@ describe('coffre dans la partie', () => {
     s.putInChest(c, 'wood', 3);
     expect(s.removeMachine(f, c.id, { x: 0, z: 0 })).toBe(true);
     expect(s.inventory.stone).toBe(30);
-    expect(s.inventory.wood).toBe(5 + 8); // 2 restants + 3 rangés + 8 de la recette
+    expect(s.inventory.machine_chest_wood).toBe(1);
+    expect(s.inventory.wood).toBe(5); // 2 restants + 3 rangés
   });
 });
 

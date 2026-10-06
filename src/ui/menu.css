@@ -1273,3 +1273,26 @@
 .chest-grid {
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
 }
+
+/* Croix de fermeture en haut à droite des fenêtres (sac, machine). */
+.panel.inventory,
+.panel.machine-window {
+  position: relative;
+}
+.panel-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.panel-close:hover {
+  background: rgba(200, 60, 60, 0.7);
+}

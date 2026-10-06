@@ -263,7 +263,7 @@ export class GameState {
   }
 
   /**
-   * Démolit des pièces et rend leurs ressources de fabrication (ce qui ne tient pas dans le sac tombe au sol
+   * Démolit des pièces et rend les objets correspondants (ce qui ne tient pas dans le sac tombe au sol
    * aux coordonnées données). Renvoie le nombre de pièces démontées.
    */
   removeKeys(keys: string[], drop: { x: number; z: number }): number {
@@ -276,22 +276,8 @@ export class GameState {
       const door = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
       if (door) delete this.changes.pieces[`o:${door[1]}:${door[2]},${door[3]}:${door[4]}`];
       n++;
-      // Démolir rend les ressources de fabrication (pierre, bois), pas la pièce elle-même.
-      const recipe = itemById(pieceDef(kind).item).recipe ?? { [pieceDef(kind).item]: 1 };
-      for (const [item, count] of Object.entries(recipe)) {
-        const fits = Math.min(count, maxAddable(this.inventory, item, this.limits));
-        if (fits > 0) this.inventory = add(this.inventory, item, fits);
-        if (count - fits > 0) {
-          this.changes.drops.push({
-            id: `drop-${this.changes.nextDropId++}`,
-            item,
-            count: count - fits,
-            x: drop.x,
-            z: drop.z,
-          });
-          this.emit({ type: 'drops' });
-        }
-      }
+      // Démolir rend la pièce elle-même (l'objet), pas ses ressources de fabrication.
+      this.giveBack(pieceDef(kind).item, 1, drop);
     }
     if (n > 0) {
       this.roomCache = null;
@@ -339,12 +325,11 @@ export class GameState {
     }
   }
 
-  /** Démolit une machine : ressources de fabrication et contenu reviennent au joueur. */
+  /** Démolit une machine : l'objet et son contenu reviennent au joueur. */
   removeMachine(factory: Factory, id: number, at: { x: number; z: number }): boolean {
     const m = factory.remove(id);
     if (!m) return false;
-    const recipe = itemById(machineDef(m.type).item).recipe ?? {};
-    for (const [item, n] of Object.entries(recipe)) this.giveBack(item, n, at);
+    this.giveBack(machineDef(m.type).item, 1, at);
     for (const stack of [m.fuel, m.input, m.stock, ...m.slots])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);
