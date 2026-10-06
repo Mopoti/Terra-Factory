@@ -70,6 +70,7 @@ export function onLocaleChange(fn: () => void): () => void {
 
 /** Traduit une clé ; `{nom}` dans le texte est remplacé par la valeur fournie. */
 export function t(key: TranslationKey, params: Record<string, string> = {}): string {
-  const text = dictionaries[current][key] ?? dictionaries.fr[key];
+  // Une clé manquante ne doit jamais faire planter l'affichage : on montre la clé elle-même.
+  const text = dictionaries[current][key] ?? dictionaries.fr[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (_, name: string) => params[name] ?? `{${name}}`);
 }

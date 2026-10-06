@@ -23,3 +23,19 @@ describe('traductions', () => {
     expect(Object.keys(en).sort()).toEqual(Object.keys(fr).sort());
   });
 });
+
+describe('textes des ressources du monde', () => {
+  it('chaque ressource du monde a son nom (viser, légende) dans les deux langues', async () => {
+    const { RESOURCES } = await import('../core/data/resources');
+    const fr = (await import('./fr.json')).default as Record<string, string>;
+    const en = (await import('./en.json')).default as Record<string, string>;
+    for (const r of RESOURCES) {
+      expect(fr[`res.${r.id}`], `res.${r.id} (fr)`).toBeTruthy();
+      expect(en[`res.${r.id}`], `res.${r.id} (en)`).toBeTruthy();
+      if (r.kind === 'object') {
+        expect(fr[`target.${r.id}`], `target.${r.id} (fr)`).toBeTruthy();
+        expect(en[`target.${r.id}`], `target.${r.id} (en)`).toBeTruthy();
+      }
+    }
+  });
+});

@@ -556,5 +556,6 @@
   "tech.missing": "Not enough resources in the bag",
   "tech.researched": "Technology researched: {tech}",
   "tech.help": "The cost is taken from the bag. T or Esc to close.",
-  "tech.have": "{have} / {need}"
+  "tech.have": "{have} / {need}",
+  "target.fiber_bush": "Fiber bush"
 }

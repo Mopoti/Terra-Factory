@@ -107,3 +107,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Effet** : seule la **fabrication** à la main est bloquée (case grisée en pointillés dans le panneau de fabrication, info-bulle « Technologie requise »). Un objet qui n'est dans aucune technologie (pièces de construction, foreuse, fourneau, tapis, coffre en bois) reste disponible dès le départ. Les objets déjà possédés ou posés ne sont pas touchés.
 - **Sauvegardes** : enregistrées avec la partie (`changes.unlocked`) ; une ancienne partie, créée avant les technologies, a tout débloqué. Ajouter une technologie = ajouter une entrée dans `techs.json` + son nom `tech.<id>` dans les deux fichiers de langue.
 - Vérifié : tests (fabrication refusée, coût, prérequis, sauvegarde) et script navigateur (T, recherche du Textile, cases verrouillées).
+
+## Tour 49 — correctif : viser les buissons de fibres
+- **Cause** : le nom du buisson affiché au survol (`target.fiber_bush`) manquait dans les fichiers de langue ; l'interface levait une erreur à chaque image tant que le curseur visait un buisson (d'où le lag et le curseur/le cadre qui « saute », et impossibilité de cibler).
+- **Correctif** : texte ajouté en français et anglais ; `t()` ne plante plus sur une clé manquante (affiche la clé) ; un test vérifie que **chaque ressource du monde** a ses textes (`res.*`, `target.*`) dans les deux langues, pour ne plus oublier lors de l'ajout d'une ressource.
