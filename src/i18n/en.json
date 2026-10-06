@@ -467,5 +467,11 @@
   "factory.power.producer": "Production: {kw} kW max · load {load} %",
   "factory.power.pole": "Grid: {n} machine(s) · production {cap} kW · demand {demand} kW",
   "factory.power.generatorOff": "stopped",
-  "factory.power.unlinked": "Pole without machines"
+  "factory.power.unlinked": "Pole without machines",
+  "item.machine_splitter": "Splitter",
+  "item.machine_merger": "Merger",
+  "factory.router.splitter": "Splits one belt into 3 outputs (front, left, right), in turn.",
+  "factory.router.merger": "Merges up to 3 belts (back, left, right) into the front output.",
+  "factory.router.holding": "Carrying: {v}",
+  "factory.router.empty": "Empty"
 }

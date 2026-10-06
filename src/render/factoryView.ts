@@ -2,7 +2,14 @@ import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
-import { hasOutput, isChest, isDrill, machineDef, type MachineType } from '../core/data/machines';
+import {
+  hasOutput,
+  isChest,
+  isDrill,
+  isRouter,
+  machineDef,
+  type MachineType,
+} from '../core/data/machines';
 import { dims, outputCell, type Factory, type Machine } from '../core/factory/factory';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -44,8 +51,15 @@ export function beltEntry(
   const [dx, dz] = RISE_DIR[m.rot];
   const feeds = (n: Machine | null): boolean => {
     if (!n || n === m) return false;
+    if (n.type === 'splitter') {
+      // Trois sorties : devant, gauche, droite (pas derrière).
+      const back = (n.rot + 2) % 4;
+      return RISE_DIR.some(
+        ([ax, az], dir) => dir !== back && n.gx + ax === m.gx && n.gz + az === m.gz,
+      );
+    }
     const front =
-      n.type === 'conveyor'
+      n.type === 'conveyor' || n.type === 'merger'
         ? { gx: n.gx + RISE_DIR[n.rot][0], gz: n.gz + RISE_DIR[n.rot][1] }
         : outputCell(n.type, n.gx, n.gz, n.rot);
     return front.gx === m.gx && front.gz === m.gz;
@@ -184,7 +198,20 @@ export class FactoryView {
         else
           mb.box(x, 0, z, w * CELL_SIZE_M - 0.04, def.height, d * CELL_SIZE_M - 0.04, color, true);
         // Flèche de sortie (un coffre n'en a pas : il se remplit par les tapis).
-        if (hasOutput(g.type)) {
+        if (isRouter(g.type)) {
+          const outs = g.type === 'splitter' ? [g.rot, (g.rot + 1) % 4, (g.rot + 3) % 4] : [g.rot];
+          for (const dir of outs)
+            mb.box(
+              center(g.gx + RISE_DIR[dir][0]),
+              0,
+              center(g.gz + RISE_DIR[dir][1]),
+              0.2,
+              0.2,
+              0.2,
+              shade(color, 0.85),
+              true,
+            );
+        } else if (hasOutput(g.type)) {
           const out = outputCell(g.type, g.gx, g.gz, g.rot);
           mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
         }
@@ -280,6 +307,28 @@ function addMachineBody(
     mb.box(x - 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
     mb.box(x + 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
     mb.box(x, 0.3, z - 0.24, 0.1, 0.12, 0.03, hexToRgb('#d9c15a'), true);
+    return;
+  }
+  if (type === 'splitter' || type === 'merger') {
+    // Boîtier plat ; les becs marquent les sorties (séparateur : 3, groupeur : 1) et les entrées en creux.
+    mb.box(x, 0, z, sx, 0.25, sz, color, true);
+    mb.box(x, 0.25, z, sx - 0.14, 0.1, sz - 0.14, shade(color, 1.3), true);
+    const bec = hexToRgb('#2a2d31');
+    const beak = (dir: number): void => {
+      const [bx, bz] = RISE_DIR[dir];
+      mb.box(
+        x + bx * 0.22,
+        0.05,
+        z + bz * 0.22,
+        bx !== 0 ? 0.14 : 0.24,
+        0.2,
+        bz !== 0 ? 0.14 : 0.24,
+        bec,
+        true,
+      );
+    };
+    if (type === 'splitter') [rot, (rot + 1) % 4, (rot + 3) % 4].forEach(beak);
+    else beak(rot);
     return;
   }
   if (type === 'pole') {

@@ -8,7 +8,9 @@ export type MachineType =
   | 'chest_wood'
   | 'chest_iron'
   | 'generator'
-  | 'pole';
+  | 'pole'
+  | 'splitter'
+  | 'merger';
 
 export interface MachineDef {
   id: MachineType;
@@ -52,6 +54,9 @@ export const isDrill = (type: MachineType): boolean =>
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean => isDrill(type) || type === 'furnace';
+
+/** Séparateur (1 entrée, 3 sorties) ou groupeur (3 entrées, 1 sortie) : aiguille les objets d'un tapis à l'autre. */
+export const isRouter = (type: MachineType): boolean => type === 'splitter' || type === 'merger';
 
 export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';

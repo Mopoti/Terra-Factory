@@ -467,5 +467,11 @@
   "factory.power.producer": "Production : {kw} kW max · charge {load} %",
   "factory.power.pole": "Réseau : {n} machine(s) · production {cap} kW · demande {demand} kW",
   "factory.power.generatorOff": "à l'arrêt",
-  "factory.power.unlinked": "Poteau sans machine"
+  "factory.power.unlinked": "Poteau sans machine",
+  "item.machine_splitter": "Séparateur",
+  "item.machine_merger": "Groupeur",
+  "factory.router.splitter": "Sépare un tapis en 3 sorties (devant, gauche, droite), à tour de rôle.",
+  "factory.router.merger": "Réunit jusqu'à 3 tapis (derrière, gauche, droite) vers la sortie de devant.",
+  "factory.router.holding": "Transporte : {v}",
+  "factory.router.empty": "Vide"
 }

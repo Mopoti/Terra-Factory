@@ -88,6 +88,24 @@
       "mineSeconds": 0.667,
       "stockMax": 100,
       "consumesKw": 90
+    },
+    {
+      "id": "splitter",
+      "w": 1,
+      "d": 1,
+      "item": "machine_splitter",
+      "color": "#5b6f86",
+      "fuel": false,
+      "height": 0.4
+    },
+    {
+      "id": "merger",
+      "w": 1,
+      "d": 1,
+      "item": "machine_merger",
+      "color": "#7a6a8a",
+      "fuel": false,
+      "height": 0.4
     }
   ],
   "smelting": [

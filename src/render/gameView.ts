@@ -54,6 +54,7 @@ import {
   hasOutput,
   isChest,
   isDrill,
+  isRouter,
   machineDef,
   machineForItem,
   type MachineDef,
@@ -584,7 +585,7 @@ export function startGameView(
         id: `machine:${m.id}`,
         name: t(`item.${machineDef(m.type).item}` as TranslationKey),
         seconds: m.type === 'conveyor' ? 0.4 : 1.2,
-        usable: m.type !== 'conveyor',
+        usable: m.type !== 'conveyor' && !isRouter(m.type),
         distance: hitM.t,
         box: machineBox(m),
       };
@@ -802,6 +803,11 @@ export function startGameView(
         );
       }
       if (m.slots.length === 0) rows.push(`<div class="sub">${t('factory.chestEmpty')}</div>`);
+    } else if (isRouter(m.type)) {
+      rows.push(`<div class="sub">${t(`factory.router.${m.type}` as TranslationKey)}</div>`);
+      rows.push(
+        `<div>${t('factory.router.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
+      );
     } else if (m.type === 'pole') {
       const g = factory.gridInfo(m);
       rows.push(

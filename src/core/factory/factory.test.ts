@@ -284,3 +284,59 @@ describe('électricité', () => {
     expect(gen.fuelLeft).toBeLessThanOrEqual(100 - 9);
   });
 });
+
+describe('séparateur et groupeur', () => {
+  const setup = (...ms: Machine[]): Factory => {
+    return new Factory(ms, makeWorld().world);
+  };
+  const loaded = (id: number, gx: number, gz: number, rot: number, n: number): Machine => {
+    const b = emptyMachine(id, 'conveyor', gx, gz, rot);
+    for (let i = 0; i < n; i++) b.belt.push({ item: 'iron_ore', pos: 1 - i * 0.34 });
+    return b;
+  };
+
+  it('le séparateur répartit sur ses 3 sorties, jamais derrière', () => {
+    // Séparateur en (10,10) tourné vers +z ; entrée par derrière (10,9).
+    const src = loaded(1, 10, 9, 0, 3);
+    const sp = emptyMachine(2, 'splitter', 10, 10, 0);
+    const front = emptyMachine(3, 'chest_wood', 10, 11, 0);
+    const left = emptyMachine(4, 'chest_wood', 11, 10, 0);
+    const right = emptyMachine(5, 'chest_wood', 9, 10, 0);
+    const f = setup(src, sp, front, left, right);
+    run(f, 3);
+    expect([front, left, right].map((c) => c.slots[0]?.count ?? 0)).toEqual([1, 1, 1]);
+    expect(src.belt.length).toBe(0);
+  });
+
+  it('le séparateur ne pousse pas dans un tapis qui lui fait face', () => {
+    const sp = emptyMachine(2, 'splitter', 10, 10, 0);
+    sp.stock = { item: 'iron_ore', count: 1 };
+    const facing = emptyMachine(3, 'conveyor', 10, 11, 2);
+    const f = setup(sp, facing);
+    run(f, 1);
+    expect(sp.stock).not.toBeNull();
+    expect(facing.belt.length).toBe(0);
+  });
+
+  it('le groupeur prend à tour de rôle sur ses 3 entrées', () => {
+    const mg = emptyMachine(1, 'merger', 10, 10, 0);
+    const back = loaded(2, 10, 9, 0, 3);
+    const l = loaded(3, 11, 10, 3, 3);
+    const r = loaded(4, 9, 10, 1, 3);
+    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const f = setup(mg, back, l, r, out);
+    run(f, 0.15);
+    expect(out.slots[0]?.count).toBe(3);
+    expect([back, l, r].map((b) => b.belt.length)).toEqual([2, 2, 2]);
+  });
+
+  it('un groupeur reçoit aussi directement d’une foreuse', () => {
+    const mg = emptyMachine(1, 'merger', 3, 1, 1);
+    const drill = emptyMachine(2, 'drill', 0, 0, 1);
+    drill.fuel = { item: 'coal', count: 5 };
+    const out = emptyMachine(3, 'chest_wood', 4, 1, 0);
+    const f = setup(mg, drill, out);
+    run(f, 4);
+    expect(out.slots[0]?.count ?? 0).toBeGreaterThan(0);
+  });
+});

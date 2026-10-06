@@ -5,6 +5,7 @@ import {
   hasOutput,
   isChest,
   isDrill,
+  isRouter,
   machineDef,
   smeltRecipe,
   type MachineType,
@@ -228,6 +229,8 @@ const MACHINE_TYPES: MachineType[] = [
   'chest_iron',
   'generator',
   'pole',
+  'splitter',
+  'merger',
 ];
 
 /** Centre d'une machine (m). */
@@ -384,6 +387,7 @@ export class Factory {
         m.slots.length >= (def.slots ?? 0) && m.slots.every((x) => x.count >= CHEST_STACK);
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
+    if (isRouter(m.type)) return m.stock ? 'blocked' : 'idle';
     if (m.type === 'conveyor')
       return m.belt.length > 0 && m.belt[0].pos >= 1
         ? 'blocked'
@@ -415,6 +419,7 @@ export class Factory {
     this.updateGrids();
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
+      else if (isRouter(m.type)) this.tickRouter(m);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -538,11 +543,24 @@ export class Factory {
   // --- Tapis et échanges ---------------------------------------------------------------------------
 
   /** Une machine ou un tapis peut-il recevoir cet objet par cette case ? Si oui, l'y met. */
-  private deliver(target: Machine, from: Machine, item: string): boolean {
+  private deliver(target: Machine, from: Machine, item: string, dir = from.rot): boolean {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
+    if (target.type === 'splitter') {
+      // Une seule case d'attente ; un tapis qui sort du séparateur ne le réalimente pas.
+      if (target.stock) return false;
+      target.stock = { item, count: 1 };
+      return true;
+    }
+    // Le groupeur va chercher lui-même les objets sur les tapis qui l'alimentent (à tour de rôle).
+    if (target.type === 'merger') {
+      if (target.stock || from.type === 'conveyor') return false;
+      target.stock = { item, count: 1 };
+      return true;
+    }
     if (target.type === 'conveyor') {
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
-      if (target.rot === (from.rot + 2) % 4 && from.type === 'conveyor') return false;
+      if (target.rot === (dir + 2) % 4 && (from.type === 'conveyor' || isRouter(from.type)))
+        return false;
       const cap = machineDef('conveyor').capacity ?? 3;
       if (target.belt.length >= cap) return false;
       const last = target.belt[target.belt.length - 1];
@@ -570,6 +588,38 @@ export class Factory {
     if (this.deliver(target, m, m.stock.item)) {
       m.stock.count--;
       if (m.stock.count <= 0) m.stock = null;
+    }
+  }
+
+  /** Séparateur : devant / gauche / droite à tour de rôle. Groupeur : prend derrière / gauche / droite à tour de rôle, sort devant. */
+  private tickRouter(m: Machine): void {
+    const front = m.rot;
+    if (m.type === 'merger' && !m.stock) {
+      for (let i = 0; i < 3; i++) {
+        const k = (Math.floor(m.progress) + i) % 3;
+        const side = (m.rot + [2, 3, 1][k]) % 4;
+        const [dx, dz] = RISE_DIR[side];
+        const src = this.machineAt(m.gx + dx, m.gz + dz);
+        if (!src || src.type !== 'conveyor' || (src.rot + 2) % 4 !== side) continue;
+        const head = src.belt[0];
+        if (!head || head.pos < 1) continue;
+        m.stock = { item: head.item, count: 1 };
+        src.belt.shift();
+        m.progress = (k + 1) % 3;
+        break;
+      }
+    }
+    if (!m.stock) return;
+    const outs = m.type === 'splitter' ? [front, (front + 1) % 4, (front + 3) % 4] : [front];
+    for (let i = 0; i < outs.length; i++) {
+      const k = m.type === 'splitter' ? (Math.floor(m.progress) + i) % 3 : 0;
+      const dir = outs[k];
+      const [dx, dz] = RISE_DIR[dir];
+      const target = this.machineAt(m.gx + dx, m.gz + dz);
+      if (!target || target === m || !this.deliver(target, m, m.stock.item, dir)) continue;
+      m.stock = null;
+      if (m.type === 'splitter') m.progress = (k + 1) % 3;
+      break;
     }
   }
 

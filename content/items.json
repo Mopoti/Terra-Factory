@@ -191,6 +191,24 @@
         "copper_ingot": 4,
         "stone": 2
       }
+    },
+    {
+      "id": "machine_splitter",
+      "weightKg": 2,
+      "volumeL": 4,
+      "color": "#5b6f86",
+      "recipe": {
+        "iron_ingot": 5
+      }
+    },
+    {
+      "id": "machine_merger",
+      "weightKg": 2,
+      "volumeL": 4,
+      "color": "#7a6a8a",
+      "recipe": {
+        "iron_ingot": 5
+      }
     }
   ]
 }
