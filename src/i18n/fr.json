@@ -590,7 +590,7 @@
   "factory.fluid.steam": "Vapeur : {v}",
   "factory.fluid.empty": "vide",
   "factory.fluid.pressure": "Pression : {v} %",
-  "factory.needWater": "Une pompe se pose au bord de l'eau (une case d'étang voisine).",
+  "factory.needWater": "Une pompe se pose au bord de l'eau : la ligne côté sortie sur la terre, le reste dans l'étang.",
   "factory.turbine.output": "Production : {kw} kW",
   "threat.health": "Santé",
   "threat.machineLost": "Une installation a été détruite par des ennemis !",

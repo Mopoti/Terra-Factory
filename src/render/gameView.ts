@@ -747,13 +747,18 @@ export function startGameView(
     const baseRot = buildRot ?? autoRot();
 
     if (!isLinear(def.id)) {
+      // Une pompe se pose à moitié dans l'eau : ses cases dans l'étang ne comptent pas comme bloquées.
+      const blockedHere =
+        def.id === 'pump'
+          ? (cell: Cell): boolean => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz)
+          : machineBlocked;
       const { w, d } = dims(def.id, baseRot);
       const gx = c.gx - Math.floor(w / 2);
       const gz = c.gz - Math.floor(d / 2);
       let ok =
         stock > 0 &&
         within({ gx: gx + Math.floor(w / 2), gz: gz + Math.floor(d / 2) }) &&
-        factory.canPlace(def.id, gx, gz, baseRot, machineBlocked);
+        factory.canPlace(def.id, gx, gz, baseRot, blockedHere);
       let why = stock > 0 ? '' : t('build.missing');
       if (
         ok &&
@@ -769,7 +774,7 @@ export function startGameView(
       if (down && !machineWasDown) {
         if (
           ok &&
-          options.state.placeMachine(factory, def.id, gx, gz, baseRot, machineBlocked) === 'ok'
+          options.state.placeMachine(factory, def.id, gx, gz, baseRot, blockedHere) === 'ok'
         ) {
           playSfx('placeStone');
           buildMessage = '';
@@ -1921,10 +1926,10 @@ export function startGameView(
         !building &&
         options.state.selectedItem() !== 'pistol' &&
         input.isActionActive('interact'),
-      demolishing:
-        !paused && !uiOpen && !building && input.isActionActive('secondary') && rightMoved < 10,
+      demolishing: !paused && !uiOpen && input.isActionActive('secondary') && rightMoved < 10,
       // En construction, la récolte est coupée (pas de ressource affichée derrière un mur).
-      paused: paused || uiOpen || building,
+      paused: paused || uiOpen,
+      structuresOnly: building,
       aimAtCenter: rig.view === 'first',
       mouse: { x: mouseX, y: mouseY },
       viewport: { w: window.innerWidth, h: window.innerHeight },

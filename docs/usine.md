@@ -174,3 +174,9 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Le joueur **ne traverse plus les machines ni les tuyaux** (toute leur emprise bloque, comme un mur) ; les **tapis se marchent**. Si une machine est posée sur le joueur, il peut en sortir librement.
 - Un **tapis emporte le joueur** qui s'y tient (au sol), dans le sens du tapis, à la vitesse des objets (0,75 m/s), tant qu'aucun obstacle ne bloque ; marcher dans le sens contraire ralentit, dans le même sens accélère.
 - Vérifié en navigateur : le joueur posé sur deux tuiles de tapis est emmené jusqu'au bout (21,2 → 23,0 m) puis s'arrête avant le fourneau (en marchant vers lui il reste à 23,5 m, devant la machine qui commence à 24 m).
+
+## Tour 61 — pompe au bord de l'eau, démolir en construisant, angles de tapis
+- **Pompe** : elle se pose **à cheval sur la rive** : la ligne côté sortie sur la **terre**, le reste de son emprise dans l'**eau** (ses cases dans l'étang ne sont plus « bloquées »). Tout sur la terre ou tout dans l'eau est refusé.
+- **Démolir pendant la construction** : avec un objet sélectionné dans la barre de raccourcis, le **clic droit maintenu** (sans bouger) démolit la construction ou machine visée ; le fantôme de pose reste actif. En construction, la visée ne cible que les constructions et machines (pas les ressources) et le clic gauche ne fait que poser.
+- **Angles de tapis** : correctif : l'entrée d'un tapis qui tourne était prise du mauvais côté (gauche/droite inversés), d'où des objets qui arrivaient « de l'autre côté ». Les tapis dessinent maintenant une **voie centrale foncée** de l'entrée à la sortie (en L dans un angle) avec la flèche à la sortie.
+- Vérifié : tests (pompe), scène navigateur (angle en L, démolition d'un tapis avec le tapis en main : sac 5 → 6).

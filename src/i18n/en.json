@@ -590,7 +590,7 @@
   "factory.fluid.steam": "Steam: {v}",
   "factory.fluid.empty": "empty",
   "factory.fluid.pressure": "Pressure: {v} %",
-  "factory.needWater": "A pump goes at the water's edge (a neighbouring pond cell).",
+  "factory.needWater": "A pump goes at the water's edge: the output-side row on land, the rest in the pond.",
   "factory.turbine.output": "Output: {kw} kW",
   "threat.health": "Health",
   "threat.machineLost": "An installation was destroyed by enemies!",

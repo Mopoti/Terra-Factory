@@ -414,18 +414,31 @@ export class Factory {
   private links: FluidLink[] = [];
   private pumpsOk = new Set<number>();
 
-  /** Une case d'eau touche-t-elle l'emprise de cette machine ? */
+  /**
+   * Pompe : sa première ligne (côté sortie) est sur la terre, le reste de l'emprise est dans l'eau.
+   */
   private waterNear(type: MachineType, gx: number, gz: number, rot: number): boolean {
-    const w = this.world.waterAt;
-    if (!w) return false;
-    return footprint(type, gx, gz, rot).some((c) =>
-      [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ].some(([dx, dz]) => w.call(this.world, c.gx + dx, c.gz + dz)),
-    );
+    const water = this.world.waterAt;
+    if (!water) return false;
+    const { w, d } = dims(type, rot);
+    const cells = footprint(type, gx, gz, rot);
+    const depthOf = (c: Cell): number => {
+      switch (rot % 4) {
+        case 0:
+          return c.gz - gz;
+        case 1:
+          return c.gx - gx;
+        case 2:
+          return d - 1 - (c.gz - gz);
+        default:
+          return w - 1 - (c.gx - gx);
+      }
+    };
+    const front = Math.max(...cells.map(depthOf));
+    return cells.every((c) => {
+      const wet = water.call(this.world, c.gx, c.gz);
+      return depthOf(c) === front ? !wet : wet;
+    });
   }
 
   /** Relie les poteaux entre eux (fil de 8 m) et les machines électriques au poteau le plus proche (4 m). */

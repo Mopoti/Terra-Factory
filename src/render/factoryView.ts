@@ -129,8 +129,8 @@ export function beltEntry(
   if (feeds(factory.neighbor(m, (m.rot + 2) % 4))) return { ex: -dx, ez: -dz, curved: false };
   // Sur les côtés : virage.
   for (const [dir, sx, sz] of [
-    [(m.rot + 1) % 4, -dz, dx],
-    [(m.rot + 3) % 4, dz, -dx],
+    [(m.rot + 3) % 4, -dz, dx],
+    [(m.rot + 1) % 4, dz, -dx],
   ] as const) {
     if (feeds(factory.neighbor(m, dir))) return { ex: sx, ez: sz, curved: true };
   }
@@ -350,6 +350,23 @@ function addBelt(
   };
   arm(dx, dz);
   arm(entry.ex, entry.ez);
+  // Voie centrale (là où passent les objets) : de l'entrée au centre puis du centre à la sortie ; elle dessine
+  // aussi les angles.
+  const lane = shade(color, 0.7);
+  const laneBox = (ux: number, uz: number): void => {
+    mb.box(
+      cx + (ux * half) / 2,
+      BELT_H,
+      cz + (uz * half) / 2,
+      Math.abs(ux) > 0 ? half + 0.14 : 0.14,
+      0.004,
+      Math.abs(uz) > 0 ? half + 0.14 : 0.14,
+      lane,
+      false,
+    );
+  };
+  laneBox(dx, dz);
+  laneBox(entry.ex, entry.ez);
   // Flèche de sens, claire, sur le dessus (au milieu du tapis, là où passent les objets).
   const light = shade(color, 1.9);
   const tipX = cx + dx * 0.36;

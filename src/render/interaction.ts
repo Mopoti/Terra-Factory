@@ -76,6 +76,8 @@ export interface InteractionFrame {
   /** Vrai si le clic droit est maintenu sans bouger : démolir ce qui est visé. */
   demolishing: boolean;
   paused: boolean;
+  /** Construction en cours : on ne vise que les constructions et machines (pour les démolir), pas les ressources. */
+  structuresOnly?: boolean;
   /** 1ère personne : on vise au centre de l'écran ; sinon sous le curseur. */
   aimAtCenter: boolean;
   mouse: { x: number; y: number };
@@ -258,7 +260,7 @@ export class Interaction {
     const limit = structure?.distance ?? Infinity;
     let best: Hit | null = null;
     // Ressources : on suit le rayon pas à pas (plus finement près du sol).
-    let travelled = 0.2;
+    let travelled = frame.structuresOnly ? Infinity : 0.2;
     const p = new THREE.Vector3();
     while (travelled < Math.min(80, limit)) {
       p.copy(origin).addScaledVector(dir, travelled);
@@ -283,7 +285,7 @@ export class Interaction {
     }
     // Objets au sol : distance au rayon.
     const w = new THREE.Vector3();
-    for (const d of this.state.changes.drops) {
+    for (const d of frame.structuresOnly ? [] : this.state.changes.drops) {
       w.set(d.x, 0.12, d.z).sub(origin);
       const along = w.dot(dir);
       if (along < 0 || along > limit) continue;

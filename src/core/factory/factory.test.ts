@@ -613,16 +613,16 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     const gen = emptyMachine(1, 'generator', 15, 0, 0);
     gen.fuel = { item: 'coal', count: 10 };
     const poles = [4, 12, 20, 28].map((z, i) => emptyMachine(2 + i, 'pole', 13, z, 0));
-    const pump = emptyMachine(20, 'pump', 10, 0, 0);
-    const p1 = emptyMachine(21, 'pipe', 10, 2, 0);
-    const p2 = emptyMachine(22, 'pipe', 10, 4, 0);
-    const boiler = emptyMachine(23, 'boiler', 9, 6, 0);
+    const pump = emptyMachine(20, 'pump', 10, -1, 0);
+    const p1 = emptyMachine(21, 'pipe', 10, 1, 0);
+    const p2 = emptyMachine(22, 'pipe', 10, 3, 0);
+    const boiler = emptyMachine(23, 'boiler', 9, 5, 0);
     if (boilerCoal > 0) boiler.fuel = { item: 'coal', count: boilerCoal };
-    const p3 = emptyMachine(24, 'pipe', 10, 9, 0);
+    const p3 = emptyMachine(24, 'pipe', 10, 8, 0);
     const list = [gen, ...poles, pump, p1, p2, boiler, p3];
     const ms: Record<string, Machine> = { pump, boiler, p3 };
     for (let i = 0; i < turbines; i++) {
-      const t = emptyMachine(40 + i, 'turbine', 10, 11 + 3 * i, 0);
+      const t = emptyMachine(40 + i, 'turbine', 10, 10 + 3 * i, 0);
       ms[`t${i}`] = t;
       list.push(t);
     }
@@ -639,8 +639,14 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
 
   it('une pompe ne se pose qu’au bord de l’eau', () => {
     const f = new Factory([], world());
-    expect(f.canPlace('pump', 10, 0, 0, () => false)).toBe(true);
+    // Pompe 2 x 2 tournée vers +z : la ligne côté sortie (z = 0) sur la terre, l'autre (z = -1) dans l'eau.
+    expect(f.canPlace('pump', 10, -1, 0, () => false)).toBe(true);
+    // tout sur la terre, ou tout dans l'eau : refusé
+    expect(f.canPlace('pump', 10, 0, 0, () => false)).toBe(false);
+    expect(f.canPlace('pump', 10, -2, 0, () => false)).toBe(false);
     expect(f.canPlace('pump', 10, 5, 0, () => false)).toBe(false);
+    // tournée vers -z, la ligne de sortie est celle du bas (z = -1) : dans l'eau, donc refusé ; avec z = 0 sortie vers -z impossible
+    expect(f.canPlace('pump', 10, -1, 2, () => false)).toBe(false);
   });
 
   it('l’eau va de la pompe à la chaudière par les tuyaux, la vapeur de la chaudière à la turbine', () => {
