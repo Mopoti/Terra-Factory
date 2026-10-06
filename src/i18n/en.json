@@ -608,7 +608,7 @@
   "map.pollution": "Smoke (air)",
   "map.enemies": "Enemies",
   "item.pistol": "Pistol",
-  "item.tool_wood": "Wooden tool",
+  "item.tool_stone": "Stone tool",
   "item.tool_iron": "Iron tool",
   "item.magazine": "Magazine (12 rounds)",
   "weapon.ammo": "Rounds {n} / {max} · magazines: {mags}",

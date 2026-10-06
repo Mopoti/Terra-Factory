@@ -399,10 +399,10 @@
       }
     },
     {
-      "id": "tool_wood",
+      "id": "tool_stone",
       "weightKg": 1.2,
       "volumeL": 2,
-      "color": "#a9743a",
+      "color": "#8a8f98",
       "recipe": {
         "wood": 6,
         "stone": 4

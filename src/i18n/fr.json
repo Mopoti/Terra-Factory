@@ -608,7 +608,7 @@
   "map.pollution": "Fumées (air)",
   "map.enemies": "Ennemis",
   "item.pistol": "Pistolet",
-  "item.tool_wood": "Outil en bois",
+  "item.tool_stone": "Outil en pierre",
   "item.tool_iron": "Outil en fer",
   "item.magazine": "Chargeur (12 balles)",
   "weapon.ammo": "Balles {n} / {max} · chargeurs : {mags}",

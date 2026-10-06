@@ -60,6 +60,7 @@ export function remove(
 
 /** Anciens objets de construction (avant les matériaux), convertis à la lecture. */
 const LEGACY_ITEMS: Record<string, string> = {
+  tool_wood: 'tool_stone',
   piece_wall: 'piece_wall_stone',
   piece_door: 'piece_door_wood',
   piece_floor: 'piece_slab_wood',

@@ -178,8 +178,9 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     r.tools.slice(0, TOOL_SLOTS).forEach((rawId, i) => {
       if (typeof rawId !== 'string') return;
       try {
-        const def = itemById(rawId);
-        if (def.tool || def.id === 'pistol') result.tools[i] = rawId;
+        const id = migrateItemId(rawId);
+        const def = itemById(id);
+        if (def.tool || def.id === 'pistol') result.tools[i] = id;
       } catch {
         /* objet inconnu : case vide */
       }

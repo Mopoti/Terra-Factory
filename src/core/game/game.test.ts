@@ -1150,10 +1150,10 @@ describe('piles du sac, objet en main et outils', () => {
   });
 
   it("l'outil de la case d'outils change la récolte ; seuls outils et pistolet y vont", () => {
-    const s = new GameState({ inventory: { tool_wood: 1, tool_iron: 1, stone: 1 } });
+    const s = new GameState({ inventory: { tool_stone: 1, tool_iron: 1, stone: 1 } });
     expect(s.harvestTool()).toBeNull();
     expect(s.assignTool(0, 'stone')).toBe(false);
-    expect(s.assignTool(0, 'tool_wood')).toBe(true);
+    expect(s.assignTool(0, 'tool_stone')).toBe(true);
     expect(s.harvestTool()?.speed).toBe(2);
     s.assignTool(0, 'tool_iron');
     expect(s.harvestTool()?.yield).toBe(2);

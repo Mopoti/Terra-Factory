@@ -194,7 +194,7 @@ export function startGameView(
   // dessus) et, en 1ère personne, fixé à la caméra.
   const handle = new THREE.MeshStandardMaterial({ color: 0x7a4e24 });
   const metal = new THREE.MeshStandardMaterial({ color: 0xa9b2bb });
-  const woodHead = new THREE.MeshStandardMaterial({ color: 0xa9743a });
+  const stoneHead = new THREE.MeshStandardMaterial({ color: 0x8a8f98 });
   const toolHeads: THREE.Mesh[] = [];
   function makeTool(): THREE.Group {
     const tool = new THREE.Group();
@@ -2047,7 +2047,7 @@ export function startGameView(
     // L'outil n'apparaît dans les mains que pendant l'action qui en a besoin (couper, casser, miner).
     const usingTool = interaction.working === 'tool' && !armedNow;
     const toolId = options.state.toolItem();
-    for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : woodHead;
+    for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     hand.visible = rig.view === 'first' && views.first.showHands && usingTool;
     bodyTool.visible = rig.view !== 'first' && usingTool;
     bareHand.visible = rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
