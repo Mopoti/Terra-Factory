@@ -858,3 +858,22 @@ describe('niveau 2 (2 m)', () => {
     expect(high[6].belt.map((b) => b.item)).toEqual(['iron_ore']);
   });
 });
+
+describe('machines à l’étage', () => {
+  it('un tapis de niveau 2 alimente un coffre posé à l’étage, sans toucher au sol', () => {
+    const { world } = makeWorld();
+    const up = emptyMachine(1, 'conveyor', 4, 4, 0, 7);
+    up.belt.push({ item: 'iron_ore', pos: 0.5 });
+    const chest = emptyMachine(2, 'chest_wood', 4, 6, 0, 2);
+    const groundChest = emptyMachine(3, 'chest_wood', 4, 6, 0); // même place, au sol
+    const f = new Factory([up, chest, groundChest], world);
+    expect(chest.lift).toBe(2);
+    expect(f.machineAt(4, 6, 2)?.id).toBe(2);
+    expect(f.machineAt(4, 6)?.id).toBe(3);
+    expect(f.canPlace('chest_wood', 4, 6, 0, () => false, 2)).toBe(false); // déjà pris à l'étage
+    expect(f.canPlace('chest_wood', 8, 6, 0, () => false, 2)).toBe(true);
+    run(f, 5);
+    expect(chest.slots[0]?.item).toBe('iron_ore');
+    expect(groundChest.slots).toHaveLength(0);
+  });
+});

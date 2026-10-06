@@ -199,6 +199,7 @@ export class FactoryView {
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
         for (const i of io.ins) flatArrow(mb, i.cell, i.dir, IN_ARROW);
+        liftBody(mb, start, m.lift);
       }
     }
     this.bodies.geometry.dispose();
@@ -208,7 +209,7 @@ export class FactoryView {
     const top = (m: Machine): [number, number, number] => {
       const { w, d } = dims(m.type, m.rot);
       const h = m.type === 'pole' ? 3.3 + GROW_M : visualHeight(m.type);
-      return [(m.gx + w / 2) * CELL_SIZE_M, h, (m.gz + d / 2) * CELL_SIZE_M];
+      return [(m.gx + w / 2) * CELL_SIZE_M, h + m.lift * LEVEL_M, (m.gz + d / 2) * CELL_SIZE_M];
     };
     for (const { from, to } of this.factory.wires) {
       const a = top(from);
@@ -292,6 +293,7 @@ export class FactoryView {
       const mb = new MeshBuilder();
       for (const g of list) {
         const color = g.ok ? GREEN : RED;
+        const first = mb.positions.length;
         const { w, d } = dims(g.type, g.rot);
         const x = (g.gx + w / 2) * CELL_SIZE_M;
         const z = (g.gz + d / 2) * CELL_SIZE_M;
@@ -314,6 +316,7 @@ export class FactoryView {
         );
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, shade(color, 0.85));
         for (const i of io.ins) flatArrow(mb, i.cell, i.dir, shade(color, 1.3));
+        if (g.type !== 'conveyor') liftBody(mb, first, g.lift ?? 0);
       }
       this.ghost.geometry.dispose();
       this.ghost.geometry = geometryOf(mb);
@@ -556,6 +559,12 @@ function addFlatBelt(
     lift + BELT_H + 0.006,
     light,
   );
+}
+
+/** Monte tout ce qui a été dessiné depuis `start` à la hauteur du niveau (machine posée à l'étage). */
+function liftBody(mb: MeshBuilder, start: number, level: number): void {
+  if (level <= 0) return;
+  for (let i = start + 1; i < mb.positions.length; i += 3) mb.positions[i] += level * LEVEL_M;
 }
 
 /** Agrandit le corps d'une machine de 10 cm en largeur, longueur et hauteur (autour de son centre au sol). */

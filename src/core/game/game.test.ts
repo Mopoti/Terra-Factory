@@ -1160,3 +1160,28 @@ describe('piles du sac, objet en main et outils', () => {
     expect(s.snapshot().changes.tools[0]).toBe('tool_iron');
   });
 });
+
+describe('dalle au bout d’un escalier', () => {
+  it('se pose à la hauteur du haut de la marche, en visant l’escalier', () => {
+    const s = new GameState({ inventory: { piece_stairs_stone: 2, piece_slab_stone: 2 } });
+    expect(s.place('stairs_stone', posFor('stairs_stone', 0, 5, 5, undefined, 0, 0))).toBe('ok'); // monte vers +z
+    // Rayon qui vise la marche de dessus (case 5,5, juste au-dessus de la pente).
+    const origin = { x: 2.75, y: 1.6, z: 1.5 };
+    const target = { x: 2.75, y: 0.3, z: 2.85 };
+    const dir = { x: 0, y: target.y - origin.y, z: target.z - origin.z };
+    const len = Math.hypot(dir.x, dir.y, dir.z);
+    const hit = aimCeiling(
+      origin,
+      { x: dir.x / len, y: dir.y / len, z: dir.z / len },
+      s.changes.pieces,
+      'ceiling_stone',
+      0,
+      12,
+      'place',
+      true,
+    );
+    expect(hit?.pos.gx).toBe(5);
+    expect(hit?.pos.gz).toBe(6);
+    expect(hit?.pos.layer).toBe(0);
+  });
+});

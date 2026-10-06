@@ -662,7 +662,7 @@ export class GameState {
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     // Les tapis remplacés (séparateur / groupeur posé sur une ligne) reviennent dans le sac avec leur contenu.
     const at = { x: (gx + 0.5) * CELL_SIZE_M, z: (gz + 0.5) * CELL_SIZE_M };
-    for (const belt of factory.replacedBelts(type, gx, gz, rot))
+    for (const belt of factory.replacedBelts(type, gx, gz, rot, lift))
       this.removeMachine(factory, belt.id, at);
     factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift));
     this.emit({ type: 'factory' });

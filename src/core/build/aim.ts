@@ -257,6 +257,19 @@ export function aimCeiling(
       .filter((l) => l >= 0 && l < LAYERS_PER_STOREY)
       .sort((a, b) => b - a);
     const candidates: [number, number][] = [[gx, gz]];
+    // Le rayon est dans (ou sur) un escalier : la dalle se pose au bout de la marche, à sa hauteur.
+    const landings: { cell: [number, number]; layer: number }[] = [];
+    for (let r = 0; r < 4; r++) {
+      for (const layer of layers) {
+        if (pieces[pieceKey({ slot: 'stairs', level, gx, gz, layer, rot: r })]) {
+          landings.push({ cell: [gx + RISE_DIR[r][0], gz + RISE_DIR[r][1]], layer });
+        }
+      }
+    }
+    for (const l of landings) {
+      const pos = usable(l.cell[0], l.cell[1], l.layer);
+      if (pos) return { pos, cell: { gx: l.cell[0], gz: l.cell[1] } };
+    }
     const e = nearestEdge(x, z);
     if (e.dist <= SNAP_M) {
       // Les deux cases de part et d'autre du bord, la plus proche de l'œil d'abord.

@@ -90,9 +90,13 @@ export const LIFT_NEXT = [0, 2, 2, 0, 0, 0, 7, 7, 2] as const;
 export const TUNNEL_MAX_TILES = 8;
 export const LIFT_COUNT = LIFTS.length;
 /** Hauteur d'un niveau (m). */
-export const LEVEL_M = 1;
-export const liftStart = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].from : 0);
-export const liftEnd = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].to : 0);
+export const LEVEL_M = 1.25;
+/** Niveau d'entrée d'une pièce : un tapis suit sa forme ; une machine est au sol (0) ou à l'étage sur une dalle (2). */
+export const liftStart = (m: Machine): number =>
+  m.type === 'conveyor' ? LIFTS[m.lift].from : m.lift;
+export const liftEnd = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].to : m.lift);
+/** Étage (dalle à 2,5 m) : niveau des machines posées en hauteur. */
+export const UPPER_LEVEL = 2;
 
 /** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */
 export const recipeOf = (m: Machine): Record<string, number> | null =>
@@ -308,7 +312,14 @@ export function emptyMachine(
     slots: [],
     recipe: null,
     fluid: emptyFluid(),
-    lift: type === 'conveyor' && Number.isInteger(lift) && lift > 0 && lift < LIFT_COUNT ? lift : 0,
+    lift:
+      type === 'conveyor'
+        ? Number.isInteger(lift) && lift > 0 && lift < LIFT_COUNT
+          ? lift
+          : 0
+        : !isLinear(type) && lift === UPPER_LEVEL
+          ? UPPER_LEVEL
+          : 0,
   };
 }
 
@@ -451,7 +462,18 @@ export class Factory {
     // (la partie dans la machine est cachée et la machine reste celle qu'on trouve sur ces cases).
     for (const m of this.machines) {
       if (isLinear(m.type)) continue;
-      for (const c of footprint(m.type, m.gx, m.gz, m.rot)) this.cells.set(`${c.gx},${c.gz}`, m);
+      for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
+        const k = `${c.gx},${c.gz}`;
+        if (m.lift === UPPER_LEVEL) {
+          // Machine à l'étage (sur une dalle) : elle occupe le niveau 2, pas le sol.
+          let up = this.air.get(UPPER_LEVEL);
+          if (!up) this.air.set(UPPER_LEVEL, (up = new Map()));
+          up.set(k, m);
+          let set = this.occupied.get(UPPER_LEVEL);
+          if (!set) this.occupied.set(UPPER_LEVEL, (set = new Set()));
+          set.add(k);
+        } else this.cells.set(k, m);
+      }
     }
     for (const m of this.machines) {
       if (!isLinear(m.type)) continue;
@@ -625,7 +647,7 @@ export class Factory {
       const found = this.layerAt(level, f.gx, f.gz);
       if (!found || found === m || out.includes(found)) continue;
       // Un tapis ne reçoit que par son niveau d'entrée ; les machines sont toutes au sol.
-      if (found.type === 'conveyor' ? liftStart(found) !== level : level !== 0) continue;
+      if (liftStart(found) !== level) continue;
       out.push(found);
     }
     return out;
@@ -639,7 +661,7 @@ export class Factory {
       const k = `${f.gx},${f.gz}`;
       for (const found of [this.cells.get(k), ...[...this.air.values()].map((l) => l.get(k))]) {
         if (!found || found === m || out.includes(found)) continue;
-        if (found.type === 'conveyor' ? liftEnd(found) !== level : level !== 0) continue;
+        if (liftEnd(found) !== level) continue;
         out.push(found);
       }
     }
@@ -668,7 +690,7 @@ export class Factory {
     if (low && low.type === 'conveyor' && low.lift !== 0 && low.lift < 4) return true;
     if (this.air.get(1)?.has(k)) return true;
     const high = this.air.get(2)?.get(k);
-    return !!high && high.lift === 8;
+    return !!high && high.type === 'conveyor' && high.lift === 8;
   }
 
   /** La machine peut-elle se poser là (cases libres, sol praticable) ? */
@@ -697,6 +719,18 @@ export class Factory {
         cells.every((c) => !taken(c) && (!onGround || !blocked(c)))
       );
     }
+    // Machine à l'étage : places libres au niveau 2 (la dalle dessous est vérifiée par `blocked`).
+    if (lift === UPPER_LEVEL) {
+      if (type === 'pump') return false;
+      const occ = this.occupied.get(UPPER_LEVEL);
+      if (isRouter(type)) {
+        return cells.every((c) => {
+          const there = this.air.get(UPPER_LEVEL)?.get(`${c.gx},${c.gz}`);
+          return there ? there.type === 'conveyor' && there.lift === 7 : !blocked(c);
+        });
+      }
+      return cells.every((c) => !occ?.has(`${c.gx},${c.gz}`) && !blocked(c));
+    }
     // Un séparateur ou un groupeur se pose sur des tapis à plat : ils sont remplacés et la chaîne continue.
     if (isRouter(type)) {
       return cells.every((c) => {
@@ -708,11 +742,12 @@ export class Factory {
   }
 
   /** Tapis qu'un séparateur / groupeur posé là remplacerait. */
-  replacedBelts(type: MachineType, gx: number, gz: number, rot: number): Machine[] {
+  replacedBelts(type: MachineType, gx: number, gz: number, rot: number, lift = 0): Machine[] {
     if (!isRouter(type)) return [];
     const found = new Set<Machine>();
     for (const c of footprint(type, gx, gz, rot)) {
-      const there = this.cells.get(`${c.gx},${c.gz}`);
+      const k = `${c.gx},${c.gz}`;
+      const there = lift === UPPER_LEVEL ? this.air.get(UPPER_LEVEL)?.get(k) : this.cells.get(k);
       if (there && there.type === 'conveyor') found.add(there);
     }
     return [...found];
@@ -1413,12 +1448,28 @@ export function pickMachine(
     const pz = origin.z + dir.z * t;
     const gx = Math.floor(px / CELL_SIZE_M);
     const gz = Math.floor(pz / CELL_SIZE_M);
-    // En l'air : tapis surélevés (niveaux 1 et 2) et rampes.
-    if (y >= 0.85 && y <= 2.3) {
+    // En l'air : tapis surélevés (niveaux 1 et 2), rampes, machines posées à l'étage.
+    if (y >= LEVEL_M - 0.4) {
       const one = factory.machineAt(gx, gz, 1);
-      if (one && y <= (one.lift === 6 ? 2.3 : 1.3)) return { machine: one, t };
+      if (one && y <= (one.lift === 6 ? 2 * LEVEL_M + 0.3 : LEVEL_M + 0.3))
+        return { machine: one, t };
       const two = factory.machineAt(gx, gz, 2);
-      if (two && (two.lift === 7 ? y >= 1.85 : true)) return { machine: two, t };
+      if (two) {
+        const floor = 2 * LEVEL_M;
+        const ok =
+          two.type !== 'conveyor'
+            ? y >= floor && y <= floor + visualHeight(two.type)
+            : two.lift === 7
+              ? y >= floor - 0.15 && y <= floor + 0.3
+              : y <= floor + 0.3;
+        if (ok) {
+          if (two.type === 'pole') {
+            const c = centerOf(two);
+            if (Math.hypot(px - c.x, pz - c.z) > POLE_HIT_M) continue;
+          }
+          return { machine: two, t };
+        }
+      }
     }
     const m = factory.machineAt(gx, gz);
     const top =

@@ -288,7 +288,28 @@ function carriedByWall(
   const top = (g: number, h: number, axis: 'x' | 'z'): boolean =>
     hasBlock(pieces, level, g, h, axis, layer) &&
     (layer === TOP_LAYER || !hasBlock(pieces, level, g, h, axis, layer + 1));
-  return top(gx, gz, 'x') || top(gx, gz + 1, 'x') || top(gx, gz, 'z') || top(gx + 1, gz, 'z');
+  return (
+    top(gx, gz, 'x') ||
+    top(gx, gz + 1, 'x') ||
+    top(gx, gz, 'z') ||
+    top(gx + 1, gz, 'z') ||
+    carriedByStairs(pieces, level, gx, gz, layer)
+  );
+}
+
+/** Le haut d'une marche (bloc `layer`) touche cette case : la dalle se pose au bout de l'escalier, à la même hauteur. */
+function carriedByStairs(
+  pieces: Pieces,
+  level: number,
+  gx: number,
+  gz: number,
+  layer: number,
+): boolean {
+  return RISE_DIR.some(([dx, dz], rot) =>
+    pieces[pieceKey({ slot: 'stairs', level, gx: gx - dx, gz: gz - dz, layer, rot })]
+      ? true
+      : false,
+  );
 }
 
 /**

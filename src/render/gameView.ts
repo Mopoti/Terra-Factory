@@ -72,6 +72,7 @@ import {
 import {
   Factory,
   LEVEL_M,
+  UPPER_LEVEL,
   LIFTS,
   LIFT_COUNT,
   LIFT_NEXT,
@@ -360,6 +361,8 @@ export function startGameView(
   let buildRot: number | null = null;
   /** Forme verticale du tapis qu'on pose (PageUp / PageDown) : voir `LIFTS`. */
   let buildLift = 0;
+  /** Machine : au sol (0) ou à l'étage sur une dalle (2), choisi avec PageUp / PageDown. */
+  let buildMachineLevel = 0;
   /** Axe du dernier bord visé (pour que R parte de l'orientation actuelle d'un mur). */
   let lastAimAxis: 'x' | 'z' = 'x';
   let lastBuildItem: string | null = null;
@@ -395,7 +398,11 @@ export function startGameView(
           : t('build.rotation', { deg: String(buildRot * 90) });
       const lift =
         def.id === 'conveyor' ? ` · ${t(`factory.lift.${buildLift}` as TranslationKey)}` : '';
-      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
+      const floor =
+        !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL
+          ? ` · ${t('factory.upperFloor')}`
+          : '';
+      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}${floor}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
       return;
     }
     const rooms = options.state.rooms().length;
@@ -683,7 +690,7 @@ export function startGameView(
     const thin = m.type === 'pole';
     return {
       x: (m.gx + w / 2) * CELL_SIZE_M,
-      y: h / 2,
+      y: h / 2 + (m.type === 'conveyor' ? 0 : m.lift * LEVEL_M),
       z: (m.gz + d / 2) * CELL_SIZE_M,
       sx: thin ? 0.3 : w * CELL_SIZE_M + grow,
       sy: h,
@@ -809,7 +816,9 @@ export function startGameView(
     const def = selectedMachine();
     if (!def) return;
     computeRay();
-    const c = cellOnPlane(rayOrigin, rayDir, 0);
+    // Machine à l'étage : on vise le plan de la dalle (2,5 m) ; elle exige une dalle d'étage sous chacune de ses cases.
+    const upper = !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL;
+    const c = cellOnPlane(rayOrigin, rayDir, upper ? 2 * LEVEL_M : 0);
     const down = input.isActionActive('interact');
     if (!c) {
       factoryView.hideGhost();
@@ -827,19 +836,25 @@ export function startGameView(
 
     if (!isLinear(def.id)) {
       // Une pompe se pose à moitié dans l'eau : ses cases dans l'étang ne comptent pas comme bloquées.
-      const blockedHere =
-        def.id === 'pump'
+      const pieces = options.state.changes.pieces;
+      const blockedHere = upper
+        ? (cell: Cell): boolean => !pieces[`f:1:${cell.gx},${cell.gz}`]
+        : def.id === 'pump'
           ? (cell: Cell): boolean => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz)
           : machineBlocked;
+      const level = upper ? UPPER_LEVEL : 0;
       const { w, d } = dims(def.id, baseRot);
       const gx = c.gx - Math.floor(w / 2);
       const gz = c.gz - Math.floor(d / 2);
       let ok =
         stock > 0 &&
         within({ gx: gx + Math.floor(w / 2), gz: gz + Math.floor(d / 2) }) &&
-        factory.canPlace(def.id, gx, gz, baseRot, blockedHere);
+        factory.canPlace(def.id, gx, gz, baseRot, blockedHere, level);
       let why = stock > 0 ? '' : t('build.missing');
-      if (
+      if (ok && upper && isDrill(def.id)) {
+        ok = false;
+        why = t('factory.needOre');
+      } else if (
         ok &&
         isDrill(def.id) &&
         factory.oreUnder(emptyMachine(0, def.id, gx, gz, baseRot)).total === 0
@@ -849,11 +864,11 @@ export function startGameView(
       } else if (!ok && stock > 0) {
         why = def.id === 'pump' ? t('factory.needWater') : t('factory.cannotPlace');
       }
-      factoryView.showGhost([{ type: def.id, gx, gz, rot: baseRot, ok }]);
+      factoryView.showGhost([{ type: def.id, gx, gz, rot: baseRot, ok, lift: level }]);
       if (down && !machineWasDown) {
         if (
           ok &&
-          options.state.placeMachine(factory, def.id, gx, gz, baseRot, blockedHere) === 'ok'
+          options.state.placeMachine(factory, def.id, gx, gz, baseRot, blockedHere, level) === 'ok'
         ) {
           if (def.id === 'pole') poleChain = factory.machines[factory.machines.length - 1];
           playSfx('placeStone');
@@ -1433,7 +1448,11 @@ export function startGameView(
     const gz = Math.floor(zM / CELL_SIZE_M);
     // Les tapis à plat se marchent ; les rampes et les tapis à 1 m sont pleins ; à 2 m on passe dessous.
     if (factory.solidAt(gx, gz)) return true;
-    const m = factory.machineAt(gx, gz);
+    // Sur une dalle d'étage, on est au-dessus des machines du sol ; en bas, on passe sous celles de l'étage.
+    const above = playerY >= 1.5;
+    const upstairs = factory.machineAt(gx, gz, UPPER_LEVEL);
+    if (above && upstairs && upstairs.type !== 'conveyor') return true;
+    const m = above ? null : factory.machineAt(gx, gz);
     if (m !== null && m.type === 'conveyor') return false;
     if (m === null) return false;
     // Un poteau ne bloque que près de son mât.
@@ -2011,7 +2030,12 @@ export function startGameView(
           const down = pressed('levelDown');
           if (buildingMachine) {
             // Tapis : change de forme (plat, rampe, surélevé, descente, tunnel).
-            if ((up || down) && selectedMachine()?.id === 'conveyor') {
+            if ((up || down) && selectedMachine() && selectedMachine()?.id !== 'conveyor') {
+              if (!isLinear(selectedMachine()!.id)) {
+                buildMachineLevel = up ? UPPER_LEVEL : 0;
+                renderBuildHud();
+              }
+            } else if ((up || down) && selectedMachine()?.id === 'conveyor') {
               if (machinePath.length > 0) {
                 // En traçant : monter / descendre à partir du tapis sous le curseur (rampe, entrée ou sortie de tunnel).
                 const i = machinePath.length - 1;
