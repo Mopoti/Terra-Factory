@@ -215,6 +215,28 @@ export class FactoryView {
           const out = outputCell(g.type, g.gx, g.gz, g.rot);
           mb.box(center(out.gx), 0, center(out.gz), 0.2, 0.2, 0.2, shade(color, 0.85), true);
         }
+        // Entrées : petit cube clair sur la face qui reçoit (combustible du générateur, entrées du groupeur…).
+        const inDirs =
+          g.type === 'generator'
+            ? [g.rot]
+            : g.type === 'splitter'
+              ? [(g.rot + 2) % 4]
+              : g.type === 'merger'
+                ? [(g.rot + 2) % 4, (g.rot + 1) % 4, (g.rot + 3) % 4]
+                : [];
+        for (const dir of inDirs) {
+          const [ix, iz] = RISE_DIR[dir];
+          mb.box(
+            x + ix * ((ix !== 0 ? w : d) * CELL_SIZE_M * 0.5 + 0.1),
+            0,
+            z + iz * ((ix !== 0 ? w : d) * CELL_SIZE_M * 0.5 + 0.1),
+            0.16,
+            0.16,
+            0.16,
+            shade(color, 1.25),
+            true,
+          );
+        }
       }
       this.ghost.geometry.dispose();
       this.ghost.geometry = geometryOf(mb);
@@ -282,6 +304,30 @@ function addBelt(
   );
 }
 
+/** Petit carré clair posé sur une face (entrée de ressources) : largeur `w`, de la hauteur `y` sur `h` de haut. */
+function inputMark(
+  mb: MeshBuilder,
+  ex: number,
+  ez: number,
+  dx: number,
+  dz: number,
+  w: number,
+  y: number,
+  h: number,
+): void {
+  const t = 0.03;
+  mb.box(
+    ex + dx * (t / 2 - 0.005),
+    y,
+    ez + dz * (t / 2 - 0.005),
+    dx !== 0 ? t : w,
+    h,
+    dz !== 0 ? t : w,
+    hexToRgb('#cfe4f2'),
+    true,
+  );
+}
+
 function addMachineBody(
   mb: MeshBuilder,
   type: MachineType,
@@ -306,29 +352,44 @@ function addMachineBody(
     const strap = hexToRgb(iron ? '#4a5058' : '#3a2a1a');
     mb.box(x - 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
     mb.box(x + 0.13, 0, z, 0.06, 0.58, 0.5, strap, true);
-    mb.box(x, 0.3, z - 0.24, 0.1, 0.12, 0.03, hexToRgb('#d9c15a'), true);
+    mb.box(
+      x + fx * 0.24,
+      0.3,
+      z + fz * 0.24,
+      fx !== 0 ? 0.03 : 0.1,
+      0.12,
+      fz !== 0 ? 0.03 : 0.1,
+      hexToRgb('#d9c15a'),
+      true,
+    );
     return;
   }
   if (type === 'splitter' || type === 'merger') {
-    // Boîtier plat ; les becs marquent les sorties (séparateur : 3, groupeur : 1) et les entrées en creux.
+    // Boîtier plat. Becs sombres = sorties (séparateur : 3, groupeur : 1) ; carrés clairs en creux = entrées.
+    // Becs et carrés restent sous le dessus (0.25) et débordent de 2 cm dans le boîtier : pas de faces confondues.
     mb.box(x, 0, z, sx, 0.25, sz, color, true);
-    mb.box(x, 0.25, z, sx - 0.14, 0.1, sz - 0.14, shade(color, 1.3), true);
-    const bec = hexToRgb('#2a2d31');
-    const beak = (dir: number): void => {
-      const [bx, bz] = RISE_DIR[dir];
+    mb.box(x, 0.25, z, sx - 0.16, 0.08, sz - 0.16, shade(color, 1.3), true);
+    const side = (dir: number): [number, number] => RISE_DIR[dir];
+    const outs = type === 'splitter' ? [rot, (rot + 1) % 4, (rot + 3) % 4] : [rot];
+    const ins =
+      type === 'splitter' ? [(rot + 2) % 4] : [(rot + 2) % 4, (rot + 1) % 4, (rot + 3) % 4];
+    for (const dir of outs) {
+      const [bx, bz] = side(dir);
       mb.box(
-        x + bx * 0.22,
-        0.05,
-        z + bz * 0.22,
-        bx !== 0 ? 0.14 : 0.24,
-        0.2,
-        bz !== 0 ? 0.14 : 0.24,
-        bec,
+        x + bx * 0.28,
+        0.04,
+        z + bz * 0.28,
+        bx !== 0 ? 0.16 : 0.2,
+        0.18,
+        bz !== 0 ? 0.16 : 0.2,
+        hexToRgb('#2a2d31'),
         true,
       );
-    };
-    if (type === 'splitter') [rot, (rot + 1) % 4, (rot + 3) % 4].forEach(beak);
-    else beak(rot);
+    }
+    for (const dir of ins) {
+      const [bx, bz] = side(dir);
+      inputMark(mb, x + bx * (sx / 2), z + bz * (sz / 2), bx, bz, 0.12, 0.06, 0.14);
+    }
     return;
   }
   if (type === 'pole') {
@@ -340,11 +401,21 @@ function addMachineBody(
     return;
   }
   if (type === 'generator') {
-    // Générateur : caisson, bloc moteur, échappement.
+    // Générateur : caisson, bloc moteur, échappement à l'arrière ; carré clair sur la face d'entrée du combustible.
+    const [rx, rz] = [-fz, fx];
     mb.box(x, 0, z, sx, 0.7, sz, color, true);
-    mb.box(x - 0.1, 0.7, z, sx - 0.5, 0.3, sz - 0.3, shade(color, 1.3), true);
-    mb.box(x + 0.3, 0.7, z + 0.3, 0.18, 0.55, 0.18, hexToRgb('#3d3a38'), true);
-    mb.box(x - 0.3, 0.2, z - sz / 2 - 0.01, 0.2, 0.2, 0.03, hexToRgb('#e6c84a'), true);
+    mb.box(x - fx * 0.1, 0.7, z - fz * 0.1, sx - 0.4, 0.3, sz - 0.4, shade(color, 1.3), true);
+    mb.box(
+      x - fx * 0.3 + rx * 0.3,
+      0.7,
+      z - fz * 0.3 + rz * 0.3,
+      0.18,
+      0.55,
+      0.18,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    inputMark(mb, x + fx * (sx / 2), z + fz * (sz / 2), fx, fz, 0.3, 0.2, 0.3);
     return;
   }
   if (isDrill(type)) {

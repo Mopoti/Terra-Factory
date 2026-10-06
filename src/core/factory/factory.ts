@@ -568,8 +568,11 @@ export class Factory {
       target.belt.push({ item, pos: 0 });
       return true;
     }
+    // Le générateur prend son combustible par sa face d'entrée (celle que montre le carré clair).
+    if (target.type === 'generator')
+      return dir === (target.rot + 2) % 4 && this.deliverFuel(target, item);
     if (target.type === 'furnace') {
-      if (!smeltRecipe(item)) return false;
+      if (!smeltRecipe(item)) return this.deliverFuel(target, item);
       const max = machineDef('furnace').stockMax ?? 100;
       if (target.input && (target.input.item !== item || target.input.count >= max)) return false;
       if (target.input) target.input.count++;
@@ -577,6 +580,16 @@ export class Factory {
       return true;
     }
     return false;
+  }
+
+  /** Met un combustible dans la case de combustible d'une machine, si elle en prend. */
+  private deliverFuel(target: Machine, item: string): boolean {
+    if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return false;
+    const max = machineDef(target.type).stockMax ?? 100;
+    if (target.fuel && (target.fuel.item !== item || target.fuel.count >= max)) return false;
+    if (target.fuel) target.fuel.count++;
+    else target.fuel = { item, count: 1 };
+    return true;
   }
 
   /** Foreuse / fourneau : pousse un objet du stock vers la case de sortie. */

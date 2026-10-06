@@ -851,7 +851,7 @@ export function startGameView(
             : t('factory.power.none', { m: String(machineDef('pole').linkReachM ?? 4) }),
         })}</div>`,
       );
-    } else if (!def.producesKw && m.type !== 'pole') {
+    } else if (!def.producesKw && m.type !== 'pole' && !isRouter(m.type)) {
       rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
     }
     if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);

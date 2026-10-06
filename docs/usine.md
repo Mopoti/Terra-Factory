@@ -58,3 +58,9 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Avec une pile au curseur : clic sur une case de machine (combustible/minerai) ou sur le coffre = dépôt (le reste demeure en main si la case est pleine ou refuse) ; clic dans le sac = on range ; fermer la fenêtre = on range aussi. Une sauvegarde compte la pile tenue dans le sac.
 - Dans la fenêtre machine, clic droit sur une case de machine/coffre = en reprendre la moitié.
 - Vérifié par test unitaire et script navigateur (curseur, dépôt dans un coffre, Ctrl+clic, fermeture).
+
+## Tour 41 — retours PO (aspect des machines)
+- **Générateur** : il tourne maintenant (R) et son carré clair indique la **face d'entrée du combustible** ; un tapis qui y débouche l'alimente (pas par les autres faces). Un fourneau accepte aussi le combustible par tapis (charbon, bois), en plus du minerai.
+- **Séparateur / groupeur** : becs sombres = sorties, petits carrés clairs = entrées (1 pour le séparateur, 3 pour le groupeur). Les becs et carrés ne partagent plus de faces avec le boîtier (les motifs hachurés venaient de faces confondues).
+- **Vérification des autres objets** : coffre — le fermoir ne tournait pas, corrigé ; poteau — symétrique, R ne change rien d'visible (normal) ; foreuses/fourneau/tapis — déjà orientés par leur bec de sortie. Le panneau d'un séparateur/groupeur n'affiche plus la ligne « consommation électrique ».
+- Vérifié par tests (295) et capture navigateur (vue du dessus).

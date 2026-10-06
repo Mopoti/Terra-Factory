@@ -143,10 +143,10 @@ describe('tapis et fourneau', () => {
     expect(f.status(f1)).toBe('idle');
     const coal = emptyMachine(2, 'furnace', 5, 5, 0);
     const belt = emptyMachine(3, 'conveyor', 5, 4, 0);
-    belt.belt.push({ item: 'coal', pos: 1 });
+    belt.belt.push({ item: 'stone', pos: 1 });
     const g = new Factory([coal, belt], world);
     run(g, 2);
-    expect(coal.input).toBeNull(); // le charbon n'est pas cuisible : il reste sur le tapis
+    expect(coal.input).toBeNull(); // la pierre ne se cuit pas et ne brûle pas : elle reste sur le tapis
     expect(belt.belt).toHaveLength(1);
   });
 });
@@ -338,5 +338,33 @@ describe('séparateur et groupeur', () => {
     const f = setup(mg, drill, out);
     run(f, 4);
     expect(out.slots[0]?.count ?? 0).toBeGreaterThan(0);
+  });
+});
+
+describe('combustible par tapis', () => {
+  it('le générateur ne prend le combustible que par sa face d’entrée', () => {
+    // Générateur 2x2 en (10,10), entrée côté +z (rot 0). Tapis en (10,12) qui descend vers -z : bonne face.
+    const good = emptyMachine(2, 'conveyor', 10, 12, 2);
+    good.belt.push({ item: 'coal', pos: 1 });
+    const gen = emptyMachine(1, 'generator', 10, 10, 0);
+    const bad = emptyMachine(3, 'conveyor', 9, 10, 1);
+    bad.belt.push({ item: 'coal', pos: 1 });
+    const f = new Factory([gen, good, bad], makeWorld().world);
+    run(f, 0.5);
+    expect(gen.fuel).toEqual({ item: 'coal', count: 1 });
+    expect(good.belt.length).toBe(0);
+    expect(bad.belt.length).toBe(1);
+  });
+
+  it('un fourneau prend aussi son combustible par tapis, et refuse ce qui ne brûle pas', () => {
+    const furnace = emptyMachine(1, 'furnace', 10, 10, 0);
+    const a = emptyMachine(2, 'conveyor', 9, 10, 1);
+    a.belt.push({ item: 'coal', pos: 1 });
+    const b = emptyMachine(3, 'conveyor', 9, 11, 1);
+    b.belt.push({ item: 'stone', pos: 1 });
+    const f = new Factory([furnace, a, b], makeWorld().world);
+    run(f, 0.5);
+    expect(furnace.fuel?.count).toBe(1);
+    expect(b.belt.length).toBe(1);
   });
 });
