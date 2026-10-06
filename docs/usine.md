@@ -157,3 +157,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Anciennes parties** : à l'ouverture, les tapis sont recalés sur la grille de tuiles ; les machines gardent leur coin, et celles qui se chevauchent maintenant sont **retirées et posées au sol** (à ramasser). Marqueur `footprintVersion` dans la sauvegarde.
 - Vérifié : tests (emprises 4×4/3×3/2×2, sorties, migration d'ancienne partie, vapeur et fluides en 2×2) et scène navigateur (foreuse 4×4 → tuiles de tapis → fourneau).
 - Limite : plusieurs anciens tests de bras, laboratoire, assembleur et réseau électrique sont posés sur des coordonnées de l'ancienne taille (ils se chevauchent) mais passent encore ; ils seront remis en géométrie propre.
+
+## Tour 57 — correctif : poser un tapis contre la sortie d'une machine
+- Les tuiles de tapis/tuyau ne sont plus calées sur une grille fixe de 2 cases : la tuile se pose **là où l'on vise** et se décale d'une case si besoin (4 positions autour du curseur, la première libre) pour **toucher la sortie** de la machine (qui tombait avant sur une tuile chevauchant la foreuse : case rouge). Les tuiles suivantes d'un chemin avancent de 2 cases à partir de la précédente.
+- Vérifié en navigateur : foreuse 4×4, tuile verte contre sa sortie, tracé de 2 tuiles posées (sac 20 → 18).

@@ -722,7 +722,9 @@ export function startGameView(
     return [0, 1, 2, 3].some((r) => pieces[`s:0:${c.gx},${c.gz}:0:${r}`]);
   };
   const dirIndex = (from: Cell, to: Cell): number =>
-    RISE_DIR.findIndex(([dx, dz]) => dx === to.gx - from.gx && dz === to.gz - from.gz);
+    RISE_DIR.findIndex(
+      ([dx, dz]) => dx === Math.sign(to.gx - from.gx) && dz === Math.sign(to.gz - from.gz),
+    );
 
   function updateMachineBuild(): void {
     const def = selectedMachine();
@@ -781,31 +783,43 @@ export function startGameView(
       return;
     }
 
-    // Tapis et tuyaux : ils occupent des tuiles de 2 × 2 cases. En gardant le clic, on trace un chemin tuile par
+    // Tapis et tuyaux : ils occupent des tuiles de 2 × 2 cases, posées où l'on vise (pas sur une grille fixe :
+    // la tuile se cale pour toucher la sortie d'une machine). En gardant le clic, on trace un chemin tuile par
     // tuile ; chaque élément s'oriente vers le suivant.
-    const tc = { gx: Math.floor(c.gx / 2), gz: Math.floor(c.gz / 2) };
-    const tileNear = (t: Cell): boolean => near({ gx: t.gx * 2 + 1, gz: t.gz * 2 + 1 });
+    const tileNear = (t: Cell): boolean => near({ gx: t.gx + 1, gz: t.gz + 1 });
     const tileWithin = (t: Cell): boolean => tileNear(t) || pathReached.has(`${t.gx},${t.gz}`);
+    const contains = (t: Cell, cell: Cell): boolean =>
+      cell.gx >= t.gx && cell.gx < t.gx + 2 && cell.gz >= t.gz && cell.gz < t.gz + 2;
+    /** Première tuile libre qui contient la case visée (4 positions possibles autour du curseur). */
+    const tileAround = (cell: Cell): Cell => {
+      const options = [
+        { gx: cell.gx, gz: cell.gz },
+        { gx: cell.gx - 1, gz: cell.gz },
+        { gx: cell.gx, gz: cell.gz - 1 },
+        { gx: cell.gx - 1, gz: cell.gz - 1 },
+      ];
+      return (
+        options.find((o) => factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked)) ??
+        options[0]
+      );
+    };
     if (down) {
       const last = machinePath[machinePath.length - 1];
       if (!last) {
-        machinePath = [tc];
+        const first = tileAround(c);
+        machinePath = [first];
         pathReached.clear();
-        if (tileNear(tc)) pathReached.add(`${tc.gx},${tc.gz}`);
-      } else if (last.gx !== tc.gx || last.gz !== tc.gz) {
-        const back = machinePath.findIndex((p) => p.gx === tc.gx && p.gz === tc.gz);
+        if (tileNear(first)) pathReached.add(`${first.gx},${first.gz}`);
+      } else if (!contains(last, c)) {
+        const back = machinePath.findIndex((p) => contains(p, c));
         if (back >= 0) machinePath.length = back + 1;
         else {
           const cur = { ...last };
-          for (
-            let guard = 0;
-            guard < MAX_BELT_PATH && (cur.gx !== tc.gx || cur.gz !== tc.gz);
-            guard++
-          ) {
-            const dx = tc.gx - cur.gx;
-            const dz = tc.gz - cur.gz;
-            if (Math.abs(dx) >= Math.abs(dz)) cur.gx += Math.sign(dx);
-            else cur.gz += Math.sign(dz);
+          for (let guard = 0; guard < MAX_BELT_PATH && !contains(cur, c); guard++) {
+            const dx = c.gx - (cur.gx + 0.5);
+            const dz = c.gz - (cur.gz + 0.5);
+            if (Math.abs(dx) >= Math.abs(dz)) cur.gx += 2 * Math.sign(dx);
+            else cur.gz += 2 * Math.sign(dz);
             machinePath.push({ ...cur });
             if (tileNear(cur)) pathReached.add(`${cur.gx},${cur.gz}`);
           }
@@ -813,18 +827,17 @@ export function startGameView(
         }
       }
     }
-    const path = machinePath.length > 0 ? machinePath : [tc];
+    const path = machinePath.length > 0 ? machinePath : [tileAround(c)];
     let left = stock;
-    const ghosts = path.map((tile, i) => {
+    const ghosts = path.map((cell, i) => {
       const rot =
         i < path.length - 1
-          ? dirIndex(tile, path[i + 1])
+          ? dirIndex(cell, path[i + 1])
           : path.length > 1
-            ? dirIndex(path[i - 1], tile)
+            ? dirIndex(path[i - 1], cell)
             : baseRot;
-      const cell = { gx: tile.gx * 2, gz: tile.gz * 2 };
       const free =
-        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && tileWithin(tile);
+        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked) && tileWithin(cell);
       const ok = free && left > 0;
       if (ok) left--;
       return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok };
