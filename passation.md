@@ -24,6 +24,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Quand le PO doit agir (Claude ne peut pas), guider **pas à pas**, sans jargon, avec résultat attendu.
 
 ## Documents de référence
+- **`docs/gdd.md` : Game Design Document complet (référence du jeu tel qu'il est).**
 - `docs/architecture.md` : plan technique et chantiers du prototype (PROPOSITION en attente de validation du PO).
 - `docs/besoins.md` : cahier des charges (menu, édition de partie, paramètres, simulation).
 - `docs/risques.md` : sujets à trancher tôt pour éviter de gros chantiers.
@@ -41,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 84** : rédaction du GDD complet `docs/gdd.md` (tableaux générés depuis `content/*.json`). À tenir à jour à chaque tour.
 - **Chantier 0 (socle) : code écrit** (Vite+TS+Three, lint, tests, build OK, page de test avec cube 50 cm). Aperçu en ligne : projet Vercel `terra-factory` (équipe « Quentin's projects », id team_xrjDzT2k477SH2HSx2Sjp6VW, projet prj_hutwADsGr53rJXwE8FRSrlykZTyB) relié à GitHub ; branche de production = la branche de travail `claude/sleepy-bell-vvkepj` ; URL https://terra-factory.vercel.app (protégée par connexion Vercel par défaut). Déploiement automatique à chaque push. Chantier 0 VALIDÉ par le PO.
 - **Tour 83** : saut sur 2 blocs ; corps du joueur + point de réapparition (H) + carte/boussole ; combustibles en MJ et machines en kW (générateur 900 kW, chaudière 700 kW). Les objets seront refondus (grosse refonte à venir) : ne pas équilibrer les objets avant. Voir docs/usine.md.
 - **Tour 82** : tuyaux enterrés (tunnel PageDown entrée / PageUp sortie, comme les tapis). Voir docs/usine.md.
