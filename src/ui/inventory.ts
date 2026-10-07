@@ -1,3 +1,4 @@
+import { discoveryFor } from '../core/data/discoveries';
 import { techFor } from '../core/data/techs';
 import {
   ITEM_CATEGORIES,
@@ -208,13 +209,7 @@ export function mountInventory(
       );
     }
     if (!state.isUnlocked(hovered)) {
-      tooltip.append(
-        el(
-          'div',
-          'lack',
-          t('tech.needed', { tech: t(`tech.${techFor(hovered)?.id ?? ''}` as TranslationKey) }),
-        ),
-      );
+      tooltip.append(el('div', 'lack', lockedReason(hovered)));
     }
     tooltip.append(el('small', undefined, `${t('inv.count')} : ${state.inventory[hovered] ?? 0}`));
     tooltip.hidden = false;
@@ -222,6 +217,21 @@ export function mountInventory(
     const h = tooltip.offsetHeight;
     tooltip.style.left = `${Math.max(8, Math.min(mouse.x + 16, window.innerWidth - w - 8))}px`;
     tooltip.style.top = `${Math.max(8, Math.min(mouse.y + 16, window.innerHeight - h - 8))}px`;
+  }
+
+  /** Pourquoi un objet est verrouillé : technologie à rechercher, ou découverte à faire en récoltant. */
+  function lockedReason(item: string): string {
+    const tech = techFor(item);
+    if (tech && !state.changes.unlocked.includes(tech.id))
+      return t('tech.needed', { tech: t(`tech.${tech.id}` as TranslationKey) });
+    const d = discoveryFor(item);
+    if (d)
+      return t('discovery.needed', {
+        n: String(d.harvest.count),
+        item: itemName(d.harvest.item),
+        have: String(Math.min(d.harvest.count, state.changes.harvested[d.harvest.item] ?? 0)),
+      });
+    return '';
   }
 
   function craft(item: string, times: number): void {
@@ -232,7 +242,7 @@ export function mountInventory(
         stopped === 'bag'
           ? t('inv.craftBagFull')
           : stopped === 'locked'
-            ? t('tech.needed', { tech: t(`tech.${techFor(item)?.id ?? ''}` as TranslationKey) })
+            ? lockedReason(item)
             : t('inv.noResources');
     } else if (made < times) {
       playSfx('craft');

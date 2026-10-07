@@ -269,6 +269,17 @@
       }
     },
     {
+      "id": "machine_waterwheel",
+      "weightKg": 16,
+      "volumeL": 28,
+      "color": "#7a5a36",
+      "recipe": {
+        "wood": 12,
+        "stone": 4,
+        "copper_wire": 4
+      }
+    },
+    {
       "id": "machine_pole",
       "weightKg": 2,
       "volumeL": 6,
@@ -453,8 +464,8 @@
       "volumeL": 0.2,
       "color": "#4fc3a1",
       "recipe": {
-        "iron_ingot": 2,
-        "copper_ingot": 2
+        "iron_gear": 1,
+        "copper_wire": 1
       }
     },
     {

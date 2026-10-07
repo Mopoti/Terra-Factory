@@ -9,6 +9,7 @@ export type MachineType =
   | 'chest_wood'
   | 'chest_iron'
   | 'generator'
+  | 'waterwheel'
   | 'pole'
   | 'splitter'
   | 'merger'

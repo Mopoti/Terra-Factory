@@ -625,6 +625,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   drill_electric: 1.3,
   furnace: 1.0,
   stamper: 1.0,
+  waterwheel: 1.5,
   chest_wood: 0.6,
   chest_iron: 0.6,
   generator: 1.1,
@@ -843,6 +844,52 @@ function addMachineBody(
     mb.cone(x - 0.18, 0.65, z - 0.1, 0.17, 0.3, 8, hexToRgb('#cfe9ef'));
     mb.box(x + 0.2, 0.65, z + 0.15, 0.08, 0.28, 0.08, hexToRgb('#4fc3a1'), true);
     mb.box(x + 0.2, 0.65, z - 0.2, 0.18, 0.12, 0.14, hexToRgb('#2f3a40'), true);
+    return;
+  }
+  if (type === 'waterwheel') {
+    // Roue à aubes : deux chevalets, un axe, et une roue d'aubes verticale (huit pales) tournée vers l'étang.
+    const across = fx !== 0; // l'axe de la roue est perpendiculaire à la direction `rot`
+    const axisX = across ? 0 : 1;
+    const axisZ = across ? 1 : 0;
+    const wood = shade(color, 1.0);
+    for (const k of [-1, 1]) {
+      mb.box(
+        x + axisX * k * (sx / 2 - 0.1),
+        0,
+        z + axisZ * k * (sz / 2 - 0.1),
+        axisX ? 0.1 : 0.5,
+        1.0,
+        axisZ ? 0.1 : 0.5,
+        shade(color, 0.7),
+        true,
+      );
+    }
+    mb.box(
+      x,
+      0.95,
+      z,
+      axisX ? sx - 0.1 : 0.1,
+      0.1,
+      axisZ ? sz - 0.1 : 0.1,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    const R = 0.5;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const px = Math.cos(a) * R;
+      const py = 1.0 + Math.sin(a) * R;
+      mb.box(
+        x + (across ? 0 : px) * 1,
+        py - 0.08,
+        z + (across ? px : 0),
+        axisX ? sx - 0.5 : 0.2,
+        0.16,
+        axisZ ? sz - 0.5 : 0.2,
+        wood,
+        true,
+      );
+    }
     return;
   }
   if (type === 'stamper') {

@@ -1122,3 +1122,29 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     expect(bad[0].recipe).toBeNull();
   });
 });
+
+describe('roue à aubes (tier 0)', () => {
+  const lake = (_gx: number, gz: number): boolean => gz < 0;
+  const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: lake });
+
+  it('se pose contre un étang (pas dedans, pas loin), 10 kW constants sans combustible', () => {
+    const f = new Factory([], world());
+    expect(f.canPlace('waterwheel', 10, 0, 0, () => false)).toBe(true); // touche l'eau (z = -1)
+    expect(f.canPlace('waterwheel', 10, 5, 0, () => false)).toBe(false); // trop loin
+    expect(f.canPlace('waterwheel', 10, -4, 0, () => false)).toBe(false); // dans l'eau
+  });
+
+  it('alimente un réseau : une foreuse électrique tourne à 10/90 de sa vitesse', () => {
+    const wheel = emptyMachine(1, 'waterwheel', 10, 0, 0);
+    const pole = emptyMachine(2, 'pole', 14, 0, 0);
+    const lamp = emptyMachine(3, 'lab', 17, 0, 0);
+    lamp.input = { item: 'science_pack', count: 5 };
+    const f = new Factory([wheel, pole, lamp], world());
+    f.labDemand = 5;
+    run(f, 1);
+    const g = f.gridInfo(lamp)!;
+    expect(g.capacityKw).toBe(10);
+    expect(g.demandKw).toBe(30);
+    expect(g.satisfaction).toBeCloseTo(1 / 3, 5);
+  });
+});

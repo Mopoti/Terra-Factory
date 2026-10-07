@@ -900,3 +900,26 @@ describe('mort, corps à récupérer, duvet et lit', () => {
     expect(s.changes.spawns).toHaveLength(0);
   });
 });
+
+describe('découvertes : la roue à aubes se débloque en récoltant 10 malachite', () => {
+  it('compte les récoltes à la main et débloque l’objet au seuil, une seule fois', () => {
+    const s = new GameState();
+    const seen: string[] = [];
+    s.onChange((e) => {
+      if (e.type === 'discovery') seen.push(e.id);
+    });
+    expect(s.isUnlocked('machine_waterwheel')).toBe(false);
+    s.harvest('1,1', 100, 'copper_ore', 6);
+    expect(s.isUnlocked('machine_waterwheel')).toBe(false);
+    s.harvest('1,1', 100, 'iron_ore', 50); // un autre minerai ne compte pas
+    expect(s.isUnlocked('machine_waterwheel')).toBe(false);
+    s.harvest('2,2', 100, 'copper_ore', 4);
+    expect(s.isUnlocked('machine_waterwheel')).toBe(true);
+    s.harvest('2,2', 100, 'copper_ore', 4);
+    expect(seen).toEqual(['waterwheel']);
+    // enregistré avec la partie
+    const back = new GameState(s.snapshot());
+    expect(back.isUnlocked('machine_waterwheel')).toBe(true);
+    expect(back.changes.harvested.copper_ore).toBe(14);
+  });
+});

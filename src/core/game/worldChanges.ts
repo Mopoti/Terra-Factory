@@ -6,6 +6,7 @@ import { itemById, type EquipSlot } from '../data/items';
 import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
+import { DISCOVERIES } from '../data/discoveries';
 import { TECHS } from '../data/techs';
 import type { ChunkData } from '../world/worldgen';
 
@@ -75,6 +76,10 @@ export interface WorldChanges {
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
   admin: boolean;
+  /** Quantités récoltées à la main, par objet (compteurs des découvertes). */
+  harvested: Record<string, number>;
+  /** Découvertes faites (voir `content/discoveries.json`). */
+  discovered: string[];
   /** Corps laissés là où le joueur est tombé, avec ses affaires (affichés dans le monde et sur la carte). */
   corpses: Corpse[];
   nextCorpseId: number;
@@ -127,6 +132,8 @@ export function emptyChanges(): WorldChanges {
     equipment: {},
     unlocked: [],
     admin: false,
+    harvested: {},
+    discovered: [],
     corpses: [],
     nextCorpseId: 1,
     spawns: [],
@@ -203,6 +210,14 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
+  if (typeof r.harvested === 'object' && r.harvested !== null) {
+    for (const [item, n] of Object.entries(r.harvested as Record<string, unknown>)) {
+      if (isNum(n) && n > 0) result.harvested[item] = Math.floor(n);
+    }
+  }
+  result.discovered = Array.isArray(r.discovered)
+    ? DISCOVERIES.map((d) => d.id).filter((id) => (r.discovered as unknown[]).includes(id))
+    : [];
   const rec = (v: unknown): Record<string, unknown> | null =>
     typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
   for (const raw of Array.isArray(r.corpses) ? r.corpses.slice(0, 50) : []) {

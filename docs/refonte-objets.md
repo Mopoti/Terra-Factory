@@ -168,3 +168,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - Zinc, laiton (tuyau de laiton), acier (Bessemer, scories), béton (pierre écrasée + scorie), constructeur T2, station de lavage.
 - **Roue à aubes** (tier 0) : demande le **fil de cuivre**, maintenant disponible ; à coder avec le mécanisme « débloquer en récoltant 10 cuivre ».
 - **Paquets de science T1** : engrenage en fer + fil de cuivre (objets maintenant disponibles) ; la recette actuelle (2 lingots de fer + 2 de cuivre) reste provisoire.
+
+### 3.4 Tier 0 : roue à aubes et paquets de science T1 (Tour 88)
+
+- **Découvertes** (nouveau mécanisme, `content/discoveries.json`) : des objets se débloquent en **récoltant à la main** une quantité cumulée d'une ressource, sans technologie ni laboratoire. Les compteurs (`changes.harvested`) et les découvertes faites (`changes.discovered`) sont sauvegardés. Une notification s'affiche au déblocage ; l'infobulle d'un objet verrouillé indique « Se débloque en récoltant N × objet (a / N) ».
+- **Roue à aubes** (`waterwheel`, 3×3, 12 bois + 4 pierre + **4 fils de cuivre**) : débloquée en récoltant **10 malachite**. Doit être posée **contre un étang** (une case d'eau contre l'un de ses côtés, sans être dans l'eau). Produit **10 kW constants**, sans combustible, sur le réseau des poteaux. (Un laboratoire demande 30 kW : il faut 3 roues, ou le laboratoire à combustible T1 à prévoir.)
+- **Paquet de science T1** : **1 engrenage en fer + 1 fil de cuivre** (au lieu de 2 lingots de fer + 2 lingots de cuivre) ; il faut donc l'estampeuse et ses moules.
+- Reste pour le Tier 0/1 : un laboratoire sans électricité (table de recherche à combustible ou à roue), et les tiers T2 à T4 des paquets de science.

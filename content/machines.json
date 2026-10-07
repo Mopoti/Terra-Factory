@@ -238,6 +238,16 @@
       "stockMax": 20,
       "height": 1.0,
       "pollution": 0
+    },
+    {
+      "id": "waterwheel",
+      "w": 3,
+      "d": 3,
+      "item": "machine_waterwheel",
+      "color": "#7a5a36",
+      "fuel": false,
+      "producesKw": 10,
+      "height": 1.5
     }
   ]
 }

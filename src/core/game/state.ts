@@ -10,6 +10,7 @@ import {
   type Machine,
   type Stack,
 } from '../factory/factory';
+import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
 import { isSmith, machineDef, type MachineType } from '../data/machines';
 import { recipeById } from '../data/recipes';
@@ -52,7 +53,8 @@ export type StateEvent =
   | { type: 'inventory' }
   | { type: 'build' }
   | { type: 'hotbar' }
-  | { type: 'factory' };
+  | { type: 'factory' }
+  | { type: 'discovery'; id: string };
 
 export interface HarvestResult {
   /** Unités réellement ajoutées au sac. */
@@ -382,6 +384,17 @@ export class GameState {
     return Math.max(0, total - (this.changes.taken[key] ?? 0));
   }
 
+  /** Compte une récolte à la main et déclenche les découvertes atteintes. */
+  private countHarvest(item: string, n: number): void {
+    this.changes.harvested[item] = (this.changes.harvested[item] ?? 0) + n;
+    for (const d of DISCOVERIES) {
+      if (this.changes.discovered.includes(d.id)) continue;
+      if ((this.changes.harvested[d.harvest.item] ?? 0) < d.harvest.count) continue;
+      this.changes.discovered.push(d.id);
+      this.emit({ type: 'discovery', id: d.id });
+    }
+  }
+
   /** Récolte jusqu'à `units` unités d'une ressource (arbre, rocher, case de minerai). */
   harvest(key: string, total: number, item: string, units = 1): HarvestResult {
     const available = this.remaining(key, total);
@@ -390,6 +403,7 @@ export class GameState {
     if (gained > 0) {
       this.inventory = add(this.inventory, item, gained);
       this.changes.taken[key] = (this.changes.taken[key] ?? 0) + gained;
+      this.countHarvest(item, gained);
       this.emit({ type: 'harvest', key });
       this.emit({ type: 'inventory' });
     }
@@ -555,7 +569,11 @@ export class GameState {
   /** Cet objet peut-il être fabriqué (sa technologie est-elle recherchée) ? */
   isUnlocked(item: string): boolean {
     const tech = techFor(item);
-    return !tech || this.changes.unlocked.includes(tech.id);
+    const discovery = discoveryFor(item);
+    return (
+      (!tech || this.changes.unlocked.includes(tech.id)) &&
+      (!discovery || this.changes.discovered.includes(discovery.id))
+    );
   }
 
   /** Recherche une technologie : consomme son coût dans le sac. */

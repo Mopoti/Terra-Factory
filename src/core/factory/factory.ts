@@ -468,6 +468,7 @@ const MACHINE_TYPES: MachineType[] = [
   'chest_wood',
   'chest_iron',
   'generator',
+  'waterwheel',
   'pole',
   'splitter',
   'merger',
@@ -614,6 +615,22 @@ export class Factory {
   /**
    * Pompe : sa première ligne (côté sortie) est sur la terre, le reste de l'emprise est dans l'eau.
    */
+  /** La machine touche-t-elle un étang (une case d'eau contre l'un de ses côtés) sans être elle-même dans l'eau ? */
+  private waterAdjacent(type: MachineType, gx: number, gz: number, rot: number): boolean {
+    const water = this.world.waterAt;
+    if (!water) return false;
+    const cells = footprint(type, gx, gz, rot);
+    if (cells.some((c) => water.call(this.world, c.gx, c.gz))) return false;
+    return cells.some((c) =>
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].some(([dx, dz]) => water.call(this.world, c.gx + dx, c.gz + dz)),
+    );
+  }
+
   private waterNear(type: MachineType, gx: number, gz: number, rot: number): boolean {
     const water = this.world.waterAt;
     if (!water) return false;
@@ -807,6 +824,7 @@ export class Factory {
     lift = 0,
   ): boolean {
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
+    if (type === 'waterwheel' && !this.waterAdjacent(type, gx, gz, rot)) return false;
     const cells = footprint(type, gx, gz, rot);
     if (isLinear(type)) {
       const layers = type === 'conveyor' ? (LIFTS[lift]?.layers ?? [0]) : [0];
@@ -943,6 +961,7 @@ export class Factory {
           : 'idle';
     const max = def.stockMax ?? 100;
     if (m.type === 'pole') return (this.gridInfo(m)?.machines ?? 0) > 0 ? 'running' : 'idle';
+    if (m.type === 'waterwheel') return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
     if (m.type === 'generator') {
       if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
       return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
@@ -1027,6 +1046,7 @@ export class Factory {
       const def = machineDef(m.type);
       if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
       if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
+      else if (m.type === 'waterwheel') g.capacityKw += def.producesKw ?? 0;
       else if (def.producesKw && (m.fuelLeft > 0 || (m.fuel && m.fuel.count > 0))) {
         g.capacityKw += def.producesKw;
       }

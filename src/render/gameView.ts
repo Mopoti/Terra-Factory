@@ -31,6 +31,7 @@ import {
   type ViewId,
 } from '../core/save/saveIndex';
 import type { GameState } from '../core/game/state';
+import { DISCOVERIES } from '../core/data/discoveries';
 import { MOULD_CYCLES, recipeById } from '../core/data/recipes';
 import { applyChanges, NEST_HP } from '../core/game/worldChanges';
 import { WorldGenerator } from '../core/world/worldgen';
@@ -466,6 +467,17 @@ export function startGameView(
     buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${buildRot === null ? t('build.rotationAuto') : t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
+    if (e.type === 'discovery') {
+      const d = DISCOVERIES.find((x) => x.id === e.id);
+      if (d)
+        options.onMessage?.(
+          t('discovery.unlocked', {
+            name: t(`item.${d.unlocks[0]}` as TranslationKey),
+            n: String(d.harvest.count),
+            item: t(`item.${d.harvest.item}` as TranslationKey),
+          }),
+        );
+    }
     if (e.type === 'inventory') refreshWorn();
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
     if (e.type === 'hotbar') syncBuilding();
