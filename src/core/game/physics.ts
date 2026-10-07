@@ -17,6 +17,8 @@ export const JUMP_SPEED_M_S = 7;
 
 /** Épaisseur de la dalle d'un plafond ou d'un sol. */
 const SLAB_M = THICKNESS_M;
+/** Demi-côté d'un pilier de soutènement (m). */
+const PILLAR_HALF = 0.15;
 /** Au-dessus d'un mur, la dalle dépasse de 3 mm (évite que deux faces se confondent à l'écran). */
 export const SLAB_LIFT_M = 0.003;
 
@@ -84,6 +86,18 @@ export function spansAt(
     }
     if (pieces[pieceKey({ slot: 'floor', level, gx, gz })])
       spans.push({ bottom: y0, top: y0 + SLAB_M });
+    // Pilier de soutènement : colonne de 30 cm au centre de la case.
+    for (let layer = LAYERS_PER_STOREY - 1; layer >= 0; layer--) {
+      if (!pieces[pieceKey({ slot: 'pillar', level, gx, gz, layer })]) continue;
+      const cx = (gx + 0.5) * CELL_SIZE_M;
+      const cz = (gz + 0.5) * CELL_SIZE_M;
+      if (
+        Math.abs(x - cx) <= PILLAR_HALF + wallMargin &&
+        Math.abs(z - cz) <= PILLAR_HALF + wallMargin
+      )
+        spans.push({ bottom: y0, top: y0 + (layer + 1) * LAYER_HEIGHT_M });
+      break;
+    }
   }
   return spans;
 }

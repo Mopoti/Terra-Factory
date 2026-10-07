@@ -60,6 +60,16 @@ export function pickPiece(
       const block = `${base}:${layer}`;
       if (pieces[block]) return hit(block);
     }
+    // Pilier de soutènement (colonne de 30 cm au centre de la case).
+    if (
+      Math.abs(x - (gx + 0.5) * CELL_SIZE_M) <= 0.17 &&
+      Math.abs(z - (gz + 0.5) * CELL_SIZE_M) <= 0.17
+    ) {
+      for (let l = LAYERS_PER_STOREY - 1; l >= 0; l--) {
+        const key = pieceKey({ slot: 'pillar', level, gx, gz, layer: l });
+        if (pieces[key] && rel <= (l + 1) * LAYER_HEIGHT_M) return hit(key);
+      }
+    }
     // Dalles : plafond (dessus du bloc `l`), sol.
     for (let l = 0; l < LAYERS_PER_STOREY; l++) {
       const top = (l + 1) * LAYER_HEIGHT_M + 0.003;

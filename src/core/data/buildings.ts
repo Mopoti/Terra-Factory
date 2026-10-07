@@ -1,11 +1,11 @@
 import raw from '../../../content/buildings.json';
 
-export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs';
+export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs' | 'pillar';
 export type Material = 'wood' | 'stone';
 /** Identifiant d'une pièce : type + matériau, par exemple « wall_stone ». */
 export type PieceKind = `${PieceType}_${Material}`;
 /** Emplacement occupé : un bord de case (mur ou porte), le sol ou le plafond d'une case. */
-export type PieceSlot = 'edge' | 'floor' | 'ceiling' | 'stairs';
+export type PieceSlot = 'edge' | 'floor' | 'ceiling' | 'stairs' | 'pillar';
 
 export interface PieceDef {
   id: PieceKind;
@@ -25,6 +25,8 @@ export const LAYER_HEIGHT_M: number = raw.layerHeightM;
 export const LAYERS_PER_STOREY = Math.round(raw.storeyHeightM / raw.layerHeightM);
 /** Épaisseur des murs, sols et plafonds (m). */
 export const THICKNESS_M: number = raw.thicknessM;
+/** Distance maximale (m) entre une pièce en hauteur et un support : au-delà, un pilier est posé automatiquement. */
+export const SUPPORT_SPAN_M: number = raw.supportSpanM;
 /** Portée de construction (m). */
 export const BUILD_REACH_M: number = raw.reachM;
 /** Au-delà, un espace fermé n'est plus considéré comme une pièce (calcul borné). */

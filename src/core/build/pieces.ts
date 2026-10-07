@@ -35,12 +35,12 @@ export const TOP_LAYER = LAYERS_PER_STOREY - 1;
 export function pieceKey(p: PiecePos): string {
   const base = `${p.slot[0]}:${p.level}:${p.gx},${p.gz}`;
   if (p.slot === 'edge') return `${base}:${p.axis ?? 'x'}:${p.layer ?? 0}`;
-  if (p.slot === 'ceiling') return `${base}:${p.layer ?? TOP_LAYER}`;
+  if (p.slot === 'ceiling' || p.slot === 'pillar') return `${base}:${p.layer ?? TOP_LAYER}`;
   if (p.slot === 'stairs') return `${base}:${p.layer ?? 0}:${p.rot ?? 0}`;
   return base;
 }
 
-const KEY_RE = /^([efcs]):(-?\d+):(-?\d+),(-?\d+)(?::([xz]):(\d+)|:(\d+)(?::(\d))?)?$/;
+const KEY_RE = /^([efcsp]):(-?\d+):(-?\d+),(-?\d+)(?::([xz]):(\d+)|:(\d+)(?::(\d))?)?$/;
 /** Clé qui marque une porte comme ouverte (même valeur que la porte) : `o:étage:gx,gz:axe`. */
 export const doorOpenKey = (p: {
   level: number;
@@ -52,14 +52,21 @@ const OPEN_RE = /^o:(-?\d+):(-?\d+),(-?\d+):([xz])$/;
 
 const LEGACY_CEILING_RE = /^c:(-?\d+):(-?\d+),(-?\d+)$/;
 const LEGACY_EDGE_RE = /^e:(-?\d+):(-?\d+),(-?\d+):([xz])$/;
-const SLOT_OF: Record<string, PieceSlot> = { e: 'edge', f: 'floor', c: 'ceiling', s: 'stairs' };
+const SLOT_OF: Record<string, PieceSlot> = {
+  e: 'edge',
+  f: 'floor',
+  c: 'ceiling',
+  s: 'stairs',
+  p: 'pillar',
+};
 
 export function parseKey(key: string): PiecePos | null {
   const m = KEY_RE.exec(key);
   if (!m) return null;
   const slot = SLOT_OF[m[1]];
   if ((slot === 'edge') !== (m[5] !== undefined)) return null;
-  if ((slot === 'ceiling' || slot === 'stairs') !== (m[7] !== undefined)) return null;
+  if ((slot === 'ceiling' || slot === 'stairs' || slot === 'pillar') !== (m[7] !== undefined))
+    return null;
   if ((slot === 'stairs') !== (m[8] !== undefined)) return null;
   if (slot === 'stairs' && Number(m[8]) > 3) return null;
   const layerText = m[6] ?? m[7];
@@ -71,7 +78,7 @@ export function parseKey(key: string): PiecePos | null {
     gx: Number(m[3]),
     gz: Number(m[4]),
     ...(m[5] ? { axis: m[5] as 'x' | 'z', layer } : {}),
-    ...(slot === 'ceiling' ? { layer } : {}),
+    ...(slot === 'ceiling' || slot === 'pillar' ? { layer } : {}),
     ...(slot === 'stairs' ? { layer, rot: Number(m[8]) } : {}),
   };
 }
@@ -95,7 +102,7 @@ export function posFor(
     gz,
     ...(slot === 'edge' ? { axis: axis ?? 'x', layer: type === 'door' ? 0 : (layer ?? 0) } : {}),
     // Un plafond est posé sur le haut d'un mur : par défaut sur le bloc du haut de l'étage.
-    ...(slot === 'ceiling' ? { layer: layer ?? TOP_LAYER } : {}),
+    ...(slot === 'ceiling' || slot === 'pillar' ? { layer: layer ?? TOP_LAYER } : {}),
     ...(slot === 'stairs' ? { layer: layer ?? 0, rot: (((rot ?? 0) % 4) + 4) % 4 } : {}),
   };
 }

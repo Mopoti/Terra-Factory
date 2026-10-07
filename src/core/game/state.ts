@@ -12,6 +12,7 @@ import {
 import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
 import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
+import { pillarsFor } from '../build/support';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import {
@@ -36,7 +37,9 @@ import {
   MAGAZINE_ROUNDS,
   emptyChanges,
   normalizeChanges,
+  type Corpse,
   type DroppedStack,
+  type SpawnPoint,
   type Vehicle,
   type WorldChanges,
 } from './worldChanges';
@@ -524,6 +527,11 @@ export class GameState {
     if (!this.canAfford(kind)) return 'missing';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[pieceKey(pos)] = placed;
+    // Pièce en hauteur à plus de 2,5 m d'un support : des piliers sont posés automatiquement (sans coût).
+    Object.assign(
+      this.changes.pieces,
+      pillarsFor(this.changes.pieces, pos, pieceDef(placed).material),
+    );
     if (rotation % 4 !== 0) this.changes.rotations[pieceKey(pos)] = ((rotation % 4) + 4) % 4;
     this.roomCache = null;
     this.emit({ type: 'build' });
@@ -662,8 +670,9 @@ export class GameState {
       const door = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
       if (door) delete this.changes.pieces[`o:${door[1]}:${door[2]},${door[3]}:${door[4]}`];
       n++;
-      // Démolir rend la pièce elle-même (l'objet), pas ses ressources de fabrication.
-      this.giveBack(pieceDef(kind).item, 1, drop);
+      // Démolir rend la pièce elle-même (l'objet), pas ses ressources de fabrication. Un pilier
+      // automatique ne rend rien.
+      if (pieceDef(kind).type !== 'pillar') this.giveBack(pieceDef(kind).item, 1, drop);
     }
     if (n > 0) {
       this.roomCache = null;
@@ -676,6 +685,88 @@ export class GameState {
   // --- Véhicules ---------------------------------------------------------------------------------
 
   /** Pose un buggy (consomme l'objet du sac). */
+  // --- Mort, corps et réapparition ---------------------------------------------------------------
+
+  /** Le joueur tombe : tout ce qu'il porte (sac, curseur, équipement) reste sur son corps, à récupérer. */
+  dieAt(x: number, z: number, yaw: number): Corpse {
+    const inventory = this.hand
+      ? add(structuredClone(this.inventory), this.hand.item, this.hand.count)
+      : structuredClone(this.inventory);
+    const corpse: Corpse = {
+      id: this.changes.nextCorpseId++,
+      x,
+      z,
+      yaw,
+      inventory,
+      equipment: { ...this.changes.equipment },
+    };
+    this.inventory = {};
+    this.hand = null;
+    this.held = null;
+    this.carried = null;
+    this.bag = [];
+    this.changes.equipment = {};
+    this.changes.corpses.push(corpse);
+    this.emit({ type: 'inventory' });
+    return corpse;
+  }
+
+  /**
+   * Le joueur interagit avec un corps : l'équipement se remet sur lui (ou va au sac si l'emplacement est pris),
+   * puis le contenu passe dans le sac autant que la place le permet. Le corps disparaît quand il est vide.
+   */
+  recoverCorpse(id: number): 'recovered' | 'partial' | 'empty' | 'none' {
+    const corpse = this.changes.corpses.find((c) => c.id === id);
+    if (!corpse) return 'none';
+    const hadStuff =
+      Object.keys(corpse.inventory).length > 0 || Object.keys(corpse.equipment).length > 0;
+    for (const [slot, item] of Object.entries(corpse.equipment) as [EquipSlot, string][]) {
+      if (!this.changes.equipment[slot]) this.changes.equipment[slot] = item;
+      else corpse.inventory = add(corpse.inventory, item, 1);
+      delete corpse.equipment[slot];
+    }
+    for (const [item, count] of Object.entries(corpse.inventory)) {
+      const n = Math.min(count, maxAddable(this.inventory, item, this.limits));
+      if (n <= 0) continue;
+      this.inventory = add(this.inventory, item, n);
+      corpse.inventory = remove(corpse.inventory, item, n).inventory;
+    }
+    const left = Object.keys(corpse.inventory).length > 0;
+    if (!left) this.changes.corpses.splice(this.changes.corpses.indexOf(corpse), 1);
+    this.emit({ type: 'inventory' });
+    return !hadStuff ? 'empty' : left ? 'partial' : 'recovered';
+  }
+
+  /** Pose un duvet (usage unique) ou un lit (permanent) : le dernier posé est le point de réapparition. */
+  placeSpawn(kind: 'bag' | 'bed', x: number, z: number): SpawnPoint | null {
+    const item = kind === 'bag' ? 'sleeping_bag' : 'bed';
+    if ((this.inventory[item] ?? 0) < 1) return null;
+    this.inventory = remove(this.inventory, item, 1).inventory;
+    const point: SpawnPoint = { id: this.changes.nextSpawnId++, x, z, kind };
+    this.changes.spawns.push(point);
+    this.emit({ type: 'inventory' });
+    return point;
+  }
+
+  /** Range un duvet ou un lit : il revient dans le sac (ou tombe au sol si le sac est plein). */
+  pickUpSpawn(id: number, at: { x: number; z: number }): boolean {
+    const i = this.changes.spawns.findIndex((s) => s.id === id);
+    if (i < 0) return false;
+    const [point] = this.changes.spawns.splice(i, 1);
+    this.giveBack(point.kind === 'bag' ? 'sleeping_bag' : 'bed', 1, at);
+    this.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /** Où le joueur se réveille : le dernier duvet ou lit posé (un duvet est consommé), sinon `null` (point de départ). */
+  consumeRespawn(): { x: number; z: number } | null {
+    const spawns = this.changes.spawns;
+    const last = spawns[spawns.length - 1];
+    if (!last) return null;
+    if (last.kind === 'bag') spawns.pop();
+    return { x: last.x, z: last.z };
+  }
+
   placeVehicle(x: number, z: number, yaw: number): Vehicle | null {
     if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
     this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;

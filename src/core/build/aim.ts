@@ -8,6 +8,7 @@ import {
   pieceDef,
   resolveKind,
   type PieceKind,
+  type PieceType,
 } from '../data/buildings';
 import { isFree, parseKey, posFor, slabPos, type PiecePos, type Pieces } from './pieces';
 import { pickPiece } from './pick';
@@ -58,9 +59,11 @@ function boxDist(p: Vec, b: Box): number {
 
 const BLOCK = LAYER_HEIGHT_M;
 const HALF = THICKNESS_M / 2;
+/** Demi-côté d'un pilier de soutènement (30 cm de large). */
+export const PILLAR_HALF_M = 0.15;
 
 /** Boîte occupée par une pièce à `pos` : un bloc de mur, une porte, une dalle ou un cube d'escalier. */
-export function pieceBox(pos: PiecePos, type: 'wall' | 'door' | 'slab' | 'stairs'): Box {
+export function pieceBox(pos: PiecePos, type: PieceType): Box {
   const y0 = pos.level * STOREY_HEIGHT_M;
   const x = pos.gx * CELL_SIZE_M;
   const z = pos.gz * CELL_SIZE_M;
@@ -75,6 +78,18 @@ export function pieceBox(pos: PiecePos, type: 'wall' | 'door' | 'slab' | 'stairs
     const yb = y0 + (pos.layer ?? 0) * BLOCK;
     return { x0: x, x1: x + CELL_SIZE_M, y0: yb, y1: yb + BLOCK, z0: z, z1: z + CELL_SIZE_M };
   }
+  if (pos.slot === 'pillar') {
+    const cx = (pos.gx + 0.5) * CELL_SIZE_M;
+    const cz = (pos.gz + 0.5) * CELL_SIZE_M;
+    return {
+      x0: cx - PILLAR_HALF_M,
+      x1: cx + PILLAR_HALF_M,
+      y0: y0,
+      y1: y0 + ((pos.layer ?? LAYERS_PER_STOREY - 1) + 1) * BLOCK,
+      z0: cz - PILLAR_HALF_M,
+      z1: cz + PILLAR_HALF_M,
+    };
+  }
   // Dalle : épaisseur de 10 cm au-dessus de sa face (sol) ou sur le haut du bloc (plafond).
   const top = pos.slot === 'floor' ? y0 + THICKNESS_M : y0 + ((pos.layer ?? 0) + 1) * BLOCK + 0.003;
   return { x0: x, x1: x + CELL_SIZE_M, y0: top - THICKNESS_M, y1: top, z0: z, z1: z + CELL_SIZE_M };
@@ -83,7 +98,7 @@ export function pieceBox(pos: PiecePos, type: 'wall' | 'door' | 'slab' | 'stairs
 /** Pièce à poser, selon le type et la hauteur absolue (en blocs depuis le sol). */
 function candidatePos(
   kind: PieceKind,
-  type: 'wall' | 'door' | 'slab' | 'stairs',
+  type: PieceType,
   gx: number,
   gz: number,
   hy: number,

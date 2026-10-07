@@ -45,6 +45,12 @@ export function addPiece(
     addStairs(mb, pos, color, gap);
     return;
   }
+  if (def.type === 'pillar') {
+    // Pilier : colonne carrée de 30 cm, du sol de l'étage jusqu'au dessous de la dalle qu'elle porte.
+    const height = ((pos.layer ?? LAYERS_PER_STOREY - 1) + 1) * LAYER_HEIGHT_M;
+    mb.box(cx, y0, cz, 0.3 - gap, height - 0.01, 0.3 - gap, color, true);
+    return;
+  }
   if (def.type === 'floor') {
     mb.box(cx, y0, cz, CELL_SIZE_M - gap, T, CELL_SIZE_M - gap, color, true);
     return;

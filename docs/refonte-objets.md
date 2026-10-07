@@ -5,22 +5,22 @@
 
 ## 0. Carte des points
 
-| #   | Point                                                                                              | Statut                                           |
-| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes) | **validé (Tour 85)**                             |
-| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                        | **en discussion**                                |
-| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse, Bessemer, béton, lavage                    | à faire                                          |
-| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                         | ⚠️ contredit des décisions antérieures           |
-| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »    | à faire                                          |
-| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement    | à faire                                          |
-| 7   | Pétrole, plastique, câbles isolés (T3)                                                             | à faire                                          |
-| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                             | à faire                                          |
-| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                | ⚠️ contredit le Tour 83 (touche H, sac conservé) |
-| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                 | à faire                                          |
-| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                          | à faire (en dernier)                             |
-| 12  | Multiplateforme : tactile, manettes, Steam                                                         | à faire (en dernier)                             |
+| #   | Point                                                                                              | Statut                                                                                                 |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes) | **validé (Tour 85)**                                                                                   |
+| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                        | **en discussion**                                                                                      |
+| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse, Bessemer, béton, lavage                    | à faire                                                                                                |
+| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                         | **validé et codé (Tour 86)** : on garde le 2×2 ; piliers automatiques à 2,5 m (pièces) ; belts à faire |
+| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »    | à faire                                                                                                |
+| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement    | à faire                                                                                                |
+| 7   | Pétrole, plastique, câbles isolés (T3)                                                             | à faire                                                                                                |
+| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                             | à faire                                                                                                |
+| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                | **validé et codé (Tour 86)**                                                                           |
+| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                 | à faire                                                                                                |
+| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                          | à faire (en dernier)                                                                                   |
+| 12  | Multiplateforme : tactile, manettes, Steam                                                         | à faire (en dernier)                                                                                   |
 
-Contradictions à trancher avant d'y toucher : **#4** (tapis 2×2 acquis, aucune contrainte de support acquise au Tour 76 ; le document propose l'inverse), **#9** (touche H et sac conservé au Tour 83 ; le document propose lit/duvet et sac laissé sur le corps).
+Les contradictions des points #4 et #9 ont été tranchées au Tour 86 (voir §4 et §9).
 
 ## 1. Point 1 — le cadre
 
@@ -95,3 +95,41 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Nouveaux minerais par paliers** : sphalérite (zinc) et bauxite ≥ 300 m, quartz (silicium) ≥ 600 m, uraninite ≥ 1 200 m (`minDistanceM` dans `resources.json`) ; ils ne font pas partie des gisements garantis au départ.
 - **Noms réels** : Hématite (iron_ore), Malachite (copper_ore) ; les identifiants ne changent pas. Les nouveaux minerais se récoltent mais **n'ont pas encore d'usage** (point 3).
 - **Ponts** (codé) : une dalle de sol posée sur une case d'eau la rend **praticable** (joueur, tapis, tuyaux, poteaux, machines) ; sans pilier. Limite actuelle : les machines posées sur un pont ont leur base dans la dalle (10 cm) ; rendu à reprendre avec le point 4 (grille et structure).
+
+## 4. Point 4 — grille et structure (Tour 86)
+
+### 4.1 Décisions du PO
+
+- **On garde le 2×2** (tuiles de 1 m pour tapis, tuyaux, bras, séparateurs…). **Note de conception** : la taille pourra être modifiée (1×1) **quand on aura mis un vrai modèle 3D** ; tout est piloté par `content/machines.json` (`w`, `d`) et par les constantes de tuile.
+- **Piliers de soutènement automatiques** : un pilier compte comme **support** et est **posé automatiquement à 2,5 m de distance d'un support**. Un support est un mur qui touche le sol, un objet en contact avec le sol, ou un objet qui touche un objet en contact avec le sol, etc.
+
+### 4.2 Règle codée (`src/core/build/support.ts`)
+
+- **Aucune pièce n'est refusée** (la pose reste libre, comme au Tour 76) : c'est le **pilier qui est ajouté**, gratuitement et sans item.
+- Une pièce en hauteur (dalle, plafond, marche d'escalier, mur ou porte à un étage ≥ 1) doit avoir un **support à moins de 2,5 m** (distance horizontale). Sinon, un **pilier** est posé automatiquement **sous la pièce** et, si besoin, d'autres en dessous (un par étage) jusqu'au sol ou jusqu'à une dalle soutenue.
+- **Support** = colonne qui descend jusqu'au sol : **mur** dont les blocs sont empilés jusqu'au sol (ou posés sur une dalle elle-même soutenue), **pilier** (30 cm de large) posé au sol ou sur une dalle soutenue. Le dessus du support doit être à la face de la pièce (on ne soutient que par dessous).
+- Le calcul est récursif et par face : un mur sur une dalle soutenue est soutenu, donc des étages empilés se soutiennent entre eux.
+- Une grande dalle posée case par case reçoit un pilier tous les ≈ 3 m (6 cases) dès qu'elle dépasse 2,5 m d'un support.
+- Le pilier est une pièce (`pillar_wood` / `pillar_stone`, du matériau de la pièce soutenue), visible, solide (collision), **démolissable** (clic droit maintenu) **sans rendre d'objet**.
+- Rien ne s'effondre : si on démolit un support, les pièces au-dessus restent (pas de ruine) ; un nouveau pilier est ajouté seulement à la **prochaine pose** qui en a besoin.
+
+### 4.3 Reste à faire (point 4b)
+
+- **Tapis et tuyaux surélevés** : même règle (piliers automatiques tous les 2,5 m le long d'un niveau 1 ou 2). Le Tour 86 ne traite que les pièces de construction ; les tapis surélevés gardent leur support dessiné actuel.
+- **Machines à l'étage** : elles exigent déjà une dalle ; la dalle reçoit ses piliers.
+- **Ponts sur l'eau** : une dalle posée à la hauteur du sol sur l'eau est un sol (face 0), donc déjà « soutenue » ; pas de pilier.
+
+## 9. Point 9 — survie : mort, corps, duvet et lit (Tour 86)
+
+### 9.1 Décisions du PO
+
+- **À la mort, tout reste sur le corps** : sac, ce qu'on tient, équipement. On retourne à la tombe **✝** (carte, et boussole si _Navigation_ est recherchée) et on **interagit (F)** pour tout reprendre d'un coup.
+- **Réapparition** : **duvet d'exploration à usage unique** + **lit fixe permanent** ; la touche **H disparaît**.
+
+### 9.2 Réalisation
+
+- **Mort** : `GameState.dieAt` crée un **corps** (`changes.corpses`, plusieurs possibles) avec son contenu (sac + curseur + équipement) ; le joueur repart avec le sac **vide**. Le joueur réapparaît au **dernier duvet ou lit posé** ; un duvet est **détruit** à la réapparition, un lit reste ; sans rien de posé, au point de départ.
+- **Récupération** : près du corps (≤ 2,5 m), **F** : l'équipement se remet sur le joueur (ou va au sac si l'emplacement est pris), puis le contenu passe au sac **tant que la place le permet** ; le reste attend sur le corps ; un corps vide disparaît.
+- **Objets** : **Duvet d'exploration** (10 tissu ; consommable, 1,5 kg) et **Lit** (8 lingots de fer + 12 tissu ; 14 kg), débloqués provisoirement par _Textile_ (à reclasser dans la refonte). On les **pose au clic** (comme le buggy) à portée de 6 m ; **Maj + F** à moins de 2,5 m les range.
+- **Carte** : ✝ (corps), ⚑ (lit), ⚐ (duvet) ; **boussole** : repère du corps le plus proche.
+- **Sauvegarde** : `corpses` et `spawns` dans les changements ; les anciens `corpse` / `respawn` du Tour 83 n'existent plus (on repart de zéro).

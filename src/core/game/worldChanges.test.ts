@@ -27,14 +27,24 @@ describe('nids détruits et mode débogage', () => {
   });
 });
 
-describe('corps et point de réapparition', () => {
-  it('sont enregistrés, ignorés s’ils sont invalides', () => {
-    const c = normalizeChanges({ corpse: { x: 3, z: -4, yaw: 1 }, respawn: { x: 10, z: 12 } });
-    expect(c.corpse).toEqual({ x: 3, z: -4, yaw: 1 });
-    expect(c.respawn).toEqual({ x: 10, z: 12 });
-    const bad = normalizeChanges({ corpse: { x: 'a' }, respawn: 5 });
-    expect(bad.corpse).toBeNull();
-    expect(bad.respawn).toBeNull();
+describe('corps et points de réapparition', () => {
+  it('sont enregistrés avec leur contenu, ignorés s’ils sont invalides', () => {
+    const c = normalizeChanges({
+      corpses: [
+        { id: 4, x: 3, z: -4, yaw: 1, inventory: { coal: 7 }, equipment: { torso: 'backpack' } },
+        { x: 'a' },
+      ],
+      spawns: [
+        { id: 2, x: 10, z: 12, kind: 'bed' },
+        { id: 3, x: 1, z: 1, kind: 'tent' },
+      ],
+    });
+    expect(c.corpses).toHaveLength(1);
+    expect(c.corpses[0].inventory).toEqual({ coal: 7 });
+    expect(c.corpses[0].equipment).toEqual({ torso: 'backpack' });
+    expect(c.nextCorpseId).toBe(5);
+    expect(c.spawns).toEqual([{ id: 2, x: 10, z: 12, kind: 'bed' }]);
+    expect(c.nextSpawnId).toBe(3);
   });
 });
 

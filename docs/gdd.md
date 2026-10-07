@@ -179,9 +179,10 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 ### 4.3 Santé, mort et réapparition ✅
 
 - La barre de santé est **masquée par défaut** (réglage « Afficher la barre de santé ») ; la **rougeur des bords de l'écran** indique la gravité des dégâts.
-- À **0 PV** : le joueur est assommé ; **son corps reste sur place** (capsule grise couchée), il **réapparaît au point de réapparition enregistré**, sinon au **premier point** (départ de la partie). **Le sac n'est pas perdu.**
-- Le corps est visible **sur la carte (✝)** et, si la technologie **Navigation** est recherchée, **repéré sur la boussole** (✝ ; flèche ◄✝ / ✝► s'il est hors du champ). Un nouveau corps remplace l'ancien.
-- **Point de réapparition** : touche **H** (enregistre la position actuelle). 🔶 Solution provisoire en attendant une structure dédiée (lit, balise).
+- À **0 PV** : le joueur est assommé ; **son corps reste sur place** (capsule grise couchée) **avec tout ce qu'il portait** (sac, équipement) ; il réapparaît au **dernier duvet ou lit posé**, sinon au **premier point** (départ de la partie), **les mains vides**.
+- Le corps est visible **sur la carte (✝, ainsi que ⚑ lit et ⚐ duvet)** et, si la technologie **Navigation** est recherchée, **repéré sur la boussole** (✝ ; flèche ◄✝ / ✝► s'il est hors du champ). Un nouveau corps remplace l'ancien.
+- **Récupération** : près du corps (2,5 m), **F** reprend l'équipement et le contenu d'un coup (dans la limite de la place du sac ; le reste attend sur le corps).
+- **Réapparition** : **duvet d'exploration** (usage unique, détruit après la réapparition) ou **lit** (permanent), posés au clic ; le dernier posé compte. Maj + F les range.
 
 ### 4.4 Sac à dos et inventaire ✅
 
@@ -316,7 +317,7 @@ Les objets-machines et leurs coûts figurent au §7.1.
 
 ### 6.3 Règles de pose ✅ (refonte du Tour 76)
 
-- **Aucune contrainte de support** : on peut poser en l'air.
+- **Pose libre, mais piliers automatiques** : on peut poser en l'air, mais une pièce en hauteur à plus de **2,5 m** d'un support (mur ou pilier qui descend au sol) reçoit **automatiquement un pilier de soutènement** (gratuit, solide, démolissable) ; les piliers comptent comme supports. Détail : `docs/refonte-objets.md` §4.
 - La visée choisit **la face libre la plus proche** de la première surface touchée par le rayon (pièce, sol ou plan de niveau).
 - Pose en **traçant** (clic maintenu), **rotation** (R), **niveau d'étage** (PageUp/PageDown), **hauteur de mur** (Début/Fin).
 - **Copier / coller** (Ctrl+C/V), **annuler / rétablir** (Ctrl+Z/Y), **démolition en chaîne** (clic droit maintenu, ou X / Suppr).

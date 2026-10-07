@@ -3,7 +3,7 @@ import { CELL_SIZE_M } from '../constants';
 import { footprint, normalizeMachines, type Machine } from '../factory/factory';
 import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
-import { migrateItemId } from './inventory';
+import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { TECHS } from '../data/techs';
@@ -20,6 +20,24 @@ export interface Vehicle {
   fuelStack: { item: string; count: number } | null;
   /** Coffre du buggy (carburant et quelques objets) : piles d'au plus 100. */
   slots: { item: string; count: number }[];
+}
+
+/** Le corps d'un joueur tombé : il garde tout ce que le joueur portait, à récupérer en interagissant. */
+export interface Corpse {
+  id: number;
+  x: number;
+  z: number;
+  yaw: number;
+  inventory: Inventory;
+  equipment: Partial<Record<EquipSlot, string>>;
+}
+
+/** Point de réapparition posé par le joueur : un duvet (usage unique) ou un lit (permanent). */
+export interface SpawnPoint {
+  id: number;
+  x: number;
+  z: number;
+  kind: 'bag' | 'bed';
 }
 
 /** Objets déposés au sol par le joueur. */
@@ -57,10 +75,12 @@ export interface WorldChanges {
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
   admin: boolean;
-  /** Corps laissé là où le joueur est tombé (affiché dans le monde et sur la carte), ou null. */
-  corpse: { x: number; z: number; yaw: number } | null;
-  /** Point de réapparition choisi par le joueur (null = le point de départ de la partie). */
-  respawn: { x: number; z: number } | null;
+  /** Corps laissés là où le joueur est tombé, avec ses affaires (affichés dans le monde et sur la carte). */
+  corpses: Corpse[];
+  nextCorpseId: number;
+  /** Duvets et lits posés : le dernier posé est le point de réapparition (sinon, le point de départ). */
+  spawns: SpawnPoint[];
+  nextSpawnId: number;
   /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
   researching: string | null;
   progress: Record<string, number>;
@@ -107,8 +127,10 @@ export function emptyChanges(): WorldChanges {
     equipment: {},
     unlocked: [],
     admin: false,
-    corpse: null,
-    respawn: null,
+    corpses: [],
+    nextCorpseId: 1,
+    spawns: [],
+    nextSpawnId: 1,
     researching: null,
     progress: {},
     pollution: {},
@@ -181,14 +203,37 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
-  const point = (v: unknown): { x: number; z: number; yaw: number } | null => {
-    if (typeof v !== 'object' || v === null) return null;
-    const o = v as Record<string, unknown>;
-    return isNum(o.x) && isNum(o.z) ? { x: o.x, z: o.z, yaw: isNum(o.yaw) ? o.yaw : 0 } : null;
-  };
-  result.corpse = point(r.corpse);
-  const spawn = point(r.respawn);
-  result.respawn = spawn ? { x: spawn.x, z: spawn.z } : null;
+  const rec = (v: unknown): Record<string, unknown> | null =>
+    typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
+  for (const raw of Array.isArray(r.corpses) ? r.corpses.slice(0, 50) : []) {
+    const o = rec(raw);
+    if (!o || !isNum(o.x) || !isNum(o.z)) continue;
+    const equipment: Partial<Record<EquipSlot, string>> = {};
+    for (const [slot, id] of Object.entries(rec(o.equipment) ?? {})) {
+      const item = typeof id === 'string' ? migrateItemId(id) : null;
+      if (item && itemById(item).equip?.slot === slot) equipment[slot as EquipSlot] = item;
+    }
+    result.corpses.push({
+      id: isNum(o.id) ? Math.floor(o.id) : result.corpses.length + 1,
+      x: o.x,
+      z: o.z,
+      yaw: isNum(o.yaw) ? o.yaw : 0,
+      inventory: normalizeInventory(o.inventory),
+      equipment,
+    });
+  }
+  result.nextCorpseId = result.corpses.reduce((m, c) => Math.max(m, c.id), 0) + 1;
+  for (const raw of Array.isArray(r.spawns) ? r.spawns.slice(0, 200) : []) {
+    const o = rec(raw);
+    if (!o || !isNum(o.x) || !isNum(o.z) || (o.kind !== 'bag' && o.kind !== 'bed')) continue;
+    result.spawns.push({
+      id: isNum(o.id) ? Math.floor(o.id) : result.spawns.length + 1,
+      x: o.x,
+      z: o.z,
+      kind: o.kind,
+    });
+  }
+  result.nextSpawnId = result.spawns.reduce((m, s) => Math.max(m, s.id), 0) + 1;
   result.unlocked = Array.isArray(r.unlocked)
     ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
     : TECHS.map((t) => t.id);

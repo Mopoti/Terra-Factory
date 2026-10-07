@@ -1,5 +1,5 @@
 {
-  "_comment": "Pièces de construction. Un mur est fait de blocs de 50 cm (5 par étage) ; une porte occupe tout l'étage. Chaque pièce posée consomme 1 objet « piece_* » du sac (fabriqué dans l'inventaire, voir items.json).",
+  "_comment": "Pièces de construction. Un mur est fait de blocs de 50 cm (5 par étage) ; une porte occupe tout l'étage. Chaque pièce posée consomme 1 objet « piece_* » du sac (fabriqué dans l'inventaire, voir items.json). Les piliers de soutènement (pillar_*) ne se posent pas à la main : ils sont placés automatiquement tous les 2,5 m (voir docs/refonte-objets.md, point 4).",
   "storeyHeightM": 2.5,
   "layerHeightM": 0.5,
   "thicknessM": 0.1,
@@ -89,6 +89,21 @@
       "material": "stone",
       "color": "#7a7f86",
       "item": "piece_door_stone"
+    },
+    {
+      "id": "pillar_wood",
+      "type": "pillar",
+      "material": "wood",
+      "color": "#8a5f36",
+      "item": "piece_pillar_wood"
+    },
+    {
+      "id": "pillar_stone",
+      "type": "pillar",
+      "material": "stone",
+      "color": "#6f747a",
+      "item": "piece_pillar_stone"
     }
-  ]
+  ],
+  "supportSpanM": 2.5
 }

@@ -836,3 +836,64 @@ describe('carburant du buggy', () => {
     expect(s.refuelVehicle(v)).toBe(0);
   });
 });
+
+describe('mort, corps à récupérer, duvet et lit', () => {
+  const newState = (): GameState => {
+    const s = new GameState({ inventory: { coal: 30, wood: 10, sleeping_bag: 1, bed: 1 } });
+    s.changes.equipment.torso = 'backpack';
+    return s;
+  };
+
+  it('à la mort tout reste sur le corps ; on le récupère d’un coup', () => {
+    const s = newState();
+    const corpse = s.dieAt(5, 6, 0.5);
+    expect(s.inventory).toEqual({});
+    expect(s.changes.equipment).toEqual({});
+    expect(corpse.inventory.coal).toBe(30);
+    expect(corpse.equipment.torso).toBe('backpack');
+    expect(s.recoverCorpse(corpse.id)).toBe('recovered');
+    expect(s.inventory.coal).toBe(30);
+    expect(s.inventory.bed).toBe(1);
+    expect(s.changes.equipment.torso).toBe('backpack');
+    expect(s.changes.corpses).toHaveLength(0);
+  });
+
+  it('si le sac est plein, le reste attend sur le corps', () => {
+    const s = new GameState({ inventory: { stone: 4000 } }); // bien au-delà de ce que le sac peut porter
+    const corpse = s.dieAt(0, 0, 0);
+    corpse.inventory.wood = 2000;
+    expect(s.recoverCorpse(corpse.id)).toBe('partial');
+    expect(s.changes.corpses).toHaveLength(1);
+    expect(
+      Object.values(s.changes.corpses[0].inventory).reduce((a, b) => a + b, 0),
+    ).toBeGreaterThan(0);
+  });
+
+  it('deux morts : deux corps, chacun avec ses affaires', () => {
+    const s = newState();
+    s.dieAt(1, 1, 0);
+    s.inventory = { stone: 3 };
+    s.dieAt(9, 9, 0);
+    expect(s.changes.corpses.map((c) => Object.keys(c.inventory).length)).toEqual([4, 1]);
+  });
+
+  it('un duvet est consommé à la réapparition, un lit reste ; sans rien posé : point de départ', () => {
+    const s = newState();
+    expect(s.consumeRespawn()).toBeNull();
+    expect(s.placeSpawn('bed', 10, 10)).not.toBeNull();
+    expect(s.placeSpawn('bag', 50, 50)).not.toBeNull();
+    expect(s.inventory.bed ?? 0).toBe(0);
+    expect(s.consumeRespawn()).toEqual({ x: 50, z: 50 }); // le dernier posé : le duvet, détruit
+    expect(s.changes.spawns).toHaveLength(1);
+    expect(s.consumeRespawn()).toEqual({ x: 10, z: 10 }); // le lit
+    expect(s.consumeRespawn()).toEqual({ x: 10, z: 10 }); // toujours là
+  });
+
+  it('on range un lit : il revient dans le sac', () => {
+    const s = newState();
+    const bed = s.placeSpawn('bed', 3, 3)!;
+    expect(s.pickUpSpawn(bed.id, { x: 3, z: 3 })).toBe(true);
+    expect(s.inventory.bed).toBe(1);
+    expect(s.changes.spawns).toHaveLength(0);
+  });
+});

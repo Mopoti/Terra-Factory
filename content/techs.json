@@ -15,7 +15,7 @@
         "fiber": 30
       },
       "requires": [],
-      "unlocks": ["cloth", "backpack", "hood", "trousers", "boots", "gloves"]
+      "unlocks": ["cloth", "backpack", "hood", "trousers", "boots", "gloves", "sleeping_bag", "bed"]
     },
     {
       "id": "electricity",

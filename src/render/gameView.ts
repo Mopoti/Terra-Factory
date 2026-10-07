@@ -203,15 +203,16 @@ export function startGameView(
   );
   player.castShadow = true;
   scene.add(player);
-  // Le corps du joueur tombé : une capsule couchée, grise, qui reste là où il a été assommé.
-  const corpseMesh = new THREE.Mesh(
-    new THREE.CapsuleGeometry(PLAYER_RADIUS_M, PLAYER_HEIGHT_M - 2 * PLAYER_RADIUS_M, 4, 10),
-    new THREE.MeshStandardMaterial({ color: 0x8a7f78 }),
+  // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
+  const corpseGeometry = new THREE.CapsuleGeometry(
+    PLAYER_RADIUS_M,
+    PLAYER_HEIGHT_M - 2 * PLAYER_RADIUS_M,
+    4,
+    10,
   );
-  corpseMesh.rotation.z = Math.PI / 2;
-  corpseMesh.castShadow = true;
-  corpseMesh.visible = false;
-  scene.add(corpseMesh);
+  const corpseMaterial = new THREE.MeshStandardMaterial({ color: 0x8a7f78 });
+  const corpseMeshes = new Map<number, THREE.Mesh>();
+  const spawnMeshes = new Map<number, THREE.Group>();
   let playerX = state.x;
   let playerY = state.y;
   let velY = 0;
@@ -1768,6 +1769,65 @@ export function startGameView(
     const d2 = cx * cx + cy * cy + cz * cz - along * along;
     return d2 <= 0.9 * 0.9;
   }
+  /** Duvet : rouleau vert ; lit : cadre de métal et matelas. */
+  function makeSpawnModel(kind: 'bag' | 'bed'): THREE.Group {
+    const g = new THREE.Group();
+    if (kind === 'bag') {
+      const roll = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.7, 12),
+        new THREE.MeshStandardMaterial({ color: 0x3f5a3a }),
+      );
+      roll.rotation.z = Math.PI / 2;
+      roll.position.y = 0.16;
+      roll.castShadow = true;
+      g.add(roll);
+    } else {
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 0.12, 1.9),
+        new THREE.MeshStandardMaterial({ color: 0x6d6f73 }),
+      );
+      frame.position.y = 0.16;
+      const mattress = new THREE.Mesh(
+        new THREE.BoxGeometry(0.82, 0.12, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0xcdd6dc }),
+      );
+      mattress.position.y = 0.28;
+      frame.castShadow = true;
+      g.add(frame, mattress);
+    }
+    return g;
+  }
+  let bodyHintId = -1;
+  /** Le joueur est près de son corps : F récupère ses affaires ; Maj + F range un duvet ou un lit tout proche. */
+  function bodyTick(pressedUse: boolean): void {
+    const { corpses, spawns } = options.state.changes;
+    const body = corpses.find((c) => Math.hypot(c.x - playerX, c.z - playerZ) <= 2.5);
+    if (!body) bodyHintId = -1;
+    else if (bodyHintId !== body.id) {
+      bodyHintId = body.id;
+      options.onMessage?.(t('corpse.hint'));
+    }
+    if (!pressedUse || aimedMachine || mounted) return;
+    if (body && !input.isActionActive('sprint')) {
+      const result = options.state.recoverCorpse(body.id);
+      options.onMessage?.(
+        t(
+          result === 'recovered'
+            ? 'corpse.recovered'
+            : result === 'partial'
+              ? 'corpse.bagFull'
+              : 'corpse.empty',
+        ),
+      );
+      playSfx('pickup');
+      return;
+    }
+    const sp = spawns.find((s) => Math.hypot(s.x - playerX, s.z - playerZ) <= 2.5);
+    if (sp && input.isActionActive('sprint')) {
+      options.state.pickUpSpawn(sp.id, { x: playerX, z: playerZ });
+      options.onMessage?.(t('spawn.pickedUp'));
+    }
+  }
   function vehicleTick(dt: number, pressedUse: boolean): void {
     const list = options.state.changes.vehicles;
     // Les modèles suivent la liste enregistrée.
@@ -1834,6 +1894,29 @@ export function startGameView(
         } else playSfx('deny');
       }
     }
+    // Poser un duvet ou un lit : clic gauche avec l'objet choisi, quand rien d'autre n'est visé.
+    const spawnItem = options.state.selectedItem();
+    if (
+      down &&
+      !placeWasDown &&
+      !building &&
+      (spawnItem === 'sleeping_bag' || spawnItem === 'bed') &&
+      !interaction.aimed
+    ) {
+      computeRay();
+      const cell = cellOnPlane(rayOrigin, rayDir, 0);
+      if (cell) {
+        const x = center(cell.gx);
+        const z = center(cell.gz);
+        if (!isBlockedAt(x, z) && Math.hypot(x - playerX, z - playerZ) <= 6) {
+          const kind = spawnItem === 'bed' ? 'bed' : 'bag';
+          if (options.state.placeSpawn(kind, x, z)) {
+            playSfx('placeWood');
+            options.onMessage?.(t(kind === 'bed' ? 'spawn.bedPlaced' : 'spawn.bagPlaced'));
+          }
+        } else playSfx('deny');
+      }
+    }
     placeWasDown = down;
     if (mounted) {
       mounted.x = playerX;
@@ -1887,11 +1970,49 @@ export function startGameView(
   corpseMark.className = 'compass-mark corpse-mark';
   corpseMark.textContent = '✝';
   compass.append(corpseMark);
+  /** Met à jour les modèles des corps et des points de réapparition, et le repère du corps le plus proche sur la boussole. */
   function updateCorpse(hasCompass: boolean, bearing: number): void {
-    const body = options.state.changes.corpse;
-    corpseMesh.visible = body !== null;
-    if (body) corpseMesh.position.set(body.x, PLAYER_RADIUS_M, body.z);
-    if (body) corpseMesh.rotation.y = body.yaw;
+    const { corpses, spawns } = options.state.changes;
+    for (const c of corpses) {
+      let mesh = corpseMeshes.get(c.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(corpseGeometry, corpseMaterial);
+        mesh.rotation.z = Math.PI / 2;
+        mesh.castShadow = true;
+        scene.add(mesh);
+        corpseMeshes.set(c.id, mesh);
+      }
+      mesh.position.set(c.x, PLAYER_RADIUS_M, c.z);
+      mesh.rotation.y = c.yaw;
+    }
+    for (const [id, mesh] of corpseMeshes) {
+      if (corpses.some((c) => c.id === id)) continue;
+      scene.remove(mesh);
+      corpseMeshes.delete(id);
+    }
+    for (const sp of spawns) {
+      let g = spawnMeshes.get(sp.id);
+      if (!g) {
+        g = makeSpawnModel(sp.kind);
+        scene.add(g);
+        spawnMeshes.set(sp.id, g);
+      }
+      g.position.set(sp.x, 0, sp.z);
+    }
+    for (const [id, g] of spawnMeshes) {
+      if (spawns.some((sp) => sp.id === id)) continue;
+      scene.remove(g);
+      spawnMeshes.delete(id);
+    }
+    // Corps le plus proche.
+    const body = corpses.reduce<(typeof corpses)[number] | null>(
+      (best, c) =>
+        !best ||
+        Math.hypot(c.x - playerX, c.z - playerZ) < Math.hypot(best.x - playerX, best.z - playerZ)
+          ? c
+          : best,
+      null,
+    );
     corpseMark.style.display = hasCompass && body ? '' : 'none';
     if (!hasCompass || !body) return;
     const target =
@@ -2201,9 +2322,10 @@ export function startGameView(
     if (sinceHurt > 5) playerHealth = Math.min(MAX_HEALTH, playerHealth + 4 * dt);
     if (playerHealth <= 0) {
       playerHealth = MAX_HEALTH;
-      // Le corps reste sur place ; on se réveille au point de réapparition choisi, sinon au premier point.
-      options.state.changes.corpse = { x: playerX, z: playerZ, yaw: facing };
-      const spawn = options.state.changes.respawn;
+      // Le corps reste sur place avec toutes les affaires ; on se réveille au dernier duvet / lit posé (un duvet
+      // est consommé), sinon au premier point.
+      options.state.dieAt(playerX, playerZ, facing);
+      const spawn = options.state.consumeRespawn();
       playerX = spawn?.x ?? DEFAULT_PLAYER_STATE.x;
       playerZ = spawn?.z ?? DEFAULT_PLAYER_STATE.z;
       playerY = 0;
@@ -2379,10 +2501,6 @@ export function startGameView(
 
     if (pressed('inventory')) options.onToggleInventory?.();
     if (pressed('map')) options.onToggleMap?.();
-    if (pressed('setRespawn') && !paused && !uiOpen) {
-      options.state.changes.respawn = { x: playerX, z: playerZ };
-      options.onMessage?.(t('respawn.set'));
-    }
     if (pressed('debug')) {
       debugOn = !debugOn;
       applyDebug();
@@ -2480,7 +2598,9 @@ export function startGameView(
         if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       }
       updateSeason(dt);
-      vehicleTick(dt, pressed('use'));
+      const useKey = pressed('use');
+      vehicleTick(dt, useKey);
+      bodyTick(useKey);
       motion = step(dt);
       stepBody(dt);
       carryByBelt(dt);
@@ -2690,7 +2810,8 @@ export function startGameView(
       for (const mesh of chunks.values()) mesh.dispose();
       chunks.clear();
       renderer.dispose();
-      corpseMesh.geometry.dispose();
+      corpseGeometry.dispose();
+      corpseMaterial.dispose();
       renderer.domElement.remove();
       crosshair.remove();
       compass.remove();
