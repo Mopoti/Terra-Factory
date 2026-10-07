@@ -1,6 +1,7 @@
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { energyKJ, itemById } from '../data/items';
+import { MOULD_CYCLES, recipeById, recipeProduct } from '../data/recipes';
 import {
   hasOutput,
   isChest,
@@ -14,7 +15,7 @@ import {
   isLinear,
   isRouter,
   machineDef,
-  smeltRecipe,
+  isSmith,
   visualHeight,
   type MachineType,
 } from '../data/machines';
@@ -62,8 +63,10 @@ export interface Machine {
   belt: BeltItem[];
   /** Coffre : piles rangées (au plus `slots`). Assembleur : ingrédients en attente. */
   slots: Stack[];
-  /** Assembleur : objet fabriqué (null = aucun choix). */
+  /** Assembleur : objet fabriqué. Fourneau / estampeuse : identifiant de la recette (`recipes.json`). Null = aucun choix. */
   recipe: string | null;
+  /** Estampeuse : cycles restants sur le moule en place (0 = aucun moule engagé). */
+  wear: number;
   /** Fluides contenus (tuyau, pompe, chaudière, turbine). */
   fluid: Record<FluidKind, number>;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
@@ -106,7 +109,21 @@ export const UPPER_LEVEL = 2;
 
 /** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */
 export const recipeOf = (m: Machine): Record<string, number> | null =>
-  m.recipe ? itemById(m.recipe).recipe : null;
+  isSmith(m.type)
+    ? (recipeById(m.recipe)?.in ?? null)
+    : m.recipe
+      ? itemById(m.recipe).recipe
+      : null;
+
+/** Objet fabriqué par la recette choisie (assembleur : l'objet lui-même ; fourneau / estampeuse : le produit de la recette). */
+export const productOf = (m: Machine): { item: string; count: number } | null => {
+  if (!m.recipe) return null;
+  if (isSmith(m.type)) {
+    const r = recipeById(m.recipe);
+    return r ? recipeProduct(r) : null;
+  }
+  return { item: m.recipe, count: 1 };
+};
 
 /** Assembleur : combien d'unités d'un ingrédient il garde en attente au plus. */
 export const ingredientCap = (need: number): number => Math.max(10, need * 4);
@@ -155,6 +172,7 @@ export type MachineStatus =
   | 'noAmmo'
   | 'noStudy'
   | 'noFuel'
+  | 'noMould'
   | 'noOre'
   | 'full'
   | 'blocked'
@@ -287,6 +305,7 @@ export function ports(
   switch (type) {
     case 'drill':
     case 'furnace':
+    case 'stamper':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
       return { ins: [], outs: [out(rot)] };
@@ -331,6 +350,7 @@ export function emptyMachine(
     belt: [],
     slots: [],
     recipe: null,
+    wear: 0,
     fluid: emptyFluid(),
     lift:
       type === 'conveyor'
@@ -417,7 +437,14 @@ export function normalizeMachines(raw: unknown): Machine[] {
         /* recette inconnue */
       }
     }
-    if (Array.isArray(m.slots) && (isChest(machine.type) || isAssembler(machine.type))) {
+    if (typeof m.recipe === 'string' && isSmith(machine.type)) {
+      if (recipeById(m.recipe)?.machine === machine.type) machine.recipe = m.recipe;
+    }
+    machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
+    if (
+      Array.isArray(m.slots) &&
+      (isChest(machine.type) || isAssembler(machine.type) || isSmith(machine.type))
+    ) {
       for (const st of m.slots) {
         const stack = normalizeStack(st);
         if (stack) machine.slots.push({ ...stack, count: Math.min(stack.count, CHEST_STACK) });
@@ -436,6 +463,7 @@ const MACHINE_TYPES: MachineType[] = [
   'drill',
   'drill_electric',
   'furnace',
+  'stamper',
   'conveyor',
   'chest_wood',
   'chest_iron',
@@ -924,9 +952,13 @@ export class Factory {
       if (m.stock && m.stock.count >= max) return 'full';
       if (def.consumesKw && this.powerFactor(m) <= 0) return 'noPower';
     } else {
-      if (!m.input || !smeltRecipe(m.input.item)) return 'idle';
-      const out = smeltRecipe(m.input.item)?.out;
-      if (m.stock && (m.stock.item !== out || m.stock.count >= max)) return 'full';
+      const r = recipeById(m.recipe);
+      const product = productOf(m);
+      if (!r || !product || !this.hasIngredients(m, r.in)) return 'idle';
+      if (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max))
+        return 'full';
+      if (r.mould && m.wear <= 0 && !(m.input?.item === r.mould && m.input.count > 0))
+        return 'noMould';
     }
     if (def.fuel && this.fuelSecondsLeft(m) <= 0) return 'noFuel';
     return 'running';
@@ -951,7 +983,7 @@ export class Factory {
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
         if (isDrill(m.type)) this.tickDrill(m, dt);
-        else this.tickFurnace(m, dt);
+        else this.tickSmith(m, dt);
       }
     }
   }
@@ -1067,25 +1099,40 @@ export class Factory {
     return null;
   }
 
-  private tickFurnace(m: Machine, dt: number): void {
-    const def = machineDef('furnace');
-    const max = def.stockMax ?? 100;
-    const recipe = m.input ? smeltRecipe(m.input.item) : null;
-    if (!m.input || !recipe) {
+  /**
+   * Fourneau et estampeuse : un cycle de la recette choisie. Il faut tous les ingrédients, de la place pour le produit,
+   * du combustible et, pour l'estampeuse, un moule (il s'use de 1 par cycle et se brise à zéro).
+   */
+  private tickSmith(m: Machine, dt: number): void {
+    const max = machineDef(m.type).stockMax ?? 100;
+    const r = recipeById(m.recipe);
+    const product = productOf(m);
+    if (!r || !product || !this.hasIngredients(m, r.in)) {
       m.progress = 0;
       return;
     }
-    if (m.stock && (m.stock.item !== recipe.out || m.stock.count >= max)) return;
+    if (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max)) return;
+    // Moule : on en engage un neuf quand le précédent est brisé.
+    if (r.mould && m.wear <= 0) {
+      if (m.input?.item !== r.mould || m.input.count <= 0) return;
+      m.input.count--;
+      if (m.input.count <= 0) m.input = null;
+      m.wear = MOULD_CYCLES;
+    }
     if (!this.fire(m)) return;
     this.burn(m, dt);
     m.progress += dt;
-    if (m.progress >= recipe.seconds) {
-      m.progress -= recipe.seconds;
-      m.input.count--;
-      if (m.input.count <= 0) m.input = null;
-      if (m.stock) m.stock.count++;
-      else m.stock = { item: recipe.out, count: 1 };
+    if (m.progress < r.seconds) return;
+    m.progress -= r.seconds;
+    for (const [item, n] of Object.entries(r.in)) {
+      const stack = m.slots.find((x) => x.item === item);
+      if (!stack) continue;
+      stack.count -= n;
+      if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
     }
+    if (r.mould) m.wear--;
+    if (m.stock) m.stock.count += product.count;
+    else m.stock = { item: product.item, count: product.count };
   }
 
   // --- Tapis et échanges ---------------------------------------------------------------------------
@@ -1112,11 +1159,7 @@ export class Factory {
     }
     // Combustible : par n'importe quelle face sauf la sortie (le carré clair marque l'entrée conseillée).
     if (target.type === 'generator') return this.fuelRoom(target, item);
-    if (target.type === 'furnace') {
-      if (!smeltRecipe(item)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
-      const max = machineDef('furnace').stockMax ?? 100;
-      return !target.input || (target.input.item === item && target.input.count < max);
-    }
+    if (isSmith(target.type)) return this.smithSlot(target, item, dir) !== null;
     // Chaudière : combustible uniquement par l'arrière (face à la sortie de vapeur).
     if (target.type === 'boiler') return dir === target.rot && this.fuelRoom(target, item);
     if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
@@ -1160,9 +1203,10 @@ export class Factory {
       if (target.rot === (dir + 2) % 4) return 'facing';
       return 'beltFull';
     }
-    if (target.type === 'furnace') {
-      if (smeltRecipe(item)) return target.input?.item !== item ? 'otherOre' : 'inputFull';
-      if (!itemById(item).energyMJ) return 'notUsable';
+    if (isSmith(target.type)) {
+      if (recipeOf(target)?.[item]) return 'ingredientFull';
+      if (recipeById(target.recipe)?.mould === item) return 'mouldFull';
+      if (!itemById(item).energyMJ) return recipeOf(target) ? 'notIngredient' : 'noRecipe';
       return dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
     }
     if (target.type === 'generator' || isDrill(target.type)) {
@@ -1196,9 +1240,16 @@ export class Factory {
       const stack = target.slots.find((x) => x.item === item);
       if (stack) stack.count++;
       else target.slots.push({ item, count: 1 });
-    } else if (target.type === 'furnace' && smeltRecipe(item)) {
-      if (target.input) target.input.count++;
-      else target.input = { item, count: 1 };
+    } else if (isSmith(target.type)) {
+      const where = this.smithSlot(target, item, dir);
+      if (where === 'ingredient') {
+        const stack = target.slots.find((x) => x.item === item);
+        if (stack) stack.count++;
+        else target.slots.push({ item, count: 1 });
+      } else if (where === 'mould') {
+        if (target.input) target.input.count++;
+        else target.input = { item, count: 1 };
+      } else this.addFuel(target, item);
     } else this.addFuel(target, item);
     return true;
   }
@@ -1328,6 +1379,20 @@ export class Factory {
     }
     if (m.stock) m.stock.count++;
     else m.stock = { item: m.recipe, count: 1 };
+  }
+
+  /** Où va cet objet dans un fourneau / une estampeuse : ingrédient de la recette, moule, ou combustible (null = refusé). */
+  private smithSlot(m: Machine, item: string, dir: number): 'ingredient' | 'mould' | 'fuel' | null {
+    if (recipeOf(m)?.[item] && this.ingredientRoom(m, item)) return 'ingredient';
+    const mould = recipeById(m.recipe)?.mould;
+    if (mould === item) {
+      const max = machineDef(m.type).stockMax ?? 100;
+      return !m.input || (m.input.item === item && m.input.count < Math.min(max, 20))
+        ? 'mould'
+        : null;
+    }
+    // Combustible : par n'importe quelle face sauf la sortie.
+    return dir !== (m.rot + 2) % 4 && this.fuelRoom(m, item) ? 'fuel' : null;
   }
 
   private addFuel(target: Machine, item: string): void {

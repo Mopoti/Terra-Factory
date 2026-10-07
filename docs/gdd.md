@@ -264,7 +264,7 @@ Tout objet a un **identifiant texte stable** (ex. `iron_ingot`), un **poids**, u
 | Paquet de science | 0,1 kg  | 0,2 L  | 2 × lingot de fer + 2 × lingot de cuivre |
 | Boussole          | 0,2 kg  | 0,2 L  | 2 × lingot de fer + 1 × lingot de cuivre |
 
-- **Fonte** (fourneau) : minerai de fer → lingot de fer et minerai de cuivre → lingot de cuivre, **3 s** chacun.
+- **Fourneau** (recette choisie dans la fenêtre) : lingots de fer (2 hématite + 1 charbon, 2 s), **fonte** (2 hématite + 3 charbon, 4 s), lingots de cuivre (2 malachite, 3 s) ; moules en fonte (plaque, engrenage, fil). **Estampeuse** (moule exigé, 8 cycles) : plaque de fer, engrenage, fil de cuivre. Détail : `docs/refonte-objets.md` §3.
 - Le **paquet de science** se fabrique à la main ou à l'assembleur ; il alimente les laboratoires (§8).
 
 ### 5.3 Pièces de construction

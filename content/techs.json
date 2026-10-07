@@ -7,7 +7,23 @@
         "iron_ingot": 20
       },
       "requires": [],
-      "unlocks": ["machine_splitter", "machine_merger", "machine_chest_iron", "machine_arm"]
+      "unlocks": [
+        "machine_splitter",
+        "machine_merger",
+        "machine_chest_iron",
+        "machine_arm"
+      ]
+    },
+    {
+      "id": "metallurgy",
+      "cost": {
+        "iron_ingot": 20,
+        "stone": 10
+      },
+      "requires": [],
+      "unlocks": [
+        "machine_stamper"
+      ]
     },
     {
       "id": "textile",
@@ -15,7 +31,16 @@
         "fiber": 30
       },
       "requires": [],
-      "unlocks": ["cloth", "backpack", "hood", "trousers", "boots", "gloves", "sleeping_bag", "bed"]
+      "unlocks": [
+        "cloth",
+        "backpack",
+        "hood",
+        "trousers",
+        "boots",
+        "gloves",
+        "sleeping_bag",
+        "bed"
+      ]
     },
     {
       "id": "electricity",
@@ -24,15 +49,26 @@
         "copper_ingot": 20
       },
       "requires": [],
-      "unlocks": ["machine_pole", "machine_generator", "machine_drill_electric", "machine_lab"]
+      "unlocks": [
+        "machine_pole",
+        "machine_generator",
+        "machine_drill_electric",
+        "machine_lab"
+      ]
     },
     {
       "id": "automation",
       "cost": {
         "science_pack": 20
       },
-      "requires": ["electricity", "logistics"],
-      "unlocks": ["machine_arm_electric", "machine_assembler"]
+      "requires": [
+        "electricity",
+        "logistics"
+      ],
+      "unlocks": [
+        "machine_arm_electric",
+        "machine_assembler"
+      ]
     },
     {
       "id": "steam",
@@ -41,8 +77,15 @@
         "copper_ingot": 15,
         "stone": 10
       },
-      "requires": ["electricity"],
-      "unlocks": ["machine_pipe", "machine_pump", "machine_boiler", "machine_turbine"]
+      "requires": [
+        "electricity"
+      ],
+      "unlocks": [
+        "machine_pipe",
+        "machine_pump",
+        "machine_boiler",
+        "machine_turbine"
+      ]
     },
     {
       "id": "navigation",
@@ -51,7 +94,9 @@
         "copper_ingot": 5
       },
       "requires": [],
-      "unlocks": ["compass"]
+      "unlocks": [
+        "compass"
+      ]
     },
     {
       "id": "defense",
@@ -59,8 +104,12 @@
         "iron_ingot": 30,
         "copper_ingot": 10
       },
-      "requires": ["logistics"],
-      "unlocks": ["machine_turret"]
+      "requires": [
+        "logistics"
+      ],
+      "unlocks": [
+        "machine_turret"
+      ]
     }
   ]
 }

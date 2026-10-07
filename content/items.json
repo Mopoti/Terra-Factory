@@ -161,6 +161,48 @@
       "color": "#e08a4a"
     },
     {
+      "id": "cast_iron_ingot",
+      "weightKg": 0.4,
+      "volumeL": 0.15,
+      "color": "#4a4d52"
+    },
+    {
+      "id": "iron_plate",
+      "weightKg": 0.5,
+      "volumeL": 0.2,
+      "color": "#8d9298"
+    },
+    {
+      "id": "iron_gear",
+      "weightKg": 0.4,
+      "volumeL": 0.2,
+      "color": "#767b81"
+    },
+    {
+      "id": "copper_wire",
+      "weightKg": 0.1,
+      "volumeL": 0.1,
+      "color": "#d98a3d"
+    },
+    {
+      "id": "mould_plate",
+      "weightKg": 1.5,
+      "volumeL": 1,
+      "color": "#3a3c40"
+    },
+    {
+      "id": "mould_gear",
+      "weightKg": 1.5,
+      "volumeL": 1,
+      "color": "#3a3c40"
+    },
+    {
+      "id": "mould_wire",
+      "weightKg": 1.5,
+      "volumeL": 1,
+      "color": "#3a3c40"
+    },
+    {
       "id": "machine_drill",
       "weightKg": 8,
       "volumeL": 15,
@@ -176,6 +218,16 @@
       "volumeL": 12,
       "color": "#7a6a63",
       "recipe": {
+        "stone": 10
+      }
+    },
+    {
+      "id": "machine_stamper",
+      "weightKg": 14,
+      "volumeL": 22,
+      "color": "#7a5a44",
+      "recipe": {
+        "iron_ingot": 12,
         "stone": 10
       }
     },

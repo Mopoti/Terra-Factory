@@ -5,20 +5,20 @@
 
 ## 0. Carte des points
 
-| #   | Point                                                                                              | Statut                                                                                                 |
-| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes) | **validé (Tour 85)**                                                                                   |
-| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                        | **en discussion**                                                                                      |
-| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse, Bessemer, béton, lavage                    | à faire                                                                                                |
-| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                         | **validé et codé (Tour 86)** : on garde le 2×2 ; piliers automatiques à 2,5 m (pièces) ; belts à faire |
-| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »    | à faire                                                                                                |
-| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement    | à faire                                                                                                |
-| 7   | Pétrole, plastique, câbles isolés (T3)                                                             | à faire                                                                                                |
-| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                             | à faire                                                                                                |
-| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                | **validé et codé (Tour 86)**                                                                           |
-| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                 | à faire                                                                                                |
-| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                          | à faire (en dernier)                                                                                   |
-| 12  | Multiplateforme : tactile, manettes, Steam                                                         | à faire (en dernier)                                                                                   |
+| #   | Point                                                                                                            | Statut                                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé (Tour 85)**                                                                                   |
+| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **en discussion**                                                                                      |
+| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **3a validé et codé (Tour 87)**, 3b à faire                                                            |
+| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **validé et codé (Tour 86)** : on garde le 2×2 ; piliers automatiques à 2,5 m (pièces) ; belts à faire |
+| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | à faire                                                                                                |
+| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | à faire                                                                                                |
+| 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | à faire                                                                                                |
+| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | à faire                                                                                                |
+| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                                                           |
+| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | à faire                                                                                                |
+| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | à faire (en dernier)                                                                                   |
+| 12  | Multiplateforme : tactile, manettes, Steam                                                                       | à faire (en dernier)                                                                                   |
 
 Les contradictions des points #4 et #9 ont été tranchées au Tour 86 (voir §4 et §9).
 
@@ -133,3 +133,38 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Objets** : **Duvet d'exploration** (10 tissu ; consommable, 1,5 kg) et **Lit** (8 lingots de fer + 12 tissu ; 14 kg), débloqués provisoirement par _Textile_ (à reclasser dans la refonte). On les **pose au clic** (comme le buggy) à portée de 6 m ; **Maj + F** à moins de 2,5 m les range.
 - **Carte** : ✝ (corps), ⚑ (lit), ⚐ (duvet) ; **boussole** : repère du corps le plus proche.
 - **Sauvegarde** : `corpses` et `spawns` dans les changements ; les anciens `corpse` / `respawn` du Tour 83 n'existent plus (on repart de zéro).
+
+## 3. Point 3 — métallurgie
+
+### 3.1 Décisions du PO (Tour 87)
+
+- **Le fourneau choisit sa recette dans sa fenêtre** (comme l'assembleur) ; il n'en a aucune par défaut.
+- **T1 : cuivre** = 2 malachite → 2 lingots de cuivre. **T2 : zinc** = 2 sphalérite → 2 lingots de zinc ; **laiton** : 1 lingot de cuivre + 1 lingot de zinc → **2 tuyaux de laiton**.
+- **Un moule par produit**, **8 cycles** avant de se briser.
+- **Découpage** : **3a maintenant (T1)**, **3b ensuite (T2)**.
+
+### 3.2 Réalisé (3a)
+
+- **Recettes** dans `content/recipes.json` (ingrédients, produit, durée, moule ; `mouldCycles` = 8) :
+
+| Machine    | Recette                                | Ingrédients                          | Produit             | Durée |
+| ---------- | -------------------------------------- | ------------------------------------ | ------------------- | ----- |
+| Fourneau   | Lingots de fer                         | 2 hématite + 1 charbon               | 2 lingots de fer    | 2 s   |
+| Fourneau   | Lingots de fonte                       | 2 hématite + 3 charbon               | 2 lingots de fonte  | 4 s   |
+| Fourneau   | Lingots de cuivre                      | 2 malachite                          | 2 lingots de cuivre | 3 s   |
+| Fourneau   | Moule de plaque / d'engrenage / de fil | 2 / 3 / 2 lingots de fonte           | 1 moule             | 3 s   |
+| Estampeuse | Plaque de fer                          | 2 lingots de fer + moule de plaque   | 1 plaque            | 2 s   |
+| Estampeuse | Engrenage en fer                       | 2 lingots de fer + moule d'engrenage | 1 engrenage         | 2 s   |
+| Estampeuse | Fil de cuivre                          | 1 lingot de cuivre + moule de fil    | 2 fils              | 1,5 s |
+
+- **Le charbon d'une recette est un réactif** (il va dans les ingrédients) ; le combustible reste une case à part. Quand les ingrédients sont pleins, le charbon qui arrive devient du combustible.
+- **Estampeuse T1** (3×3, 12 lingots de fer + 10 pierre, technologie provisoire _Métallurgie_ : 20 lingots de fer + 10 pierre) : brûle du combustible (60 kW), une case de **moules** ; chaque cycle use le moule de 1, il se brise après 8 cycles et le suivant (en réserve) est engagé ; sans moule : état **« Pas de moule »**. Changer de recette rend les ingrédients, le produit et les moules inutiles.
+- **Nouveaux objets** : lingot de fonte, plaque de fer, engrenage en fer, fil de cuivre, trois moules (non fabricables à la main : seulement au fourneau).
+- **Fenêtre** : recette, ingrédients, moule + usure, combustible, produit ; infobulle de la machine : recette, ingrédients en attente, moule.
+- **Sauvegarde** : `recipe`, `slots`, moule (`input`) et usure (`wear`) ; les anciens fourneaux (sans recette) se rechargent sans recette.
+
+### 3.3 À faire (3b, T2) et branchements
+
+- Zinc, laiton (tuyau de laiton), acier (Bessemer, scories), béton (pierre écrasée + scorie), constructeur T2, station de lavage.
+- **Roue à aubes** (tier 0) : demande le **fil de cuivre**, maintenant disponible ; à coder avec le mécanisme « débloquer en récoltant 10 cuivre ».
+- **Paquets de science T1** : engrenage en fer + fil de cuivre (objets maintenant disponibles) ; la recette actuelle (2 lingots de fer + 2 de cuivre) reste provisoire.

@@ -443,18 +443,21 @@ describe('machines et tapis dans la partie', () => {
   const none = (): boolean => false;
   const noWorld = { oreAt: () => null, mineOre: () => 0 };
   it("poser consomme l'objet, démolir rend la machine et le contenu", () => {
-    const s = new GameState({ inventory: { machine_furnace: 1, coal: 2, iron_ore: 3 } });
+    const s = new GameState({ inventory: { machine_furnace: 1, coal: 3, iron_ore: 3 } });
     const f = new Factory(s.changes.machines, noWorld);
     expect(s.placeMachine(f, 'furnace', 4, 4, 0, none)).toBe('ok');
     expect(s.placeMachine(f, 'furnace', 8, 8, 0, none)).toBe('missing');
     const m = s.changes.machines[0];
-    expect(s.loadMachine(m, 'fuel', 'coal', 5)).toBe(2);
-    expect(s.loadMachine(m, 'input', 'iron_ore', 3)).toBe(3);
-    expect(s.loadMachine(m, 'input', 'coal', 1)).toBe(0); // le charbon ne se cuit pas
+    expect(s.loadMachine(m, 'fuel', 'coal', 2)).toBe(2);
+    expect(s.loadIngredient(m, 'iron_ore', 3)).toBe(0); // pas de recette choisie : rien ne s'accepte
+    expect(s.setRecipe(m, 'iron')).toBe(true);
+    expect(s.loadIngredient(m, 'iron_ore', 3)).toBe(3);
+    expect(s.loadIngredient(m, 'coal', 1)).toBe(1); // le réactif de la recette
+    expect(s.loadIngredient(m, 'stone', 1)).toBe(0);
     expect(s.inventory).toEqual({});
     expect(s.removeMachine(f, m.id, { x: 0, z: 0 })).toBe(true);
-    // la machine + 2 charbon + 3 minerais
-    expect(s.inventory).toEqual({ machine_furnace: 1, coal: 2, iron_ore: 3 });
+    // la machine + 3 charbon + 3 minerais
+    expect(s.inventory).toEqual({ machine_furnace: 1, coal: 3, iron_ore: 3 });
     expect(s.changes.machines).toHaveLength(0);
   });
   it('on ne pose pas deux machines au même endroit ; reprendre le stock', () => {

@@ -624,6 +624,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   drill: 1.3,
   drill_electric: 1.3,
   furnace: 1.0,
+  stamper: 1.0,
   chest_wood: 0.6,
   chest_iron: 0.6,
   generator: 1.1,
@@ -842,6 +843,27 @@ function addMachineBody(
     mb.cone(x - 0.18, 0.65, z - 0.1, 0.17, 0.3, 8, hexToRgb('#cfe9ef'));
     mb.box(x + 0.2, 0.65, z + 0.15, 0.08, 0.28, 0.08, hexToRgb('#4fc3a1'), true);
     mb.box(x + 0.2, 0.65, z - 0.2, 0.18, 0.12, 0.14, hexToRgb('#2f3a40'), true);
+    return;
+  }
+  if (type === 'stamper') {
+    // Estampeuse : bâti de fonte, deux montants et une presse (piston) au-dessus de l'enclume ; cheminée de la chauffe.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.75), true);
+    mb.box(x, 0.3, z, sx - 0.2, 0.18, sz - 0.2, shade(color, 1.1), true); // enclume
+    for (const k of [-1, 1]) {
+      mb.box(
+        x + (fx !== 0 ? 0 : k * (sx / 2 - 0.12)),
+        0.3,
+        z + (fz !== 0 ? 0 : k * (sz / 2 - 0.12)),
+        0.12,
+        0.6,
+        0.12,
+        shade(color, 0.9),
+        true,
+      );
+    }
+    mb.box(x, 0.8, z, sx - 0.12, 0.14, sz - 0.12, shade(color, 1.25), true); // traverse
+    mb.box(x, 0.5, z, 0.18, 0.3, 0.18, hexToRgb('#3d3a38'), true); // piston
+    mb.box(x - fx * 0.35, 0.9, z - fz * 0.35, 0.14, 0.4, 0.14, hexToRgb('#3d3a38'), true); // cheminée
     return;
   }
   if (isAssembler(type)) {

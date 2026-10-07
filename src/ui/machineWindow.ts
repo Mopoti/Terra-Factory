@@ -1,6 +1,7 @@
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
-import { isAssembler, isChest, isDrill, machineDef, smeltRecipe } from '../core/data/machines';
+import { isAssembler, isChest, isDrill, isSmith, machineDef } from '../core/data/machines';
+import { MOULD_CYCLES, recipeById, recipesFor } from '../core/data/recipes';
 import {
   footprint,
   ingredientCap,
@@ -97,7 +98,7 @@ export function mountMachineWindow(
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
-    (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item)) ||
+    (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
     (slot === 'input' && m.type === 'lab' && item === 'science_pack') ||
     (slot === 'input' && m.type === 'turret' && item === 'magazine');
 
@@ -219,7 +220,8 @@ export function mountMachineWindow(
     const max = machineDef(m.type).stockMax ?? 100;
     let moved = 0;
     if (isChest(m.type)) moved = state.putInChest(m, item, count);
-    else if (m.type === 'assembler') moved = state.loadIngredient(m, item, count);
+    else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
+      moved = state.loadIngredient(m, item, count);
     else {
       for (const slot of ['input', 'fuel'] as const) {
         if (accepts(m, slot, item)) {
@@ -404,9 +406,16 @@ export function mountMachineWindow(
     row.append(el('span', 'mach-label', t('machine.recipe')));
     const select = el('select', 'mach-select');
     select.append(new Option(t('machine.recipeNone'), ''));
-    for (const def of ITEMS) {
-      if (def.recipe)
-        select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
+    if (isSmith(m.type)) {
+      for (const r of recipesFor(m.type))
+        select.append(
+          new Option(t(`recipe.${r.id}` as TranslationKey), r.id, false, r.id === m.recipe),
+        );
+    } else {
+      for (const def of ITEMS) {
+        if (def.recipe)
+          select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
+      }
     }
     select.value = m.recipe ?? '';
     select.addEventListener('change', () => {
@@ -547,10 +556,25 @@ export function mountMachineWindow(
       rows.append(fuelInfo);
     }
     if (isAssembler(m.type)) rows.append(...assemblerRows(m));
-    if (m.type === 'furnace') rows.append(machineSlot(m, 'input', t('machine.input'), m.input));
+    if (isSmith(m.type)) {
+      rows.append(...assemblerRows(m));
+      const mould = recipeById(m.recipe)?.mould;
+      if (mould) {
+        rows.append(
+          machineSlot(m, 'input', t('machine.mould', { item: itemName(mould) }), m.input),
+        );
+        rows.append(
+          el(
+            'div',
+            'mach-info',
+            t('machine.mouldWear', { n: String(m.wear), max: String(MOULD_CYCLES) }),
+          ),
+        );
+      }
+    }
     if (m.type === 'lab') rows.append(machineSlot(m, 'input', t('machine.packs'), m.input));
     if (m.type === 'turret') rows.append(machineSlot(m, 'input', t('machine.magazines'), m.input));
-    if (isDrill(m.type) || m.type === 'furnace' || isAssembler(m.type)) {
+    if (isDrill(m.type) || isSmith(m.type) || isAssembler(m.type)) {
       rows.append(
         machineSlot(
           m,
@@ -558,7 +582,7 @@ export function mountMachineWindow(
           t(
             isDrill(m.type)
               ? 'machine.stock'
-              : isAssembler(m.type)
+              : isAssembler(m.type) || isSmith(m.type)
                 ? 'machine.product'
                 : 'machine.output',
           ),

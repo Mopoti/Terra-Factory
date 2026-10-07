@@ -4,13 +4,15 @@ import {
   chestRoom,
   emptyMachine,
   ingredientCap,
+  recipeOf,
   type Cell,
   type Factory,
   type Machine,
   type Stack,
 } from '../factory/factory';
 import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
-import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
+import { isSmith, machineDef, type MachineType } from '../data/machines';
+import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { pillarsFor } from '../build/support';
 import { detectRooms, type Room } from '../build/rooms';
@@ -871,8 +873,11 @@ export class GameState {
 
   /** Assembleur : choisit l'objet à fabriquer ; les ingrédients et le produit en cours reviennent au sac. */
   setRecipe(m: Machine, item: string | null): boolean {
-    if (m.type !== 'assembler') return false;
-    if (item !== null && !itemById(item).recipe) return false;
+    if (m.type !== 'assembler' && !isSmith(m.type)) return false;
+    if (item !== null) {
+      if (isSmith(m.type) ? recipeById(item)?.machine !== m.type : !itemById(item).recipe)
+        return false;
+    }
     const at = { x: m.gx * CELL_SIZE_M, z: m.gz * CELL_SIZE_M };
     for (const stack of [...m.slots, m.stock])
       if (stack) this.giveBack(stack.item, stack.count, at);
@@ -880,6 +885,12 @@ export class GameState {
     m.stock = null;
     m.progress = 0;
     m.recipe = item;
+    // Changer de recette rend aussi le moule en réserve (celui qui est engagé se perd).
+    if (isSmith(m.type) && m.input && m.input.item !== recipeById(item)?.mould) {
+      this.giveBack(m.input.item, m.input.count, at);
+      m.input = null;
+    }
+    m.wear = 0;
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return true;
@@ -887,8 +898,8 @@ export class GameState {
 
   /** Assembleur : met des ingrédients du sac dans la machine (seulement ceux de la recette). Renvoie la quantité. */
   loadIngredient(m: Machine, item: string, count: number): number {
-    const need = m.recipe ? itemById(m.recipe).recipe?.[item] : undefined;
-    if (m.type !== 'assembler' || !need) return 0;
+    const need = recipeOf(m)?.[item];
+    if ((m.type !== 'assembler' && !isSmith(m.type)) || !need) return 0;
     const stack = m.slots.find((x) => x.item === item);
     const room = ingredientCap(need) - (stack?.count ?? 0);
     const moved = Math.min(count, this.inventory[item] ?? 0, room);
@@ -949,7 +960,7 @@ export class GameState {
       return 0;
     if (
       slot === 'input' &&
-      !(m.type === 'furnace' && smeltRecipe(item)) &&
+      !(isSmith(m.type) && !!item && recipeById(m.recipe)?.mould === item) &&
       !(m.type === 'lab' && item === SCIENCE_PACK) &&
       !(m.type === 'turret' && item === 'magazine')
     )

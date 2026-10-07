@@ -4,6 +4,7 @@ export type MachineType =
   | 'drill'
   | 'drill_electric'
   | 'furnace'
+  | 'stamper'
   | 'conveyor'
   | 'chest_wood'
   | 'chest_iron'
@@ -69,18 +70,15 @@ export interface MachineDef {
   capacity?: number;
 }
 
-export interface SmeltRecipe {
-  in: string;
-  out: string;
-  seconds: number;
-}
-
 export const isDrill = (type: MachineType): boolean =>
   type === 'drill' || type === 'drill_electric';
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean =>
-  isDrill(type) || type === 'furnace' || type === 'assembler';
+  isDrill(type) || isSmith(type) || type === 'assembler';
+
+/** Fourneau ou estampeuse : machine à combustible dont la recette (de `recipes.json`) se choisit dans la fenêtre. */
+export const isSmith = (type: MachineType): boolean => type === 'furnace' || type === 'stamper';
 
 /** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
 export const isAssembler = (type: MachineType): boolean => type === 'assembler';
@@ -132,7 +130,6 @@ export const isChest = (type: MachineType): boolean =>
   type === 'chest_wood' || type === 'chest_iron';
 
 export const MACHINES: MachineDef[] = raw.machines as MachineDef[];
-export const SMELTING: SmeltRecipe[] = raw.smelting;
 
 export function machineDef(type: MachineType): MachineDef {
   const def = MACHINES.find((m) => m.id === type);
@@ -143,6 +140,3 @@ export function machineDef(type: MachineType): MachineDef {
 /** Quelle machine correspond à cet objet du sac, s'il en est une. */
 export const machineForItem = (item: string | null): MachineDef | null =>
   MACHINES.find((m) => m.item === item) ?? null;
-
-export const smeltRecipe = (input: string): SmeltRecipe | null =>
-  SMELTING.find((r) => r.in === input) ?? null;

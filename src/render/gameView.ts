@@ -31,6 +31,7 @@ import {
   type ViewId,
 } from '../core/save/saveIndex';
 import type { GameState } from '../core/game/state';
+import { MOULD_CYCLES, recipeById } from '../core/data/recipes';
 import { applyChanges, NEST_HP } from '../core/game/worldChanges';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
@@ -64,6 +65,7 @@ import {
   isFluid,
   isLinear,
   isDrill,
+  isSmith,
   isLab,
   isTurret,
   TURRET_DAMAGE,
@@ -1109,12 +1111,27 @@ export function startGameView(
         rows.push(`<div class="sub">${t(`item.${item}` as TranslationKey)} : ${n}</div>`);
       }
       rows.push(`<div>${t('factory.stock', { v: stackText(m.stock, def.stockMax) })}</div>`);
-    } else if (m.type === 'furnace') {
+    } else if (isSmith(m.type)) {
+      const r = recipeById(m.recipe);
       rows.push(
-        `<div>${t('factory.production', { rate: t('factory.rateFurnace', { s: '3' }) })}</div>`,
+        `<div>${t('machine.recipe')} : ${r ? t(`recipe.${r.id}` as TranslationKey) : t('machine.recipeNone')}</div>`,
       );
-      rows.push(`<div>${t('factory.input', { v: stackText(m.input, def.stockMax) })}</div>`);
+      if (r) {
+        rows.push(
+          `<div class="sub">${Object.entries(r.in)
+            .map(
+              ([item, n]) =>
+                `${m.slots.find((x) => x.item === item)?.count ?? 0} / ${n} × ${t(`item.${item}` as TranslationKey)}`,
+            )
+            .join(' · ')} · ${r.seconds} s</div>`,
+        );
+        if (r.mould)
+          rows.push(
+            `<div class="sub">${t('machine.mould', { item: t(`item.${r.mould}` as TranslationKey) })} : ${m.input?.count ?? 0} · ${t('machine.mouldWear', { n: String(m.wear), max: String(MOULD_CYCLES) })}</div>`,
+          );
+      }
       rows.push(`<div>${t('factory.output', { v: stackText(m.stock, def.stockMax) })}</div>`);
+      if (status === 'noMould') rows.push(`<div class="sub">${t('factory.hint.noMould')}</div>`);
     } else if (isChest(m.type)) {
       rows.push(
         `<div>${t('factory.chest', { n: String(m.slots.length), max: String(def.slots ?? 0) })}</div>`,

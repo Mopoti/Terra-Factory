@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MOULD_CYCLES } from '../data/recipes';
 import {
   Factory,
   chestPut,
@@ -107,9 +108,11 @@ describe('tapis et fourneau', () => {
     ];
     const furnace = emptyMachine(4, 'furnace', 1, 5, 0); // emprise (1..2, 5..6), reçoit le tapis (1,4)
     furnace.fuel = { item: 'coal', count: 2 };
+    furnace.recipe = 'iron';
+    furnace.slots.push({ item: 'coal', count: 10 }); // le réactif de la recette
     const f = new Factory([d, ...belts, furnace], world);
     run(f, 12);
-    expect(furnace.input !== null || furnace.stock !== null).toBe(true);
+    expect(furnace.slots.some((s) => s.item === 'iron_ore') || furnace.stock !== null).toBe(true);
     run(f, 20);
     expect(furnace.stock?.item).toBe('iron_ingot');
     expect(furnace.stock?.count).toBeGreaterThanOrEqual(3);
@@ -139,18 +142,19 @@ describe('tapis et fourneau', () => {
     const { world } = makeWorld();
     const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
     f1.fuel = { item: 'wood', count: 3 };
-    f1.input = { item: 'copper_ore', count: 2 };
+    f1.recipe = 'copper';
+    f1.slots.push({ item: 'copper_ore', count: 2 });
     const f = new Factory([f1], world);
     run(f, 6.5);
     expect(f1.stock).toEqual({ item: 'copper_ingot', count: 2 });
-    expect(f1.input).toBeNull();
+    expect(f1.slots).toHaveLength(0);
     expect(f.status(f1)).toBe('idle');
     const coal = emptyMachine(2, 'furnace', 5, 5, 0);
     const belt = emptyMachine(3, 'conveyor', 5, 4, 0);
     belt.belt.push({ item: 'stone', pos: 1 });
     const g = new Factory([coal, belt], world);
     run(g, 2);
-    expect(coal.input).toBeNull(); // la pierre ne se cuit pas et ne brûle pas : elle reste sur le tapis
+    expect(coal.slots).toHaveLength(0); // la pierre ne se cuit pas et ne brûle pas : elle reste sur le tapis
     expect(belt.belt).toHaveLength(1);
   });
 });
@@ -388,9 +392,10 @@ describe('bras robotique', () => {
     const arm = emptyMachine(2, 'arm', 10, 10, 0);
     arm.fuel = { item: 'coal', count: 3 };
     const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    furnace.recipe = 'iron';
     const f = new Factory([src, arm, furnace], makeWorld().world);
     run(f, 4);
-    expect(furnace.input?.count ?? 0).toBeGreaterThanOrEqual(3);
+    expect(furnace.slots.find((s) => s.item === 'iron_ore')?.count ?? 0).toBeGreaterThanOrEqual(3);
     expect(src.slots[0]?.count ?? 0).toBeLessThanOrEqual(2);
   });
 
@@ -409,17 +414,18 @@ describe('bras robotique', () => {
     const src = chestWith(1, 10, 9, 'iron_ore', 5);
     const arm = emptyMachine(2, 'arm', 10, 10, 0);
     const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    furnace.recipe = 'iron';
     const f = new Factory([src, arm, furnace], makeWorld().world);
     run(f, 2);
     expect(f.status(arm)).toBe('noFuel');
-    expect(furnace.input).toBeNull();
+    expect(furnace.slots).toHaveLength(0);
     // un coffre de charbon sur le côté
     const fuelBox = chestWith(4, 11, 10, 'coal', 4);
     const g = new Factory([src, arm, furnace, fuelBox], makeWorld().world);
     run(g, 3);
     expect(fuelBox.slots[0].count).toBeLessThan(4);
     expect(g.fuelSecondsLeft(arm)).toBeGreaterThan(0);
-    expect(furnace.input?.count ?? 0).toBeGreaterThan(0);
+    expect(furnace.slots.find((s) => s.item === 'iron_ore')?.count ?? 0).toBeGreaterThan(0);
   });
 
   it('quand il va manquer de combustible il en garde un de ce qu’il transporte', () => {
@@ -492,10 +498,11 @@ describe('bras et tapis mélangés', () => {
     const arm = emptyMachine(2, 'arm', 10, 10, 0);
     arm.fuel = { item: 'coal', count: 3 };
     const furnace = emptyMachine(3, 'furnace', 10, 11, 0);
+    furnace.recipe = 'iron';
     const f = new Factory([belt, arm, furnace], makeWorld().world);
     expect(f.armDiagnosis(arm)).toBe('ok');
     run(f, 3);
-    expect(furnace.input?.item).toBe('iron_ore');
+    expect(furnace.slots[0]?.item).toBe('iron_ore');
     expect(belt.belt.map((b) => b.item)).toEqual(['stone']);
     expect(f.armDiagnosis(arm)).toBe('refused');
   });
@@ -998,5 +1005,120 @@ describe('tuyaux enterrés (tunnel)', () => {
     f.remove(exit.id);
     run(f, 30);
     expect(far.fluid.water).toBeLessThan(0.5);
+  });
+});
+
+describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => {
+  const stock = (m: Machine, item: string, count: number): void => {
+    m.slots.push({ item, count });
+  };
+
+  it('le fer demande hématite ET charbon : 2 hématite + 1 charbon → 2 lingots en 2 s', () => {
+    const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
+    f1.recipe = 'iron';
+    f1.fuel = { item: 'wood', count: 5 };
+    stock(f1, 'iron_ore', 2);
+    const f = new Factory([f1], makeWorld().world);
+    run(f, 3);
+    expect(f.status(f1)).toBe('idle'); // il manque le charbon
+    expect(f1.stock).toBeNull();
+    stock(f1, 'coal', 1);
+    run(f, 2.5);
+    expect(f1.stock).toEqual({ item: 'iron_ingot', count: 2 });
+    expect(f1.slots).toHaveLength(0);
+  });
+
+  it('la fonte : 2 hématite + 3 charbon → 2 lingots de fonte en 4 s', () => {
+    const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
+    f1.recipe = 'cast_iron';
+    f1.fuel = { item: 'wood', count: 5 };
+    stock(f1, 'iron_ore', 2);
+    stock(f1, 'coal', 3);
+    const f = new Factory([f1], makeWorld().world);
+    run(f, 3.5);
+    expect(f1.stock).toBeNull();
+    run(f, 1);
+    expect(f1.stock).toEqual({ item: 'cast_iron_ingot', count: 2 });
+  });
+
+  it('un fourneau sans recette choisie refuse tout sauf le combustible', () => {
+    const belt = emptyMachine(1, 'conveyor', 5, 4, 0);
+    belt.belt.push({ item: 'iron_ore', pos: 1 });
+    const furnace = emptyMachine(2, 'furnace', 5, 5, 0);
+    const f = new Factory([belt, furnace], makeWorld().world);
+    run(f, 2);
+    expect(furnace.slots).toHaveLength(0);
+    expect(belt.belt).toHaveLength(1);
+  });
+
+  it('le charbon va d’abord dans les ingrédients, puis (si plein) dans le combustible', () => {
+    const furnace = emptyMachine(2, 'furnace', 5, 5, 0);
+    furnace.recipe = 'iron';
+    const feeder = (): Machine => {
+      const b = emptyMachine(1, 'conveyor', 5, 4, 0);
+      b.belt.push({ item: 'coal', pos: 1 });
+      return b;
+    };
+    stock(furnace, 'coal', 9); // 10 = plafond de la recette (max(10, 4 × 1))
+    const b1 = feeder();
+    const f = new Factory([b1, furnace], makeWorld().world);
+    run(f, 1);
+    expect(furnace.slots.find((s) => s.item === 'coal')?.count).toBe(10);
+    const b2 = feeder();
+    const g = new Factory([b2, furnace], makeWorld().world);
+    run(g, 1);
+    expect(furnace.fuel?.item).toBe('coal'); // les ingrédients sont pleins : c'est du combustible
+  });
+
+  it('l’estampeuse exige un moule, qui s’use de 1 par cycle et se brise après 8 cycles', () => {
+    const st = emptyMachine(1, 'stamper', 0, 0, 0);
+    st.recipe = 'iron_plate';
+    st.fuel = { item: 'coal', count: 5 };
+    stock(st, 'iron_ingot', 30);
+    const f = new Factory([st], makeWorld().world);
+    run(f, 4);
+    expect(f.status(st)).toBe('noMould');
+    expect(st.stock).toBeNull();
+    st.input = { item: 'mould_plate', count: 2 };
+    run(f, 2.1);
+    expect(st.stock).toEqual({ item: 'iron_plate', count: 1 });
+    expect(st.wear).toBe(7);
+    expect(st.input?.count).toBe(1); // un moule est engagé, un reste en réserve
+    // 8 cycles au total avec le premier moule : à la fin du 8ᵉ il est brisé, le second est aussitôt engagé
+    run(f, 2 * 7 + 0.2);
+    expect(st.stock?.count).toBe(8);
+    expect(st.wear).toBe(MOULD_CYCLES);
+    expect(st.input).toBeNull(); // plus de moule en réserve : le second est en place
+    run(f, 2);
+    expect(st.stock?.count).toBe(9);
+    expect(st.wear).toBe(MOULD_CYCLES - 1);
+  });
+
+  it('le fil de cuivre : 1 lingot → 2 fils', () => {
+    const st = emptyMachine(1, 'stamper', 0, 0, 0);
+    st.recipe = 'copper_wire';
+    st.fuel = { item: 'coal', count: 5 };
+    st.input = { item: 'mould_wire', count: 1 };
+    stock(st, 'copper_ingot', 4);
+    const f = new Factory([st], makeWorld().world);
+    run(f, 1.6);
+    expect(st.stock).toEqual({ item: 'copper_wire', count: 2 });
+  });
+
+  it('le moule du bon type seulement ; la recette, le moule et l’usure survivent à la sauvegarde', () => {
+    const st = emptyMachine(1, 'stamper', 0, 0, 0);
+    st.recipe = 'iron_gear';
+    const belt = emptyMachine(2, 'conveyor', 0, 0, 0);
+    expect(new Factory([st], makeWorld().world).refusal(st, belt, 'mould_plate', 0)).not.toBeNull();
+    expect(new Factory([st], makeWorld().world).refusal(st, belt, 'mould_gear', 0)).toBeNull();
+    st.wear = 5;
+    st.input = { item: 'mould_gear', count: 2 };
+    const back = normalizeMachines(JSON.parse(JSON.stringify([st])));
+    expect(back[0].recipe).toBe('iron_gear');
+    expect(back[0].wear).toBe(5);
+    expect(back[0].input).toEqual({ item: 'mould_gear', count: 2 });
+    // une recette d'un autre type de machine est ignorée
+    const bad = normalizeMachines([{ ...JSON.parse(JSON.stringify(st)), recipe: 'iron' }]);
+    expect(bad[0].recipe).toBeNull();
   });
 });
