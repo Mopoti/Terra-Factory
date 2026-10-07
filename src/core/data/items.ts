@@ -9,6 +9,8 @@ export interface ItemDef {
   color: string;
   /** Fabrication à la main : objet -> quantité nécessaire pour 1 unité. `null` = ressource brute. */
   recipe: Record<string, number> | null;
+  /** Unités obtenues par fabrication (1 par défaut ; ex. 1 plaque de cuivre → 2 tuyaux). */
+  yield: number;
   /** Combustible : énergie libérée par 1 unité, en mégajoules (absent = n'est pas un combustible). */
   energyMJ: number | null;
   /** Équipement porté : emplacement du corps et bonus de capacité du sac. */
@@ -35,6 +37,7 @@ interface RawItem {
   volumeL: number;
   color: string;
   recipe?: Record<string, number>;
+  yield?: number;
   energyMJ?: number;
   tool?: { speed: number; yield: number };
   equip?: { slot: EquipSlot; bag?: { slots?: number; weightKg?: number; volumeL?: number } };
@@ -46,6 +49,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   volumeMl: Math.round(i.volumeL * 1000),
   color: i.color,
   recipe: i.recipe ?? null,
+  yield: i.yield ?? 1,
   energyMJ: i.energyMJ ?? null,
   tool: i.tool ?? null,
   equip: i.equip

@@ -42,6 +42,19 @@
       "pollutionKind": "ground"
     },
     {
+      "id": "crusher",
+      "w": 3,
+      "d": 3,
+      "item": "machine_crusher",
+      "color": "#6e6a64",
+      "fuel": true,
+      "burnKw": 60,
+      "stockMax": 100,
+      "height": 1.0,
+      "pollution": 0.4,
+      "pollutionKind": "ground"
+    },
+    {
       "id": "conveyor",
       "w": 2,
       "d": 2,
@@ -184,7 +197,7 @@
       "w": 2,
       "d": 2,
       "item": "machine_pipe",
-      "color": "#7d8791",
+      "color": "#c97a3a",
       "fuel": false,
       "fluidCap": 100,
       "height": 0.5

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Factory } from '../factory/factory';
+import { Factory, emptyMachine } from '../factory/factory';
 import { aimBuild, aimExisting, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
@@ -925,5 +925,28 @@ describe('découvertes : la roue à aubes se débloque en fabriquant 10 plaques 
     const back = new GameState(s.snapshot());
     expect(back.isUnlocked('machine_waterwheel')).toBe(true);
     expect(back.changes.produced.copper_plate).toBe(14);
+  });
+});
+
+describe('tuyau de cuivre, recettes verrouillées', () => {
+  it('1 plaque de cuivre donne 2 tuyaux (fabrication à la main)', () => {
+    const s = new GameState({ inventory: { copper_plate: 3 } });
+    s.changes.unlocked.push('steam');
+    expect(s.craft('machine_pipe', 2)).toEqual({ made: 2, stopped: null }); // 1 fabrication = 2 tuyaux
+    expect(s.inventory.machine_pipe).toBe(2);
+    expect(s.inventory.copper_plate).toBe(2);
+    expect(s.craft('machine_pipe', 4).made).toBe(4);
+    expect(s.inventory.machine_pipe).toBe(6);
+    expect(s.craft('machine_pipe', 2).made).toBe(0); // plus de plaques
+  });
+
+  it('le zinc n’est choisissable qu’une fois « Métallurgie T2 » recherchée', () => {
+    const s = new GameState({ inventory: {} });
+    const furnace = emptyMachine(1, 'furnace', 0, 0, 0);
+    expect(s.setRecipe(furnace, 'zinc')).toBe(false);
+    expect(s.setRecipe(furnace, 'iron')).toBe(true);
+    s.changes.unlocked.push('metallurgy_2');
+    expect(s.setRecipe(furnace, 'zinc')).toBe(true);
+    expect(furnace.recipe).toBe('zinc');
   });
 });

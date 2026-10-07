@@ -38,6 +38,28 @@
       "seconds": 3
     },
     {
+      "id": "zinc",
+      "machine": "furnace",
+      "in": {
+        "zinc_ore": 2
+      },
+      "out": {
+        "zinc_ingot": 2
+      },
+      "seconds": 3
+    },
+    {
+      "id": "crushed_stone",
+      "machine": "crusher",
+      "in": {
+        "stone": 1
+      },
+      "out": {
+        "crushed_stone": 1
+      },
+      "seconds": 2
+    },
+    {
       "id": "mould_plate",
       "machine": "furnace",
       "in": {

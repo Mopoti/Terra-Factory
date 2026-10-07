@@ -173,7 +173,13 @@ export function mountInventory(
     const def = itemById(hovered);
     tooltip.replaceChildren(el('strong', undefined, itemName(hovered)));
     if (def.recipe) {
-      tooltip.append(el('div', undefined, t('inv.recipe')));
+      tooltip.append(
+        el(
+          'div',
+          undefined,
+          def.yield > 1 ? `${t('inv.recipe')} (→ ${def.yield})` : t('inv.recipe'),
+        ),
+      );
       for (const [id, n] of Object.entries(def.recipe)) {
         const have = state.inventory[id] ?? 0;
         const line = el('div', have >= n ? 'ok' : 'lack', `${n} × ${itemName(id)} `);

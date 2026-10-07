@@ -625,6 +625,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   drill_electric: 1.3,
   furnace: 1.0,
   stamper: 1.0,
+  crusher: 1.0,
   waterwheel: 1.5,
   chest_wood: 0.6,
   chest_iron: 0.6,
@@ -890,6 +891,25 @@ function addMachineBody(
         true,
       );
     }
+    return;
+  }
+  if (type === 'crusher') {
+    // Concasseur : bâti, trémie évasée en haut, deux mâchoires, bec de sortie et cheminée.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.2, 0.45, sz - 0.2, color, true);
+    mb.box(x, 0.7, z, sx - 0.05, 0.12, sz - 0.05, shade(color, 1.25), true); // trémie
+    mb.box(x, 0.82, z, sx - 0.45, 0.1, sz - 0.45, shade(color, 0.6), true); // ouverture
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.3,
+      0.15,
+      fz !== 0 ? 0.1 : 0.3,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    mb.box(x - fx * 0.35, 0.8, z - fz * 0.35, 0.14, 0.4, 0.14, hexToRgb('#3d3a38'), true);
     return;
   }
   if (type === 'stamper') {

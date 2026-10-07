@@ -16,7 +16,15 @@
         "stone": 10
       },
       "requires": [],
-      "unlocks": ["machine_stamper"]
+      "unlocks": ["machine_stamper", "machine_crusher"]
+    },
+    {
+      "id": "metallurgy_2",
+      "cost": {
+        "science_pack": 30
+      },
+      "requires": ["metallurgy", "electricity"],
+      "unlocks": ["zinc_ingot"]
     },
     {
       "id": "textile",

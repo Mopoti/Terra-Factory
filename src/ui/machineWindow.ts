@@ -407,13 +407,15 @@ export function mountMachineWindow(
     const select = el('select', 'mach-select');
     select.append(new Option(t('machine.recipeNone'), ''));
     if (isSmith(m.type)) {
-      for (const r of recipesFor(m.type))
+      for (const r of recipesFor(m.type).filter(
+        (x) => state.isUnlocked(Object.keys(x.out)[0]) || x.id === m.recipe,
+      ))
         select.append(
           new Option(t(`recipe.${r.id}` as TranslationKey), r.id, false, r.id === m.recipe),
         );
     } else {
       for (const def of ITEMS) {
-        if (def.recipe)
+        if (def.recipe && state.isUnlocked(def.id))
           select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
       }
     }

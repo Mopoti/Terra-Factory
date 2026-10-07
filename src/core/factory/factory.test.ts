@@ -1161,3 +1161,27 @@ describe('roue à aubes (tier 0)', () => {
     expect(g.satisfaction).toBeCloseTo(1 / 3, 5);
   });
 });
+
+describe('métallurgie 3b-1 : zinc, concasseur, tuyau de cuivre', () => {
+  it('le concasseur broie 1 pierre en 1 pierre écrasée (recette d’office), pierre amenée par tapis', () => {
+    const crusher = emptyMachine(2, 'crusher', 5, 5, 0);
+    expect(crusher.recipe).toBe('crushed_stone');
+    crusher.fuel = { item: 'coal', count: 3 };
+    const belt = emptyMachine(1, 'conveyor', 5, 4, 0);
+    belt.belt.push({ item: 'stone', pos: 1 });
+    const f = new Factory([belt, crusher], makeWorld().world);
+    run(f, 3.2);
+    expect(crusher.stock).toEqual({ item: 'crushed_stone', count: 1 });
+    expect(f.takeProduced()).toEqual([['crushed_stone', 1]]);
+  });
+
+  it('le zinc : 2 sphalérite → 2 lingots de zinc en 3 s, sans charbon', () => {
+    const furnace = emptyMachine(1, 'furnace', 0, 0, 0);
+    furnace.recipe = 'zinc';
+    furnace.fuel = { item: 'wood', count: 5 };
+    furnace.slots.push({ item: 'zinc_ore', count: 2 });
+    const f = new Factory([furnace], makeWorld().world);
+    run(f, 3.2);
+    expect(furnace.stock).toEqual({ item: 'zinc_ingot', count: 2 });
+  });
+});

@@ -161,6 +161,18 @@
       "color": "#e08a4a"
     },
     {
+      "id": "zinc_ingot",
+      "weightKg": 0.4,
+      "volumeL": 0.15,
+      "color": "#9fb2c6"
+    },
+    {
+      "id": "crushed_stone",
+      "weightKg": 1.1,
+      "volumeL": 0.6,
+      "color": "#a89f94"
+    },
+    {
       "id": "cast_iron_ingot",
       "weightKg": 0.4,
       "volumeL": 0.15,
@@ -235,6 +247,16 @@
       "recipe": {
         "iron_ingot": 12,
         "stone": 10
+      }
+    },
+    {
+      "id": "machine_crusher",
+      "weightKg": 12,
+      "volumeL": 20,
+      "color": "#6e6a64",
+      "recipe": {
+        "iron_ingot": 8,
+        "stone": 12
       }
     },
     {
@@ -488,10 +510,11 @@
       "id": "machine_pipe",
       "weightKg": 0.8,
       "volumeL": 1,
-      "color": "#7d8791",
+      "color": "#c97a3a",
       "recipe": {
-        "iron_ingot": 2
-      }
+        "copper_plate": 1
+      },
+      "yield": 2
     },
     {
       "id": "machine_pump",

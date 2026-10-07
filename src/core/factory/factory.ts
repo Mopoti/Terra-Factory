@@ -122,7 +122,7 @@ export const productOf = (m: Machine): { item: string; count: number } | null =>
     const r = recipeById(m.recipe);
     return r ? recipeProduct(r) : null;
   }
-  return { item: m.recipe, count: 1 };
+  return { item: m.recipe, count: itemById(m.recipe).yield };
 };
 
 /** Assembleur : combien d'unités d'un ingrédient il garde en attente au plus. */
@@ -306,6 +306,7 @@ export function ports(
     case 'drill':
     case 'furnace':
     case 'stamper':
+    case 'crusher':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
       return { ins: [], outs: [out(rot)] };
@@ -349,7 +350,8 @@ export function emptyMachine(
     progress: 0,
     belt: [],
     slots: [],
-    recipe: null,
+    // Le concasseur n'a qu'une recette : elle est choisie d'office.
+    recipe: type === 'crusher' ? 'crushed_stone' : null,
     wear: 0,
     fluid: emptyFluid(),
     lift:
@@ -464,6 +466,7 @@ const MACHINE_TYPES: MachineType[] = [
   'drill_electric',
   'furnace',
   'stamper',
+  'crusher',
   'conveyor',
   'chest_wood',
   'chest_iron',
@@ -1386,7 +1389,9 @@ export class Factory {
     const need = recipeOf(m);
     if (!need || !m.recipe || !this.hasIngredients(m, need)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
-    return !m.stock || (m.stock.item === m.recipe && m.stock.count < max);
+    return (
+      !m.stock || (m.stock.item === m.recipe && m.stock.count + itemById(m.recipe).yield <= max)
+    );
   }
 
   private tickAssembler(m: Machine, dt: number): void {
@@ -1407,9 +1412,10 @@ export class Factory {
       stack.count -= n;
       if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
     }
-    if (m.stock) m.stock.count++;
-    else m.stock = { item: m.recipe, count: 1 };
-    this.made.set(m.recipe, (this.made.get(m.recipe) ?? 0) + 1);
+    const per = itemById(m.recipe).yield;
+    if (m.stock) m.stock.count += per;
+    else m.stock = { item: m.recipe, count: per };
+    this.made.set(m.recipe, (this.made.get(m.recipe) ?? 0) + per);
   }
 
   /** Où va cet objet dans un fourneau / une estampeuse : ingrédient de la recette, moule, ou combustible (null = refusé). */

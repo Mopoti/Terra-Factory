@@ -1,7 +1,7 @@
 import raw from '../../../content/recipes.json';
 
 /** Machines à recette choisie dans leur fenêtre (comme l'assembleur, mais avec des recettes propres). */
-export type SmithType = 'furnace' | 'stamper';
+export type SmithType = 'furnace' | 'stamper' | 'crusher';
 
 export interface Recipe {
   id: string;

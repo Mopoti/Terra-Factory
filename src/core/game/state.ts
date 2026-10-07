@@ -673,12 +673,13 @@ export class GameState {
       }
       let after = this.inventory;
       for (const [id, n] of Object.entries(recipe)) after = remove(after, id, n).inventory;
-      if (maxAddable(after, item, this.limits) < 1) {
+      const per = itemById(item).yield;
+      if (maxAddable(after, item, this.limits) < per) {
         stopped = 'bag';
         break;
       }
-      this.inventory = add(after, item, 1);
-      made++;
+      this.inventory = add(after, item, per);
+      made += per;
     }
     if (made > 0) {
       this.changes.produced[item] = (this.changes.produced[item] ?? 0) + made;
@@ -915,6 +916,9 @@ export class GameState {
     if (item !== null) {
       if (isSmith(m.type) ? recipeById(item)?.machine !== m.type : !itemById(item).recipe)
         return false;
+      // Une recette dont le produit n'est pas encore débloqué (technologie) reste fermée.
+      const product = isSmith(m.type) ? Object.keys(recipeById(item)?.out ?? {})[0] : item;
+      if (product && !this.isUnlocked(product)) return false;
     }
     const at = { x: m.gx * CELL_SIZE_M, z: m.gz * CELL_SIZE_M };
     for (const stack of [...m.slots, m.stock])
