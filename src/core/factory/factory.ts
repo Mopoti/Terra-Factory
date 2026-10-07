@@ -96,9 +96,11 @@ export const LIFT_COUNT = LIFTS.length;
 export const LEVEL_HEIGHTS = [0, 1, 2] as const;
 export const levelY = (level: number): number => LEVEL_HEIGHTS[level] ?? 0;
 /** Niveau d'entrée d'une pièce : un tapis suit sa forme ; une machine est au sol (0) ou à l'étage sur une dalle (2). */
+// Un tuyau n'a que des formes de tunnel (4 entrée, 5 sortie) : toujours au niveau du sol.
 export const liftStart = (m: Machine): number =>
-  m.type === 'conveyor' ? LIFTS[m.lift].from : m.lift;
-export const liftEnd = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].to : m.lift);
+  m.type === 'conveyor' ? LIFTS[m.lift].from : m.type === 'pipe' ? 0 : m.lift;
+export const liftEnd = (m: Machine): number =>
+  m.type === 'conveyor' ? LIFTS[m.lift].to : m.type === 'pipe' ? 0 : m.lift;
 /** Étage (dalle à 2 m) : niveau des machines posées en hauteur. */
 export const UPPER_LEVEL = 2;
 
@@ -335,9 +337,13 @@ export function emptyMachine(
         ? Number.isInteger(lift) && lift > 0 && lift < LIFT_COUNT
           ? lift
           : 0
-        : !isLinear(type) && lift === UPPER_LEVEL
-          ? UPPER_LEVEL
-          : 0,
+        : type === 'pipe'
+          ? lift === 4 || lift === 5
+            ? lift
+            : 0
+          : !isLinear(type) && lift === UPPER_LEVEL
+            ? UPPER_LEVEL
+            : 0,
   };
 }
 
@@ -515,6 +521,18 @@ export class Factory {
     }
     this.linkTunnels();
     this.buildGrids();
+    this.tunnelLinks = [];
+    for (const m of this.machines) {
+      const out = m.type === 'pipe' && m.lift === 4 ? this.tunnelExit.get(m.id) : undefined;
+      if (!out) continue;
+      // Tuyau enterré : l'eau passe de l'entrée à la sortie comme dans un tuyau continu.
+      this.tunnelLinks.push({
+        a: m,
+        pa: { side: m.rot, mode: 'both', fluid: 'any' },
+        b: out,
+        pb: { side: (out.rot + 2) % 4, mode: 'both', fluid: 'any' },
+      });
+    }
     this.links = fluidLinks(
       this.machines.filter((m) => isFluid(m.type)),
       (gx, gz) => this.machineAt(gx, gz),
@@ -529,17 +547,21 @@ export class Factory {
 
   /** Entrée de tunnel (id) → sa sortie : la première sortie alignée devant elle. */
   private readonly tunnelExit = new Map<number, Machine>();
+  /** Raccords des tuyaux enterrés (entrée ↔ sortie), en plus des raccords voisins. */
+  private tunnelLinks: FluidLink[] = [];
 
   private linkTunnels(): void {
     this.tunnelExit.clear();
     const anchors = new Map<string, Machine>();
+    // Tapis et tuyaux ont chacun leurs tunnels : une entrée ne trouve qu'une sortie de son espèce.
     for (const m of this.machines)
-      if (m.type === 'conveyor' && m.lift === 5) anchors.set(`${m.gx},${m.gz}`, m);
+      if ((m.type === 'conveyor' || m.type === 'pipe') && m.lift === 5)
+        anchors.set(`${m.type}:${m.gx},${m.gz}`, m);
     for (const m of this.machines) {
-      if (m.type !== 'conveyor' || m.lift !== 4) continue;
+      if ((m.type !== 'conveyor' && m.type !== 'pipe') || m.lift !== 4) continue;
       const [dx, dz] = RISE_DIR[m.rot];
       for (let k = 1; k <= TUNNEL_MAX_TILES; k++) {
-        const out = anchors.get(`${m.gx + dx * 2 * k},${m.gz + dz * 2 * k}`);
+        const out = anchors.get(`${m.type}:${m.gx + dx * 2 * k},${m.gz + dz * 2 * k}`);
         if (out && out.rot === m.rot) {
           this.tunnelExit.set(m.id, out);
           break;
@@ -761,6 +783,7 @@ export class Factory {
     if (isLinear(type)) {
       const layers = type === 'conveyor' ? (LIFTS[lift]?.layers ?? [0]) : [0];
       if (type === 'conveyor' && !LIFTS[lift]) return false;
+      if (type === 'pipe' && lift !== 0 && lift !== 4 && lift !== 5) return false;
       // Aucune place déjà prise dans les couches qu'il occupe (un tapis peut passer sur ou sous un autre).
       const taken = (c: Cell): boolean =>
         layers.some((l) => this.occupied.get(l)?.has(`${c.gx},${c.gz}`));
@@ -913,6 +936,7 @@ export class Factory {
 
   tick(dt: number): void {
     stepFluids(this.links, dt);
+    stepFluids(this.tunnelLinks, dt);
     this.updateGrids();
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);

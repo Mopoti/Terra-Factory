@@ -960,3 +960,42 @@ describe('emprise de la turbine', () => {
     expect(dims('turbine', 1)).toEqual({ w: 4, d: 3 });
   });
 });
+
+describe('tuyaux enterrés (tunnel)', () => {
+  const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 });
+  const pipeLine = (): { f: Factory; entrance: Machine; exit: Machine; far: Machine } => {
+    // Pompe → tuyau → entrée (z = 4) … 3 tuiles sous terre … sortie (z = 10) → tuyau, le long de +z.
+    const pump = emptyMachine(1, 'pump', 10, -1, 0);
+    const p1 = emptyMachine(2, 'pipe', 10, 1, 0);
+    const entrance = emptyMachine(3, 'pipe', 10, 3, 0, 4);
+    const exit = emptyMachine(4, 'pipe', 10, 9, 0, 5);
+    const far = emptyMachine(5, 'pipe', 10, 11, 0);
+    return { f: new Factory([pump, p1, entrance, exit, far], world()), entrance, exit, far };
+  };
+
+  it('seuls les tuyaux ont des formes de tunnel (entrée 4, sortie 5)', () => {
+    expect(emptyMachine(1, 'pipe', 0, 0, 0, 4).lift).toBe(4);
+    expect(emptyMachine(1, 'pipe', 0, 0, 0, 5).lift).toBe(5);
+    expect(emptyMachine(1, 'pipe', 0, 0, 0, 1).lift).toBe(0);
+    const f = new Factory([], makeWorld().world);
+    expect(f.canPlace('pipe', 0, 0, 0, () => false, 4)).toBe(true);
+    expect(f.canPlace('pipe', 0, 0, 0, () => false, 3)).toBe(false);
+  });
+
+  it('l’eau traverse le tunnel et on peut construire au-dessus du passage', () => {
+    const { f, entrance, exit, far } = pipeLine();
+    run(f, 30);
+    expect(entrance.fluid.water).toBeGreaterThan(5);
+    expect(exit.fluid.water).toBeGreaterThan(5);
+    expect(far.fluid.water).toBeGreaterThan(5);
+    // Une machine posée sur le trajet souterrain (z = 5..8) n'est pas gênée.
+    expect(f.canPlace('chest_wood', 10, 6, 0, () => false)).toBe(true);
+  });
+
+  it('sans la sortie, rien ne passe de l’autre côté', () => {
+    const { f, exit, far } = pipeLine();
+    f.remove(exit.id);
+    run(f, 30);
+    expect(far.fluid.water).toBeLessThan(0.5);
+  });
+});

@@ -422,7 +422,13 @@ export function startGameView(
         !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL
           ? ` · ${t('factory.upperFloor')}`
           : '';
-      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}${floor}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(isLinear(def.id) ? 'factory.helpConveyor' : 'factory.helpMachine')}</small>`;
+      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}${floor}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(
+        def.id === 'pipe'
+          ? 'factory.helpPipe'
+          : isLinear(def.id)
+            ? 'factory.helpConveyor'
+            : 'factory.helpMachine',
+      )}</small>`;
       return;
     }
     const rooms = options.state.rooms().length;
@@ -948,7 +954,7 @@ export function startGameView(
     const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, levelY(aimLevel)) : null;
     const snap = rampSnap(cAir ?? c);
     // Le patron suit l'inclinaison choisie, au niveau du tapis visé (sol si rien n'est visé).
-    baseLift = tiltLift(snap?.level ?? 0, buildTilt);
+    baseLift = def.id === 'pipe' ? 0 : tiltLift(snap?.level ?? 0, buildTilt);
     if (baseLift !== hudLift) {
       hudLift = baseLift;
       renderBuildHud();
@@ -2378,12 +2384,14 @@ export function startGameView(
           const down = pressed('levelDown');
           if (buildingMachine) {
             // Tapis : change de forme (plat, rampe, surélevé, descente, tunnel).
-            if ((up || down) && selectedMachine() && selectedMachine()?.id !== 'conveyor') {
+            const tunnelable =
+              selectedMachine()?.id === 'conveyor' || selectedMachine()?.id === 'pipe';
+            if ((up || down) && selectedMachine() && !tunnelable) {
               if (!isLinear(selectedMachine()!.id)) {
                 buildMachineLevel = up ? UPPER_LEVEL : 0;
                 renderBuildHud();
               }
-            } else if ((up || down) && selectedMachine()?.id === 'conveyor') {
+            } else if ((up || down) && tunnelable) {
               if (machinePath.length > 0) {
                 // En traçant : monter / descendre à partir du tapis sous le curseur (rampe, entrée ou sortie de tunnel).
                 const i = machinePath.length - 1;
@@ -2392,14 +2400,15 @@ export function startGameView(
                 if (up) {
                   // Monter : rampe (sol → 1 → 2) ou sortie de tunnel ; annule une descente choisie sur cette tuile.
                   if (set === 4 || set === 3 || set === 8) liftOverride.delete(i);
-                  else if (before === 0) liftOverride.set(i, 1);
+                  else if (before === 0 && selectedMachine()?.id === 'conveyor')
+                    liftOverride.set(i, 1);
                   else if (before === 1) liftOverride.set(i, 6);
                   else if (before === -1) liftOverride.set(i, 5);
                 } else if (set === 1 || set === 6) liftOverride.delete(i);
                 else if (before === 0) liftOverride.set(i, 4);
                 else if (before === 1) liftOverride.set(i, 3);
                 else if (before === 2) liftOverride.set(i, 8);
-              } else {
+              } else if (selectedMachine()?.id === 'conveyor') {
                 // Patron : PageUp l'incline vers le haut, PageDown le remet à plat puis l'incline vers le bas.
                 buildTilt = Math.max(-1, Math.min(1, buildTilt + (up ? 1 : -1)));
                 renderBuildHud();

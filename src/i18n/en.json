@@ -439,6 +439,7 @@
   "factory.cannotPlace": "Spot taken or impassable",
   "factory.helpMachine": "R: orient the output · PageUp / PageDown: upstairs on a slab / ground · click: place · same slot: put away",
   "factory.upperFloor": "Upstairs (on a slab)",
+  "factory.helpPipe": "R: direction · while dragging, PageDown: tunnel entrance (the pipe goes underground), PageUp: exit · hold the click and drag to lay several pipes · same cell: pick up",
   "factory.helpConveyor": "R: direction · PageUp / PageDown: go up / down (ramp, tunnel) while tracing · hold click and trace to place several belts in a row · same slot: put away",
   "factory.lift.0": "Flat (ground)",
   "factory.lift.1": "Ramp up (45°)",

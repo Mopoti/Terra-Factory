@@ -439,6 +439,7 @@
   "factory.cannotPlace": "Emplacement occupé ou impraticable",
   "factory.helpMachine": "R : orienter la sortie · PageUp / PageDown : à l'étage sur une dalle / au sol · clic : poser · même case : ranger",
   "factory.upperFloor": "À l'étage (sur une dalle)",
+  "factory.helpPipe": "R : sens · en traçant, PageDown : entrée de tunnel (le tuyau passe sous terre), PageUp : sortie · maintenir le clic et tracer pour poser plusieurs tuyaux · même case : ranger",
   "factory.helpConveyor": "R : sens · PageUp / PageDown : monter / descendre (rampe, tunnel) en traçant · maintenir le clic et tracer pour poser plusieurs tapis à la suite · même case : ranger",
   "factory.lift.0": "À plat (sol)",
   "factory.lift.1": "Rampe montante (45°)",

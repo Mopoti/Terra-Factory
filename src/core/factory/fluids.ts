@@ -21,10 +21,13 @@ export function emptyFluid(): Record<FluidKind, number> {
 }
 
 /** Prises de fluide d'une machine posée avec l'orientation `rot`. */
-export function fluidPorts(type: MachineType, rot: number): FluidPort[] {
+export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[] {
   const back = (rot + 2) % 4;
   switch (type) {
     case 'pipe':
+      // Tuyau enterré : l'entrée se raccorde derrière, la sortie devant (le reste passe sous terre).
+      if (lift === 4) return [{ side: back, mode: 'both', fluid: 'any' }];
+      if (lift === 5) return [{ side: rot % 4, mode: 'both', fluid: 'any' }];
       return [0, 1, 2, 3].map((side) => ({ side, mode: 'both' as const, fluid: 'any' as const }));
     case 'pump':
       return [{ side: rot % 4, mode: 'out', fluid: 'water' }];
@@ -64,13 +67,13 @@ export function fluidLinks(
 ): FluidLink[] {
   const links: FluidLink[] = [];
   for (const a of machines) {
-    for (const pa of fluidPorts(a.type, a.rot)) {
+    for (const pa of fluidPorts(a.type, a.rot, a.lift)) {
       const seen = new Set<number>();
       for (const cell of sideCellsOf(a, pa.side)) {
         const b = machineAt(cell.gx, cell.gz);
         if (!b || b === a || b.id < a.id || seen.has(b.id)) continue;
         seen.add(b.id);
-        const pb = fluidPorts(b.type, b.rot).find((p) => p.side === (pa.side + 2) % 4);
+        const pb = fluidPorts(b.type, b.rot, b.lift).find((p) => p.side === (pa.side + 2) % 4);
         if (pb) links.push({ a, pa, b, pb });
       }
     }

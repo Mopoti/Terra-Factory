@@ -216,14 +216,14 @@ export class FactoryView {
         addBelt(mb, m, entry, hexToRgb(machineDef('conveyor').color), this.factory);
       } else {
         const start = mb.positions.length;
-        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m));
+        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift);
         growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
         for (const i of io.ins)
           flatArrow(mb, i.cell, i.dir, m.type === 'boiler' ? COAL_ARROW : IN_ARROW);
-        liftBody(mb, start, m.lift);
+        liftBody(mb, start, m.type === 'pipe' ? 0 : m.lift);
       }
     }
     this.bodies.geometry.dispose();
@@ -372,7 +372,7 @@ export class FactoryView {
         );
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, shade(color, 0.85));
         for (const i of io.ins) flatArrow(mb, i.cell, i.dir, shade(color, 1.3));
-        if (g.type !== 'conveyor') liftBody(mb, first, g.lift ?? 0);
+        if (g.type !== 'conveyor' && g.type !== 'pipe') liftBody(mb, first, g.lift ?? 0);
       }
       this.ghost.geometry.dispose();
       this.ghost.geometry = geometryOf(mb);
@@ -675,6 +675,7 @@ function addMachineBody(
   gz: number,
   rot: number,
   sides: number[] = [],
+  lift = 0,
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -708,6 +709,27 @@ function addMachineBody(
       hexToRgb('#2a2d31'),
       true,
     );
+    return;
+  }
+  if (type === 'pipe' && (lift === 4 || lift === 5)) {
+    // Tuyau enterré : un seul manchon côté raccord, puis une bouche sombre qui plonge dans le sol.
+    const open = lift === 4 ? (rot + 2) % 4 : rot;
+    const [ox, oz] = RISE_DIR[open];
+    const [hx, hz] = RISE_DIR[(open + 2) % 4];
+    mb.box(
+      x + ox * 0.25,
+      0.04,
+      z + oz * 0.25,
+      ox !== 0 ? 0.52 : 0.28,
+      0.28,
+      oz !== 0 ? 0.52 : 0.28,
+      color,
+      true,
+    );
+    mb.box(x, 0.02, z, 0.4, 0.32, 0.4, shade(color, 1.1), true);
+    // Voûte côté sous-terre : dôme bas de terre avec l'ouverture sombre vers le manchon.
+    mb.box(x + hx * 0.12, 0, z + hz * 0.12, 0.46, 0.22, 0.46, shade(color, 0.6), true);
+    mb.box(x + hx * 0.02, 0.05, z + hz * 0.02, 0.26, 0.1, 0.26, hexToRgb('#1d1f22'), true);
     return;
   }
   if (type === 'pipe') {

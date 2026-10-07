@@ -348,3 +348,9 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 81 — turbine 3 × 4
 
 - **Turbine** : **3 cases en largeur, 4 en longueur** (sens de la vapeur), soit 1,5 m × 2 m.
+
+## Tour 82 — tuyaux enterrés
+
+- Comme les tapis : en traçant des tuyaux, **PageDown** = entrée de tunnel (le tuyau plonge sous terre), **PageUp** sur une tuile suivante = sortie ; les tuiles entre les deux sont « sous terre » : on peut construire par-dessus (portée max `TUNNEL_MAX_TILES` = 8 tuiles, entrée et sortie alignées et dans le même sens).
+- Modèle : un tuyau a `lift` 0 (normal), 4 (entrée : raccord derrière seulement) ou 5 (sortie : raccord devant seulement). `Factory.tunnelLinks` relie l'entrée à sa première sortie alignée (eau et vapeur passent comme dans un tuyau continu). Une entrée de tuyau ne s'apparie qu'à une sortie de tuyau (jamais à un tapis).
+- Tests : lifts autorisés, eau qui traverse, construction possible au-dessus, rien ne passe sans sortie.
