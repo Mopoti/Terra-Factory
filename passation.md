@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 85 (point 2 codé)** : gisements plus riches et plus grands avec la distance (base 1 000 × (1 + (D/100)^1,5)), nouveaux minerais zinc/bauxite/quartz/uraninite par paliers 300/600/1 200 m, noms Hématite et Malachite, ponts (dalle sur l'eau = praticable). Voir `docs/refonte-objets.md`.
 - **Tour 85 (suite)** : point 1 validé (types validés, coût en paquets réglé en jouant, **tier 0 : roue à aubes débloquée par la récolte de 10 cuivre**, 10 kW) ; point 2 (monde) en discussion. Voir `docs/refonte-objets.md`.
 - **Tour 85** : intégration de `gdd_factorisation.md` point par point (suivi dans `docs/refonte-objets.md`). Point 1 : technologies par type × tier (2 objets max par techno), paquets de science T1–T4 du même tier, outil unique, noms réels des minerais, repartir de zéro. Contradictions à trancher : #4 (grille / piliers) et #9 (mort / lit).
 - **Tour 84** : rédaction du GDD complet `docs/gdd.md` (tableaux générés depuis `content/*.json`). À tenir à jour à chaque tour.

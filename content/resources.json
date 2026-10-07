@@ -1,6 +1,12 @@
 {
-  "_comment": "Ressources du monde. Valeurs de départ, à équilibrer ici sans toucher au code. Ids stables : ne jamais les renommer.",
-  "families": ["forests", "rocks", "ores", "water", "enemies"],
+  "_comment": "Ressources du monde. Valeurs de départ, à équilibrer ici sans toucher au code. Ids stables : ne jamais les renommer. Gisements : « centerAmount » est la quantité au centre à D = 0 ; elle est multipliée par 1 + (D/100)^1,5 selon la distance D du centre du gisement au point de départ ; « minDistanceM » = distance minimale d'apparition.",
+  "families": [
+    "forests",
+    "rocks",
+    "ores",
+    "water",
+    "enemies"
+  ],
   "resources": [
     {
       "id": "tree",
@@ -59,10 +65,16 @@
       "color": "#8d6e63",
       "candidateSizeM": 96,
       "presence": 0.45,
-      "radiusM": [6, 16],
-      "centerAmount": 3500,
+      "radiusM": [
+        6,
+        16
+      ],
+      "centerAmount": 1000,
       "edgeRatio": 0.09,
-      "richness": [0.8, 1.2],
+      "richness": [
+        0.8,
+        1.2
+      ],
       "biomeWeight": {
         "prairie": 1,
         "forest": 0.8,
@@ -81,10 +93,16 @@
       "color": "#d2793b",
       "candidateSizeM": 96,
       "presence": 0.4,
-      "radiusM": [6, 15],
-      "centerAmount": 3500,
+      "radiusM": [
+        6,
+        15
+      ],
+      "centerAmount": 1000,
       "edgeRatio": 0.09,
-      "richness": [0.8, 1.2],
+      "richness": [
+        0.8,
+        1.2
+      ],
       "biomeWeight": {
         "prairie": 1,
         "forest": 0.8,
@@ -103,10 +121,16 @@
       "color": "#2b2b2f",
       "candidateSizeM": 96,
       "presence": 0.4,
-      "radiusM": [6, 14],
-      "centerAmount": 3500,
+      "radiusM": [
+        6,
+        14
+      ],
+      "centerAmount": 1000,
       "edgeRatio": 0.09,
-      "richness": [0.8, 1.2],
+      "richness": [
+        0.8,
+        1.2
+      ],
       "biomeWeight": {
         "prairie": 1,
         "forest": 1,
@@ -119,13 +143,132 @@
       }
     },
     {
+      "id": "zinc_ore",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#b7a54a",
+      "candidateSizeM": 96,
+      "presence": 0.35,
+      "radiusM": [
+        6,
+        14
+      ],
+      "minDistanceM": 300,
+      "centerAmount": 1000,
+      "edgeRatio": 0.09,
+      "richness": [
+        0.8,
+        1.2
+      ],
+      "biomeWeight": {
+        "prairie": 1,
+        "forest": 0.8,
+        "desert": 1,
+        "tundra": 1
+      },
+      "harvest": {
+        "item": "zinc_ore",
+        "secondsPerUnit": 0.4
+      }
+    },
+    {
+      "id": "bauxite",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#b5532f",
+      "candidateSizeM": 96,
+      "presence": 0.35,
+      "radiusM": [
+        6,
+        14
+      ],
+      "minDistanceM": 300,
+      "centerAmount": 1000,
+      "edgeRatio": 0.09,
+      "richness": [
+        0.8,
+        1.2
+      ],
+      "biomeWeight": {
+        "prairie": 1,
+        "forest": 0.8,
+        "desert": 1,
+        "tundra": 1
+      },
+      "harvest": {
+        "item": "bauxite",
+        "secondsPerUnit": 0.4
+      }
+    },
+    {
+      "id": "quartz",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#d8e6ee",
+      "candidateSizeM": 96,
+      "presence": 0.3,
+      "radiusM": [
+        5,
+        12
+      ],
+      "minDistanceM": 600,
+      "centerAmount": 1000,
+      "edgeRatio": 0.09,
+      "richness": [
+        0.8,
+        1.2
+      ],
+      "biomeWeight": {
+        "prairie": 1,
+        "forest": 0.8,
+        "desert": 1,
+        "tundra": 1
+      },
+      "harvest": {
+        "item": "quartz",
+        "secondsPerUnit": 0.4
+      }
+    },
+    {
+      "id": "uraninite",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#2f7d46",
+      "candidateSizeM": 96,
+      "presence": 0.25,
+      "radiusM": [
+        4,
+        10
+      ],
+      "minDistanceM": 1200,
+      "centerAmount": 1000,
+      "edgeRatio": 0.09,
+      "richness": [
+        0.8,
+        1.2
+      ],
+      "biomeWeight": {
+        "prairie": 1,
+        "forest": 0.8,
+        "desert": 1,
+        "tundra": 1
+      },
+      "harvest": {
+        "item": "uraninite",
+        "secondsPerUnit": 0.4
+      }
+    },
+    {
       "id": "water",
       "family": "water",
       "kind": "pond",
       "color": "#2f6fb0",
       "candidateSizeM": 80,
       "presence": 0.4,
-      "radiusM": [4, 10],
+      "radiusM": [
+        4,
+        10
+      ],
       "biomeWeight": {
         "prairie": 1,
         "forest": 1,

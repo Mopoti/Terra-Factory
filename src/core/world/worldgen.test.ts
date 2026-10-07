@@ -5,6 +5,8 @@ import { hashSeed } from './rng';
 import {
   SPAWN_CLEAR_M,
   WorldGenerator,
+  distanceGrowth,
+  distanceRichness,
   defaultWorldParams,
   type ChunkData,
   type WorldParams,
@@ -148,13 +150,39 @@ describe('minerais : quantités par case', () => {
       expect(o.amount % 5).toBe(0);
     }
   });
-  it('centre ≈ 3 500 max, bord ≈ 315 min (richesse ±20 %)', () => {
-    const max = Math.max(...iron.map((o) => o.amount));
+  it('quantité par case : bord ≈ 9 % du minimum, jamais en dessous ; riche seulement au loin', () => {
     const min = Math.min(...iron.map((o) => o.amount));
-    expect(max).toBeLessThanOrEqual(3500 * 1.2 + 5);
-    expect(max).toBeGreaterThan(2800);
-    expect(min).toBeGreaterThanOrEqual(3500 * 0.8 * 0.09 - 5);
+    const max = Math.max(...iron.map((o) => o.amount));
+    expect(min).toBeGreaterThanOrEqual(1000 * 0.8 * 0.09 - 5);
     expect(min).toBeLessThan(500);
+    // Autour du départ (< 150 m) un centre vaut au plus 1000 × 1,2 × (1 + 1,5^1,5) ; plus loin il peut dépasser.
+    const near = iron.filter((o) => Math.hypot(o.gx * CELL_SIZE_M, o.gz * CELL_SIZE_M) < 150);
+    const nearMax = Math.max(...near.map((o) => o.amount));
+    expect(nearMax).toBeLessThanOrEqual(1000 * 1.2 * distanceRichness(200) + 5);
+    expect(max).toBeGreaterThanOrEqual(nearMax);
+  });
+  it('la richesse et la taille croissent avec la distance', () => {
+    expect(distanceRichness(0)).toBe(1);
+    expect(distanceRichness(100)).toBe(2);
+    expect(distanceRichness(500)).toBeCloseTo(1 + 5 ** 1.5, 5);
+    expect(distanceGrowth(0)).toBe(1);
+    expect(distanceGrowth(500)).toBe(1.5);
+    expect(distanceGrowth(5000)).toBe(2);
+  });
+  it('zinc et bauxite à partir de 300 m, quartz à 600 m, uraninite à 1 200 m (rien avant)', () => {
+    const found: Record<string, number> = {};
+    for (const c of region(g, 40)) {
+      for (const o of c.ore) {
+        const d = Math.hypot(o.gx * CELL_SIZE_M, o.gz * CELL_SIZE_M);
+        found[o.id] = Math.min(found[o.id] ?? Infinity, d);
+      }
+    }
+    // Les cases d'un tas peuvent déborder un peu du centre : on tolère le rayon maximal (≈ 30 m).
+    expect(found.zinc_ore ?? 999).toBeGreaterThan(300 - 40);
+    expect(found.bauxite ?? 999).toBeGreaterThan(300 - 40);
+    expect(found.quartz ?? 999).toBeGreaterThan(600 - 40);
+    expect(found.uraninite ?? 9999).toBeGreaterThan(1200 - 40);
+    expect(found.zinc_ore).toBeDefined();
   });
   it("plus on est au centre d'un tas, plus il y a de minerais", () => {
     // Plus grand tas connexe (voisinage à 4 cases).

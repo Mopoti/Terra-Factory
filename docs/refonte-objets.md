@@ -87,3 +87,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - Quantité par case = `centerAmount` (3 500) × richesse (×0,8 à ×1,2) × densité × profil (9 % au bord) ; **identique partout** dans le monde.
 - 3 minerais : fer, cuivre, charbon. Étangs : cases d'eau infranchissables, on ne peut pas y poser de machine.
 - Zone de départ garantie : ≈ 150 m, aucun nid avant 250 m.
+
+### 2.3 Décisions du PO (Tour 85) et réalisation
+
+- **Base** : 1 000 au centre à D = 0 (au lieu de 3 500) × **1 + (D/100)^1,5** (D = distance du centre du gisement au départ). À 150 m : ×2,8 ; 500 m : ×12 ; 1 000 m : ×32.
+- **Distance** : change aussi la **taille** (rayon ×1 → ×2 à 1 000 m) et l'**espacement** (÷ (1 + D/2000) sur la présence).
+- **Nouveaux minerais par paliers** : sphalérite (zinc) et bauxite ≥ 300 m, quartz (silicium) ≥ 600 m, uraninite ≥ 1 200 m (`minDistanceM` dans `resources.json`) ; ils ne font pas partie des gisements garantis au départ.
+- **Noms réels** : Hématite (iron_ore), Malachite (copper_ore) ; les identifiants ne changent pas. Les nouveaux minerais se récoltent mais **n'ont pas encore d'usage** (point 3).
+- **Ponts** (codé) : une dalle de sol posée sur une case d'eau la rend **praticable** (joueur, tapis, tuyaux, poteaux, machines) ; sans pilier. Limite actuelle : les machines posées sur un pont ont leur base dans la dalle (10 cm) ; rendu à reprendre avec le point 4 (grille et structure).

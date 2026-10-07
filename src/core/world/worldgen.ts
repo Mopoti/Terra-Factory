@@ -129,6 +129,12 @@ interface Nest {
 const cellCenter = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 const roundTo5 = (v: number): number => Math.max(5, Math.round(v / 5) * 5);
 
+/** Richesse d'un gisement selon la distance D (m) de son centre au point de départ : 1 + (D / 100)^1,5. */
+export const distanceRichness = (distM: number): number =>
+  1 + Math.pow(Math.max(0, distM) / 100, 1.5);
+/** Agrandissement des gisements avec la distance : ×1 au départ, ×2 à 1 000 m et au-delà. */
+export const distanceGrowth = (distM: number): number => 1 + Math.min(1, Math.max(0, distM) / 1000);
+
 export class WorldGenerator {
   readonly seed: number;
   readonly params: WorldParams;
@@ -168,7 +174,8 @@ export class WorldGenerator {
   /** Un tas de départ par minerai et par étang, à portée de marche du point d'apparition. */
   private buildStarters(): void {
     const kinds = RESOURCES.filter(
-      (r): r is PatchResource => r.kind === 'deposit' || r.kind === 'pond',
+      (r): r is PatchResource =>
+        (r.kind === 'deposit' && (r.minDistanceM ?? 0) === 0) || r.kind === 'pond',
     );
     const base = hash01(this.seed, 0, 0, this.salt('starter.angle')) * Math.PI * 2;
     const objects = RESOURCES.filter((r): r is ObjectResource => r.kind === 'object');
@@ -241,12 +248,20 @@ export class WorldGenerator {
       for (let iz = izMin; iz <= izMax; iz++) {
         const xM = (ix + 0.1 + 0.8 * hash01(this.seed, ix, iz, saltId + 2)) * s;
         const zM = (iz + 0.1 + 0.8 * hash01(this.seed, ix, iz, saltId + 3)) * s;
+        const dist = Math.hypot(xM, zM);
+        if (res.kind === 'deposit' && dist < (res.minDistanceM ?? 0)) continue;
         const weight = res.biomeWeight[this.biomeAt(xM, zM)];
-        if (hash01(this.seed, ix, iz, saltId + 1) >= this.presence(res) * weight) continue;
+        // Plus on s'éloigne du départ, plus les gisements sont un peu espacés (÷ 1,5 à 1 000 m)…
+        const spacing = res.kind === 'deposit' ? 1 / (1 + dist / 2000) : 1;
+        if (hash01(this.seed, ix, iz, saltId + 1) >= this.presence(res) * weight * spacing)
+          continue;
+        // … et plus grands (jusqu'à ×2 à 1 000 m).
+        const grow = res.kind === 'deposit' ? distanceGrowth(dist) : 1;
         const radiusM =
           (res.radiusM[0] +
             (res.radiusM[1] - res.radiusM[0]) * hash01(this.seed, ix, iz, saltId + 4)) *
-          size;
+          size *
+          grow;
         const r = radiusM * SHAPE_REACH;
         if (xM + r < minX || xM - r > maxX || zM + r < minZ || zM - r > maxZ) continue;
         const richness =
@@ -282,7 +297,8 @@ export class WorldGenerator {
     const density = this.params.families[p.res.family].density;
     const tc = clamp(t, 0, 1);
     const profile = p.res.edgeRatio + (1 - p.res.edgeRatio) * (1 - tc * tc);
-    return roundTo5(p.res.centerAmount * p.richness * density * profile);
+    const richer = distanceRichness(Math.hypot(p.xM, p.zM));
+    return roundTo5(p.res.centerAmount * p.richness * density * profile * richer);
   }
 
   // --- Nids ---------------------------------------------------------------------------------

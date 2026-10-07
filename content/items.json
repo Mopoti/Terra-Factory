@@ -34,6 +34,30 @@
       "color": "#d2793b"
     },
     {
+      "id": "zinc_ore",
+      "weightKg": 0.5,
+      "volumeL": 0.3,
+      "color": "#b7a54a"
+    },
+    {
+      "id": "bauxite",
+      "weightKg": 0.35,
+      "volumeL": 0.3,
+      "color": "#b5532f"
+    },
+    {
+      "id": "quartz",
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "color": "#d8e6ee"
+    },
+    {
+      "id": "uraninite",
+      "weightKg": 0.9,
+      "volumeL": 0.3,
+      "color": "#2f7d46"
+    },
+    {
       "id": "coal",
       "weightKg": 0.25,
       "volumeL": 0.3,

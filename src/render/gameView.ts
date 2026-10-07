@@ -777,7 +777,11 @@ export function startGameView(
   const MAX_BELT_PATH = 150;
   let machineWasDown = false;
   const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
+  // Un pont : une dalle de sol posée sur une case d'eau la rend praticable (marche, tapis, tuyaux, poteaux).
+  const bridgeAt = (gx: number, gz: number): boolean =>
+    waterCellAt(gx, gz) && !!options.state.changes.pieces[`f:0:${gx},${gz}`];
   const machineBlocked = (c: Cell): boolean => {
+    if (bridgeAt(c.gx, c.gz)) return false;
     if (blocked.has(`${c.gx},${c.gz}`)) return true;
     const pieces = options.state.changes.pieces;
     if (pieces[`f:0:${c.gx},${c.gz}`]) return true;
@@ -1492,9 +1496,11 @@ export function startGameView(
     }
     return true;
   };
-  const isBlockedAt = (xM: number, zM: number): boolean =>
-    blocked.has(`${Math.floor(xM / CELL_SIZE_M)},${Math.floor(zM / CELL_SIZE_M)}`) ||
-    machineSolidAt(xM, zM);
+  const isBlockedAt = (xM: number, zM: number): boolean => {
+    const gx = Math.floor(xM / CELL_SIZE_M);
+    const gz = Math.floor(zM / CELL_SIZE_M);
+    return (blocked.has(`${gx},${gz}`) && !bridgeAt(gx, gz)) || machineSolidAt(xM, zM);
+  };
   /** Distance parcourue au dernier pas : une pente d'escalier se monte même à faible nombre d'images/s. */
   let stepSlack = 0;
   /** Les rampes inclinées montent d'environ 1,25 m par mètre : on tolère un peu plus de pas qu'un escalier. */
