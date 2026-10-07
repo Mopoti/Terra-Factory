@@ -94,6 +94,8 @@ export class Interaction {
   private readonly byChunk = new Map<string, string[]>();
   private readonly dropGroup = new THREE.Group();
   private readonly dropMaterials = new Map<string, THREE.MeshStandardMaterial>();
+  /** Boîte blanche autour de la cible : seulement en mode débogage. */
+  showBoxes = false;
   private readonly highlight: THREE.LineSegments;
   private readonly raycaster = new THREE.Raycaster();
   private readonly hud: HTMLElement;
@@ -371,7 +373,7 @@ export class Interaction {
     this.aimed = reachable;
     this.showHighlight(hit, reachable);
     // En première personne le réticule suffit : pas de boîte blanche autour de la cible.
-    if (frame.aimAtCenter) this.highlight.visible = false;
+    if (frame.aimAtCenter || !this.showBoxes) this.highlight.visible = false;
 
     if (!hit) {
       this.holdingId = null;

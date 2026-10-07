@@ -45,6 +45,15 @@
       "unlocks": ["machine_pipe", "machine_pump", "machine_boiler", "machine_turbine"]
     },
     {
+      "id": "navigation",
+      "cost": {
+        "iron_ingot": 10,
+        "copper_ingot": 5
+      },
+      "requires": [],
+      "unlocks": ["compass"]
+    },
+    {
       "id": "defense",
       "cost": {
         "iron_ingot": 30,

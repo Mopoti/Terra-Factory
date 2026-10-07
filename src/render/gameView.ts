@@ -31,7 +31,7 @@ import {
   type ViewId,
 } from '../core/save/saveIndex';
 import type { GameState } from '../core/game/state';
-import { applyChanges } from '../core/game/worldChanges';
+import { applyChanges, NEST_HP } from '../core/game/worldChanges';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
@@ -1712,10 +1712,17 @@ export function startGameView(
     }
     m.slots = v.slots;
     // La case de carburant et les secondes de route restantes sont celles du buggy.
-    if (!Object.getOwnPropertyDescriptor(m, 'fuel')?.get) {
-      Object.defineProperty(m, 'fuel', { get: () => v.fuelStack, set: (x) => (v.fuelStack = x) });
-      Object.defineProperty(m, 'fuelLeft', { get: () => v.fuel, set: (x) => (v.fuel = x) });
-    }
+    // Redéfini à chaque appel : si la liste des buggys est remplacée (chargement), on pointe toujours le bon.
+    Object.defineProperty(m, 'fuel', {
+      configurable: true,
+      get: () => v.fuelStack,
+      set: (x) => (v.fuelStack = x),
+    });
+    Object.defineProperty(m, 'fuelLeft', {
+      configurable: true,
+      get: () => v.fuel,
+      set: (x) => (v.fuel = x),
+    });
     return m;
   }
   /** Le rayon de visée touche-t-il ce buggy (sphère autour de lui) ? */
@@ -1844,6 +1851,10 @@ export function startGameView(
   container.appendChild(compass);
   /** Cap de la caméra en degrés : 0 = nord, 90 = est. */
   function updateCompass(): void {
+    // La boussole est une amélioration : elle n'apparaît qu'une fois la technologie « Navigation » recherchée.
+    const hasCompass = options.state.changes.unlocked.includes('navigation');
+    compass.hidden = !hasCompass;
+    if (!hasCompass) return;
     const bearing = ((((-rig.yaw * 180) / Math.PI) % 360) + 360) % 360;
     const half = 160;
     const span = 80;
@@ -1861,18 +1872,30 @@ export function startGameView(
   }
   // --- Pollution, ennemis, santé ---------------------------------------------------------------
   const cellChunks = POLLUTION_CELL_M / (CHUNK_CELLS * CELL_SIZE_M);
-  const nestCache = new Map<string, { x: number; z: number }[]>();
+  interface NestPos {
+    x: number;
+    z: number;
+    gx: number;
+    gz: number;
+    cells: number;
+  }
+  const nestCache = new Map<string, NestPos[]>();
   const treeCache = new Map<string, number>();
   const scanCell = (pcx: number, pcz: number): void => {
     const k = `${pcx},${pcz}`;
     if (nestCache.has(k)) return;
-    const nests: { x: number; z: number }[] = [];
+    const nests: NestPos[] = [];
     let trees = 0;
     for (let dz = 0; dz < cellChunks; dz++) {
       for (let dx = 0; dx < cellChunks; dx++) {
         for (const o of generator.chunk(pcx * cellChunks + dx, pcz * cellChunks + dz).objects) {
           if (o.id === 'nest') {
+            // Un nid détruit (dégâts cumulés) n'existe plus.
+            if ((options.state.changes.taken[cellKey(o.gx, o.gz)] ?? 0) >= NEST_HP) continue;
             nests.push({
+              gx: o.gx,
+              gz: o.gz,
+              cells: o.cells,
               x: (o.gx + o.cells / 2) * CELL_SIZE_M,
               z: (o.gz + o.cells / 2) * CELL_SIZE_M,
             });
@@ -1883,8 +1906,8 @@ export function startGameView(
     nestCache.set(k, nests);
     treeCache.set(k, trees);
   };
-  const nestsNear = (x: number, z: number, radiusM: number): { x: number; z: number }[] => {
-    const out: { x: number; z: number }[] = [];
+  const nestsNear = (x: number, z: number, radiusM: number): NestPos[] => {
+    const out: NestPos[] = [];
     const r = Math.ceil(radiusM / POLLUTION_CELL_M);
     const cx = Math.floor(x / POLLUTION_CELL_M);
     const cz = Math.floor(z / POLLUTION_CELL_M);
@@ -1898,6 +1921,39 @@ export function startGameView(
     }
     return out;
   };
+  /** Inflige des dégâts à un nid ; à 0 point de vie il disparaît (et ses gardiens avec lui). */
+  function damageNest(nest: NestPos, amount: number): 'hit' | 'kill' {
+    options.state.takeFromWorld(cellKey(nest.gx, nest.gz), NEST_HP, amount);
+    if ((options.state.changes.taken[cellKey(nest.gx, nest.gz)] ?? 0) < NEST_HP) return 'hit';
+    const k = `${Math.floor(nest.x / POLLUTION_CELL_M)},${Math.floor(nest.z / POLLUTION_CELL_M)}`;
+    nestCache.delete(k);
+    dirtyChunks.add(`${Math.floor(nest.gx / CHUNK_CELLS)},${Math.floor(nest.gz / CHUNK_CELLS)}`);
+    for (let i = threat.enemies.length - 1; i >= 0; i--) {
+      const home = threat.enemies[i].home;
+      if (home && Math.hypot(home.x - nest.x, home.z - nest.z) < 1) threat.enemies.splice(i, 1);
+    }
+    playSfx('rockBreak');
+    options.onMessage?.(t('threat.nestDestroyed'));
+    return 'kill';
+  }
+  /** Le tir touche-t-il un nid avant `maxAlong` m ? (cône de 1 m de haut centré sur le nid) */
+  function shootNest(maxAlong: number, damage: number): number | null {
+    let best: { nest: NestPos; along: number } | null = null;
+    for (const n of nestsNear(rayOrigin.x, rayOrigin.z, maxAlong + 6)) {
+      const wx = n.x - rayOrigin.x;
+      const wy = 0.4 - rayOrigin.y;
+      const wz = n.z - rayOrigin.z;
+      const along = wx * rayDir.x + wy * rayDir.y + wz * rayDir.z;
+      if (along < 0 || along > maxAlong || (best && along >= best.along)) continue;
+      const cx = rayOrigin.x + rayDir.x * along - n.x;
+      const cy = rayOrigin.y + rayDir.y * along - 0.4;
+      const cz = rayOrigin.z + rayDir.z * along - n.z;
+      if (Math.hypot(cx, cy, cz) <= Math.max(0.8, n.cells * 0.25)) best = { nest: n, along };
+    }
+    if (!best) return null;
+    damageNest(best.nest, damage);
+    return best.along;
+  }
   const threatWorld: ThreatWorld = {
     nestsNear,
     nestsIn: (pcx, pcz) => (scanCell(pcx, pcz), nestCache.get(`${pcx},${pcz}`) ?? []),
@@ -1968,6 +2024,9 @@ export function startGameView(
   let targetClock = 0;
   let threatTargets: ThreatTarget[] = [];
   const machineHealth = new Map<number, number>();
+  const hurtOverlay = document.createElement('div');
+  hurtOverlay.className = 'hurt-overlay';
+  container.appendChild(hurtOverlay);
   const healthBar = document.createElement('div');
   healthBar.className = 'health-bar';
   healthBar.innerHTML = '<div class="health-fill"></div><span></span>';
@@ -2060,6 +2119,9 @@ export function startGameView(
         } else {
           computeRay();
           const shot = threat.shoot(rayOrigin, rayDir, 40, 10);
+          // Un nid sur la ligne de tir (et plus près qu'un ennemi touché) encaisse le tir.
+          const nestAt = shot.result === null ? shootNest(shot.distance, 10) : null;
+          if (nestAt !== null) shot.distance = nestAt;
           playSfx('shot');
           const end = rayOrigin.clone().addScaledVector(rayDir, shot.distance);
           const start = rayOrigin.clone().addScaledVector(rayDir, 0.6);
@@ -2072,7 +2134,11 @@ export function startGameView(
         }
       }
     } else if (attackCooldown <= 0 && !building && input.isActionActive('interact')) {
-      const result = threat.hit(playerX, playerZ, 2.6, 12);
+      let result = threat.hit(playerX, playerZ, 2.6, 12);
+      if (!result) {
+        const close = nestsNear(playerX, playerZ, 3.6)[0];
+        if (close) result = damageNest(close, 12);
+      }
       if (result) {
         attackCooldown = 0.45;
         playSfx(result === 'kill' ? 'rockBreak' : 'woodChop');
@@ -2094,6 +2160,15 @@ export function startGameView(
   hint.className = 'look-hint';
   hint.textContent = t('hint.mouseLook');
   container.appendChild(hint);
+  // Mode débogage (touche F3) : boîtes autour des cibles, infos de partie, compteur d'images.
+  let debugOn = false;
+  let showHealthSetting = false;
+  let showFpsSetting = false;
+  function applyDebug(): void {
+    debugBox.hidden = !debugOn;
+    fpsBox.hidden = !(debugOn || showFpsSetting);
+    interaction.showBoxes = debugOn;
+  }
   const fpsBox = document.createElement('div');
   fpsBox.className = 'fps-counter';
   container.appendChild(fpsBox);
@@ -2138,8 +2213,9 @@ export function startGameView(
     camera.updateProjectionMatrix();
     scene.fog = new THREE.Fog(skyNow, far * 0.55, far);
     fpsLimit = d.fpsLimit;
-    fpsBox.hidden = !d.showFps;
-    debugBox.hidden = !d.showDebug;
+    showFpsSetting = d.showFps;
+    showHealthSetting = d.showHealth;
+    applyDebug();
     if (shadowsWereOn !== (d.shadows !== 'off')) {
       shadowsWereOn = d.shadows !== 'off';
       scene.traverse((o) => {
@@ -2247,6 +2323,14 @@ export function startGameView(
 
     if (pressed('inventory')) options.onToggleInventory?.();
     if (pressed('map')) options.onToggleMap?.();
+    if (pressed('debug')) {
+      debugOn = !debugOn;
+      applyDebug();
+      if (debugOn && !options.state.changes.admin) {
+        options.state.changes.admin = true;
+        options.onMessage?.(t('debug.adminWarn'));
+      }
+    }
     if (pressed('techTree')) options.onToggleTech?.();
 
     let motion = { speed: 0, strafe: 0 };
@@ -2409,7 +2493,12 @@ export function startGameView(
       },
       now / 1000,
     );
-    healthBar.hidden = playerHealth >= MAX_HEALTH - 0.5 && threat.enemies.length === 0;
+    healthBar.hidden = !showHealthSetting;
+    // La rougeur de l'écran dit la gravité : elle monte avec les dégâts reçus et s'efface quand la santé revient.
+    const hurt = Math.min(1, Math.max(0, (MAX_HEALTH - playerHealth) / MAX_HEALTH));
+    hurtOverlay.style.opacity = String(
+      Math.min(0.85, hurt * 0.9 + Math.max(0, 1 - sinceHurt) * 0.25),
+    );
     healthFill.style.width = `${Math.max(0, Math.round(playerHealth))}%`;
     healthText.textContent = `${t('threat.health')} ${Math.max(0, Math.round(playerHealth))}`;
     itemsTimer += realDt;
@@ -2515,6 +2604,7 @@ export function startGameView(
     dispose: () => {
       enemyView.dispose();
       healthBar.remove();
+      hurtOverlay.remove();
       unsubscribe();
       interaction.dispose();
       unsubscribeBuild();

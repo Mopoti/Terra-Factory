@@ -1539,3 +1539,22 @@
   color: #aab4bf;
   text-align: center;
 }
+.map-veil {
+  cursor: pointer;
+  margin-left: 12px;
+}
+
+/* Rougeur de l'écran quand le joueur est blessé. */
+.hurt-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.15s linear;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(160, 0, 0, 0) 35%,
+    rgba(190, 10, 10, 0.85) 100%
+  );
+}

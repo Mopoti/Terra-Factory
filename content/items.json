@@ -256,6 +256,16 @@
       "fuelSeconds": 6
     },
     {
+      "id": "compass",
+      "weightKg": 0.2,
+      "volumeL": 0.2,
+      "color": "#c8a64a",
+      "recipe": {
+        "iron_ingot": 2,
+        "copper_ingot": 1
+      }
+    },
+    {
       "id": "cloth",
       "weightKg": 0.1,
       "volumeL": 0.3,

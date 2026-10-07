@@ -38,6 +38,7 @@ const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
 const OUT_ARROW: Rgb = hexToRgb('#ffb347');
 const IN_ARROW: Rgb = hexToRgb('#7ec8ff');
+const COAL_ARROW: Rgb = hexToRgb('#2b2b2b');
 
 const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 
@@ -75,7 +76,8 @@ function flatArrow(
   const pz = dx;
   const cx = center(cell.gx);
   const cz = center(cell.gz);
-  const y = 0.04;
+  // Un peu au-dessus du sol (plus haut qu'un tapis, 12 cm) pour rester visibles à côté d'un tapis.
+  const y = 0.2;
   const at = (along: number, across: number): [number, number] => [
     cx + dx * along + px * across,
     cz + dz * along + pz * across,
@@ -213,7 +215,8 @@ export class FactoryView {
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
-        for (const i of io.ins) flatArrow(mb, i.cell, i.dir, IN_ARROW);
+        for (const i of io.ins)
+          flatArrow(mb, i.cell, i.dir, m.type === 'boiler' ? COAL_ARROW : IN_ARROW);
         liftBody(mb, start, m.lift);
       }
     }
@@ -758,23 +761,33 @@ function addMachineBody(
     return;
   }
   if (type === 'turbine') {
-    // Turbine : carter long, brides aux deux bouts, axe de rotor visible dessus.
-    const long = Math.max(sx, sz);
-    mb.box(x, 0, z, fx !== 0 ? long : 0.42, 0.7, fz !== 0 ? long : 0.42, color, true);
+    // Turbine : carter large (deux fois plus qu'avant), brides aux deux bouts, axe de rotor visible dessus.
+    const len = fx !== 0 ? sx : sz;
+    const wid = (fx !== 0 ? sz : sx) - 0.2;
+    mb.box(x, 0, z, fx !== 0 ? len : wid, 0.7, fz !== 0 ? len : wid, color, true);
     for (const k of [-1, 1]) {
       mb.box(
-        x + fx * k * (long / 2 - 0.06),
+        x + fx * k * (len / 2 - 0.06),
         0.02,
-        z + fz * k * (long / 2 - 0.06),
-        fx !== 0 ? 0.1 : 0.5,
+        z + fz * k * (len / 2 - 0.06),
+        fx !== 0 ? 0.1 : wid + 0.08,
         0.66,
-        fz !== 0 ? 0.1 : 0.5,
+        fz !== 0 ? 0.1 : wid + 0.08,
         shade(color, 0.75),
         true,
       );
     }
     mb.box(x, 0.7, z, 0.16, 0.2, 0.16, hexToRgb('#3d3a38'), true);
-    mb.box(x, 0.9, z, fx !== 0 ? 0.5 : 0.1, 0.06, fz !== 0 ? 0.5 : 0.1, hexToRgb('#e6c84a'), true);
+    mb.box(
+      x,
+      0.9,
+      z,
+      fx !== 0 ? 0.1 : wid * 0.8,
+      0.06,
+      fz !== 0 ? 0.1 : wid * 0.8,
+      hexToRgb('#e6c84a'),
+      true,
+    );
     return;
   }
   if (type === 'turret') {

@@ -74,6 +74,7 @@ export const ACTIONS = [
   { id: 'inventory', category: 'ui', defaults: ['Tab', 'L:I'] },
   { id: 'map', category: 'ui', defaults: ['L:M', null] },
   { id: 'techTree', category: 'ui', defaults: ['L:T', null] },
+  { id: 'debug', category: 'ui', defaults: ['F3', null] },
   { id: 'screenshot', category: 'ui', defaults: ['F2', null] },
   { id: 'pause', category: 'ui', defaults: ['Escape', null], fixed: true },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },

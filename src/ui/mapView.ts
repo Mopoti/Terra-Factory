@@ -53,6 +53,8 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
   const chunkCache = new Map<string, HTMLCanvasElement>();
   let isOpenNow = false;
   let zoomIndex = 2;
+  /** Voile de pollution affiché sur la carte (case à cocher). */
+  let showPollution = true;
   /** Centre de la vue (en cases). */
   let center = { gx: 0, gz: 0 };
   let raf = 0;
@@ -184,14 +186,14 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     }
     // Pollution : voile rouge par cellule de 32 m ; ennemis : points rouges.
     const cellCells = POLLUTION_CELL_M / CELL_SIZE_M;
-    for (const [k, v] of Object.entries(options.threat.pollution)) {
+    for (const [k, v] of showPollution ? Object.entries(options.threat.pollution) : []) {
       const [pcx, pcz] = k.split(',').map(Number);
-      ctx.fillStyle = `rgba(214, 48, 49, ${Math.min(0.6, 0.1 + v / 200)})`;
+      ctx.fillStyle = `rgba(214, 48, 49, ${Math.min(0.3, 0.04 + v / 500)})`;
       ctx.fillRect(sx(pcx * cellCells), sz(pcz * cellCells), cellCells * zoom, cellCells * zoom);
     }
-    for (const [k, v] of Object.entries(options.threat.ground)) {
+    for (const [k, v] of showPollution ? Object.entries(options.threat.ground) : []) {
       const [pcx, pcz] = k.split(',').map(Number);
-      ctx.fillStyle = `rgba(150, 90, 30, ${Math.min(0.65, 0.12 + v / 200)})`;
+      ctx.fillStyle = `rgba(150, 90, 30, ${Math.min(0.32, 0.05 + v / 500)})`;
       ctx.fillRect(sx(pcx * cellCells), sz(pcz * cellCells), cellCells * zoom, cellCells * zoom);
     }
     ctx.fillStyle = '#ff3b3b';
@@ -268,12 +270,23 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(OBJECT_COLORS.tree, t('map.trees')),
       legendItem(OBJECT_COLORS.rock, t('map.rocks')),
       legendItem(OBJECT_COLORS.nest, t('map.nests')),
-      legendItem('rgba(214,48,49,0.6)', t('map.pollution')),
-      legendItem('rgba(150,90,30,0.65)', t('map.ground')),
+      legendItem('rgba(214,48,49,0.3)', t('map.pollution')),
+      legendItem('rgba(150,90,30,0.32)', t('map.ground')),
       legendItem('#ff3b3b', t('map.enemies')),
       legendItem('#c79a5d', t('map.buildings')),
       legendItem('#e2e6ea', t('map.belts')),
     );
+    const veil = document.createElement('label');
+    veil.className = 'map-veil';
+    const veilBox = document.createElement('input');
+    veilBox.type = 'checkbox';
+    veilBox.checked = showPollution;
+    veilBox.addEventListener('change', () => {
+      showPollution = veilBox.checked;
+      draw();
+    });
+    veil.append(veilBox, document.createTextNode(` ${t('map.showPollution')}`));
+    legend.append(veil);
     const help = document.createElement('small');
     help.className = 'help';
     help.textContent = t('map.help');

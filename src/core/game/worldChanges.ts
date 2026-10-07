@@ -55,6 +55,8 @@ export interface WorldChanges {
   equipment: Partial<Record<EquipSlot, string>>;
   /** Technologies déjà recherchées. */
   unlocked: string[];
+  /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
+  admin: boolean;
   /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
   researching: string | null;
   progress: Record<string, number>;
@@ -98,6 +100,7 @@ export function emptyChanges(): WorldChanges {
     nextMachineId: 1,
     equipment: {},
     unlocked: [],
+    admin: false,
     researching: null,
     progress: {},
     pollution: {},
@@ -111,11 +114,14 @@ export function emptyChanges(): WorldChanges {
 }
 
 /** Applique les changements du joueur à un chunk fraîchement généré. */
+/** Points de vie d'un nid : le « taken » du nid compte les dégâts reçus. */
+export const NEST_HP = 150;
+
 export function applyChanges(chunk: ChunkData, changes: WorldChanges): ChunkData {
   const hasTaken = Object.keys(changes.taken).length > 0;
   if (!hasTaken) return chunk;
   const objects = chunk.objects.flatMap((o) => {
-    if (o.id === 'nest') return [o];
+    if (o.id === 'nest') return (changes.taken[cellKey(o.gx, o.gz)] ?? 0) >= NEST_HP ? [] : [o];
     const taken = changes.taken[cellKey(o.gx, o.gz)] ?? 0;
     const left = resourceById(o.id).kind === 'object' ? o.amount - taken : o.amount;
     return left > 0 ? [{ ...o, amount: left }] : [];
@@ -162,6 +168,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     }
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
+  result.admin = r.admin === true;
   result.unlocked = Array.isArray(r.unlocked)
     ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
     : TECHS.map((t) => t.id);

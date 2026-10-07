@@ -68,11 +68,11 @@ describe('nids et ennemis', () => {
   it('un ennemi peu agressif ignore le joueur lointain ; le joueur peut les frapper', () => {
     const calm = new Threat({}, {}, world, { aggressive: false });
     calm.enemies.push({ id: 1, x: 0, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
-    calm.update(0.05, [{ id: 'player', x: 20, z: 0 }]);
+    calm.update(0.05, [{ id: 'player', x: 40, z: 0 }]);
     expect(calm.enemies[0].target).toBeNull();
     const fierce = new Threat({}, {}, world, { aggressive: true });
     fierce.enemies.push({ id: 1, x: 0, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
-    fierce.update(0.05, [{ id: 'player', x: 20, z: 0 }]);
+    fierce.update(0.05, [{ id: 'player', x: 40, z: 0 }]);
     expect(fierce.enemies[0].target).toBe('player');
     expect(fierce.hit(0, 0, 2, 13)).toBe('hit');
     expect(fierce.hit(0, 0, 2, 13)).toBe('kill');

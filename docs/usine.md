@@ -325,3 +325,14 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 
 - **Eau** : entrée par un côté, ressort par le côté opposé (raccord dans les deux sens, niveaux équilibrés) : on enchaîne plusieurs chaudières sur une même conduite. **Charbon** : uniquement par l'arrière (tapis ou bras) ; **vapeur** : sortie devant, en face du charbon. Flèches : bleues sur les côtés, blanche devant.
 - Test : deux chaudières côte à côte se remplissent, le combustible n'est accepté que par l'arrière. Les parties existantes : les chaudières déjà posées peuvent devoir être tournées (l'eau n'arrive plus par l'arrière).
+
+## Tour 79 — turbine large, flèches, débogage, santé, nids
+
+- **Turbine** : 2 × 3 → **4 × 3** cases (deux fois plus large) ; dessin élargi.
+- **Chaudière** : flèches à la bonne couleur (eau bleue sur les côtés, vapeur blanche devant, **charbon noir derrière**). Toutes les flèches sont relevées à 20 cm pour rester visibles à côté d'un tapis.
+- **Touche Debug (F3)** : affiche la boîte blanche autour de la cible survolée, le panneau d'infos (seed, position, biome…) et le compteur d'images. Le réglage « infos de débogage » disparaît des paramètres. Au premier usage dans une partie, `changes.admin = true` : pas de succès pour cette partie (les succès et les types de partie, créa / survie, restent à faire).
+- **Boussole** : n'apparaît qu'après la technologie **Navigation** (10 fer + 5 cuivre ; objet « Boussole »). Les parties existantes la perdent tant qu'elle n'est pas recherchée.
+- **Carte** : voile de pollution beaucoup plus transparent, case à cocher pour le masquer.
+- **Santé** : barre cachée par défaut (réglage « Afficher la barre de santé ») ; la **rougeur des bords de l'écran** monte avec les dégâts et s'efface avec la santé.
+- **Ennemis** : les nids ont 150 points de vie, **détruits à force de tirer** (ou au corps à corps) ; leurs gardiens disparaissent avec eux. Ennemis voient le joueur de plus loin (24 m, 45 m si agressifs), gardiens 30 m / laisse 90 m, réapparition des gardiens en 40 s (au lieu de 120), nids plus voraces (coût d'un ennemi 12 au lieu de 20).
+- **Buggy** : le réservoir et la case de carburant sont maintenant toujours reliés au bon buggy (accesseurs redéfinis à chaque ouverture) ; cause exacte non reproduite, à confirmer en jeu.

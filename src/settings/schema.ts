@@ -23,7 +23,8 @@ export interface Settings {
     timeFormat: TimeFormat;
     colorblind: ColorBlindMode;
     showFps: boolean;
-    showDebug: boolean;
+    /** Barre de santé toujours affichée (sinon la rougeur de l'écran indique les dégâts). */
+    showHealth: boolean;
     units: UnitPrefs;
   };
   sound: {
@@ -105,7 +106,7 @@ export function defaultSettings(preset: KeyboardPreset): Settings {
       timeFormat: 'auto',
       colorblind: 'none',
       showFps: false,
-      showDebug: true,
+      showHealth: false,
       units: { distance: 'm', temperature: 'C', mass: 'kg', pressure: 'Pa', energy: 'SI' },
     },
     sound: {
