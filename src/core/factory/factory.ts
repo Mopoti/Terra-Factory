@@ -301,7 +301,7 @@ export function ports(
     case 'turret':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     case 'boiler':
-      return { ins: [into(left), into(right)], outs: [] };
+      return { ins: [into(back)], outs: [] };
     default:
       return { ins: [], outs: [] };
   }
@@ -1093,8 +1093,9 @@ export class Factory {
       const max = machineDef('furnace').stockMax ?? 100;
       return !target.input || (target.input.item === item && target.input.count < max);
     }
-    if (isDrill(target.type) || target.type === 'boiler')
-      return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
+    // Chaudière : combustible uniquement par l'arrière (face à la sortie de vapeur).
+    if (target.type === 'boiler') return dir === target.rot && this.fuelRoom(target, item);
+    if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
     if (isTurret(target.type))
       return (

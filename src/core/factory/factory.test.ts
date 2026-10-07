@@ -610,20 +610,21 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     turbines: number,
     boilerCoal: number,
   ): { f: Factory; ms: Record<string, Machine> } => {
-    // Pompe et tuyaux en 2 x 2, chaudière 3 x 3, turbines 2 x 3, en colonne le long de +z.
+    // Pompe et tuyaux en 2 x 2 le long de +z ; la chaudière 3 x 3 (tournée vers +x) reçoit l'eau par son côté -z
+    // et sort la vapeur vers +x, où les turbines 2 x 3 s'alignent.
     const gen = emptyMachine(1, 'generator', 15, 0, 0);
     gen.fuel = { item: 'coal', count: 10 };
     const poles = [4, 12, 20, 28].map((z, i) => emptyMachine(2 + i, 'pole', 13, z, 0));
     const pump = emptyMachine(20, 'pump', 10, -1, 0);
     const p1 = emptyMachine(21, 'pipe', 10, 1, 0);
     const p2 = emptyMachine(22, 'pipe', 10, 3, 0);
-    const boiler = emptyMachine(23, 'boiler', 9, 5, 0);
+    const boiler = emptyMachine(23, 'boiler', 9, 5, 1);
     if (boilerCoal > 0) boiler.fuel = { item: 'coal', count: boilerCoal };
-    const p3 = emptyMachine(24, 'pipe', 10, 8, 0);
+    const p3 = emptyMachine(24, 'pipe', 12, 5, 0);
     const list = [gen, ...poles, pump, p1, p2, boiler, p3];
     const ms: Record<string, Machine> = { pump, boiler, p3 };
     for (let i = 0; i < turbines; i++) {
-      const t = emptyMachine(40 + i, 'turbine', 10, 10 + 3 * i, 0);
+      const t = emptyMachine(40 + i, 'turbine', 14 + 3 * i, 5, 1);
       ms[`t${i}`] = t;
       list.push(t);
     }
@@ -660,6 +661,26 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     expect(f.status(ms.t0)).toBe('running');
     // le réseau électrique compte la turbine
     expect(f.gridInfo(ms.t0)!.capacityKw).toBeGreaterThan(200);
+  });
+
+  it('l’eau traverse une chaudière et alimente la suivante ; le charbon n’entre que par l’arrière', () => {
+    const pipe = emptyMachine(1, 'pipe', 11, 3, 0);
+    pipe.fluid.water = 100;
+    const b1 = emptyMachine(2, 'boiler', 9, 5, 1);
+    const b2 = emptyMachine(3, 'boiler', 9, 8, 1); // côté +z de la première
+    const f = new Factory([pipe, b1, b2], world());
+    run(f, 20);
+    expect(b1.fluid.water).toBeGreaterThan(20);
+    expect(b2.fluid.water).toBeGreaterThan(20);
+    // rot 1 : derrière = -x. Un tapis venant de -x (direction +x = rot) est accepté, un autre côté non.
+    const coal = (dir: number): boolean =>
+      (
+        f as unknown as { canAccept: (t: Machine, fr: Machine, i: string, d: number) => boolean }
+      ).canAccept(b1, pipe, 'coal', dir);
+    expect(coal(1)).toBe(true);
+    expect(coal(0)).toBe(false);
+    expect(coal(2)).toBe(false);
+    expect(coal(3)).toBe(false);
   });
 
   it('sans combustible la chaudière ne produit pas de vapeur : la turbine reste à l’arrêt', () => {
@@ -706,7 +727,7 @@ describe('raccords décalés et poteau fin', () => {
     const world = { ...makeWorld().world, waterAt: (_gx: number, gz: number) => gz < 0 };
     const pipe = emptyMachine(1, 'pipe', 11, 3, 0); // touche seulement la case (11,4) du côté arrière
     pipe.fluid.water = 100;
-    const boiler = emptyMachine(2, 'boiler', 9, 5, 0);
+    const boiler = emptyMachine(2, 'boiler', 9, 5, 1);
     const f = new Factory([pipe, boiler], world);
     run(f, 3);
     expect(boiler.fluid.water).toBeGreaterThan(20);

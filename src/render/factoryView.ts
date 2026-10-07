@@ -99,10 +99,12 @@ function fluidArrows(
   tint?: (c: Rgb) => Rgb,
 ): void {
   for (const p of fluidPorts(type, rot)) {
-    if (p.mode === 'both') continue;
+    if (p.mode === 'both' && p.fluid === 'any') continue;
     const cell = sideCell(type, gx, gz, rot, p.side);
     const base = p.fluid === 'water' ? WATER_ARROW : STEAM_ARROW;
-    flatArrow(mb, cell, p.mode === 'out' ? p.side : (p.side + 2) % 4, tint ? tint(base) : base);
+    // Eau traversante (chaudière) : entrée à gauche, ressort à droite (le raccord marche dans les deux sens).
+    const outward = p.mode === 'out' || (p.mode === 'both' && p.side === (rot + 1) % 4);
+    flatArrow(mb, cell, outward ? p.side : (p.side + 2) % 4, tint ? tint(base) : base);
   }
 }
 

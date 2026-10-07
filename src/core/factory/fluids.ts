@@ -29,8 +29,10 @@ export function fluidPorts(type: MachineType, rot: number): FluidPort[] {
     case 'pump':
       return [{ side: rot % 4, mode: 'out', fluid: 'water' }];
     case 'boiler':
+      // Eau par un côté et qui ressort de l'autre (chaudières en série) ; vapeur devant, combustible derrière.
       return [
-        { side: back, mode: 'in', fluid: 'water' },
+        { side: (rot + 1) % 4, mode: 'both', fluid: 'water' },
+        { side: (rot + 3) % 4, mode: 'both', fluid: 'water' },
         { side: rot % 4, mode: 'out', fluid: 'steam' },
       ];
     case 'turbine':
