@@ -10,6 +10,7 @@ import {
   pickMachine,
   type FactoryWorld,
   type Machine,
+  dims,
 } from './factory';
 
 /** Un petit monde : des cases de minerai de fer sous (0..2, 0..2), 5 minerais chacune. */
@@ -950,5 +951,12 @@ describe('amorçage de la vapeur sans générateur', () => {
     run(f, 5);
     expect(pump.fluid.water).toBeGreaterThan(0);
     expect(pump.fluid.water).toBeLessThan(5 * 100 * 0.5); // bien moins vite qu'à pleine puissance
+  });
+});
+
+describe('emprise de la turbine', () => {
+  it('fait 3 cases en largeur et 4 en longueur (tournée de 90°, l’inverse)', () => {
+    expect(dims('turbine', 0)).toEqual({ w: 3, d: 4 });
+    expect(dims('turbine', 1)).toEqual({ w: 4, d: 3 });
   });
 });
