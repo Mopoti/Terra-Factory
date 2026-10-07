@@ -1,3 +1,4 @@
+import { DEFAULT_TIME } from '../game/seasons';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
@@ -151,7 +152,11 @@ describe('gérer les sauvegardes', () => {
   it('duplique une partie avec toutes ses sauvegardes, indépendamment de l’originale', () => {
     const lib = memory();
     const g = lib.create('A', 'seed-a', {
-      options: { enemies: { aggressive: true, expand: false }, realism: 'realistic' },
+      options: {
+        enemies: { aggressive: true, expand: false },
+        realism: 'realistic',
+        time: DEFAULT_TIME,
+      },
     });
     lib.saveSlot(g.id, { name: 'un', kind: 'manual', player, inventory: { wood: 2 } }, 5, 1);
     const copy = lib.duplicateGame(g.id, 'A (copie)')!;

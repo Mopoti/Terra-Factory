@@ -92,14 +92,14 @@ export const LIFT_NEXT = [0, 2, 2, 0, 0, 0, 7, 7, 2] as const;
 export const TUNNEL_MAX_TILES = 8;
 export const LIFT_COUNT = LIFTS.length;
 /** Hauteur d'un niveau (m). */
-/** Hauteur (m) de chaque niveau, en multiples de 50 cm : sol, 1 m, 2,5 m (un étage : la dalle). */
-export const LEVEL_HEIGHTS = [0, 1, 2.5] as const;
+/** Hauteur (m) de chaque niveau, en multiples de 50 cm et de même pas (rampes toutes identiques, à 45°) : sol, 1 m, 2 m. */
+export const LEVEL_HEIGHTS = [0, 1, 2] as const;
 export const levelY = (level: number): number => LEVEL_HEIGHTS[level] ?? 0;
 /** Niveau d'entrée d'une pièce : un tapis suit sa forme ; une machine est au sol (0) ou à l'étage sur une dalle (2). */
 export const liftStart = (m: Machine): number =>
   m.type === 'conveyor' ? LIFTS[m.lift].from : m.lift;
 export const liftEnd = (m: Machine): number => (m.type === 'conveyor' ? LIFTS[m.lift].to : m.lift);
-/** Étage (dalle à 2,5 m) : niveau des machines posées en hauteur. */
+/** Étage (dalle à 2 m) : niveau des machines posées en hauteur. */
 export const UPPER_LEVEL = 2;
 
 /** Assembleur : ingrédients de la recette choisie (objet -> quantité par unité fabriquée). */

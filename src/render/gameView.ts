@@ -40,7 +40,7 @@ import type { Settings } from '../settings/schema';
 import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
-import { seasonAt } from '../core/game/seasons';
+import { climateAt, dayLight } from '../core/game/seasons';
 import { buildChunkMesh, ghostUniforms, setGroundTint, type ChunkMesh } from './chunkMesh';
 import {
   STEP_UP_M,
@@ -182,7 +182,8 @@ export function startGameView(
   const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 500);
   scene.add(camera);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x556655, 1.1));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x556655, 1.1);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.shadow.camera.left = sun.shadow.camera.bottom = -28;
   sun.shadow.camera.right = sun.shadow.camera.top = 28;
@@ -815,7 +816,7 @@ export function startGameView(
     const def = selectedMachine();
     if (!def) return;
     computeRay();
-    // Machine à l'étage : on vise le plan de la dalle (2,5 m) ; elle exige une dalle d'étage sous chacune de ses cases.
+    // Machine à l'étage : on vise le plan de la dalle (2 m) ; elle exige une dalle sous chacune de ses cases.
     const upper = !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL;
     const c = cellOnPlane(rayOrigin, rayDir, upper ? levelY(UPPER_LEVEL) : 0);
     const down = input.isActionActive('interact');
@@ -837,7 +838,8 @@ export function startGameView(
       // Une pompe se pose à moitié dans l'eau : ses cases dans l'étang ne comptent pas comme bloquées.
       const pieces = options.state.changes.pieces;
       const blockedHere = upper
-        ? (cell: Cell): boolean => !slabAt(pieces, LAYERS_PER_STOREY, cell.gx, cell.gz)
+        ? (cell: Cell): boolean =>
+            !slabAt(pieces, Math.round(levelY(UPPER_LEVEL) / LAYER_HEIGHT_M), cell.gx, cell.gz)
         : def.id === 'pump'
           ? (cell: Cell): boolean => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz)
           : machineBlocked;
@@ -1642,17 +1644,26 @@ export function startGameView(
   }
 
   // --- Saisons ---------------------------------------------------------------------------------
-  let seasonKey = '';
+  const NIGHT_SKY = 0x0a1224;
+  const timeCfg = game.options.time;
+  let lastSkyMix = -1;
   function updateSeason(dt: number): void {
     options.state.changes.time += dt;
-    const { season } = seasonAt(options.state.changes.time);
-    threat.treeFactor = season.treeAbsorb;
-    if (season.id === seasonKey) return;
-    seasonKey = season.id;
-    setGroundTint(season.ground, season.snow);
-    skyNow = season.sky;
-    (scene.background as THREE.Color).set(season.sky);
-    if (scene.fog) scene.fog.color.set(season.sky);
+    const time = options.state.changes.time;
+    const climate = climateAt(time, timeCfg);
+    const day = dayLight(time, timeCfg);
+    threat.treeFactor = climate.treeAbsorb;
+    // Ambiance de la saison (interpolée : pas de changement brusque) et luminosité du jour / de la nuit.
+    setGroundTint(climate.ground, climate.snow);
+    hemi.intensity = 1.1 * (0.3 + 0.7 * day.light);
+    sun.intensity = 1.6 * day.light;
+    const mix = Math.round(day.light * 100) * 1000 + climate.sky;
+    if (mix === lastSkyMix) return;
+    lastSkyMix = mix;
+    const sky = new THREE.Color(NIGHT_SKY).lerp(new THREE.Color(climate.sky), day.light);
+    skyNow = sky.getHex();
+    (scene.background as THREE.Color).copy(sky);
+    if (scene.fog) scene.fog.color.copy(sky);
   }
 
   // --- Véhicules : buggy ------------------------------------------------------------------------
@@ -2157,8 +2168,10 @@ export function startGameView(
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,
       (() => {
-        const { season, day, year } = seasonAt(options.state.changes.time);
-        return `${t('debug.season')} : ${t(`season.${season.id}` as TranslationKey)} · ${t('debug.seasonDay', { d: String(day), y: String(year) })}`;
+        const clock = options.state.changes.time;
+        const { season, day, year } = climateAt(clock, timeCfg);
+        const light = dayLight(clock, timeCfg);
+        return `${t('debug.season')} : ${t(`season.${season.id}` as TranslationKey)} · ${t('debug.seasonDay', { d: String(day), y: String(year) })} · ${t(light.isDay ? 'time.day' : 'time.night')}`;
       })(),
       `${t('debug.view')} : ${t(`view.${rig.view}` as TranslationKey)}`,
       `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m · ${t('debug.height')} ${playerY.toFixed(2)} m`,
@@ -2178,11 +2191,34 @@ export function startGameView(
 
   /** Aura de transparence autour du joueur (3ème personne et vue du dessus). */
   const chest = new THREE.Vector3();
+  const camPos = new THREE.Vector3();
+  const toPlayer = new THREE.Vector3();
+  /** Un mur, une dalle, une machine, un tronc ou un rocher cache-t-il le personnage depuis la caméra ? */
+  function playerHidden(): boolean {
+    camera.getWorldPosition(camPos);
+    toPlayer.set(playerX - camPos.x, playerY + 1.0 - camPos.y, playerZ - camPos.z);
+    const dist = toPlayer.length();
+    if (dist < 0.8) return false;
+    toPlayer.divideScalar(dist);
+    const dir = { x: toPlayer.x, y: toPlayer.y, z: toPlayer.z };
+    const origin = { x: camPos.x, y: camPos.y, z: camPos.z };
+    const reach = dist - 0.35;
+    const piece = pickPiece(options.state.changes.pieces, origin, dir, reach);
+    if (piece && piece.t < reach) return true;
+    const machine = pickMachine(factory, origin, dir, reach);
+    if (machine && machine.t < reach) return true;
+    for (let t = 0.3; t < reach; t += 0.15) {
+      if (obstacleAt(origin.x + dir.x * t, origin.y + dir.y * t, origin.z + dir.z * t)) return true;
+    }
+    return false;
+  }
   function updateGhost(views: Settings['views']): void {
     const on =
       rig.view === 'third' ? views.third.ghost : rig.view === 'top' ? views.top.ghost : false;
-    ghostUniforms.uGhostOn.value = on ? 1 : 0;
-    if (!on) return;
+    // L'aura ne s'allume que si quelque chose se trouve vraiment entre la caméra et le personnage.
+    const show = on && playerHidden();
+    ghostUniforms.uGhostOn.value = show ? 1 : 0;
+    if (!show) return;
     const pct = rig.view === 'third' ? views.third.ghostRadius : views.top.ghostRadius;
     camera.updateMatrixWorld();
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
@@ -2338,10 +2374,9 @@ export function startGameView(
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
     const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
     const inRoom = options.state.rooms().find((r) => r.level === 0 && r.cells.includes(pcell));
-    buildingView.setVisibility(
-      building ? buildLevel : 0,
-      inRoom && !building ? inRoom.level : null,
-    );
+    // Construction libre : tous les étages restent visibles (une pièce posée haut ne disparaît jamais) ; seul le
+    // plafond de la pièce où l'on se trouve est masqué.
+    buildingView.setVisibility(99, inRoom && !building ? inRoom.level : null);
     if (building && !paused && !uiOpen) updateBuild(dt);
     // Usine : 20 pas de simulation par seconde, affichage des objets sur les tapis 10 fois par seconde.
     if (!paused) {

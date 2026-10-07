@@ -1,3 +1,4 @@
+import { DEFAULT_TIME } from '../game/seasons';
 import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
 import { SaveLibrary } from './library';
@@ -167,7 +168,11 @@ describe('options et réglages de la partie', () => {
         ...defaultWorldParams('x').families,
         ores: { frequency: 2, size: 1.5, density: 0.5 },
       },
-      options: { enemies: { aggressive: true, expand: false }, realism: 'realistic' },
+      options: {
+        enemies: { aggressive: true, expand: false },
+        realism: 'realistic',
+        time: DEFAULT_TIME,
+      },
     });
     const back = index.get(g.id);
     expect(back?.world.families.ores).toEqual({ frequency: 2, size: 1.5, density: 0.5 });
@@ -175,6 +180,7 @@ describe('options et réglages de la partie', () => {
     expect(back?.options).toEqual({
       enemies: { aggressive: true, expand: false },
       realism: 'realistic',
+      time: DEFAULT_TIME,
     });
   });
   it('par défaut : ennemis non agressifs mais qui s’étendent, physique équilibrée', () => {
@@ -183,6 +189,7 @@ describe('options et réglages de la partie', () => {
     expect(g.options).toEqual({
       enemies: { aggressive: false, expand: true },
       realism: 'balanced',
+      time: DEFAULT_TIME,
     });
   });
   it('les multiplicateurs hors limites ou invalides sont ramenés dans ×0,25 – ×3', () => {

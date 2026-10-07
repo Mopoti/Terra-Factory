@@ -6,6 +6,7 @@ import {
   type GameSummary,
   type Realism,
 } from '../core/save/saveIndex';
+import { MIN_SHARE, SEASON_IDS, type TimeSettings } from '../core/game/seasons';
 import { FAMILY_IDS, RESOURCES, type FamilyId } from '../core/data/resources';
 import { BIOME_COLORS, BIOME_IDS } from '../core/world/biomes';
 import { PreviewRenderer } from '../core/world/preview';
@@ -220,6 +221,49 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   realismRow.append(realismControl);
   form.append(realismRow, el('small', 'help', t('editor.realism.help')));
 
+  // --- Temps : jour, nuit, saisons (trois réglages indépendants) ------------------------------------
+  form.append(
+    el('h3', undefined, t('editor.time.title')),
+    el('small', 'help', t('editor.time.help')),
+  );
+  options.time = structuredClone(options.time);
+  const timeRow = (
+    key: 'dayMinutes' | 'nightMinutes' | 'seasonDays',
+    label: string,
+    unit: string,
+    min: number,
+    max: number,
+  ): HTMLElement => {
+    const row = el('div', 'row');
+    row.append(el('span', 'row-label', label));
+    const control = el('div', 'row-control');
+    const input = el('input');
+    input.type = 'range';
+    input.min = String(min);
+    input.max = String(max);
+    input.step = '1';
+    input.value = String(options.time[key]);
+    input.setAttribute('aria-label', label);
+    const value = el('span', 'row-value');
+    const sync = (): void => {
+      value.textContent = `${options.time[key]} ${unit}`;
+    };
+    input.addEventListener('input', () => {
+      options.time[key] = Number(input.value);
+      sync();
+    });
+    sync();
+    control.append(input, value);
+    row.append(control);
+    return row;
+  };
+  form.append(
+    timeRow('dayMinutes', t('editor.time.day'), t('editor.time.minutes'), 1, 60),
+    timeRow('nightMinutes', t('editor.time.night'), t('editor.time.minutes'), 1, 60),
+    timeRow('seasonDays', t('editor.time.seasonDays'), t('editor.time.days'), 1, 60),
+    seasonPie(options.time),
+  );
+
   // --- Actions -----------------------------------------------------------------------------------
   const launch = (): void => {
     const name = nameInput.value.trim() || t('screen.newGame.defaultName', { n: '1' });
@@ -318,4 +362,115 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
 
   startPreview();
   return { element: panel, dispose };
+}
+
+const SEASON_COLORS = ['#7bc96f', '#f2c94c', '#d98b3a', '#9ec9e6'];
+
+/**
+ * Camembert des saisons : chaque part est une saison ; on tire les poignées aux frontières pour agrandir ou
+ * rapetisser une saison (au moins 5 % chacune). Modifie `time.shares` sur place.
+ */
+function seasonPie(time: TimeSettings): HTMLElement {
+  const box = el('div', 'season-pie');
+  const NS = 'http://www.w3.org/2000/svg';
+  const size = 230;
+  const c = size / 2;
+  const r = 88;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', t('editor.time.pie'));
+  const info = el('div', 'season-pie-info');
+  const point = (frac: number, radius: number): [number, number] => {
+    const a = frac * Math.PI * 2 - Math.PI / 2;
+    return [c + Math.cos(a) * radius, c + Math.sin(a) * radius];
+  };
+  const bounds = (): number[] => {
+    const out = [0];
+    for (const s of time.shares) out.push(out[out.length - 1] + s / 100);
+    return out;
+  };
+  function draw(): void {
+    svg.replaceChildren();
+    const b = bounds();
+    for (let i = 0; i < 4; i++) {
+      const [x0, y0] = point(b[i], r);
+      const [x1, y1] = point(b[i + 1], r);
+      const large = b[i + 1] - b[i] > 0.5 ? 1 : 0;
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', `M ${c} ${c} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`);
+      path.setAttribute('fill', SEASON_COLORS[i]);
+      path.setAttribute('stroke', '#1b2430');
+      path.setAttribute('stroke-width', '2');
+      svg.append(path);
+      const [lx, ly] = point((b[i] + b[i + 1]) / 2, r * 0.6);
+      const label = document.createElementNS(NS, 'text');
+      label.setAttribute('x', String(lx));
+      label.setAttribute('y', String(ly));
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('dominant-baseline', 'middle');
+      label.setAttribute('font-size', '11');
+      label.setAttribute('fill', '#1b2430');
+      label.setAttribute('pointer-events', 'none');
+      label.textContent = `${t(`season.${SEASON_IDS[i]}` as TranslationKey)} ${time.shares[i]} %`;
+      svg.append(label);
+    }
+    // Poignées aux frontières entre saisons (la première saison commence en haut).
+    for (let k = 1; k <= 3; k++) {
+      const [hx, hy] = point(b[k], r);
+      const handle = document.createElementNS(NS, 'circle');
+      handle.setAttribute('cx', String(hx));
+      handle.setAttribute('cy', String(hy));
+      handle.setAttribute('r', '8');
+      handle.setAttribute('fill', '#fff');
+      handle.setAttribute('stroke', '#1b2430');
+      handle.setAttribute('stroke-width', '2');
+      handle.setAttribute('cursor', 'grab');
+      handle.addEventListener('pointerdown', (e) => {
+        handle.setPointerCapture(e.pointerId);
+        const move = (ev: PointerEvent): void => {
+          const rect = svg.getBoundingClientRect();
+          const px = ((ev.clientX - rect.left) / rect.width) * size - c;
+          const py = ((ev.clientY - rect.top) / rect.height) * size - c;
+          let frac = (Math.atan2(py, px) + Math.PI / 2) / (Math.PI * 2);
+          if (frac < 0) frac += 1;
+          const min = MIN_SHARE / 100;
+          const lo = b[k - 1] + min;
+          const hi = b[k + 1] - min;
+          frac = Math.min(hi, Math.max(lo, frac));
+          const next = [...b];
+          next[k] = frac;
+          // Parts entières ; la dernière complète à 100.
+          const shares = [0, 1, 2, 3].map((i) => Math.round((next[i + 1] - next[i]) * 100));
+          shares[3] = 100 - shares[0] - shares[1] - shares[2];
+          if (shares.every((v) => v >= MIN_SHARE)) {
+            time.shares = shares as TimeSettings['shares'];
+            draw();
+          }
+        };
+        const up = (): void => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', up);
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+      });
+      svg.append(handle);
+    }
+    const yearDays = time.seasonDays * 4;
+    info.textContent = SEASON_IDS.map(
+      (id, i) =>
+        `${t(`season.${id}` as TranslationKey)} : ${time.shares[i]} % (${Math.round((yearDays * time.shares[i]) / 100)} ${t('editor.time.days')})`,
+    ).join(' · ');
+  }
+  draw();
+  box.append(
+    el('div', 'row-label', t('editor.time.pie')),
+    svg,
+    info,
+    el('small', 'help', t('editor.time.pieHelp')),
+  );
+  return box;
 }

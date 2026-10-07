@@ -1,5 +1,6 @@
 import { normalizeInventory, type Inventory } from '../game/inventory';
 import { normalizeChanges, type WorldChanges } from '../game/worldChanges';
+import { DEFAULT_TIME, normalizeTime, type TimeSettings } from '../game/seasons';
 import { normalizeWorldParams, type WorldParams } from '../world/worldgen';
 
 export type ViewId = 'first' | 'third' | 'top';
@@ -38,11 +39,14 @@ export interface GameOptions {
     expand: boolean;
   };
   realism: Realism;
+  /** Jour, nuit et saisons (réglages indépendants). */
+  time: TimeSettings;
 }
 
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
   enemies: { aggressive: false, expand: true },
   realism: 'balanced',
+  time: DEFAULT_TIME,
 };
 
 export function normalizeOptions(raw: unknown): GameOptions {
@@ -58,6 +62,7 @@ export function normalizeOptions(raw: unknown): GameOptions {
       expand: typeof e.expand === 'boolean' ? e.expand : d.enemies.expand,
     },
     realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
+    time: normalizeTime(o.time),
   };
 }
 

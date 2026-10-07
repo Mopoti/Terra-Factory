@@ -313,3 +313,10 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 75 — case de carburant du buggy
 
 - La fenêtre du buggy a maintenant un champ **Combustible** (comme les machines : charbon, bois…) en plus du coffre (`vehicles[].fuelStack`, sauvegardé), avec le temps de route restant. Le buggy consomme d'abord cette case, puis le charbon / bois de son coffre, puis ceux du sac. Rangé, tout revient dans le sac. Test.
+
+## Tour 77 — hauteur, rampes, aura, jour/nuit et saisons
+
+- Pièces d'étage supérieur invisibles (6e couche) : tous les étages sont désormais affichés (`setVisibility(99, …)`).
+- Rampes homogènes (niveaux 0/1/2 m, 45°), voir `docs/dimensions.md`.
+- L'aura transparente du joueur n'apparaît que si une pièce, une machine ou un obstacle se trouve entre la caméra et le joueur (`playerHidden`). Les cimes d'arbres ne comptent pas.
+- Jour, nuit et saisons : trois réglages indépendants de la partie (`options.time`, éditeur de partie) : jour 10 min, nuit 8 min, saison 10 jours par défaut ; camembert pour la part de chaque saison (min 5 %). Le sol, le ciel et l'absorption des arbres changent **progressivement** d'une saison à l'autre ; lumière jour/nuit avec aube et crépuscule. Réglable à la création seulement.

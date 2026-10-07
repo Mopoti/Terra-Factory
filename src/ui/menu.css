@@ -1525,3 +1525,17 @@
   pointer-events: none;
   z-index: 6;
 }
+
+.season-pie {
+  margin: 10px 0 14px;
+}
+.season-pie svg {
+  display: block;
+  margin: 8px auto;
+  touch-action: none;
+}
+.season-pie-info {
+  font-size: 12px;
+  color: #aab4bf;
+  text-align: center;
+}
