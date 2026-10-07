@@ -624,7 +624,7 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     const list = [gen, ...poles, pump, p1, p2, boiler, p3];
     const ms: Record<string, Machine> = { pump, boiler, p3 };
     for (let i = 0; i < turbines; i++) {
-      const t = emptyMachine(40 + i, 'turbine', 14 + 3 * i, 5, 1);
+      const t = emptyMachine(40 + i, 'turbine', 14 + 4 * i, 5, 1);
       ms[`t${i}`] = t;
       list.push(t);
     }

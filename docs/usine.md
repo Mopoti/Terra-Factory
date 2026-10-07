@@ -344,3 +344,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Turbine** : **3 × 3** cases (au lieu de 4 × 3).
 - **Debug** : touche **F9** (F3 = recherche du navigateur). Le cadre « Partie / Sac / Menu » en haut à gauche n'apparaît qu'en mode debug (Tab = sac, Échap = menu restent disponibles).
 - **Buggy** : sans carburant, il ne bouge plus du tout (message), on en descend avec la touche d'utilisation.
+
+## Tour 81 — turbine 3 × 4
+
+- **Turbine** : **3 cases en largeur, 4 en longueur** (sens de la vapeur), soit 1,5 m × 2 m.

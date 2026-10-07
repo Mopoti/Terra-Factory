@@ -206,7 +206,7 @@
     {
       "id": "turbine",
       "w": 4,
-      "d": 3,
+      "d": 4,
       "item": "machine_turbine",
       "color": "#a9b4bd",
       "fuel": false,
