@@ -57,6 +57,10 @@ export interface WorldChanges {
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
   admin: boolean;
+  /** Corps laissé là où le joueur est tombé (affiché dans le monde et sur la carte), ou null. */
+  corpse: { x: number; z: number; yaw: number } | null;
+  /** Point de réapparition choisi par le joueur (null = le point de départ de la partie). */
+  respawn: { x: number; z: number } | null;
   /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
   researching: string | null;
   progress: Record<string, number>;
@@ -72,6 +76,8 @@ export interface WorldChanges {
   vehicles: Vehicle[];
   /** Balles dans le pistolet. */
   ammo: number;
+  /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
+  energyVersion: number;
   /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case). */
   footprintVersion: number;
 }
@@ -101,6 +107,8 @@ export function emptyChanges(): WorldChanges {
     equipment: {},
     unlocked: [],
     admin: false,
+    corpse: null,
+    respawn: null,
     researching: null,
     progress: {},
     pollution: {},
@@ -109,6 +117,7 @@ export function emptyChanges(): WorldChanges {
     time: 0,
     vehicles: [],
     ammo: 0,
+    energyVersion: 1,
     footprintVersion: FOOTPRINT_VERSION,
   };
 }
@@ -147,6 +156,9 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   result.pieces = normalizePieces(r.pieces);
   result.machines = normalizeMachines(r.machines);
+  // Anciennes sauvegardes : `fuelLeft` était en secondes de combustion, il est maintenant en kilojoules.
+  if (r.energyVersion !== 1)
+    for (const m of result.machines) m.fuelLeft *= machineDef(m.type).burnKw ?? 0;
   const maxMachine = result.machines.reduce((m, x) => Math.max(m, x.id), 0);
   result.nextMachineId = Math.max(
     isNum(r.nextMachineId) ? Math.floor(r.nextMachineId) : 1,
@@ -169,6 +181,14 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
+  const point = (v: unknown): { x: number; z: number; yaw: number } | null => {
+    if (typeof v !== 'object' || v === null) return null;
+    const o = v as Record<string, unknown>;
+    return isNum(o.x) && isNum(o.z) ? { x: o.x, z: o.z, yaw: isNum(o.yaw) ? o.yaw : 0 } : null;
+  };
+  result.corpse = point(r.corpse);
+  const spawn = point(r.respawn);
+  result.respawn = spawn ? { x: spawn.x, z: spawn.z } : null;
   result.unlocked = Array.isArray(r.unlocked)
     ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
     : TECHS.map((t) => t.id);
@@ -215,7 +235,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
           const f = v.fuelStack as Record<string, unknown> | null | undefined;
           if (!f || typeof f.item !== 'string' || !isNum(f.count) || f.count <= 0) return null;
           try {
-            if (!itemById(f.item).fuelSeconds) return null;
+            if (!itemById(f.item).energyMJ) return null;
           } catch {
             return null;
           }

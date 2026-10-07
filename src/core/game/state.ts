@@ -14,7 +14,15 @@ import { machineDef, smeltRecipe, type MachineType } from '../data/machines';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
-import { BAG_LIMITS, ITEMS, itemById, type BagLimits, type EquipSlot } from '../data/items';
+import {
+  BAG_LIMITS,
+  ITEMS,
+  VEHICLE_BURN_KW,
+  energyKJ,
+  itemById,
+  type BagLimits,
+  type EquipSlot,
+} from '../data/items';
 import {
   add,
   maxAddable,
@@ -695,13 +703,13 @@ export class GameState {
     // D'abord la case de carburant, puis le coffre du buggy, puis le sac.
     const take = (): { seconds: number } | null => {
       const f = v.fuelStack;
-      if (f && itemById(f.item).fuelSeconds) {
+      if (f && itemById(f.item).energyMJ) {
         f.count--;
         if (f.count <= 0) v.fuelStack = null;
-        return { seconds: (itemById(f.item).fuelSeconds ?? 0) * 0.5 };
+        return { seconds: energyKJ(f.item) / VEHICLE_BURN_KW };
       }
       for (const item of ['coal', 'wood']) {
-        const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
+        const seconds = energyKJ(item) / VEHICLE_BURN_KW;
         const stack = v.slots.find((x) => x.item === item);
         if (stack) {
           stack.count--;
@@ -710,7 +718,7 @@ export class GameState {
         }
       }
       for (const item of ['coal', 'wood']) {
-        const seconds = (itemById(item).fuelSeconds ?? 0) * 0.5;
+        const seconds = energyKJ(item) / VEHICLE_BURN_KW;
         if ((this.inventory[item] ?? 0) >= 1) {
           this.inventory = remove(this.inventory, item, 1).inventory;
           return { seconds };
@@ -846,7 +854,7 @@ export class GameState {
    */
   loadMachine(m: Machine, slot: 'fuel' | 'input', item: string, count: number): number {
     const max = machineDef(m.type).stockMax ?? 100;
-    if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).fuelSeconds))
+    if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).energyMJ))
       return 0;
     if (
       slot === 'input' &&

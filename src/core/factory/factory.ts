@@ -1,6 +1,6 @@
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
-import { itemById } from '../data/items';
+import { energyKJ, itemById } from '../data/items';
 import {
   hasOutput,
   isChest,
@@ -859,10 +859,10 @@ export class Factory {
     return { total, byItem };
   }
 
-  /** Secondes de fonctionnement restantes avec le combustible disponible. */
+  /** Secondes de fonctionnement restantes (à pleine charge) avec le combustible disponible. `fuelLeft` est en kJ. */
   fuelSecondsLeft(m: Machine): number {
-    const stack = m.fuel ? (itemById(m.fuel.item).fuelSeconds ?? 0) * m.fuel.count : 0;
-    return m.fuelLeft + stack;
+    const stack = m.fuel ? energyKJ(m.fuel.item) * m.fuel.count : 0;
+    return (m.fuelLeft + stack) / (machineDef(m.type).burnKw || 1);
   }
 
   status(m: Machine): MachineStatus {
@@ -1016,14 +1016,14 @@ export class Factory {
   private fire(m: Machine): boolean {
     if (m.fuelLeft > 0) return true;
     if (!m.fuel || m.fuel.count <= 0) return false;
-    m.fuelLeft += itemById(m.fuel.item).fuelSeconds ?? 0;
+    m.fuelLeft += energyKJ(m.fuel.item);
     m.fuel.count--;
     if (m.fuel.count <= 0) m.fuel = null;
     return m.fuelLeft > 0;
   }
 
   private burn(m: Machine, dt: number): void {
-    m.fuelLeft = Math.max(0, m.fuelLeft - dt * (machineDef(m.type).burnPerSecond ?? 1));
+    m.fuelLeft = Math.max(0, m.fuelLeft - dt * (machineDef(m.type).burnKw ?? 0));
   }
 
   private tickDrill(m: Machine, dt: number): void {
@@ -1162,11 +1162,11 @@ export class Factory {
     }
     if (target.type === 'furnace') {
       if (smeltRecipe(item)) return target.input?.item !== item ? 'otherOre' : 'inputFull';
-      if (!itemById(item).fuelSeconds) return 'notUsable';
+      if (!itemById(item).energyMJ) return 'notUsable';
       return dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
     }
     if (target.type === 'generator' || isDrill(target.type)) {
-      if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return 'notUsable';
+      if (!machineDef(target.type).fuel || !itemById(item).energyMJ) return 'notUsable';
       return isDrill(target.type) && dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
     }
     if (isAssembler(target.type))
@@ -1336,7 +1336,7 @@ export class Factory {
   }
 
   private fuelRoom(target: Machine, item: string): boolean {
-    if (!machineDef(target.type).fuel || !itemById(item).fuelSeconds) return false;
+    if (!machineDef(target.type).fuel || !itemById(item).energyMJ) return false;
     const max = machineDef(target.type).stockMax ?? 100;
     return !target.fuel || (target.fuel.item === item && target.fuel.count < max);
   }
@@ -1427,8 +1427,7 @@ export class Factory {
       const src = this.neighbor(m, (m.rot + side) % 4);
       const found = (src ? this.peekSources(src) : []).find(
         (f) =>
-          itemById(f.item).fuelSeconds &&
-          (!m.fuel || (m.fuel.item === f.item && m.fuel.count < max)),
+          itemById(f.item).energyMJ && (!m.fuel || (m.fuel.item === f.item && m.fuel.count < max)),
       );
       if (!found) continue;
       found.take();

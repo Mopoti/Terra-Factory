@@ -209,6 +209,26 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       );
       ctx.fill();
     }
+    // Corps du joueur tombé (croix rouge) et point de réapparition (drapeau).
+    const marks: [{ x: number; z: number } | null, string, string][] = [
+      [options.state.changes.corpse, '✝', '#ff5a4d'],
+      [options.state.changes.respawn, '⚑', '#6bd4ff'],
+    ];
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const [at, glyph, color] of marks) {
+      if (!at) continue;
+      const mx = (at.x / CELL_SIZE_M - gx0) * zoom;
+      const mz = (at.z / CELL_SIZE_M - gz0) * zoom;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText(glyph, mx, mz);
+      ctx.fillStyle = color;
+      ctx.fillText(glyph, mx, mz);
+    }
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
     // Joueur : flèche blanche dans le sens du regard.
     const p = options.player();
     const px = (p.x / CELL_SIZE_M - gx0) * zoom;
@@ -273,6 +293,8 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(OBJECT_COLORS.nest, t('map.nests')),
       legendItem('rgba(214,48,49,0.3)', t('map.pollution')),
       legendItem('rgba(150,90,30,0.32)', t('map.ground')),
+      legendItem('#ff5a4d', `✝ ${t('map.corpse')}`),
+      legendItem('#6bd4ff', `⚑ ${t('map.respawn')}`),
       legendItem('#ff3b3b', t('map.enemies')),
       legendItem('#c79a5d', t('map.buildings')),
       legendItem('#e2e6ea', t('map.belts')),

@@ -13,7 +13,7 @@
       "weightKg": 0.8,
       "volumeL": 3,
       "color": "#8b5a2b",
-      "fuelSeconds": 20
+      "energyMJ": 1.8
     },
     {
       "id": "stone",
@@ -38,7 +38,7 @@
       "weightKg": 0.25,
       "volumeL": 0.3,
       "color": "#2b2b2f",
-      "fuelSeconds": 100
+      "energyMJ": 9
     },
     {
       "id": "piece_wall_wood",
@@ -253,7 +253,7 @@
       "weightKg": 0.05,
       "volumeL": 0.3,
       "color": "#9bbf5a",
-      "fuelSeconds": 6
+      "energyMJ": 0.54
     },
     {
       "id": "compass",

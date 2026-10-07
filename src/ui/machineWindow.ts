@@ -96,7 +96,7 @@ export function mountMachineWindow(
 
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
-    (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).fuelSeconds) ||
+    (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
     (slot === 'input' && m.type === 'furnace' && !!smeltRecipe(item)) ||
     (slot === 'input' && m.type === 'lab' && item === 'science_pack') ||
     (slot === 'input' && m.type === 'turret' && item === 'magazine');
@@ -475,7 +475,10 @@ export function mountMachineWindow(
     t('factory.fuel', {
       v: m.fuel ? `${m.fuel.count}` : '0',
       time: duration(factory.fuelSecondsLeft(m)),
-    });
+    }) +
+    (machineDef(m.type).burnKw
+      ? ` · ${t('factory.burn', { v: String(machineDef(m.type).burnKw) })}`
+      : '');
 
   /** Mise à jour douce : seuls les nombres qui bougent changent, les éléments ne sont pas remplacés. */
   function refresh(): void {

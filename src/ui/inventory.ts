@@ -195,6 +195,9 @@ export function mountInventory(
         ),
       );
     }
+    if (def.energyMJ) {
+      tooltip.append(el('div', 'note', t('inv.energy', { v: String(def.energyMJ) })));
+    }
     if (def.equip) {
       tooltip.append(
         el(

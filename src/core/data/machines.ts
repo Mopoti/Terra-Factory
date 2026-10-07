@@ -33,7 +33,8 @@ export interface MachineDef {
   height: number;
   /** Brûle du combustible pour fonctionner. */
   fuel: boolean;
-  burnPerSecond?: number;
+  /** Combustible : puissance brûlée à pleine charge (kW = kJ/s), dans la même unité que l'énergie des objets. */
+  burnKw?: number;
   /** Foreuse : secondes par minerai extrait. */
   mineSeconds?: number;
   /** Capacité de la case de stockage. */

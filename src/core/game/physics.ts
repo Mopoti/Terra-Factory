@@ -118,7 +118,11 @@ export function groundAt(
   slack = 0,
 ): number {
   let ground = 0;
-  for (const s of spansAt(pieces, x, z, feetY, 0.2)) {
+  const spans = spansAt(pieces, x, z, feetY, 0.2);
+  for (const s of spans) {
+    // Le dessus d'un bloc recouvert par un autre bloc (murs empilés) n'est pas un appui : sinon on resterait
+    // accroché à mi-hauteur contre un mur de deux blocs au lieu de le monter d'un saut.
+    if (spans.some((o) => o !== s && Math.abs(o.bottom - s.top) < 0.02)) continue;
     if (s.top <= feetY + STEP_UP_M && s.top > ground) ground = s.top;
   }
   for (const top of stairTops(pieces, x, z, feetY)) {

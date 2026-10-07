@@ -247,9 +247,10 @@ describe('électricité', () => {
     expect(g.demandKw).toBe(90);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBe(1);
-    // Charge de 30 % : le générateur ne brûle que 0,3 s de combustible par seconde.
-    expect(f.fuelSecondsLeft(gen)).toBeGreaterThan(200 - 12 * 0.35);
-    expect(gen.fuelLeft).toBeLessThan(100);
+    // Charge de 30 % : le générateur ne brûle que 30 % de ses 900 kW, soit environ 270 kW (3,2 MJ en 12 s).
+    const burntKJ = 12 * 0.3 * 900;
+    expect(f.fuelSecondsLeft(gen)).toBeGreaterThan((2 * 9000 - burntKJ * 1.1) / 900);
+    expect(gen.fuelLeft).toBeLessThan(9000);
   });
   it("sans combustible : plus de courant ; sans poteau : la foreuse est à l'arrêt", () => {
     const { f, gen, drill } = setup();
@@ -424,7 +425,7 @@ describe('bras robotique', () => {
   it('quand il va manquer de combustible il en garde un de ce qu’il transporte', () => {
     const src = chestWith(1, 10, 9, 'coal', 20);
     const arm = emptyMachine(2, 'arm', 10, 10, 0);
-    arm.fuelLeft = 5;
+    arm.fuelLeft = 100; // 100 kJ à 20 kW : 5 s de combustion restantes
     const target = emptyMachine(3, 'chest_wood', 10, 11, 0);
     const f = new Factory([src, arm, target], makeWorld().world);
     run(f, 1.5);

@@ -1562,3 +1562,9 @@
 .game-hud[hidden] {
   display: none;
 }
+
+.corpse-mark {
+  color: #ff5a4d;
+  font-weight: 700;
+  opacity: 1 !important;
+}

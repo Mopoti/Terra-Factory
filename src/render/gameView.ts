@@ -203,6 +203,15 @@ export function startGameView(
   );
   player.castShadow = true;
   scene.add(player);
+  // Le corps du joueur tombé : une capsule couchée, grise, qui reste là où il a été assommé.
+  const corpseMesh = new THREE.Mesh(
+    new THREE.CapsuleGeometry(PLAYER_RADIUS_M, PLAYER_HEIGHT_M - 2 * PLAYER_RADIUS_M, 4, 10),
+    new THREE.MeshStandardMaterial({ color: 0x8a7f78 }),
+  );
+  corpseMesh.rotation.z = Math.PI / 2;
+  corpseMesh.castShadow = true;
+  corpseMesh.visible = false;
+  scene.add(corpseMesh);
   let playerX = state.x;
   let playerY = state.y;
   let velY = 0;
@@ -1223,6 +1232,8 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.fuel', { v: stackText(m.fuel, def.stockMax), time: duration(secs) })}</div>`,
       );
+      if (def.burnKw)
+        rows.push(`<div class="sub">${t('factory.burn', { v: String(def.burnKw) })}</div>`);
     }
     if (def.consumesKw) {
       const g = factory.gridInfo(m);
@@ -1865,12 +1876,32 @@ export function startGameView(
   compass.append(compassValue);
   container.appendChild(compass);
   /** Cap de la caméra en degrés : 0 = nord, 90 = est. */
+  // Repère du corps sur la boussole (croix rouge ; au bord, une flèche quand il est hors du champ).
+  const corpseMark = document.createElement('span');
+  corpseMark.className = 'compass-mark corpse-mark';
+  corpseMark.textContent = '✝';
+  compass.append(corpseMark);
+  function updateCorpse(hasCompass: boolean, bearing: number): void {
+    const body = options.state.changes.corpse;
+    corpseMesh.visible = body !== null;
+    if (body) corpseMesh.position.set(body.x, PLAYER_RADIUS_M, body.z);
+    if (body) corpseMesh.rotation.y = body.yaw;
+    corpseMark.style.display = hasCompass && body ? '' : 'none';
+    if (!hasCompass || !body) return;
+    const target =
+      ((Math.atan2(body.x - playerX, -(body.z - playerZ)) * 180) / Math.PI + 360) % 360;
+    const diff = ((target - bearing + 540) % 360) - 180;
+    const clamped = Math.max(-80, Math.min(80, diff));
+    corpseMark.style.left = `calc(50% + ${(clamped / 80) * 160}px)`;
+    corpseMark.textContent = diff < -80 ? '◄✝' : diff > 80 ? '✝►' : '✝';
+  }
   function updateCompass(): void {
     // La boussole est une amélioration : elle n'apparaît qu'une fois la technologie « Navigation » recherchée.
     const hasCompass = options.state.changes.unlocked.includes('navigation');
     compass.hidden = !hasCompass;
-    if (!hasCompass) return;
     const bearing = ((((-rig.yaw * 180) / Math.PI) % 360) + 360) % 360;
+    updateCorpse(hasCompass, bearing);
+    if (!hasCompass) return;
     const half = 160;
     const span = 80;
     COMPASS_MARKS.forEach((mark, i) => {
@@ -2164,8 +2195,11 @@ export function startGameView(
     if (sinceHurt > 5) playerHealth = Math.min(MAX_HEALTH, playerHealth + 4 * dt);
     if (playerHealth <= 0) {
       playerHealth = MAX_HEALTH;
-      playerX = DEFAULT_PLAYER_STATE.x;
-      playerZ = DEFAULT_PLAYER_STATE.z;
+      // Le corps reste sur place ; on se réveille au point de réapparition choisi, sinon au premier point.
+      options.state.changes.corpse = { x: playerX, z: playerZ, yaw: facing };
+      const spawn = options.state.changes.respawn;
+      playerX = spawn?.x ?? DEFAULT_PLAYER_STATE.x;
+      playerZ = spawn?.z ?? DEFAULT_PLAYER_STATE.z;
       playerY = 0;
       velY = 0;
       options.onMessage?.(t('threat.knockedOut'));
@@ -2339,6 +2373,10 @@ export function startGameView(
 
     if (pressed('inventory')) options.onToggleInventory?.();
     if (pressed('map')) options.onToggleMap?.();
+    if (pressed('setRespawn') && !paused && !uiOpen) {
+      options.state.changes.respawn = { x: playerX, z: playerZ };
+      options.onMessage?.(t('respawn.set'));
+    }
     if (pressed('debug')) {
       debugOn = !debugOn;
       applyDebug();
@@ -2646,6 +2684,7 @@ export function startGameView(
       for (const mesh of chunks.values()) mesh.dispose();
       chunks.clear();
       renderer.dispose();
+      corpseMesh.geometry.dispose();
       renderer.domElement.remove();
       crosshair.remove();
       compass.remove();
