@@ -113,7 +113,6 @@ const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
 /** Buggy : vitesse (par rapport à la marche) avec / sans carburant. */
 const BUGGY_FACTOR = 2.6;
-const BUGGY_EMPTY_FACTOR = 0.5;
 const PLAYER_RADIUS_M = 0.25;
 const PLAYER_HEIGHT_M = 1.7;
 const CAMERA_YAW_SPEED = 1.8;
@@ -131,6 +130,8 @@ export interface GameViewOptions {
   onToggleInventory?: () => void;
   /** La touche « Carte » a été pressée. */
   onToggleMap?: () => void;
+  /** Le mode débogage change (le cadre « Partie / Sac / Menu » ne s'affiche qu'en débogage). */
+  onDebugChange?: (on: boolean) => void;
   /** La touche « Arbre technologique » a été pressée. */
   onToggleTech?: () => void;
   /** Position et caméra de départ (sauvegarde chargée, ou mode test ?dev=1&at=x,z&dist=d). */
@@ -1605,7 +1606,14 @@ export function startGameView(
     // Au volant d'un buggy : bien plus vite tant qu'il reste du carburant (on en prend dans le sac), très lent sinon.
     const driving =
       mounted !== null && (mounted.fuel > 0 || options.state.refuelVehicle(mounted) > 0);
-    const base = mounted ? (driving ? BUGGY_FACTOR : BUGGY_EMPTY_FACTOR) : 1;
+    // Sans carburant le buggy ne bouge plus (on le quitte avec la touche d'utilisation).
+    if (mounted && !driving) {
+      if (!buggyWarned) options.onMessage?.(t('vehicle.noFuel'));
+      buggyWarned = true;
+      return { speed: 0, strafe: 0 };
+    }
+    buggyWarned = false;
+    const base = mounted ? BUGGY_FACTOR : 1;
     if (mounted && driving) mounted.fuel = Math.max(0, mounted.fuel - dt);
     const speed =
       WALK_SPEED_M_S * base * (!mounted && input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
@@ -1668,6 +1676,7 @@ export function startGameView(
 
   // --- Véhicules : buggy ------------------------------------------------------------------------
   let mounted: Vehicle | null = null;
+  let buggyWarned = false;
   const vehicleMeshes = new Map<number, THREE.Group>();
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x2b2d33 });
   const buggyMat = new THREE.MeshStandardMaterial({ color: 0xc9a227 });
@@ -2168,6 +2177,7 @@ export function startGameView(
     debugBox.hidden = !debugOn;
     fpsBox.hidden = !(debugOn || showFpsSetting);
     interaction.showBoxes = debugOn;
+    options.onDebugChange?.(debugOn);
   }
   const fpsBox = document.createElement('div');
   fpsBox.className = 'fps-counter';

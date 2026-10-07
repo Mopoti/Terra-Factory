@@ -70,12 +70,13 @@ function flatArrow(
   cell: { gx: number; gz: number },
   dir: number,
   color: Rgb,
+  shift = 0,
 ): void {
   const [dx, dz] = RISE_DIR[dir];
   const px = -dz;
   const pz = dx;
-  const cx = center(cell.gx);
-  const cz = center(cell.gz);
+  const cx = center(cell.gx) + px * shift;
+  const cz = center(cell.gz) + pz * shift;
   // Un peu au-dessus du sol (plus haut qu'un tapis, 12 cm) pour rester visibles à côté d'un tapis.
   const y = 0.2;
   const at = (along: number, across: number): [number, number] => [
@@ -104,9 +105,14 @@ function fluidArrows(
     if (p.mode === 'both' && p.fluid === 'any') continue;
     const cell = sideCell(type, gx, gz, rot, p.side);
     const base = p.fluid === 'water' ? WATER_ARROW : STEAM_ARROW;
-    // Eau traversante (chaudière) : entrée à gauche, ressort à droite (le raccord marche dans les deux sens).
-    const outward = p.mode === 'out' || (p.mode === 'both' && p.side === (rot + 1) % 4);
-    flatArrow(mb, cell, outward ? p.side : (p.side + 2) % 4, tint ? tint(base) : base);
+    const color = tint ? tint(base) : base;
+    if (p.mode === 'both') {
+      // Eau traversante (chaudière) : chaque côté fait entrer et sortir l'eau → une flèche dans chaque sens, côte à côte.
+      flatArrow(mb, cell, (p.side + 2) % 4, color, 0.14);
+      flatArrow(mb, cell, p.side, color, 0.14);
+      continue;
+    }
+    flatArrow(mb, cell, p.mode === 'out' ? p.side : (p.side + 2) % 4, color);
   }
 }
 

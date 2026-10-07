@@ -1,3 +1,4 @@
+import { applyChanges } from '../core/game/worldChanges';
 import { CELL_SIZE_M, CHUNK_CELLS } from '../core/constants';
 import { machineDef } from '../core/data/machines';
 import { resourceById } from '../core/data/resources';
@@ -80,7 +81,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       img.data[i + 2] = rgb[2];
       img.data[i + 3] = 255;
     };
-    const data = generator.chunk(cx, cz);
+    const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
     // Fond : biome (un échantillon par bloc de 4 x 4 cases).
     const block = 4;
     for (let bz = 0; bz < CHUNK_CELLS; bz += block) {
@@ -338,6 +339,8 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
   }
 
   function openWindow(): void {
+    // Les chunks sont redessinés à chaque ouverture : nids détruits, arbres coupés, minerai épuisé.
+    chunkCache.clear();
     if (isOpenNow) return;
     isOpenNow = true;
     const p = options.player();

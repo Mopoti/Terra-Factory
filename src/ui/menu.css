@@ -1558,3 +1558,7 @@
     rgba(190, 10, 10, 0.85) 100%
   );
 }
+
+.game-hud[hidden] {
+  display: none;
+}

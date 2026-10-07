@@ -147,6 +147,9 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
         else session?.inventory.toggle();
       }
     },
+    onDebugChange: (on) => {
+      hudEl.querySelector('.game-hud')?.toggleAttribute('hidden', !on);
+    },
     onToggleMap: () => {
       if (
         !session?.pause.isOpen() &&
@@ -242,6 +245,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
 
   const label = document.createElement('div');
   label.className = 'game-hud';
+  label.hidden = true;
   const name = document.createElement('span');
   name.textContent = t('game.hud.playing', { name: game.name });
   const menuButton = document.createElement('button');

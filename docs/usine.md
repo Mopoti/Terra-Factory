@@ -328,11 +328,19 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 
 ## Tour 79 — turbine large, flèches, débogage, santé, nids
 
-- **Turbine** : 2 × 3 → **4 × 3** cases (deux fois plus large) ; dessin élargi.
+- **Turbine** : 2 × 3 → **3 × 3** cases ; dessin élargi.
 - **Chaudière** : flèches à la bonne couleur (eau bleue sur les côtés, vapeur blanche devant, **charbon noir derrière**). Toutes les flèches sont relevées à 20 cm pour rester visibles à côté d'un tapis.
-- **Touche Debug (F3)** : affiche la boîte blanche autour de la cible survolée, le panneau d'infos (seed, position, biome…) et le compteur d'images. Le réglage « infos de débogage » disparaît des paramètres. Au premier usage dans une partie, `changes.admin = true` : pas de succès pour cette partie (les succès et les types de partie, créa / survie, restent à faire).
+- **Touche Debug (F9, F3 étant la recherche du navigateur)** : affiche la boîte blanche autour de la cible survolée, le panneau d'infos (seed, position, biome…) et le compteur d'images. Le réglage « infos de débogage » disparaît des paramètres. Au premier usage dans une partie, `changes.admin = true` : pas de succès pour cette partie (les succès et les types de partie, créa / survie, restent à faire).
 - **Boussole** : n'apparaît qu'après la technologie **Navigation** (10 fer + 5 cuivre ; objet « Boussole »). Les parties existantes la perdent tant qu'elle n'est pas recherchée.
 - **Carte** : voile de pollution beaucoup plus transparent, case à cocher pour le masquer.
 - **Santé** : barre cachée par défaut (réglage « Afficher la barre de santé ») ; la **rougeur des bords de l'écran** monte avec les dégâts et s'efface avec la santé.
 - **Ennemis** : les nids ont 150 points de vie, **détruits à force de tirer** (ou au corps à corps) ; leurs gardiens disparaissent avec eux. Ennemis voient le joueur de plus loin (24 m, 45 m si agressifs), gardiens 30 m / laisse 90 m, réapparition des gardiens en 40 s (au lieu de 120), nids plus voraces (coût d'un ennemi 12 au lieu de 20).
 - **Buggy** : le réservoir et la case de carburant sont maintenant toujours reliés au bon buggy (accesseurs redéfinis à chaque ouverture) ; cause exacte non reproduite, à confirmer en jeu.
+
+## Tour 80 — retours sur le Tour 79
+
+- **Carte** : redessinée à chaque ouverture avec les changements du joueur : nid détruit, arbre coupé ou minerai épuisé disparaissent.
+- **Chaudière** : chaque côté d'eau fait entrer **et** sortir l'eau (déjà le cas en logique) ; deux flèches bleues côte à côte par côté le montrent.
+- **Turbine** : **3 × 3** cases (au lieu de 4 × 3).
+- **Debug** : touche **F9** (F3 = recherche du navigateur). Le cadre « Partie / Sac / Menu » en haut à gauche n'apparaît qu'en mode debug (Tab = sac, Échap = menu restent disponibles).
+- **Buggy** : sans carburant, il ne bouge plus du tout (message), on en descend avec la touche d'utilisation.
