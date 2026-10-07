@@ -4,6 +4,7 @@ import { aimBuild, aimExisting, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
+import { DISCOVERIES } from '../data/discoveries';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
 import { add, maxAddable, normalizeInventory, remove, totals } from './inventory';
@@ -901,25 +902,28 @@ describe('mort, corps à récupérer, duvet et lit', () => {
   });
 });
 
-describe('découvertes : la roue à aubes se débloque en récoltant 10 malachite', () => {
-  it('compte les récoltes à la main et débloque l’objet au seuil, une seule fois', () => {
+describe('découvertes : la roue à aubes se débloque en fabriquant 10 plaques de cuivre', () => {
+  it('compte les fabrications et débloque l’objet au seuil, une seule fois', () => {
     const s = new GameState();
     const seen: string[] = [];
     s.onChange((e) => {
       if (e.type === 'discovery') seen.push(e.id);
     });
     expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    s.harvest('1,1', 100, 'copper_ore', 6);
+    s.countProduced('copper_plate', 6);
     expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    s.harvest('1,1', 100, 'iron_ore', 50); // un autre minerai ne compte pas
+    s.countProduced('iron_plate', 50); // une autre plaque ne compte pas
+    s.harvest('1,1', 100, 'copper_ore', 50); // récolter ne compte pas : il faut fabriquer
     expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    s.harvest('2,2', 100, 'copper_ore', 4);
+    expect(s.discoveryProgress(DISCOVERIES[0])).toBe(6);
+    s.countProduced('copper_plate', 4);
     expect(s.isUnlocked('machine_waterwheel')).toBe(true);
-    s.harvest('2,2', 100, 'copper_ore', 4);
+    s.countProduced('copper_plate', 4);
     expect(seen).toEqual(['waterwheel']);
+    expect(s.discoveryProgress(DISCOVERIES[0])).toBe(10); // plafonné
     // enregistré avec la partie
     const back = new GameState(s.snapshot());
     expect(back.isUnlocked('machine_waterwheel')).toBe(true);
-    expect(back.changes.harvested.copper_ore).toBe(14);
+    expect(back.changes.produced.copper_plate).toBe(14);
   });
 });

@@ -1094,6 +1094,19 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     expect(st.wear).toBe(MOULD_CYCLES - 1);
   });
 
+  it('la plaque de cuivre (2 lingots + moule de plaque) est comptée dans les fabrications', () => {
+    const st = emptyMachine(1, 'stamper', 0, 0, 0);
+    st.recipe = 'copper_plate';
+    st.fuel = { item: 'coal', count: 5 };
+    st.input = { item: 'mould_plate', count: 1 };
+    stock(st, 'copper_ingot', 4);
+    const f = new Factory([st], makeWorld().world);
+    run(f, 4.2);
+    expect(st.stock).toEqual({ item: 'copper_plate', count: 2 });
+    expect(f.takeProduced()).toEqual([['copper_plate', 2]]);
+    expect(f.takeProduced()).toEqual([]);
+  });
+
   it('le fil de cuivre : 1 lingot → 2 fils', () => {
     const st = emptyMachine(1, 'stamper', 0, 0, 0);
     st.recipe = 'copper_wire';

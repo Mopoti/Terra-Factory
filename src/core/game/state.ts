@@ -387,9 +387,27 @@ export class GameState {
   /** Compte une récolte à la main et déclenche les découvertes atteintes. */
   private countHarvest(item: string, n: number): void {
     this.changes.harvested[item] = (this.changes.harvested[item] ?? 0) + n;
+    this.checkDiscoveries('harvest');
+  }
+
+  /** Quelque chose a été fabriqué (par une machine ou à la main) : compteur des découvertes. */
+  countProduced(item: string, n: number): void {
+    if (n <= 0) return;
+    this.changes.produced[item] = (this.changes.produced[item] ?? 0) + n;
+    this.checkDiscoveries('produce');
+    this.emit({ type: 'inventory' });
+  }
+
+  /** Avancement d'une découverte (plafonné à son objectif). */
+  discoveryProgress(d: (typeof DISCOVERIES)[number]): number {
+    const counter = d.goal.kind === 'harvest' ? this.changes.harvested : this.changes.produced;
+    return Math.min(d.goal.count, counter[d.goal.item] ?? 0);
+  }
+
+  private checkDiscoveries(kind: 'harvest' | 'produce'): void {
     for (const d of DISCOVERIES) {
-      if (this.changes.discovered.includes(d.id)) continue;
-      if ((this.changes.harvested[d.harvest.item] ?? 0) < d.harvest.count) continue;
+      if (d.goal.kind !== kind || this.changes.discovered.includes(d.id)) continue;
+      if (this.discoveryProgress(d) < d.goal.count) continue;
       this.changes.discovered.push(d.id);
       this.emit({ type: 'discovery', id: d.id });
     }
@@ -663,6 +681,8 @@ export class GameState {
       made++;
     }
     if (made > 0) {
+      this.changes.produced[item] = (this.changes.produced[item] ?? 0) + made;
+      this.checkDiscoveries('produce');
       // Une pièce de construction fabriquée prend la première case libre de la barre.
       if (item.startsWith('piece_') && !this.changes.hotbar.includes(item)) {
         const free = this.changes.hotbar.indexOf(null);

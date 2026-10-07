@@ -2,7 +2,7 @@ import raw from '../../../content/discoveries.json';
 
 export interface DiscoveryDef {
   id: string;
-  harvest: { item: string; count: number };
+  goal: { kind: 'harvest' | 'produce'; item: string; count: number };
   unlocks: string[];
 }
 

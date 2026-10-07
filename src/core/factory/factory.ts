@@ -1024,8 +1024,17 @@ export class Factory {
   labDemand = 0;
   /** Paquets consommés depuis la dernière lecture (la partie les ajoute à la recherche). */
   private labDone = 0;
+  /** Objets fabriqués par les machines depuis le dernier relevé (compteurs des découvertes). */
+  private readonly made = new Map<string, number>();
 
   /** Renvoie (et remet à zéro) le nombre de paquets étudiés depuis le dernier appel. */
+  /** Relève (et remet à zéro) ce que les machines ont fabriqué : objet -> quantité. */
+  takeProduced(): [string, number][] {
+    const out = [...this.made];
+    this.made.clear();
+    return out;
+  }
+
   takeLabPacks(): number {
     const n = this.labDone;
     this.labDone = 0;
@@ -1153,6 +1162,7 @@ export class Factory {
     if (r.mould) m.wear--;
     if (m.stock) m.stock.count += product.count;
     else m.stock = { item: product.item, count: product.count };
+    this.made.set(product.item, (this.made.get(product.item) ?? 0) + product.count);
   }
 
   // --- Tapis et échanges ---------------------------------------------------------------------------
@@ -1399,6 +1409,7 @@ export class Factory {
     }
     if (m.stock) m.stock.count++;
     else m.stock = { item: m.recipe, count: 1 };
+    this.made.set(m.recipe, (this.made.get(m.recipe) ?? 0) + 1);
   }
 
   /** Où va cet objet dans un fourneau / une estampeuse : ingrédient de la recette, moule, ou combustible (null = refusé). */

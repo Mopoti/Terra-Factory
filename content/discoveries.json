@@ -1,9 +1,9 @@
 {
-  "_comment": "Découvertes (tier 0) : des objets qui se débloquent en récoltant à la main une quantité cumulée d'une ressource, sans technologie ni laboratoire. « harvest » : objet récolté et quantité à atteindre ; « unlocks » : objets débloqués.",
+  "_comment": "Découvertes (tier 0) : des objets qui se débloquent sans technologie ni laboratoire quand le joueur atteint un objectif cumulé. « goal.kind » : « harvest » = récolté à la main, « produce » = fabriqué (par une machine ou à la main) ; « goal.item » et « goal.count » : objet et quantité à atteindre ; « unlocks » : objets débloqués. Elles s'affichent en tête de la fenêtre des technologies avec leur compteur.",
   "discoveries": [
     {
       "id": "waterwheel",
-      "harvest": { "item": "copper_ore", "count": 10 },
+      "goal": { "kind": "produce", "item": "copper_plate", "count": 10 },
       "unlocks": ["machine_waterwheel"]
     }
   ]

@@ -173,6 +173,12 @@
       "color": "#8d9298"
     },
     {
+      "id": "copper_plate",
+      "weightKg": 0.55,
+      "volumeL": 0.2,
+      "color": "#c97a3a"
+    },
+    {
       "id": "iron_gear",
       "weightKg": 0.4,
       "volumeL": 0.2,

@@ -78,6 +78,8 @@ export interface WorldChanges {
   admin: boolean;
   /** Quantités récoltées à la main, par objet (compteurs des découvertes). */
   harvested: Record<string, number>;
+  /** Quantités fabriquées (machines ou à la main), par objet (compteurs des découvertes). */
+  produced: Record<string, number>;
   /** Découvertes faites (voir `content/discoveries.json`). */
   discovered: string[];
   /** Corps laissés là où le joueur est tombé, avec ses affaires (affichés dans le monde et sur la carte). */
@@ -133,6 +135,7 @@ export function emptyChanges(): WorldChanges {
     unlocked: [],
     admin: false,
     harvested: {},
+    produced: {},
     discovered: [],
     corpses: [],
     nextCorpseId: 1,
@@ -210,9 +213,11 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
-  if (typeof r.harvested === 'object' && r.harvested !== null) {
-    for (const [item, n] of Object.entries(r.harvested as Record<string, unknown>)) {
-      if (isNum(n) && n > 0) result.harvested[item] = Math.floor(n);
+  for (const counter of ['harvested', 'produced'] as const) {
+    const raw = r[counter];
+    if (typeof raw !== 'object' || raw === null) continue;
+    for (const [item, n] of Object.entries(raw as Record<string, unknown>)) {
+      if (isNum(n) && n > 0) result[counter][item] = Math.floor(n);
     }
   }
   result.discovered = Array.isArray(r.discovered)

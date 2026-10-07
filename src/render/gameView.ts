@@ -473,8 +473,8 @@ export function startGameView(
         options.onMessage?.(
           t('discovery.unlocked', {
             name: t(`item.${d.unlocks[0]}` as TranslationKey),
-            n: String(d.harvest.count),
-            item: t(`item.${d.harvest.item}` as TranslationKey),
+            n: String(d.goal.count),
+            item: t(`item.${d.goal.item}` as TranslationKey),
           }),
         );
     }
@@ -2690,6 +2690,7 @@ export function startGameView(
         factory.labDemand = options.state.studyRemaining();
         factory.tick(0.05);
         options.state.addStudy(factory.takeLabPacks());
+        for (const [item, n] of factory.takeProduced()) options.state.countProduced(item, n);
         simAcc -= 0.05;
       }
     }

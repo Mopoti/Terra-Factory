@@ -5,66 +5,116 @@
     {
       "id": "iron",
       "machine": "furnace",
-      "in": { "iron_ore": 2, "coal": 1 },
-      "out": { "iron_ingot": 2 },
+      "in": {
+        "iron_ore": 2,
+        "coal": 1
+      },
+      "out": {
+        "iron_ingot": 2
+      },
       "seconds": 2
     },
     {
       "id": "cast_iron",
       "machine": "furnace",
-      "in": { "iron_ore": 2, "coal": 3 },
-      "out": { "cast_iron_ingot": 2 },
+      "in": {
+        "iron_ore": 2,
+        "coal": 3
+      },
+      "out": {
+        "cast_iron_ingot": 2
+      },
       "seconds": 4
     },
     {
       "id": "copper",
       "machine": "furnace",
-      "in": { "copper_ore": 2 },
-      "out": { "copper_ingot": 2 },
+      "in": {
+        "copper_ore": 2
+      },
+      "out": {
+        "copper_ingot": 2
+      },
       "seconds": 3
     },
     {
       "id": "mould_plate",
       "machine": "furnace",
-      "in": { "cast_iron_ingot": 2 },
-      "out": { "mould_plate": 1 },
+      "in": {
+        "cast_iron_ingot": 2
+      },
+      "out": {
+        "mould_plate": 1
+      },
       "seconds": 3
     },
     {
       "id": "mould_gear",
       "machine": "furnace",
-      "in": { "cast_iron_ingot": 3 },
-      "out": { "mould_gear": 1 },
+      "in": {
+        "cast_iron_ingot": 3
+      },
+      "out": {
+        "mould_gear": 1
+      },
       "seconds": 3
     },
     {
       "id": "mould_wire",
       "machine": "furnace",
-      "in": { "cast_iron_ingot": 2 },
-      "out": { "mould_wire": 1 },
+      "in": {
+        "cast_iron_ingot": 2
+      },
+      "out": {
+        "mould_wire": 1
+      },
       "seconds": 3
     },
     {
       "id": "iron_plate",
       "machine": "stamper",
-      "in": { "iron_ingot": 2 },
-      "out": { "iron_plate": 1 },
+      "in": {
+        "iron_ingot": 2
+      },
+      "out": {
+        "iron_plate": 1
+      },
+      "seconds": 2,
+      "mould": "mould_plate"
+    },
+    {
+      "id": "copper_plate",
+      "machine": "stamper",
+      "in": {
+        "copper_ingot": 2
+      },
+      "out": {
+        "copper_plate": 1
+      },
       "seconds": 2,
       "mould": "mould_plate"
     },
     {
       "id": "iron_gear",
       "machine": "stamper",
-      "in": { "iron_ingot": 2 },
-      "out": { "iron_gear": 1 },
+      "in": {
+        "iron_ingot": 2
+      },
+      "out": {
+        "iron_gear": 1
+      },
       "seconds": 2,
       "mould": "mould_gear"
     },
     {
       "id": "copper_wire",
       "machine": "stamper",
-      "in": { "copper_ingot": 1 },
-      "out": { "copper_wire": 2 },
+      "in": {
+        "copper_ingot": 1
+      },
+      "out": {
+        "copper_wire": 2
+      },
       "seconds": 1.5,
       "mould": "mould_wire"
     }

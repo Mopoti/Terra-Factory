@@ -227,9 +227,9 @@ export function mountInventory(
     const d = discoveryFor(item);
     if (d)
       return t('discovery.needed', {
-        n: String(d.harvest.count),
-        item: itemName(d.harvest.item),
-        have: String(Math.min(d.harvest.count, state.changes.harvested[d.harvest.item] ?? 0)),
+        n: String(d.goal.count),
+        item: itemName(d.goal.item),
+        have: String(state.discoveryProgress(d)),
       });
     return '';
   }

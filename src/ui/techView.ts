@@ -1,4 +1,5 @@
 import { playSfx } from '../audio/sfx';
+import { DISCOVERIES, type DiscoveryDef } from '../core/data/discoveries';
 import { itemById } from '../core/data/items';
 import { SCIENCE_PACK, TECHS, scienceCost, type TechDef } from '../core/data/techs';
 import type { GameState } from '../core/game/state';
@@ -23,6 +24,7 @@ export function mountTech(
 ): TechWindow {
   let isOpenNow = false;
   let message = '';
+  let stopWatching: () => void = () => {};
 
   function card(tech: TechDef): HTMLElement {
     const done = state.changes.unlocked.includes(tech.id);
@@ -109,6 +111,34 @@ export function mountTech(
     return box;
   }
 
+  /** Carte d'une découverte du tier 0 : pas de coût, un compteur d'objets fabriqués. */
+  function discoveryCard(d: DiscoveryDef): HTMLElement {
+    const done = state.changes.discovered.includes(d.id);
+    const box = document.createElement('div');
+    box.className = `tech-card${done ? ' done' : ''}`;
+    const title = document.createElement('h3');
+    title.textContent = itemName(d.unlocks[0]);
+    const tier = document.createElement('div');
+    tier.className = 'tech-line sub';
+    tier.textContent = t('discovery.title');
+    const goal = document.createElement('div');
+    goal.className = `tech-line ${done ? 'ok' : ''}`;
+    goal.textContent = t('discovery.progress', {
+      have: String(state.discoveryProgress(d)),
+      n: String(d.goal.count),
+      item: itemName(d.goal.item).toLowerCase(),
+    });
+    const unlocks = document.createElement('div');
+    unlocks.className = 'tech-line sub';
+    unlocks.textContent = `${t('tech.unlocks')} : ${d.unlocks.map(itemName).join(', ')}`;
+    const status = document.createElement('div');
+    status.className = 'tech-line';
+    status.textContent = done ? t('discovery.done') : '';
+    box.append(title, tier, goal, unlocks, status);
+    box.style.setProperty('--item', itemById(d.unlocks[0]).color);
+    return box;
+  }
+
   function render(): void {
     const panel = document.createElement('div');
     panel.className = 'panel tech-panel';
@@ -117,6 +147,7 @@ export function mountTech(
     title.textContent = t('tech.title');
     const grid = document.createElement('div');
     grid.className = 'tech-grid';
+    for (const d of DISCOVERIES) grid.append(discoveryCard(d));
     for (const tech of TECHS) grid.append(card(tech));
     const msg = document.createElement('div');
     msg.className = 'inv-message';
@@ -140,6 +171,10 @@ export function mountTech(
     isOpenNow = true;
     message = '';
     root.hidden = false;
+    // Les compteurs avancent pendant que la fenêtre est ouverte.
+    stopWatching = state.onChange((e) => {
+      if (e.type === 'inventory' || e.type === 'discovery') render();
+    });
     render();
     actions.onOpenChange(true);
   }
@@ -147,6 +182,8 @@ export function mountTech(
   function closeWindow(): void {
     if (!isOpenNow) return;
     isOpenNow = false;
+    stopWatching();
+    stopWatching = () => {};
     root.hidden = true;
     root.replaceChildren();
     actions.onOpenChange(false);
