@@ -15,6 +15,7 @@ import {
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { TECHS, packCost, scienceCost, techById, techFor } from '../data/techs';
 import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
+import { buyPrice, sellPrice } from './trade';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { pillarsFor, pillarsForFace } from '../build/support';
@@ -1140,6 +1141,40 @@ export class GameState {
     this.changes.beacon = true;
     this.emit({ type: 'factory' });
     return 'ok';
+  }
+
+  /** Vend au comptoir spatial (après la balise) : renvoie les crédits gagnés. */
+  sellItem(item: string, count: number): number {
+    if (!this.changes.beacon) return 0;
+    const n = Math.min(count, this.inventory[item] ?? 0);
+    if (n <= 0) return 0;
+    this.inventory = remove(this.inventory, item, n).inventory;
+    const earned = n * sellPrice(item);
+    this.changes.credits += earned;
+    this.emit({ type: 'inventory' });
+    return earned;
+  }
+
+  /** Crédits gagnés par des objets que des tapis ont déposés au relais. */
+  creditSale(item: string, count: number): void {
+    if (!this.changes.beacon || count <= 0) return;
+    this.changes.credits += count * sellPrice(item);
+  }
+
+  /** Achète au comptoir : renvoie la quantité achetée (limitée par les crédits et la place dans le sac). */
+  buyItem(item: string, count: number): number {
+    if (!this.changes.beacon) return 0;
+    const price = buyPrice(item);
+    const n = Math.min(
+      count,
+      Math.floor(this.changes.credits / price),
+      maxAddable(this.inventory, item, this.limits),
+    );
+    if (n <= 0) return 0;
+    this.changes.credits -= n * price;
+    this.inventory = add(this.inventory, item, n);
+    this.emit({ type: 'inventory' });
+    return n;
   }
 
   /** Une machine détruite (par des ennemis) : elle disparaît avec son contenu, sans rien rendre. */

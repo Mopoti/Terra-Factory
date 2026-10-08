@@ -20,6 +20,7 @@ import {
   type Stack,
 } from '../core/factory/factory';
 import { totals } from '../core/game/inventory';
+import { buyPrice, sellPrice } from '../core/game/trade';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
@@ -225,6 +226,73 @@ export function mountMachineWindow(
     });
     row.append(take);
     return row;
+  }
+
+  let tradeSearch = '';
+  /** Comptoir commercial spatial : crédits, vente de ce que contient le sac, catalogue d'achat. */
+  function tradeRows(): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    out.push(el('h3', undefined, t('trade.title', { n: state.changes.credits.toLocaleString() })));
+    out.push(el('div', 'mach-info', t('trade.help')));
+    const sellBox = el('div', 'trade-list');
+    const bag = state.bagSlots().filter((x): x is NonNullable<typeof x> => !!x);
+    if (bag.length === 0) sellBox.append(el('div', 'mach-info', t('trade.bagEmpty')));
+    for (const slot of bag) {
+      const row = el('div', 'trade-row');
+      row.append(
+        el('span', 'trade-name', `${itemName(slot.item)} ×${slot.count}`),
+        el('span', 'trade-price', t('trade.sellPrice', { n: String(sellPrice(slot.item)) })),
+      );
+      for (const [label, n] of [
+        ['×1', 1],
+        ['×10', 10],
+        [t('trade.all'), slot.count],
+      ] as const) {
+        const b = el('button', undefined, String(label));
+        b.type = 'button';
+        b.addEventListener('click', () => {
+          if (state.sellItem(slot.item, n) > 0) playSfx('pickup');
+          render();
+        });
+        row.append(b);
+      }
+      sellBox.append(row);
+    }
+    out.push(sellBox);
+    const search = el('input', 'mach-search');
+    search.type = 'search';
+    search.placeholder = t('trade.search');
+    search.value = tradeSearch;
+    search.addEventListener('change', () => {
+      tradeSearch = search.value.trim().toLowerCase();
+      render();
+    });
+    out.push(search);
+    const buyBox = el('div', 'trade-list');
+    const shown = ITEMS.filter(
+      (i) => tradeSearch === '' || itemName(i.id).toLowerCase().includes(tradeSearch),
+    ).slice(0, 40);
+    for (const item of shown) {
+      const row = el('div', 'trade-row');
+      row.append(
+        el('span', 'trade-name', itemName(item.id)),
+        el('span', 'trade-price', t('trade.buyPrice', { n: String(buyPrice(item.id)) })),
+      );
+      for (const n of [1, 10, 100]) {
+        const b = el('button', undefined, `×${n}`);
+        b.type = 'button';
+        b.disabled = state.changes.credits < buyPrice(item.id);
+        b.addEventListener('click', () => {
+          if (state.buyItem(item.id, n) > 0) playSfx('pickup');
+          else playSfx('deny');
+          render();
+        });
+        row.append(b);
+      }
+      buyBox.append(row);
+    }
+    out.push(buyBox);
+    return out;
   }
 
   /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
@@ -675,7 +743,8 @@ export function mountMachineWindow(
       });
       rows.append(fix, out);
     }
-    if (m.type === 'relay') {
+    if (m.type === 'relay' && state.changes.beacon) rows.append(...tradeRows());
+    if (m.type === 'relay' && !state.changes.beacon) {
       const note = el('div', 'mach-info', t('machine.beacon.help'));
       const go = el('button', undefined, t('machine.beacon'));
       go.type = 'button';

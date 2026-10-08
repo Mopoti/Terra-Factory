@@ -82,6 +82,8 @@ export interface WorldChanges {
   tutorialSkipped: boolean;
   /** Balise hyperfréquence activée (fin de partie) et séquence finale déjà montrée. */
   beacon: boolean;
+  /** Crédits galactiques gagnés au comptoir spatial. */
+  credits: number;
   finaleShown: boolean;
   /** Quantités récoltées à la main, par objet (compteurs des découvertes). */
   harvested: Record<string, number>;
@@ -146,6 +148,7 @@ export function emptyChanges(): WorldChanges {
     tutorialDone: [],
     tutorialSkipped: false,
     beacon: false,
+    credits: 0,
     finaleShown: false,
     harvested: {},
     produced: {},
@@ -229,6 +232,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.admin = r.admin === true;
   result.tutorialSkipped = r.tutorialSkipped === true;
   result.beacon = r.beacon === true;
+  if (isNum(r.credits) && r.credits > 0) result.credits = Math.floor(r.credits);
   result.finaleShown = r.finaleShown === true;
   if (Array.isArray(r.tutorialDone)) {
     result.tutorialDone = r.tutorialDone.filter(

@@ -413,6 +413,8 @@ export function ports(
     case 'boiler':
     case 'fusion_reactor':
       return { ins: [into(back)], outs: [] };
+    case 'relay':
+      return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     default:
       return { ins: [], outs: [] };
   }
@@ -1260,6 +1262,16 @@ export class Factory {
   labDemand = 0;
   /** Paquets consommés depuis la dernière lecture (la partie les ajoute à la recherche). */
   private labDone: Record<string, number> = {};
+  /** Le comptoir spatial est ouvert (balise activée) : le relais achète tout ce qu'un tapis lui amène. */
+  tradeOpen = false;
+  private readonly sold = new Map<string, number>();
+
+  /** Relève (et remet à zéro) ce que le relais a reçu par tapis : objet -> quantité. */
+  takeSold(): [string, number][] {
+    const out = [...this.sold];
+    this.sold.clear();
+    return out;
+  }
   /** Paquets encore utiles à l'étude en cours, par type (null = n'importe lequel). */
   labNeeds: Record<string, number> | null = null;
   /** Objets fabriqués par les machines depuis le dernier relevé (compteurs des découvertes). */
@@ -1653,6 +1665,7 @@ export class Factory {
       return (
         item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
       );
+    if (target.type === 'relay') return this.tradeOpen;
     if (isLab(target.type) || target.type === 'fusion_reactor')
       return !target.broken && chestRoom(target, item) > 0;
     return false;
@@ -1715,6 +1728,7 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
+    else if (target.type === 'relay') this.sold.set(item, (this.sold.get(item) ?? 0) + 1);
     else if (isLab(target.type) || target.type === 'fusion_reactor') chestPut(target, item, 1);
     else if (isTurret(target.type) || target.type === 'fission_reactor') {
       if (target.input) target.input.count++;

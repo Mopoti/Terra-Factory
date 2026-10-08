@@ -2893,10 +2893,12 @@ export function startGameView(
           options.onMessage?.(t('tech.autoStudy', { tech: t(`tech.${id}` as TranslationKey) }));
       }
       while (simAcc >= 0.05) {
+        factory.tradeOpen = options.state.changes.beacon;
         factory.labDemand = options.state.studyRemaining();
         factory.labNeeds = options.state.studyNeeds();
         factory.tick(0.05);
         options.state.addStudy(factory.takeLabPacks());
+        for (const [item, n] of factory.takeSold()) options.state.creditSale(item, n);
         for (const [item, n] of factory.takeProduced()) {
           options.state.countProduced(item, n);
           if (item === 'iron_ingot') tutorial.signal('iron');
