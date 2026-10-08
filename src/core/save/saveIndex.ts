@@ -91,7 +91,7 @@ export function normalizeMultiplayer(raw: unknown): MultiplayerOptions {
   return {
     enabled: flag(o.enabled, d.enabled),
     visibility: o.visibility === 'public' ? 'public' : 'private',
-    password: typeof o.password === 'string' ? o.password.slice(0, 40) : '',
+    password: typeof o.password === 'string' ? o.password.slice(0, 100) : '',
     share: {
       research: flag(s.research, d.share.research),
       credits: flag(s.credits, d.share.credits),

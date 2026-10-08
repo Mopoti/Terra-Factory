@@ -308,7 +308,7 @@ describe('réglages multijoueur', () => {
     });
     expect(mp.enabled).toBe(true);
     expect(mp.visibility).toBe('public');
-    expect(mp.password).toHaveLength(40);
+    expect(mp.password).toHaveLength(100);
     expect(mp.share).toEqual({ research: false, credits: true, inventory: true });
     expect(normalizeMultiplayer({ visibility: 'secret' }).visibility).toBe('private');
   });

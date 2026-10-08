@@ -12,6 +12,7 @@ import type { SimEvent, SimPlayer } from '../game/simulation';
 import { GameState } from '../game/state';
 import { MAX_PLAYERS, type GameOptions, type SavedPlayer } from '../save/saveIndex';
 import type { WorldParams } from '../world/worldgen';
+import { passwordMatches } from './password';
 import { LOADOUT_KEYS, REMOTE_CALLS } from './worldSync';
 import {
   PROTOCOL_VERSION,
@@ -261,7 +262,7 @@ export class HostSession {
     if (!mp.enabled) return (this.refuse(link, 'closed'), null);
     if (this.playerCount >= MAX_PLAYERS) return (this.refuse(link, 'full'), null);
     if (mp.visibility === 'public') {
-      if (mp.password && msg.password !== mp.password) return (this.refuse(link, 'password'), null);
+      if (!passwordMatches(mp.password, msg.password)) return (this.refuse(link, 'password'), null);
     } else {
       const ok = this.opts.approve ? await this.opts.approve(name) : false;
       if (!ok) return (this.refuse(link, 'denied'), null);

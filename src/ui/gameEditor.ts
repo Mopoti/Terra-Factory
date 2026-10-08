@@ -1,4 +1,5 @@
 import type { SaveLibrary } from '../core/save/library';
+import { hashPassword } from '../core/net/password';
 import {
   DEFAULT_GAME_OPTIONS,
   GAME_MODES,
@@ -381,7 +382,14 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
       ctx.saves.create(name, seed, {
         families: structuredClone(families),
         distanceRatio,
-        options,
+        // Le mot de passe est rangé sous forme d'empreinte, jamais en clair.
+        options: {
+          ...options,
+          multiplayer: {
+            ...options.multiplayer,
+            password: hashPassword(options.multiplayer.password),
+          },
+        },
       }),
     );
   };
