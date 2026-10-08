@@ -171,6 +171,7 @@ describe('options et réglages de la partie', () => {
       options: {
         enemies: { aggressive: true, expand: false },
         realism: 'realistic',
+        mode: 'survival',
         tutorial: false,
         time: DEFAULT_TIME,
       },
@@ -181,6 +182,7 @@ describe('options et réglages de la partie', () => {
     expect(back?.options).toEqual({
       enemies: { aggressive: true, expand: false },
       realism: 'realistic',
+      mode: 'survival',
       tutorial: false,
       time: DEFAULT_TIME,
     });
@@ -191,6 +193,7 @@ describe('options et réglages de la partie', () => {
     expect(g.options).toEqual({
       enemies: { aggressive: false, expand: true },
       realism: 'balanced',
+      mode: 'survival',
       tutorial: true,
       time: DEFAULT_TIME,
     });

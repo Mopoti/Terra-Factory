@@ -254,7 +254,9 @@ export function mountMachineWindow(
       el(
         'div',
         'mach-info',
-        `${(used.weightG / 1000).toFixed(1)} / ${state.limits.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${state.limits.maxVolumeMl / 1000} L`,
+        Number.isFinite(state.limits.maxWeightG)
+          ? `${(used.weightG / 1000).toFixed(1)} / ${state.limits.maxWeightG / 1000} kg · ${(used.volumeMl / 1000).toFixed(1)} / ${state.limits.maxVolumeMl / 1000} L`
+          : `${(used.weightG / 1000).toFixed(1)} kg · ${(used.volumeMl / 1000).toFixed(1)} L (${t('inv.unlimited')})`,
       ),
     );
     const slots = state.bagSlots();

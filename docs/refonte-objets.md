@@ -338,3 +338,8 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 
 - **Décision du PO** : on n'affiche **pas le tier** mais le **temps de jeu** (heures, minutes, secondes) ; **pas de miniature** pour l'instant.
 - Le bouton « Continuer » montre le nom de la partie, la sauvegarde, la date et « 2 h 05 min 09 s de jeu » ; la liste des sauvegardes de « Charger une partie » affiche aussi le temps de jeu de chacune. Le temps de jeu est l'horloge du monde (celle des saisons), qui n'avance pas en pause.
+
+### 10.3 Point 10c : ratio de distance et mode Créatif (Tour 109)
+
+- **Ratio de distance** (curseur ×0,25 à ×3 dans l'éditeur, enregistré avec le monde, `distanceRatio`, ×1 par défaut = comportement d'avant) : multiplie l'effet de l'éloignement du départ sur les gisements — **richesse** `1 + ratio × (D/100)^1,5`, **taille** `1 + ratio × min(1, D/1000)`, **espacement** `1 / (1 + ratio × D/2000)`. Plus il est haut, plus les filons lointains sont massifs mais espacés. L'aperçu de l'éditeur en tient compte.
+- **Mode de jeu** (liste « Survie / Créatif » dans l'éditeur, `options.mode`) : en **Créatif**, selon la définition du PO — **recherche gratuite** (toute technologie se débloque d'un clic dès que ses prérequis sont là, sans objets ni paquets), **fabrication gratuite** (aucun ingrédient), **poids et volume du sac sans limite** (affiché « illimité » ; le nombre de cases passe à 120 pour l'affichage), **ignoré par les ennemis** (ni ciblé, ni gardiens réveillés). « Pas de faim » : le jeu n'a pas de faim pour l'instant, rien à désactiver.

@@ -2397,7 +2397,10 @@ export function startGameView(
         .filter((m) => (m.type === 'conveyor' || m.type === 'pipe') && !m.broken)
         .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
     }
-    const targets: ThreatTarget[] = [...threatTargets, { id: 'player', x: playerX, z: playerZ }];
+    // Mode Créatif : les ennemis ignorent le joueur.
+    const targets: ThreatTarget[] = options.state.creative
+      ? [...threatTargets]
+      : [...threatTargets, { id: 'player', x: playerX, z: playerZ }];
     for (const hit of threat.update(dt, targets, acidTargets)) {
       if (hit.acid) {
         // Acide de cracheur : le tapis ou le tuyau est abîmé (à remplacer par un élément neuf).
@@ -2430,7 +2433,7 @@ export function startGameView(
       }
     }
     // Les nids proches gardent leurs gardiens.
-    threat.keepGuards(playerX, playerZ, dt);
+    if (!options.state.creative) threat.keepGuards(playerX, playerZ, dt);
     // Tourelles automatiques : elles tirent sur l'ennemi le plus proche à portée tant qu'elles ont des balles.
     if (threat.enemies.length > 0) {
       for (const m of factory.machines) {

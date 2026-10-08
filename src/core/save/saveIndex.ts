@@ -30,6 +30,10 @@ export interface PlayerState {
 export type Realism = 'arcade' | 'balanced' | 'realistic';
 export const REALISM_LEVELS: readonly Realism[] = ['arcade', 'balanced', 'realistic'];
 
+/** Mode de jeu : Survie, ou Créatif (recherche et fabrication gratuites, sac sans limite de poids ni de volume, ignoré des ennemis). */
+export type GameMode = 'survival' | 'creative';
+export const GAME_MODES: readonly GameMode[] = ['survival', 'creative'];
+
 /** Règles de la partie choisies à sa création. */
 export interface GameOptions {
   enemies: {
@@ -39,6 +43,7 @@ export interface GameOptions {
     expand: boolean;
   };
   realism: Realism;
+  mode: GameMode;
   /** Tutoriel pas à pas (en haut à droite) : oui par défaut dans une nouvelle partie. */
   tutorial: boolean;
   /** Jour, nuit et saisons (réglages indépendants). */
@@ -48,6 +53,7 @@ export interface GameOptions {
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
   enemies: { aggressive: false, expand: true },
   realism: 'balanced',
+  mode: 'survival',
   tutorial: true,
   time: DEFAULT_TIME,
 };
@@ -66,6 +72,7 @@ export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOpt
       expand: typeof e.expand === 'boolean' ? e.expand : d.enemies.expand,
     },
     realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
+    mode: GAME_MODES.find((m) => m === o.mode) ?? d.mode,
     // Une ancienne partie n'a pas de tutoriel.
     tutorial: typeof o.tutorial === 'boolean' ? o.tutorial : tutorialDefault,
     time: normalizeTime(o.time),
@@ -186,7 +193,7 @@ export function normalizeGame(item: unknown): GameSummary[] {
       id: g.id,
       name: g.name,
       createdAt,
-      world: normalizeWorldParams(seed, world?.families),
+      world: normalizeWorldParams(seed, world?.families, world?.distanceRatio),
       options: normalizeOptions(g.options),
       saves: Array.isArray(g.saves) ? g.saves.flatMap(normalizeSlot) : [],
     },

@@ -1,7 +1,9 @@
 import type { SaveLibrary } from '../core/save/library';
 import {
   DEFAULT_GAME_OPTIONS,
+  GAME_MODES,
   REALISM_LEVELS,
+  type GameMode,
   type GameOptions,
   type GameSummary,
   type Realism,
@@ -78,6 +80,7 @@ export interface GameEditorContext {
 export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   const families: WorldFamilies = defaultWorldParams('').families;
   const options: GameOptions = structuredClone(DEFAULT_GAME_OPTIONS);
+  let distanceRatio = 1;
   let disposed = false;
 
   const panel = el('div', 'panel editor');
@@ -186,6 +189,32 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     form.append(section);
   }
 
+  // --- Ratio de distance des ressources ----------------------------------------------------------
+  const distRow = el('div', 'row');
+  distRow.append(el('span', 'row-label', t('editor.distance')));
+  const distControl = el('div', 'row-control');
+  const distInput = el('input');
+  distInput.type = 'range';
+  distInput.min = String(MULTIPLIER_MIN);
+  distInput.max = String(MULTIPLIER_MAX);
+  distInput.step = '0.05';
+  distInput.setAttribute('aria-label', t('editor.distance'));
+  const distValue = el('span', 'row-value');
+  const syncDistance = (): void => {
+    distInput.value = String(distanceRatio);
+    distValue.textContent = `×${distanceRatio.toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+  distInput.addEventListener('input', () => {
+    distanceRatio = Math.round(Number(distInput.value) * 100) / 100;
+    syncDistance();
+    schedulePreview();
+  });
+  sliderSyncs.push(syncDistance);
+  syncDistance();
+  distControl.append(distInput, distValue);
+  distRow.append(distControl);
+  form.append(distRow, el('small', 'help', t('editor.distance.help')));
+
   function checkbox(
     label: string,
     help: string,
@@ -220,6 +249,21 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   realismControl.append(realism);
   realismRow.append(realismControl);
   form.append(realismRow, el('small', 'help', t('editor.realism.help')));
+  const modeRow = el('div', 'row');
+  modeRow.append(el('span', 'row-label', t('editor.mode')));
+  const modeControl = el('div', 'row-control');
+  const mode = el('select');
+  mode.setAttribute('aria-label', t('editor.mode'));
+  for (const m of GAME_MODES) {
+    const option = el('option', undefined, t(`editor.mode.${m}` as TranslationKey));
+    option.value = m;
+    mode.append(option);
+  }
+  mode.value = options.mode;
+  mode.addEventListener('change', () => (options.mode = mode.value as GameMode));
+  modeControl.append(mode);
+  modeRow.append(modeControl);
+  form.append(modeRow, el('small', 'help', t('editor.mode.help')));
   form.append(
     checkbox(
       t('editor.tutorial'),
@@ -277,7 +321,13 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     const name = nameInput.value.trim() || t('screen.newGame.defaultName', { n: '1' });
     const seed = seedInput.value.trim() || randomSeed();
     dispose();
-    ctx.onLaunch(ctx.saves.create(name, seed, { families: structuredClone(families), options }));
+    ctx.onLaunch(
+      ctx.saves.create(name, seed, {
+        families: structuredClone(families),
+        distanceRatio,
+        options,
+      }),
+    );
   };
   for (const input of [nameInput, seedInput]) {
     input.addEventListener('keydown', (e) => {
@@ -291,6 +341,7 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     button(t('screen.newGame.launch'), launch, 'menu-btn primary'),
     button(t('editor.resetWorld'), () => {
       for (const id of FAMILY_IDS) families[id] = { frequency: 1, size: 1, density: 1 };
+      distanceRatio = 1;
       sliderSyncs.forEach((sync) => sync());
       schedulePreview();
     }),
@@ -321,7 +372,7 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     const token = ++running;
     const seed = seedInput.value.trim() || ' ';
     const renderer = new PreviewRenderer(
-      new WorldGenerator({ seed, families: structuredClone(families) }),
+      new WorldGenerator({ seed, families: structuredClone(families), distanceRatio }),
     );
     canvas.width = renderer.width;
     canvas.height = renderer.width;

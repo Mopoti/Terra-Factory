@@ -71,6 +71,9 @@ export interface HarvestResult {
  * État de jeu modifiable par le joueur : sac et changements du monde. Toute modification passe par
  * une méthode (« commande ») : c'est ce que le multijoueur et l'annulation rejoueront plus tard.
  */
+/** Cases du sac en mode Créatif (le poids et le volume n'ont plus de limite). */
+export const CREATIVE_SLOTS = 120;
+
 export class GameState {
   inventory: Inventory;
   changes: WorldChanges;
@@ -93,9 +96,14 @@ export class GameState {
     this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
   }
 
+  /** Mode Créatif : recherche et fabrication gratuites, sac sans limite de poids ni de volume. */
+  creative = false;
+
   /** Capacité du sac : de base, plus les bonus de l'équipement porté (sac à dos…). */
   get limits(): BagLimits {
     const l = { ...this.baseLimits };
+    if (this.creative)
+      return { ...l, maxSlots: CREATIVE_SLOTS, maxWeightG: Infinity, maxVolumeMl: Infinity };
     for (const id of Object.values(this.changes.equipment)) {
       const bonus = itemById(id).equip?.bonus;
       if (!bonus) continue;
@@ -600,12 +608,16 @@ export class GameState {
   research(id: string): 'ok' | 'done' | 'locked' | 'missing' | 'lab' {
     const tech = techById(id);
     if (this.changes.unlocked.includes(id)) return 'done';
-    if (scienceCost(tech) > 0) return 'lab';
+    if (scienceCost(tech) > 0 && !this.creative) return 'lab';
     if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) return 'locked';
-    if (!Object.entries(tech.cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n))
+    if (
+      !this.creative &&
+      !Object.entries(tech.cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n)
+    )
       return 'missing';
-    for (const [item, n] of Object.entries(tech.cost))
-      this.inventory = remove(this.inventory, item, n).inventory;
+    if (!this.creative)
+      for (const [item, n] of Object.entries(tech.cost))
+        this.inventory = remove(this.inventory, item, n).inventory;
     this.changes.unlocked.push(id);
     this.emit({ type: 'inventory' });
     return 'ok';
@@ -699,12 +711,16 @@ export class GameState {
     let made = 0;
     let stopped: 'resources' | 'bag' | null = null;
     while (made < times) {
-      if (!Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)) {
+      if (
+        !this.creative &&
+        !Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)
+      ) {
         stopped = 'resources';
         break;
       }
       let after = this.inventory;
-      for (const [id, n] of Object.entries(recipe)) after = remove(after, id, n).inventory;
+      if (!this.creative)
+        for (const [id, n] of Object.entries(recipe)) after = remove(after, id, n).inventory;
       const per = itemById(item).yield;
       if (maxAddable(after, item, this.limits) < per) {
         stopped = 'bag';

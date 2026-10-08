@@ -96,14 +96,14 @@ export class SaveLibrary implements SaveIndex {
   create(
     name: string,
     seed: string,
-    extras: { families?: WorldFamilies; options?: GameOptions } = {},
+    extras: { families?: WorldFamilies; distanceRatio?: number; options?: GameOptions } = {},
     now = Date.now(),
   ): GameSummary {
     const game: GameSummary = {
       id: newId('game', now),
       name: cleanName(name) || 'Partie',
       createdAt: now,
-      world: normalizeWorldParams(seed, extras.families),
+      world: normalizeWorldParams(seed, extras.families, extras.distanceRatio),
       options: normalizeOptions(extras.options, true),
       saves: [],
     };

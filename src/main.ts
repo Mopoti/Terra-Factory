@@ -135,6 +135,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   const start = slot?.player ?? devStart ?? DEFAULT_PLAYER_STATE;
 
   const state = new GameState(slot);
+  state.creative = game.options.mode === 'creative';
   const view = startGameView(appEl, game, {
     state,
     start,

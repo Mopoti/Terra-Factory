@@ -999,3 +999,24 @@ describe('amélioration d’un tapis (palier supérieur posé par-dessus)', () =
     expect(s.inventory.machine_conveyor_2).toBe(1);
   });
 });
+
+describe('mode Créatif', () => {
+  it('fabrication et recherche gratuites, sac sans limite de poids ni de volume', () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.craft('machine_splitter', 1).stopped).toBe('locked');
+    s.creative = true;
+    expect(s.research('logistics')).toBe('ok'); // aucun objet demandé
+    expect(s.craft('machine_splitter', 2).made).toBe(2); // aucun ingrédient demandé
+    expect(s.inventory.iron_ingot ?? 0).toBe(0);
+    expect(s.limits.maxWeightG).toBe(Infinity);
+    expect(s.limits.maxVolumeMl).toBe(Infinity);
+  });
+  it('une technologie à paquets de science se débloque directement', () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.research('automation')).toBe('lab');
+    s.creative = true;
+    s.changes.unlocked.push('logistics', 'electricity');
+    expect(s.research('automation')).toBe('ok');
+    expect(s.isUnlocked('machine_assembler')).toBe(true);
+  });
+});

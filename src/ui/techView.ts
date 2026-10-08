@@ -51,7 +51,7 @@ export function mountTech(
       span.textContent = `${itemName(item)} ${t('tech.have', { have: String(have), need: String(n) })}  `;
       cost.append(span);
     }
-    const science = scienceCost(tech);
+    const science = state.creative ? 0 : scienceCost(tech);
     if (science > 0) {
       const done = state.changes.packProgress[tech.id];
       for (const [pack, need] of Object.entries(packCost(tech))) {

@@ -26,6 +26,8 @@ export type WorldFamilies = Record<FamilyId, FamilyParams>;
 export interface WorldParams {
   seed: string;
   families: WorldFamilies;
+  /** Ratio de distance (×0,25 à ×3) : plus il est haut, plus les filons lointains sont massifs mais espacés. */
+  distanceRatio: number;
 }
 
 export const MULTIPLIER_MIN = 0.25;
@@ -37,11 +39,15 @@ const NEST_MAX_CELLS = 12;
 export function defaultWorldParams(seed: string): WorldParams {
   const families = {} as WorldFamilies;
   for (const id of FAMILY_IDS) families[id] = { frequency: 1, size: 1, density: 1 };
-  return { seed, families };
+  return { seed, families, distanceRatio: 1 };
 }
 
 /** Réglages valides : toutes les familles présentes, multiplicateurs dans ×0,25 – ×3. */
-export function normalizeWorldParams(seed: string, families?: Partial<WorldFamilies>): WorldParams {
+export function normalizeWorldParams(
+  seed: string,
+  families?: Partial<WorldFamilies>,
+  distanceRatio?: number,
+): WorldParams {
   const result = defaultWorldParams(seed);
   const num = (v: unknown): number =>
     typeof v === 'number' && Number.isFinite(v) ? clamp(v, MULTIPLIER_MIN, MULTIPLIER_MAX) : 1;
@@ -53,6 +59,7 @@ export function normalizeWorldParams(seed: string, families?: Partial<WorldFamil
       density: num(f?.density),
     };
   }
+  result.distanceRatio = num(distanceRatio);
   return result;
 }
 
@@ -134,10 +141,11 @@ const cellCenter = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 const roundTo5 = (v: number): number => Math.max(5, Math.round(v / 5) * 5);
 
 /** Richesse d'un gisement selon la distance D (m) de son centre au point de départ : 1 + (D / 100)^1,5. */
-export const distanceRichness = (distM: number): number =>
-  1 + Math.pow(Math.max(0, distM) / 100, 1.5);
+export const distanceRichness = (distM: number, ratio = 1): number =>
+  1 + ratio * Math.pow(Math.max(0, distM) / 100, 1.5);
 /** Agrandissement des gisements avec la distance : ×1 au départ, ×2 à 1 000 m et au-delà. */
-export const distanceGrowth = (distM: number): number => 1 + Math.min(1, Math.max(0, distM) / 1000);
+export const distanceGrowth = (distM: number, ratio = 1): number =>
+  1 + ratio * Math.min(1, Math.max(0, distM) / 1000);
 
 export class WorldGenerator {
   readonly seed: number;
@@ -147,7 +155,7 @@ export class WorldGenerator {
   private readonly salts = new Map<string, number>();
 
   constructor(params: WorldParams) {
-    this.params = normalizeWorldParams(params.seed, params.families);
+    this.params = normalizeWorldParams(params.seed, params.families, params.distanceRatio);
     this.seed = hashSeed(params.seed);
     this.buildStarters();
   }
@@ -257,11 +265,12 @@ export class WorldGenerator {
         if (res.kind === 'deposit' && dist < (res.minDistanceM ?? 0)) continue;
         const weight = res.biomeWeight[this.biomeAt(xM, zM)];
         // Plus on s'éloigne du départ, plus les gisements sont un peu espacés (÷ 1,5 à 1 000 m)…
-        const spacing = res.kind === 'deposit' ? 1 / (1 + dist / 2000) : 1;
+        const spacing =
+          res.kind === 'deposit' ? 1 / (1 + (this.params.distanceRatio * dist) / 2000) : 1;
         if (hash01(this.seed, ix, iz, saltId + 1) >= this.presence(res) * weight * spacing)
           continue;
         // … et plus grands (jusqu'à ×2 à 1 000 m).
-        const grow = res.kind === 'deposit' ? distanceGrowth(dist) : 1;
+        const grow = res.kind === 'deposit' ? distanceGrowth(dist, this.params.distanceRatio) : 1;
         const radiusM =
           (res.radiusM[0] +
             (res.radiusM[1] - res.radiusM[0]) * hash01(this.seed, ix, iz, saltId + 4)) *
@@ -307,7 +316,7 @@ export class WorldGenerator {
     const density = this.params.families[p.res.family].density;
     const tc = clamp(t, 0, 1);
     const profile = p.res.edgeRatio + (1 - p.res.edgeRatio) * (1 - tc * tc);
-    const richer = distanceRichness(Math.hypot(p.xM, p.zM));
+    const richer = distanceRichness(Math.hypot(p.xM, p.zM), this.params.distanceRatio);
     return roundTo5(p.res.centerAmount * p.richness * density * profile * richer);
   }
 

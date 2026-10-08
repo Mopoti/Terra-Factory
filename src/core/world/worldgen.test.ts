@@ -8,6 +8,7 @@ import {
   distanceGrowth,
   distanceRichness,
   defaultWorldParams,
+  normalizeWorldParams,
   type ChunkData,
   type WorldParams,
 } from './worldgen';
@@ -444,5 +445,26 @@ describe('sable', () => {
     };
     // Au moins une bonne part des cases de sable borde un étang (le reste vient des gisements du désert).
     expect(sand.filter(near).length).toBeGreaterThan(20);
+  });
+});
+
+describe('ratio de distance', () => {
+  it('à ×1 rien ne change ; plus haut, les filons lointains sont plus massifs', () => {
+    expect(distanceRichness(500, 1)).toBe(distanceRichness(500));
+    expect(distanceRichness(500, 2)).toBeGreaterThan(distanceRichness(500, 1));
+    expect(distanceRichness(0, 3)).toBe(1);
+    expect(distanceGrowth(1000, 3)).toBe(4);
+    const mean = (g: WorldGenerator): number => {
+      const ores = region(g, 20).flatMap((c) => c.ore.filter((o) => o.id === 'iron_ore'));
+      return ores.reduce((a, o) => a + o.amount, 0) / ores.length;
+    };
+    const near = mean(gen('ratio'));
+    const far = mean(gen('ratio', (p) => (p.distanceRatio = 3)));
+    expect(far).toBeGreaterThan(near);
+  });
+  it('les réglages invalides reviennent à ×1', () => {
+    expect(normalizeWorldParams('s', undefined, 99).distanceRatio).toBe(3);
+    expect(normalizeWorldParams('s', undefined, Number.NaN).distanceRatio).toBe(1);
+    expect(normalizeWorldParams('s').distanceRatio).toBe(1);
   });
 });

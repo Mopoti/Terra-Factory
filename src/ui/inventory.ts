@@ -273,13 +273,13 @@ export function mountInventory(
     panel.append(
       gauge(
         t('inv.weight'),
-        `${formatMass(used.weightG / 1000, units, locale)} / ${formatMass(state.limits.maxWeightG / 1000, units, locale)}`,
-        used.weightG / state.limits.maxWeightG,
+        `${formatMass(used.weightG / 1000, units, locale)} / ${Number.isFinite(state.limits.maxWeightG) ? formatMass(state.limits.maxWeightG / 1000, units, locale) : t('inv.unlimited')}`,
+        Number.isFinite(state.limits.maxWeightG) ? used.weightG / state.limits.maxWeightG : 0,
       ),
       gauge(
         t('inv.volume'),
-        `${(used.volumeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} / ${(state.limits.maxVolumeMl / 1000).toLocaleString(locale)} L`,
-        used.volumeMl / state.limits.maxVolumeMl,
+        `${(used.volumeMl / 1000).toLocaleString(locale, { maximumFractionDigits: 1 })} / ${Number.isFinite(state.limits.maxVolumeMl) ? `${(state.limits.maxVolumeMl / 1000).toLocaleString(locale)} L` : t('inv.unlimited')}`,
+        Number.isFinite(state.limits.maxVolumeMl) ? used.volumeMl / state.limits.maxVolumeMl : 0,
       ),
       gauge(
         t('inv.slots'),
