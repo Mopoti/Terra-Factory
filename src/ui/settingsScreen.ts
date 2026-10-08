@@ -370,7 +370,7 @@ function controlsTab(): HTMLElement {
     const cell = el('span', 'slot');
     const code = getSettings().controls[id][slot];
     if (isFixed(id)) {
-      cell.append(el('span', 'fixed', slot === 0 && code ? codeLabel(code) : ''));
+      cell.append(el('span', 'fixed', code ? codeLabel(code) : ''));
       return cell;
     }
     const isListening = listening?.action === id && listening.slot === slot;

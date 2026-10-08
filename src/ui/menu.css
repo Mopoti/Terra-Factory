@@ -1931,3 +1931,57 @@ body.touch-mode .craft-hud {
   color: #fff;
   text-shadow: 0 0 3px #000;
 }
+
+.menu-corner {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #ffffff44;
+  background: rgba(10, 14, 20, 0.55);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.menu-corner:hover {
+  opacity: 1;
+}
+body.touch-mode .menu-corner {
+  display: none;
+}
+
+/* Barre du cycle de travail d'une machine (fenêtre de la machine et panneau de visée). */
+.cycle-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: #ffffff1f;
+  overflow: hidden;
+  margin: 2px 0 8px;
+}
+.cycle-bar > div {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.5s linear;
+}
+.craft-bar {
+  position: relative;
+}
+.craft-bar-label {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 10px;
+  line-height: 100%;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
+}
+.craft-job .craft-bar {
+  height: 14px;
+  min-width: 110px;
+  flex: 1;
+}

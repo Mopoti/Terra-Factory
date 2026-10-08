@@ -1,6 +1,20 @@
 import { onLocaleChange, t } from '../i18n';
+import { getSettings } from '../settings/store';
 import { buildSettingsPanel } from './settingsScreen';
 import './menu.css';
+
+const isTextTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+/** Échap (ou « Esc », ancien nom), ou la seconde touche du menu (P) quand on n'est pas en train d'écrire. */
+function isPauseKey(e: KeyboardEvent): boolean {
+  if (e.key === 'Escape' || e.key === 'Esc' || e.code === 'Escape') return true;
+  if (e.ctrlKey || e.altKey || e.metaKey || isTextTarget(e.target)) return false;
+  return getSettings().controls.pause.some(
+    (code) => code !== null && code !== 'Escape' && e.code === code,
+  );
+}
 
 export interface PauseActions {
   /** Appelé quand le menu pause se ferme ou s'ouvre : met le jeu en pause / le relance. */
@@ -204,8 +218,7 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
   }
 
   const onKey = (e: KeyboardEvent): void => {
-    // « Esc » : ancien nom de la touche sur certains navigateurs.
-    if ((e.key !== 'Escape' && e.key !== 'Esc' && e.code !== 'Escape') || e.repeat) return;
+    if (!isPauseKey(e) || e.repeat) return;
     if (!open) openMenu();
     else if (screen !== 'main') setScreen('main');
     else close();

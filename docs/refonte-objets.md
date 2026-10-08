@@ -480,3 +480,10 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 ## Objet choisi qui suit le curseur (Tour 136)
 
 - Quand le joueur clique une ressource dans le sac (ou dans la fenêtre d'une machine), **son nom et la quantité qu'il en a** suivent le curseur (cadre de la couleur de l'objet) jusqu'à ce qu'il la dépose, la désélectionne ou ferme la fenêtre. La pile prise « en main » (clic droit, Ctrl + clic) s'affichait déjà ; l'objet simplement choisi n'avait aucune marque.
+
+## Barres de progression, menu, ouverture des machines (Tour 137)
+
+- **Barres de progression des machines** (`Factory.cycleFraction`, testé) : fraction du cycle en cours pour le fourneau et les machines de métallurgie (selon la recette), l'assembleur et ses variantes, le laboratoire, les foreuses (sauf les plus rapides), le réacteur à fission (barre qui se vide) et la fusion (amorçage, puis cycle de 30 s). Visibles dans la **fenêtre de la machine** (sous l'état) et dans le **panneau de visée** (en regardant la machine).
+- **Fabrication dans le sac** : la file de fabrication montre déjà sa barre ; elle affiche maintenant aussi le **temps restant** (« 3,2 s »). Le HUD en bas garde sa barre.
+- **Bogue corrigé : la touche « Utiliser » (F) n'ouvrait plus la fenêtre d'une machine** quand le jeu tournait : la touche était « consommée » par la lecture faite pour le buggy, avant l'ouverture de la fenêtre. Les touches sont maintenant lues une seule fois par image (même réponse partout).
+- **Menu pause** : en plus d'Échap, la touche **P** ouvre le menu (inactive quand on écrit dans un champ), et un bouton **☰ Menu** est toujours affiché en haut à gauche (hors mode tactile). Dans mes essais Échap fonctionne dans toutes les vues ; ces deux alternatives servent quand Échap est pris par le navigateur ou l'application qui affiche le jeu.

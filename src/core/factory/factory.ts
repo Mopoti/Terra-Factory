@@ -1093,6 +1093,33 @@ export class Factory {
     return (m.fuelLeft + stack) / (machineDef(m.type).burnKw || 1);
   }
 
+  /**
+   * Avancement (0 à 1) du cycle de travail en cours, pour la barre de progression ; `null` si la machine ne travaille
+   * pas par cycles (tapis, tuyau, coffre…) ou n'a rien en cours. Les foreuses très rapides n'ont pas de barre.
+   */
+  cycleFraction(m: Machine): number | null {
+    if (m.broken) return null;
+    const clamp = (v: number): number => Math.max(0, Math.min(1, v));
+    const def = machineDef(m.type);
+    if (m.type === 'fission_reactor') {
+      return m.progress > 0 ? clamp(1 - m.progress / Factory.ROD_SECONDS) : null;
+    }
+    if (m.type === 'fusion_reactor') {
+      if (m.progress <= 0) return null;
+      return clamp(m.progress / (m.wear === 0 ? Factory.FUSION_PRIME_S : Factory.FUSION_CYCLE_S));
+    }
+    if (m.progress <= 0) return null;
+    if (isSmith(m.type)) {
+      const r = recipeById(m.recipe);
+      return r ? clamp(m.progress / r.seconds) : null;
+    }
+    if (isLab(m.type)) return clamp(m.progress / (def.craftSeconds ?? 6));
+    if (isAssembler(m.type)) return clamp(m.progress / (def.craftSeconds ?? 2));
+    if (isDrill(m.type) && (def.mineSeconds ?? 1) >= 0.5)
+      return clamp(m.progress / (def.mineSeconds ?? 1));
+    return null;
+  }
+
   status(m: Machine): MachineStatus {
     const def = machineDef(m.type);
     if (isChest(m.type)) {

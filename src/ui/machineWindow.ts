@@ -83,6 +83,7 @@ export function mountMachineWindow(
   /** Éléments dont le texte change en continu (on les met à jour sans refaire la fenêtre). */
   let live: {
     status?: HTMLElement;
+    cycle?: HTMLElement;
     fuel?: HTMLElement;
     ore?: HTMLElement;
     counts: Map<SlotName, HTMLElement>;
@@ -683,6 +684,7 @@ export function mountMachineWindow(
       live.status.className = `st ${status}`;
       live.status.textContent = t(`factory.status.${status}` as TranslationKey);
     }
+    setCycleBar(live.cycle, factory.cycleFraction(m));
     if (live.fuel) live.fuel.textContent = fuelText(m);
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
     m.slots.forEach((stack, i) => {
@@ -699,6 +701,13 @@ export function mountMachineWindow(
       const stack = m[name];
       if (stack) node.textContent = `${stack.count} / ${max}`;
     }
+  }
+
+  /** Règle la largeur de la barre de cycle (null = rien en cours : barre vide). */
+  function setCycleBar(fill: HTMLElement | undefined, fraction: number | null): void {
+    if (!fill) return;
+    fill.style.width = `${Math.round((fraction ?? 0) * 100)}%`;
+    fill.parentElement?.setAttribute('aria-valuenow', String(Math.round((fraction ?? 0) * 100)));
   }
 
   function render(): void {
@@ -723,6 +732,23 @@ export function mountMachineWindow(
     const statusEl = el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey));
     live.status = statusEl;
     panel.append(statusEl);
+    // Barre du cycle en cours (temps qui s'écoule dans la machine).
+    const cycleBar = el('div', 'cycle-bar');
+    cycleBar.setAttribute('role', 'progressbar');
+    cycleBar.setAttribute('aria-label', t('machine.cycle'));
+    const cycleFill = el('div');
+    cycleBar.append(cycleFill);
+    live.cycle = cycleFill;
+    setCycleBar(cycleFill, factory.cycleFraction(m));
+    if (
+      isSmith(m.type) ||
+      isAssembler(m.type) ||
+      isLab(m.type) ||
+      isDrill(m.type) ||
+      m.type === 'fission_reactor' ||
+      m.type === 'fusion_reactor'
+    )
+      panel.append(cycleBar);
 
     const rows = el('div', 'mach-rows');
     rows.append(

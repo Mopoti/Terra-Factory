@@ -1230,6 +1230,12 @@ export function startGameView(
     const rows: string[] = [];
     rows.push(`<strong>${t(`item.${itemOfTier(def, m.tier)}` as TranslationKey)}</strong>`);
     rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
+    // Temps qui s'écoule dans la machine (cycle en cours).
+    const cycle = factory.cycleFraction(m);
+    if (cycle !== null)
+      rows.push(
+        `<div class="cycle-bar"><div style="width:${Math.round(cycle * 100)}%"></div></div>`,
+      );
     if (status === 'noPower') rows.push(`<div class="sub">${t('factory.hint.noPower')}</div>`);
     if (status === 'noWater' && m.type === 'boiler')
       rows.push(`<div class="sub">${t('factory.hint.noWater')}</div>`);
@@ -1680,7 +1686,16 @@ export function startGameView(
 
   const previouslyActive = new Set<ActionId>();
   /** Vrai à l'appui sur la touche (une seule fois par appui). */
+  /** Résultat déjà calculé pendant cette image : lire deux fois la même touche donne la même réponse. */
+  const pressedThisFrame = new Map<ActionId, boolean>();
   function pressed(action: ActionId): boolean {
+    const known = pressedThisFrame.get(action);
+    if (known !== undefined) return known;
+    const result = computePressed(action);
+    pressedThisFrame.set(action, result);
+    return result;
+  }
+  function computePressed(action: ActionId): boolean {
     const now = input.isActionActive(action);
     const was = previouslyActive.has(action);
     if (now) previouslyActive.add(action);
@@ -2674,6 +2689,14 @@ export function startGameView(
       options.onMessage?.(t('threat.knockedOut'));
     }
   }
+  // Bouton « Menu » toujours visible (le clavier n'est pas le seul moyen d'ouvrir la pause).
+  const menuCorner = document.createElement('button');
+  menuCorner.type = 'button';
+  menuCorner.className = 'menu-corner';
+  menuCorner.textContent = t('game.menuCorner');
+  menuCorner.title = t('game.menuCorner.title');
+  menuCorner.addEventListener('click', () => options.onRequestPause?.());
+  container.appendChild(menuCorner);
   const hint = document.createElement('div');
   hint.className = 'look-hint';
   hint.textContent = t('hint.mouseLook');
@@ -2833,6 +2856,7 @@ export function startGameView(
   let fpsSince = 0;
   let debugSince = 0;
   renderer.setAnimationLoop((now) => {
+    pressedThisFrame.clear();
     if (fpsLimit > 0 && now - lastFrame < 1000 / fpsLimit - 1) return;
     lastFrame = now;
     const realDt = Math.min(0.5, (now - last) / 1000);
@@ -3179,6 +3203,7 @@ export function startGameView(
       gamepad.dispose();
       offDevice();
       craftHud.remove();
+      menuCorner.remove();
       closeFinale?.();
       window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);

@@ -76,7 +76,8 @@ export const ACTIONS = [
   { id: 'techTree', category: 'ui', defaults: ['L:T', null] },
   { id: 'debug', category: 'ui', defaults: ['F9', null] },
   { id: 'screenshot', category: 'ui', defaults: ['F2', null] },
-  { id: 'pause', category: 'ui', defaults: ['Escape', null], fixed: true },
+  // Échap, et P pour les cas où Échap est pris par le navigateur ou l'application qui affiche le jeu.
+  { id: 'pause', category: 'ui', defaults: ['Escape', 'KeyP'], fixed: true },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
   { id: 'levelUp', category: 'build', defaults: ['PageUp', null] },
   { id: 'levelDown', category: 'build', defaults: ['PageDown', null] },

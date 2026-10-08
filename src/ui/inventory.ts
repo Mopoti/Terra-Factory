@@ -266,6 +266,15 @@ export function mountInventory(
 
   /** File d'attente de fabrication : barre de progression et boutons d'annulation. */
   let liveBar: HTMLElement | null = null;
+  let liveLabel: HTMLElement | null = null;
+  /** Barre de la fabrication en cours : largeur et temps restant. */
+  function updateCraftBar(): void {
+    const p = state.craftProgress();
+    const job = state.craftQueue[0];
+    if (liveBar) liveBar.style.width = `${Math.round((p?.fraction ?? 0) * 100)}%`;
+    if (liveLabel && job)
+      liveLabel.textContent = `${Math.max(0, job.duration - job.elapsed).toFixed(1)} s`;
+  }
   function queueBox(): HTMLElement | null {
     liveBar = null;
     if (state.craftQueue.length === 0) return null;
@@ -276,8 +285,11 @@ export function mountInventory(
       if (i === 0) {
         const bar = el('div', 'craft-bar');
         const fill = el('div');
-        bar.append(fill);
+        const label = el('span', 'craft-bar-label');
+        bar.append(fill, label);
         liveBar = fill;
+        liveLabel = label;
+        updateCraftBar();
         row.append(bar);
       }
       const cancel = el('button', undefined, '✕');
@@ -296,7 +308,7 @@ export function mountInventory(
     if (!isOpenNow) return;
     if (state.craftQueue.length === 0 && liveBar === null) return;
     if (!liveBar || state.craftQueue.length > 0 !== (liveBar !== null)) return render();
-    liveBar.style.width = `${Math.round((state.craftProgress()?.fraction ?? 0) * 100)}%`;
+    updateCraftBar();
   }, 200);
 
   function render(): void {
