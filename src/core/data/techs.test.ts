@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemById } from './items';
+import { ITEMS, ITEM_CATEGORIES, categoryOf, itemById } from './items';
 import { expandLegacyTechs, TECHS } from './techs';
 
 /** Machines et équipements : seuls objets comptés dans la limite de 2 par technologie (les matériaux sont libres). */
@@ -41,5 +41,19 @@ describe('technologies', () => {
     ])
       expect(ids).toContain(id);
     expect(expandLegacyTechs(['electricity'])).not.toContain('handling');
+  });
+});
+
+describe('onglets de fabrication', () => {
+  it('chaque objet fabricable a un onglet, et aucun onglet n’est vide ni trop chargé', () => {
+    const counts = new Map<string, number>();
+    for (const item of ITEMS.filter((i) => i.recipe !== null)) {
+      expect(categoryOf(item), item.id).not.toBeNull();
+      counts.set(categoryOf(item)!, (counts.get(categoryOf(item)!) ?? 0) + 1);
+    }
+    for (const c of ITEM_CATEGORIES) {
+      expect(counts.get(c) ?? 0, c).toBeGreaterThan(0);
+      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(12);
+    }
   });
 });

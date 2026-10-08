@@ -76,7 +76,7 @@ export function mountInventory(
 ): InventoryWindow {
   let isOpenNow = false;
   let selected: string | null = null;
-  let craftTab: ItemCategory = 'machines';
+  let craftTab: ItemCategory | null = null;
   let hovered: string | null = null;
   let message = '';
   let mouse = { x: 0, y: 0 };
@@ -424,8 +424,12 @@ export function mountInventory(
     // Droite : tous les objets, à fabriquer.
     const craftBox = el('div', 'inv-craft');
     craftBox.append(el('h3', undefined, t('inv.craftTitle')));
+    // Seuls les objets déjà débloqués se montrent ; un onglet sans objet disparaît.
+    const visible = ITEMS.filter((i) => i.recipe !== null && state.isUnlocked(i.id));
+    const tabsShown = ITEM_CATEGORIES.filter((c) => visible.some((i) => categoryOf(i) === c));
+    if (craftTab === null || !tabsShown.includes(craftTab)) craftTab = tabsShown[0] ?? null;
     const tabs = el('div', 'craft-tabs');
-    for (const category of ITEM_CATEGORIES) {
+    for (const category of tabsShown) {
       const tab = el('button', category === craftTab ? 'craft-tab active' : 'craft-tab');
       tab.type = 'button';
       tab.textContent = t(`craft.cat.${category}` as TranslationKey);
@@ -438,15 +442,13 @@ export function mountInventory(
     }
     craftBox.append(tabs);
     const catalog = el('div', 'slot-grid craft-grid');
-    for (const def of ITEMS.filter((i) => i.recipe !== null && categoryOf(i) === craftTab)) {
+    for (const def of visible.filter((i) => categoryOf(i) === craftTab)) {
       const cell = el('button', 'slot craft');
       cell.type = 'button';
       cell.style.setProperty('--item', def.color);
       const canCraft =
         def.recipe !== null &&
         Object.entries(def.recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
-      cell.classList.toggle('raw', def.recipe === null);
-      cell.classList.toggle('locked', !state.isUnlocked(def.id));
       cell.classList.toggle('lack', def.recipe !== null && !canCraft);
       cell.append(el('span', 'slot-name', itemName(def.id)));
       cell.draggable = true;

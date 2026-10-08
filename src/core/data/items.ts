@@ -9,6 +9,8 @@ export interface ItemDef {
   color: string;
   /** Fabrication à la main : objet -> quantité nécessaire pour 1 unité. `null` = ressource brute. */
   recipe: Record<string, number> | null;
+  /** Onglet du panneau de fabrication (absent : l'objet ne se fabrique pas à la main). */
+  category: ItemCategory | null;
   /** Unités obtenues par fabrication (1 par défaut ; ex. 1 plaque de cuivre → 2 tuyaux). */
   yield: number;
   /** Combustible : énergie libérée par 1 unité, en mégajoules (absent = n'est pas un combustible). */
@@ -38,6 +40,7 @@ interface RawItem {
   color: string;
   recipe?: Record<string, number>;
   yield?: number;
+  category?: ItemCategory;
   energyMJ?: number;
   tool?: { speed: number; yield: number };
   equip?: { slot: EquipSlot; bag?: { slots?: number; weightKg?: number; volumeL?: number } };
@@ -49,6 +52,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   volumeMl: Math.round(i.volumeL * 1000),
   color: i.color,
   recipe: i.recipe ?? null,
+  category: i.category ?? null,
   yield: i.yield ?? 1,
   energyMJ: i.energyMJ ?? null,
   tool: i.tool ?? null,
@@ -71,18 +75,24 @@ export const BAG_LIMITS: BagLimits = {
   stackMax: raw.bag.stackMax,
 };
 
-export type ItemCategory = 'machines' | 'tools' | 'buildings' | 'equipment';
-export const ITEM_CATEGORIES: ItemCategory[] = ['machines', 'tools', 'buildings', 'equipment'];
+/** Onglets du panneau de fabrication (par usage) ; l'ordre est celui des onglets. */
+export const ITEM_CATEGORIES = [
+  'extraction',
+  'smelting',
+  'machining',
+  'logistics',
+  'fluids',
+  'energy',
+  'science',
+  'buildings',
+  'equipment',
+  'tools',
+] as const;
+export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
-/**
- * Catégorie d'un objet dans le panneau de fabrication : constructions (pièces), machines, équipements
- * (ce qui se porte), et « ustensiles » pour tout le reste (matières, lingots, fibres, tissu…).
- */
-export function categoryOf(item: ItemDef): ItemCategory {
-  if (item.id.startsWith('piece_')) return 'buildings';
-  if (item.id.startsWith('machine_')) return 'machines';
-  if (item.equip) return 'equipment';
-  return 'tools';
+/** Onglet d'un objet fabricable (champ `category` de `items.json`) ; les autres objets n'en ont pas. */
+export function categoryOf(item: ItemDef): ItemCategory | null {
+  return item.category;
 }
 
 /** Portée de la récolte à la main, en mètres. */

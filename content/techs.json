@@ -387,7 +387,8 @@
         "electricity"
       ],
       "unlocks": [
-        "machine_lab"
+        "machine_lab",
+        "science_pack"
       ]
     },
     {
@@ -444,7 +445,8 @@
         "logistics_3"
       ],
       "unlocks": [
-        "machine_barreler"
+        "machine_barreler",
+        "barrel_empty"
       ]
     },
     {

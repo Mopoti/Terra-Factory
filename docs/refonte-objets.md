@@ -447,3 +447,9 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
   - **Récolte** : 3 bois, puis 3 pierres (la barre suit le contenu du sac).
 - Les autres étapes (saut, accroupi, course, carte, outil, four…) restent simples : pas de barre.
 - Le texte de chaque étape dit ce qu'il faut faire (« dans les 4 directions », « 3 bois »…). Testé : l'avancement par étape, les gestes en double, les signaux en avance.
+
+## Panneau de fabrication : objets cachés et nouveaux onglets (Tour 131)
+
+- **Objets non débloqués cachés** : le panneau de fabrication du sac ne montre que ce qui est déjà débloqué (technologie recherchée ou découverte faite). Un onglet sans objet visible disparaît.
+- **10 onglets par usage** (champ `category` de `items.json`, 5 à 12 objets chacun, testé) : Extraction (foreuses, pompes), Fonderie (fours, estampeuse, concasseur, Bessemer, bétonnière, lavage), Usinage (assembleur, constructeur, presse, raffinerie, centrifugeuse), Logistique (tapis, séparateur, bras, trieur, coffres), Fluides (tuyau, surpresseur, tour de refroidissement, barils, évaporation, vitrification), Énergie (manivelle, poteau, générateurs, accumulateur, réacteurs, balise), Science (laboratoire, paquets, puce, câble isolé), Constructions, Équipements (vêtements, sac, boussole, duvet, lit), Outils et défense (outils, pistolet, chargeur, tourelle, buggy).
+- Le paquet de science T1 est débloqué avec la technologie **Laboratoire** et le baril vide avec **Barils T3** (ils étaient fabricables dès le départ).
