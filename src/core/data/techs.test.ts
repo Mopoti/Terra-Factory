@@ -4,7 +4,10 @@ import { expandLegacyTechs, TECHS } from './techs';
 
 /** Machines et équipements : seuls objets comptés dans la limite de 2 par technologie (les matériaux sont libres). */
 const counted = (item: string): boolean =>
-  item.startsWith('machine_') || !!itemById(item).equip || item === 'sleeping_bag' || item === 'bed';
+  item.startsWith('machine_') ||
+  !!itemById(item).equip ||
+  item === 'sleeping_bag' ||
+  item === 'bed';
 
 describe('technologies', () => {
   it('chaque technologie débloque 2 machines ou équipements au plus', () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Factory, type FactoryWorld } from '../factory/factory';
+import { Threat } from '../game/threat';
 import { GameState } from '../game/state';
 import { DEFAULT_GAME_OPTIONS, normalizeMultiplayer, type GameOptions } from '../save/saveIndex';
 import { defaultWorldParams } from '../world/worldgen';
@@ -13,7 +14,7 @@ const flush = async (): Promise<void> => {
   for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 0));
 };
 
-async function setup() {
+async function setup(withThreat = false) {
   const state = new GameState({ inventory: { machine_furnace: 3 } });
   const factory = new Factory(state.changes.machines, flat);
   const options: GameOptions = {
@@ -24,8 +25,16 @@ async function setup() {
       share: { research: true, credits: true, inventory: false },
     }),
   };
+  const threat = new Threat(
+    state.changes.pollution,
+    state.changes.groundPollution,
+    { nestsIn: () => [], nestsNear: () => [], treesIn: () => 0 },
+    { aggressive: false },
+    state.changes.enemies,
+  );
   const host = new HostSession({
     state,
+    threat: withThreat ? threat : undefined,
     factory,
     blockedFor: () => () => false,
     world: defaultWorldParams('seed'),
@@ -38,7 +47,7 @@ async function setup() {
   const local = new GameState({ inventory: client.inventory, changes: client.changes });
   const localFactory = new Factory(local.changes.machines, flat);
   const sync = new GuestSync(client, local, localFactory);
-  return { host, state, factory, client, local, localFactory, sync, net };
+  return { host, state, factory, client, local, localFactory, sync, net, threat };
 }
 
 describe('applyWorldPart', () => {
@@ -231,5 +240,31 @@ describe('invité : copie locale du monde', () => {
     expect(sync.state.changes.time).toBe(99);
     expect(sync.state.inventory).toEqual({ stone: 3 });
     expect(host.playerCount).toBe(2);
+  });
+
+  it('combat : le tir et le coup au corps à corps de l’invité touchent les ennemis de l’hôte', async () => {
+    const { host, threat, client } = await setup(true);
+    const enemy = { id: 1, x: 0, z: -6, hp: 25, cooldown: 0, idle: 0, target: null };
+    threat.enemies.push(enemy);
+    host.remotes.get(client.you.id)!.info.z = 0;
+    client.fire({ x: 0, y: 0.5, z: 0 }, { x: 0, y: 0, z: -1 });
+    await flush();
+    expect(enemy.hp).toBe(15);
+    // Trop loin de sa position connue : ignoré. Direction absurde : ignorée.
+    client.fire({ x: 50, y: 1, z: 50 }, { x: 0, y: 0, z: -1 });
+    client.fire({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: -50 });
+    await flush();
+    expect(enemy.hp).toBe(15);
+    enemy.z = -1;
+    client.melee();
+    await flush();
+    expect(enemy.hp).toBe(3);
+  });
+
+  it('sans ennemis connus de l’hôte, les tirs sont ignorés', async () => {
+    const { client } = await setup(false);
+    client.fire({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: -1 });
+    client.melee();
+    await flush();
   });
 });

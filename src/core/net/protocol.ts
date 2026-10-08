@@ -27,6 +27,9 @@ export type ToHost =
   /** Action du monde jouée chez l'invité, à rejouer chez l'hôte (méthode de la liste blanche et ses arguments). */
   | { t: 'call'; method: string; args: unknown[] }
   /** Barre d'objets, outils, équipement, munitions, tutoriel : décidés par l'invité. */
+  /** Tir de pistolet (origine et direction du rayon) et coup au corps à corps : l'hôte applique les dégâts aux ennemis. */
+  | { t: 'fire'; origin: [number, number, number]; dir: [number, number, number] }
+  | { t: 'melee' }
   | { t: 'loadout'; loadout: Record<string, unknown> }
   | { t: 'leave' };
 

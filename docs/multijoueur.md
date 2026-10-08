@@ -77,3 +77,9 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 - **Règles de la partie appliquées** : 5 joueurs, privé (acceptation de l'hôte) / public (mot de passe), partage des technologies, crédits et sac (déjà en M2).
 
 **Reste (hors M3)** : combat de l'invité par commandes (tirs, corps à corps), mort de l'invité rejouée chez l'hôte, mot de passe haché dans la sauvegarde, serveur de mise en relation propre, essai à 5 joueurs réels.
+
+## M3b — combat et mort de l'invité (Tour 124) : fait
+
+- **Tir et corps à corps** : l'invité joue son coup tout de suite (retour immédiat) et l'envoie (`fire` : origine et direction du rayon ; `melee`). L'hôte applique les dégâts à **ses** ennemis avec ses propres valeurs (portée 40 m, 10 et 12 de dégâts) ; il ignore un tir parti à plus de 5 m de la position connue du joueur ou avec une direction absurde, et le corps à corps part de la position connue. L'état des ennemis revient ensuite avec le monde. Les nids passent déjà par `takeFromWorld`.
+- **Mort de l'invité** : `dieAt` et `consumeRespawn` rejoués chez l'hôte (cadavre dans le monde, réapparition au dernier lit).
+- Reste à traiter : munitions de l'invité vérifiées par l'hôte, dégâts calculés à la position exacte du rayon avec la latence, mot de passe haché, serveur de mise en relation propre, essai à 5 joueurs réels.

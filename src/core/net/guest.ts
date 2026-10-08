@@ -158,6 +158,23 @@ export class GuestClient {
     if (!this.closed) this.link.send({ t: 'call', method, args } satisfies ToHost);
   }
 
+  /** Tir du pistolet : les ennemis touchés sont ceux de l'hôte. */
+  fire(
+    origin: { x: number; y: number; z: number },
+    dir: { x: number; y: number; z: number },
+  ): void {
+    if (this.closed) return;
+    this.link.send({
+      t: 'fire',
+      origin: [origin.x, origin.y, origin.z],
+      dir: [dir.x, dir.y, dir.z],
+    } satisfies ToHost);
+  }
+
+  melee(): void {
+    if (!this.closed) this.link.send({ t: 'melee' } satisfies ToHost);
+  }
+
   sendLoadout(loadout: Record<string, unknown>): void {
     if (!this.closed) this.link.send({ t: 'loadout', loadout } satisfies ToHost);
   }

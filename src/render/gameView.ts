@@ -2571,6 +2571,7 @@ export function startGameView(
         } else {
           computeRay();
           const shot = threat.shoot(rayOrigin, rayDir, 40, 10);
+          guest?.client.fire(rayOrigin, rayDir);
           // Un nid sur la ligne de tir (et plus près qu'un ennemi touché) encaisse le tir.
           const nestAt = shot.result === null ? shootNest(shot.distance, 10) : null;
           if (nestAt !== null) shot.distance = nestAt;
@@ -2587,6 +2588,7 @@ export function startGameView(
       }
     } else if (attackCooldown <= 0 && !building && input.isActionActive('interact')) {
       let result = threat.hit(playerX, playerZ, 2.6, 12);
+      if (result) guest?.client.melee();
       if (!result) {
         const close = nestsNear(playerX, playerZ, 3.6)[0];
         if (close) result = damageNest(close, 12);

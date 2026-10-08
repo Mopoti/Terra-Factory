@@ -333,6 +333,7 @@ function startGame(
                 state,
                 factory: view.factory,
                 blockedFor: view.blockedFor,
+                threat: view.threat,
                 world: game.world,
                 options: game.options,
                 hostName: t('join.defaultName'),

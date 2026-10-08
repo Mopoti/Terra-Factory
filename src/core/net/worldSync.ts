@@ -29,6 +29,8 @@ export const REMOTE_CALLS = [
   'place',
   'placeMany',
   'recoverCorpse',
+  'dieAt',
+  'consumeRespawn',
   'placeSpawn',
   'pickUpSpawn',
   'placeVehicle',

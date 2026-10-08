@@ -3,6 +3,7 @@
  * applique sur l'état de CE joueur (même monde, fiche individuelle) avec son propre terrain, puis répond. Il diffuse
  * régulièrement l'état du monde et la position des joueurs.
  */
+import type { Threat } from '../game/threat';
 import type { Factory } from '../factory/factory';
 import { CommandBus, type Command, type CommandContext, type CommandType } from '../game/commands';
 import type { Inventory } from '../game/inventory';
@@ -22,11 +23,18 @@ import {
 import type { HostEndpoint, Link, Network } from './transport';
 
 export const HOST_ID = 'player';
+/** Armes (mêmes valeurs que chez le joueur de l'hôte). */
+const GUN_RANGE_M = 40;
+const GUN_DAMAGE = 10;
+const MELEE_RANGE_M = 2.6;
+const MELEE_DAMAGE = 12;
 
 export interface HostOptions {
   state: GameState;
   factory: Factory;
   blockedFor: CommandContext['blockedFor'];
+  /** Ennemis du monde : sans eux, les tirs et coups des invités sont ignorés. */
+  threat?: Threat;
   world: WorldParams;
   options: GameOptions;
   hostName: string;
@@ -223,6 +231,8 @@ export class HostSession {
       if (!player) return; // rien n'est accepté avant l'arrivée
       if (msg.t === 'cmd') this.command(player, msg.seq, msg.cmd);
       else if (msg.t === 'call') this.call(player, msg.method, msg.args);
+      else if (msg.t === 'fire') this.fire(player, msg.origin, msg.dir);
+      else if (msg.t === 'melee') this.melee(player);
       else if (msg.t === 'loadout') this.loadout(player, msg.loadout);
       else if (msg.t === 'pos') {
         const i = player.info;
@@ -306,6 +316,28 @@ export class HostSession {
     player.link.send({ t: 'result', seq, result: result ?? null } satisfies ToGuest);
     // Le sac d'un invité change à chaque action : on lui renvoie sa fiche avec la réponse.
     this.sendMe(player);
+  }
+
+  /** Tir d'un invité : le rayon part d'au plus 5 m de sa position connue ; portée et dégâts sont ceux de l'hôte. */
+  private fire(player: Remote, origin: unknown, dir: unknown): void {
+    const threat = this.opts.threat;
+    const vec = (v: unknown): { x: number; y: number; z: number } | null =>
+      Array.isArray(v) &&
+      v.length === 3 &&
+      v.every((n) => typeof n === 'number' && Number.isFinite(n))
+        ? { x: v[0], y: v[1], z: v[2] }
+        : null;
+    const o = vec(origin);
+    const d = vec(dir);
+    if (!threat || !o || !d) return;
+    if (Math.hypot(o.x - player.info.x, o.z - player.info.z) > 5) return;
+    const len = Math.hypot(d.x, d.y, d.z);
+    if (len < 0.5 || len > 1.5) return;
+    threat.shoot(o, d, GUN_RANGE_M, GUN_DAMAGE);
+  }
+
+  private melee(player: Remote): void {
+    this.opts.threat?.hit(player.info.x, player.info.z, MELEE_RANGE_M, MELEE_DAMAGE);
   }
 
   private sendMe(player: Remote): void {
