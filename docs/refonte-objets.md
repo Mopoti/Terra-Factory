@@ -437,3 +437,13 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Textes dynamiques** : `{@action}` dans une traduction (par exemple `{@rotate}`, `{@interact}`, `{@techTree}`) est remplacé à l'affichage par la touche du clavier (selon ses réglages) ou par le bouton de la manette (selon son remappage : A, X, RT, L3, ↑…) ; le déplacement donne « le stick gauche », la barre d'objets « LB / RB ». Une action sans bouton de manette garde sa touche. En mode tactile, ce sont les noms des boutons à l'écran.
 - **Textes convertis** : tutoriel (en entier), aides de pose (pièces, machines, tuyaux, tapis), « technologie requise », laboratoire, démolition et ouverture des structures et portes, aide de la carte. L'aide du sac (glisser, clic droit, Ctrl / Maj) reste pour la souris : on ne peut pas déplacer les piles à la manette.
 - Les textes affichés en continu (tutoriel, aide de pose) se mettent à jour dès qu'on change de périphérique ; les autres, à leur prochaine ouverture.
+
+## Tutoriel : barre de progression (Tour 130)
+
+- Les étapes qui demandent plusieurs gestes affichent une **barre de progression** (« 2 / 4 ») sous le texte ; chaque geste ne compte qu'une fois.
+  - **Déplacement** : les 4 directions (avant, gauche, arrière, droite).
+  - **Caméra** : à gauche, à droite, vers le haut, vers le bas (souris, doigt ou stick de la manette).
+  - **Vues** : les 3 vues (la vue de départ compte d'office).
+  - **Récolte** : 3 bois, puis 3 pierres (la barre suit le contenu du sac).
+- Les autres étapes (saut, accroupi, course, carte, outil, four…) restent simples : pas de barre.
+- Le texte de chaque étape dit ce qu'il faut faire (« dans les 4 directions », « 3 bois »…). Testé : l'avancement par étape, les gestes en double, les signaux en avance.

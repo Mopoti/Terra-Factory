@@ -1908,3 +1908,26 @@ body.touch-mode .craft-hud {
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
   }
 }
+
+.tutorial-bar {
+  position: relative;
+  height: 16px;
+  border-radius: 8px;
+  background: #ffffff1f;
+  overflow: hidden;
+  margin: 4px 0;
+}
+.tutorial-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+.tutorial-bar > span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 16px;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
+}

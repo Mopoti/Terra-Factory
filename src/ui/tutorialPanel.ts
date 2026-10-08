@@ -37,7 +37,8 @@ export function mountTutorialPanel(
       return;
     }
     const n = TUTORIAL_STEPS.indexOf(step) + 1;
-    const key = `${step.id}|${getSettings().keyboard}|${getDevice()}`;
+    const progress = tutorial.progress() ?? { have: 0, total: 1 };
+    const key = `${step.id}|${getSettings().keyboard}|${getDevice()}|${progress.have}`;
     if (shown === key) return;
     shown = key;
     panel.hidden = false;
@@ -53,8 +54,24 @@ export function mountTutorialPanel(
       ),
       textLine('small', t(`tutorial.group.${step.group}` as TranslationKey)),
       textLine('p', t(`tutorial.step.${step.id}` as TranslationKey, { keys })),
+      ...(progress.total > 1 ? [progressBar(progress.have, progress.total)] : []),
       skip,
     );
+  }
+
+  function progressBar(have: number, total: number): HTMLElement {
+    const bar = document.createElement('div');
+    bar.className = 'tutorial-bar';
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(total));
+    bar.setAttribute('aria-valuenow', String(have));
+    const fill = document.createElement('div');
+    fill.style.width = `${Math.round((have / total) * 100)}%`;
+    const label = document.createElement('span');
+    label.textContent = `${have} / ${total}`;
+    bar.append(fill, label);
+    return bar;
   }
 
   function textLine(tag: string, text: string): HTMLElement {

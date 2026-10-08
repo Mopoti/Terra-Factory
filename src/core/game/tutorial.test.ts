@@ -22,7 +22,7 @@ describe('tutoriel', () => {
     expect(t.current()?.id).toBe('move');
     t.signal('jump');
     expect(t.update(ctx())).toBeNull();
-    t.signal('move');
+    for (const d of ['forward', 'left', 'backward', 'right']) t.signal(d);
     expect(t.update(ctx())?.id).toBe('move');
     expect(t.current()?.id).toBe('jump');
     // le signal « saut » reçu avant a été oublié à la validation de l'étape précédente
@@ -31,12 +31,20 @@ describe('tutoriel', () => {
 
   it('les étapes de récolte et de four se lisent dans le monde', () => {
     const { t, saved } = make();
-    for (const s of ['move', 'jump', 'crouch', 'sprint', 'look', 'view', 'map']) {
-      t.signal(s);
+    for (const s of [
+      ['forward', 'left', 'backward', 'right'],
+      ['jump'],
+      ['crouch'],
+      ['sprint'],
+      ['lookLeft', 'lookRight', 'lookUp', 'lookDown'],
+      ['view:first', 'view:third', 'view:top'],
+      ['map'],
+    ]) {
+      for (const sig of s) t.signal(sig);
       t.update(ctx());
     }
     expect(t.current()?.id).toBe('wood');
-    expect(t.update(ctx({ inventory: { wood: 2, stone: 1 } }))?.id).toBe('stone');
+    expect(t.update(ctx({ inventory: { wood: 3, stone: 3 } }))?.id).toBe('stone');
     expect(t.current()?.id).toBe('tool');
     t.update(ctx({ hasTool: true }));
     t.update(ctx({ machines: [{ type: 'furnace', fuelCount: 0, slots: [], stockItem: null }] }));
@@ -59,5 +67,36 @@ describe('tutoriel', () => {
   it('la progression reprend là où elle s’est arrêtée', () => {
     const saved = { tutorialDone: ['move', 'jump'], tutorialSkipped: false };
     expect(new Tutorial(saved, true).current()?.id).toBe('crouch');
+  });
+
+  it('la barre de progression compte les gestes faits (touches, sens de la caméra, vues, unités récoltées)', () => {
+    const { t } = make();
+    expect(t.progress()).toEqual({ have: 0, total: 4 });
+    t.signal('forward');
+    t.signal('forward'); // le même geste ne compte qu'une fois
+    t.signal('left');
+    t.update(ctx());
+    expect(t.progress()).toEqual({ have: 2, total: 4 });
+    t.signal('backward');
+    t.signal('right');
+    t.update(ctx());
+    expect(t.current()?.id).toBe('jump');
+    expect(t.progress()).toEqual({ have: 0, total: 1 });
+    for (const s of ['jump', 'crouch', 'sprint']) {
+      t.signal(s);
+      t.update(ctx());
+    }
+    expect(t.progress()).toEqual({ have: 0, total: 4 }); // regarder
+    t.signal('lookLeft');
+    t.signal('lookRight');
+    t.update(ctx());
+    expect(t.progress()).toEqual({ have: 2, total: 4 });
+    for (const s of ['lookUp', 'lookDown', 'view:first', 'view:third', 'view:top', 'map']) {
+      t.signal(s);
+      t.update(ctx());
+    }
+    expect(t.current()?.id).toBe('wood');
+    t.update(ctx({ inventory: { wood: 2 } }));
+    expect(t.progress()).toEqual({ have: 2, total: 3 });
   });
 });

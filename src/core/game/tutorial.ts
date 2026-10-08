@@ -43,15 +43,38 @@ export interface TutorialContext {
   }[];
 }
 
-const SIGNAL_STEPS = new Set(['move', 'jump', 'crouch', 'sprint', 'look', 'view', 'map']);
+/** Étapes de mouvement validées par un signal du jeu. */
+const SIGNAL_STEPS = new Set(['jump', 'crouch', 'sprint', 'map']);
+
+/** Étapes qui demandent plusieurs gestes (tous les signaux de la liste) : la barre de progression les compte. */
+export const STEP_NEEDS: Readonly<Record<string, readonly string[]>> = {
+  move: ['forward', 'left', 'backward', 'right'],
+  look: ['lookLeft', 'lookRight', 'lookUp', 'lookDown'],
+  view: ['view:first', 'view:third', 'view:top'],
+};
+
+/** Étapes de récolte : combien d'unités à ramasser. */
+export const STEP_COUNTS: Readonly<Record<string, { item: string; count: number }>> = {
+  wood: { item: 'wood', count: 3 },
+  stone: { item: 'stone', count: 3 },
+};
+
+/** Avancement d'une étape : gestes faits sur gestes demandés (1 sur 1 pour les étapes simples). */
+export function stepProgress(id: string, ctx: TutorialContext): { have: number; total: number } {
+  const needs = STEP_NEEDS[id];
+  if (needs) return { have: needs.filter((n) => ctx.flags.has(n)).length, total: needs.length };
+  const goal = STEP_COUNTS[id];
+  if (goal) return { have: Math.min(goal.count, ctx.inventory[goal.item] ?? 0), total: goal.count };
+  return { have: stepComplete(id, ctx) ? 1 : 0, total: 1 };
+}
 
 export function stepComplete(id: string, ctx: TutorialContext): boolean {
+  if (STEP_NEEDS[id] || STEP_COUNTS[id]) {
+    const p = stepProgress(id, ctx);
+    return p.have >= p.total;
+  }
   if (SIGNAL_STEPS.has(id)) return ctx.flags.has(id);
   switch (id) {
-    case 'wood':
-      return (ctx.inventory.wood ?? 0) > 0;
-    case 'stone':
-      return (ctx.inventory.stone ?? 0) > 0;
     case 'tool':
       return ctx.hasTool;
     case 'furnace':
@@ -74,6 +97,7 @@ export function stepComplete(id: string, ctx: TutorialContext): boolean {
 /** Progression d'un tutoriel (enregistrée dans les changements du monde). */
 export class Tutorial {
   private flags = new Set<string>();
+  private last: Omit<TutorialContext, 'flags'> = { inventory: {}, hasTool: false, machines: [] };
 
   constructor(
     private readonly saved: { tutorialDone: string[]; tutorialSkipped: boolean },
@@ -97,6 +121,7 @@ export class Tutorial {
 
   /** Valide les étapes accomplies ; renvoie la dernière validée (pour la fanfare) ou null. */
   update(ctx: Omit<TutorialContext, 'flags'>): TutorialStep | null {
+    this.last = ctx;
     let last: TutorialStep | null = null;
     for (let step = this.current(); step; step = this.current()) {
       if (!stepComplete(step.id, { ...ctx, flags: this.flags })) break;
@@ -105,6 +130,12 @@ export class Tutorial {
       last = step;
     }
     return last;
+  }
+
+  /** Avancement de l'étape en cours (d'après le dernier état du monde reçu), ou null s'il n'y en a pas. */
+  progress(): { have: number; total: number } | null {
+    const step = this.current();
+    return step ? stepProgress(step.id, { ...this.last, flags: this.flags }) : null;
   }
 
   skip(): void {

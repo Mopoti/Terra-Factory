@@ -1558,7 +1558,7 @@ export function startGameView(
         input,
         onLook: (dx, dy) => {
           if (!paused && !uiOpen) rig.look(dx, dy, getSettings().views);
-          if (Math.hypot(dx, dy) > 2) tutorial.signal('look');
+          signalLook(dx, dy);
         },
         onZoom: (step) => {
           if (!paused && !uiOpen) rig.zoom(step, getSettings().views);
@@ -1574,7 +1574,7 @@ export function startGameView(
     inMenu: () => paused || uiOpen,
     onLook: (dx, dy) => {
       rig.look(dx, dy, getSettings().views);
-      if (Math.hypot(dx, dy) > 0.5) tutorial.signal('look');
+      signalLook(dx, dy, 0.5);
     },
     onHotbarStep: (step) => {
       const hotbar = options.state.changes.hotbar;
@@ -1601,7 +1601,7 @@ export function startGameView(
     else rightMoved = 0;
     if (isLocked() || input.isBindingActive('Mouse2')) {
       rig.look(e.movementX, e.movementY, getSettings().views);
-      if (Math.hypot(e.movementX, e.movementY) > 2) tutorial.signal('look');
+      signalLook(e.movementX, e.movementY);
     }
   };
   window.addEventListener('mousemove', onMouseMove);
@@ -1712,7 +1712,7 @@ export function startGameView(
     if (view === 'cycle') rig.cycleView(views);
     else rig.setView(view, views);
     if (rig.view === before) return;
-    tutorial.signal('view');
+    tutorial.signal(`view:${rig.view}`);
     if (rig.view !== 'first') releaseLock();
     if (rig.view === 'first') requestLock();
     options.onViewChange?.(rig.view);
@@ -2518,12 +2518,18 @@ export function startGameView(
     craftHudText.textContent = `${t(`item.${p.item}` as TranslationKey)} (${p.queued})`;
     craftHudFill.style.width = `${Math.round(p.fraction * 100)}%`;
   }
+  /** Tutoriel : la caméra doit tourner dans les deux sens, à l'horizontale comme à la verticale. */
+  function signalLook(dx: number, dy: number, min = 2): void {
+    if (Math.abs(dx) > min) tutorial.signal(dx < 0 ? 'lookLeft' : 'lookRight');
+    if (Math.abs(dy) > min) tutorial.signal(dy < 0 ? 'lookUp' : 'lookDown');
+  }
   let tutorialClock = 0;
   function updateTutorial(dt: number): void {
     if (!tutorial.current()) return;
-    if (input.isActionActive('forward') || input.isActionActive('backward'))
-      tutorial.signal('move');
-    if (input.isActionActive('left') || input.isActionActive('right')) tutorial.signal('move');
+    // La vue dans laquelle on est compte déjà pour l'étape « les 3 vues ».
+    if (tutorial.current()?.id === 'view') tutorial.signal(`view:${rig.view}`);
+    for (const dir of ['forward', 'backward', 'left', 'right'] as const)
+      if (input.isActionActive(dir)) tutorial.signal(dir);
     if (input.isActionActive('jump')) tutorial.signal('jump');
     if (input.isActionActive('crouch')) tutorial.signal('crouch');
     if (input.isActionActive('sprint') && input.isActionActive('forward'))
