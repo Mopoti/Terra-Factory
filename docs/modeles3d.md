@@ -66,3 +66,10 @@
 - `public/models/tool/icepick.glb` : converti depuis le FBX, texture de couleur réduite à 512 px (les cartes normale/rugosité/métal, très lourdes, ne sont pas reprises). Modèle redressé et mis à 0,75 m, manche vers soi, pointe vers l'avant (`src/render/toolModel.ts`).
 - Il remplace la pioche en boîtes tenue en main (1re personne) et portée par le personnage ; l'outil en pierre est teinté brun, l'outil en fer garde les couleurs d'origine. Sans fichier, les formes simples servent de secours.
 - Le style (piolet moderne noir et orange) détonne avec le reste ; à remplacer par un outil de pierre/fer plus rustique quand on en trouvera un.
+
+## Personnage : mineur articulé (Tour 147)
+- **Source** (fournie par le PO) : « 3D Rigged Character » (itch.io, **CC0**), fichier `characterRIGGED.glb` copié dans `public/models/character/miner.glb`. Mannequin de 15 os, sans matériau ni animation.
+- `src/render/minerModel.ts` : couleurs par région calculées d'après la hauteur des sommets (tête et mains = peau, jambes = pantalon, torse et bras = combinaison, teintée par joueur), casque jaune avec lampe émissive posé sur le modèle, animations calculées en tournant les os (marche proportionnelle à la vitesse, bras abaissés le long du corps, geste de frappe bras levé puis abattu pendant une récolte).
+- Le piolet de la main droite est fixé à l'os de la main (il suit le bras). En 1re personne, rien ne change (le personnage est masqué).
+- Les autres joueurs utilisent le même mannequin, teinté par joueur, animé d'après leur vitesse de déplacement ; avant le chargement (ou sans fichier), la capsule sert de secours.
+- Limites : le mannequin n'a pas de visage (le casque et la lampe indiquent l'avant), pas d'animation de repos ni de saut, et les mouvements des genoux et coudes sont simples.

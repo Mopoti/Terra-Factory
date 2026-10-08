@@ -118,6 +118,7 @@ import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import { loadModels } from './models';
 import { loadNature } from './nature';
+import { Miner, loadMiner } from './minerModel';
 import { loadPickModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
@@ -230,6 +231,17 @@ export function startGameView(
   );
   player.castShadow = true;
   scene.add(player);
+  // Le mannequin articulé remplace la capsule dès que le fichier est chargé (la capsule reste invisible, elle sert
+  // encore de support aux objets portés).
+  let miner: Miner | null = null;
+  void loadMiner().then((ok) => {
+    if (!ok || !viewAlive) return;
+    miner = new Miner(PLAYER_HEIGHT_M, 0xd9822b);
+    player.add(miner.root);
+    (player.material as THREE.Material).visible = false;
+    player.castShadow = false;
+    miner.attachHandTool(bodyTool);
+  });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
   const corpseGeometry = new THREE.CapsuleGeometry(
     PLAYER_RADIUS_M,
@@ -246,6 +258,8 @@ export function startGameView(
   let onGround = playerY === 0;
   let playerZ = state.z;
   let facing = 0;
+  let lastX = playerX;
+  let lastZ = playerZ;
 
   // Outil (provisoire : une pioche simple). Tenu à la main du personnage (3ème personne, vue du
   // dessus) et, en 1ère personne, fixé à la caméra.
@@ -3045,6 +3059,13 @@ export function startGameView(
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
     hand.visible = rig.view === 'first' && views.first.showHands && usingTool;
     bodyTool.visible = rig.view !== 'first' && usingTool;
+    miner?.update(
+      dt,
+      Math.hypot(playerX - lastX, playerZ - lastZ) / Math.max(dt, 1e-3),
+      interaction.working !== null && rig.view !== 'first',
+    );
+    lastX = playerX;
+    lastZ = playerZ;
     bareHand.visible = rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();

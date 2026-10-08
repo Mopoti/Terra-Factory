@@ -1,10 +1,14 @@
 import * as THREE from 'three';
 import type { PlayerInfo } from '../core/net/protocol';
+import { Miner, minerReady } from './minerModel';
 
 /** Affichage des autres joueurs : une silhouette colorée et leur nom, lissées entre deux envois du réseau. */
 export class RemotePlayersView {
   private readonly root = new THREE.Group();
-  private readonly shown = new Map<string, { group: THREE.Group; target: THREE.Vector3 }>();
+  private readonly shown = new Map<
+    string,
+    { group: THREE.Group; target: THREE.Vector3; miner: Miner | null }
+  >();
 
   constructor(scene: THREE.Scene) {
     scene.add(this.root);
@@ -20,11 +24,13 @@ export class RemotePlayersView {
     );
     body.position.y = 0.85;
     body.castShadow = true;
+    body.name = 'capsule';
     const nose = new THREE.Mesh(
       new THREE.BoxGeometry(0.16, 0.1, 0.2),
       new THREE.MeshStandardMaterial({ color: 0xf0e0c0 }),
     );
     nose.position.set(0, 1.3, 0.3);
+    nose.name = 'capsule';
     g.add(body, nose);
     const canvas = document.createElement('canvas');
     canvas.width = 256;
@@ -59,11 +65,22 @@ export class RemotePlayersView {
         const group = this.make(p);
         group.position.set(p.x, p.y, p.z);
         this.root.add(group);
-        entry = { group, target: new THREE.Vector3() };
+        entry = { group, target: new THREE.Vector3(), miner: null };
         this.shown.set(p.id, entry);
       }
+      // Le mannequin articulé remplace la silhouette dès que le fichier est chargé.
+      if (!entry.miner && minerReady()) {
+        const hue = [...p.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 17);
+        entry.miner = new Miner(1.7, new THREE.Color().setHSL(hue / 360, 0.6, 0.5).getHex());
+        entry.miner.root.position.y = 0.85;
+        entry.group.add(entry.miner.root);
+        for (const child of [...entry.group.children])
+          if (child.name === 'capsule') entry.group.remove(child);
+      }
       entry.target.set(p.x, p.y, p.z);
+      const before = entry.group.position.clone();
       entry.group.position.lerp(entry.target, Math.min(1, dt * 12));
+      entry.miner?.update(dt, before.distanceTo(entry.group.position) / Math.max(dt, 1e-3), false);
       entry.group.rotation.y = p.yaw;
     }
     for (const [id, entry] of this.shown) {
