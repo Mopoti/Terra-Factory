@@ -290,7 +290,7 @@ export class GameState {
   }
 
   /** Prend des objets d'une case de machine (combustible, entrée, sortie) au bout du curseur. */
-  takeSlotToHand(m: Machine, slot: 'fuel' | 'input' | 'stock', count: number): number {
+  takeSlotToHand(m: Machine, slot: 'fuel' | 'input' | 'stock' | 'extra', count: number): number {
     const st = m[slot];
     if (!st || (this.hand && this.hand.item !== st.item)) return 0;
     const n = Math.min(count, st.count);
@@ -921,10 +921,11 @@ export class GameState {
       if (product && !this.isUnlocked(product)) return false;
     }
     const at = { x: m.gx * CELL_SIZE_M, z: m.gz * CELL_SIZE_M };
-    for (const stack of [...m.slots, m.stock])
+    for (const stack of [...m.slots, m.stock, m.extra])
       if (stack) this.giveBack(stack.item, stack.count, at);
     m.slots = [];
     m.stock = null;
+    m.extra = null;
     m.progress = 0;
     m.recipe = item;
     // Changer de recette rend aussi le moule en réserve (celui qui est engagé se perd).
@@ -984,7 +985,7 @@ export class GameState {
     const m = factory.remove(id);
     if (!m) return false;
     this.giveBack(machineDef(m.type).item, 1, at);
-    for (const stack of [m.fuel, m.input, m.stock, ...m.slots])
+    for (const stack of [m.fuel, m.input, m.stock, m.extra, ...m.slots])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);
     this.emit({ type: 'factory' });
@@ -1021,7 +1022,7 @@ export class GameState {
   }
 
   /** Reprend dans le sac le contenu d'une case de machine (tout ce qui tient). Renvoie la quantité. */
-  unloadMachine(m: Machine, slot: 'fuel' | 'input' | 'stock', count = Infinity): number {
+  unloadMachine(m: Machine, slot: 'fuel' | 'input' | 'stock' | 'extra', count = Infinity): number {
     const stack = m[slot];
     if (!stack) return 0;
     const moved = Math.min(count, stack.count, maxAddable(this.inventory, stack.item, this.limits));

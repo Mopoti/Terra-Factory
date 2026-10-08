@@ -1143,6 +1143,8 @@ export function startGameView(
           );
       }
       rows.push(`<div>${t('factory.output', { v: stackText(m.stock, def.stockMax) })}</div>`);
+      if (m.extra)
+        rows.push(`<div>${t('machine.byproduct')} : ${stackText(m.extra, def.stockMax)}</div>`);
       if (status === 'noMould') rows.push(`<div class="sub">${t('factory.hint.noMould')}</div>`);
     } else if (isChest(m.type)) {
       rows.push(

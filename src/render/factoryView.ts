@@ -626,6 +626,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   furnace: 1.0,
   stamper: 1.0,
   crusher: 1.0,
+  bessemer: 1.5,
+  mixer: 1.0,
   waterwheel: 1.5,
   chest_wood: 0.6,
   chest_iron: 0.6,
@@ -891,6 +893,41 @@ function addMachineBody(
         true,
       );
     }
+    return;
+  }
+  if (type === 'bessemer') {
+    // Convertisseur Bessemer : socle, grande cornue en forme d'œuf (cône + dôme), bec orange et étincelles.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.7), true);
+    mb.box(x, 0.3, z, sx - 0.35, 0.8, sz - 0.35, color, true);
+    mb.cone(x, 1.1, z, Math.min(sx, sz) * 0.26, 0.4, 10, shade(color, 1.2), Math.min(sx, sz) * 0.1);
+    mb.box(
+      x + fx * (sx / 2 - 0.12),
+      0.9,
+      z + fz * (sz / 2 - 0.12),
+      fx !== 0 ? 0.3 : 0.2,
+      0.12,
+      fz !== 0 ? 0.3 : 0.2,
+      hexToRgb('#e0702a'),
+      true,
+    );
+    mb.box(x, 1.5, z, 0.14, 0.2, 0.14, hexToRgb('#ffd27a'), true);
+    return;
+  }
+  if (type === 'mixer') {
+    // Bétonnière : bâti, grand tambour incliné (boîte) et goulotte de sortie.
+    mb.box(x, 0, z, sx, 0.22, sz, shade(color, 0.7), true);
+    mb.box(x, 0.22, z, sx - 0.3, 0.6, sz - 0.3, color, true);
+    mb.box(x, 0.82, z, sx - 0.55, 0.14, sz - 0.55, shade(color, 0.6), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.15,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
     return;
   }
   if (type === 'crusher') {

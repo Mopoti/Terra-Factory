@@ -1185,3 +1185,72 @@ describe('métallurgie 3b-1 : zinc, concasseur, tuyau de cuivre', () => {
     expect(furnace.stock).toEqual({ item: 'zinc_ingot', count: 2 });
   });
 });
+
+describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => {
+  const powered = (...ms: Machine[]): Factory => {
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const pole = emptyMachine(91, 'pole', 4, 0, 0);
+    return new Factory([gen, pole, ...ms], makeWorld().world);
+  };
+
+  it('le Bessemer : 2 fonte → 2 acier + 1 scorie en 3 s, électricité exigée', () => {
+    const b = emptyMachine(1, 'bessemer', 8, 0, 0);
+    expect(b.recipe).toBe('steel'); // recette unique, choisie d'office
+    b.slots.push({ item: 'cast_iron_ingot', count: 4 });
+    const noCurrent = new Factory([b], makeWorld().world);
+    run(noCurrent, 5);
+    expect(b.stock).toBeNull();
+    expect(noCurrent.status(b)).toBe('noPower');
+    const f = powered(b);
+    run(f, 3.2);
+    expect(b.stock).toEqual({ item: 'steel_ingot', count: 2 });
+    expect(b.extra).toEqual({ item: 'slag', count: 1 });
+    expect(f.takeProduced().sort()).toEqual([
+      ['slag', 1],
+      ['steel_ingot', 2],
+    ]);
+  });
+
+  it('le sous-produit bloque la machine quand sa case est pleine', () => {
+    const b = emptyMachine(1, 'bessemer', 8, 0, 0);
+    b.slots.push({ item: 'cast_iron_ingot', count: 6 });
+    b.extra = { item: 'slag', count: 100 };
+    const f = powered(b);
+    run(f, 5);
+    expect(b.stock).toBeNull();
+    expect(f.status(b)).toBe('full');
+  });
+
+  it('la scorie et l’acier sortent par la face de sortie, un par un, vers un coffre', () => {
+    const b = emptyMachine(1, 'bessemer', 8, 0, 0); // sortie : +z, devant (9, 3)
+    b.slots.push({ item: 'cast_iron_ingot', count: 2 });
+    const chest = emptyMachine(2, 'chest_wood', 9, 3, 0);
+    const f = powered(b, chest);
+    run(f, 6);
+    const stored = Object.fromEntries(chest.slots.map((s) => [s.item, s.count]));
+    expect(stored).toEqual({ steel_ingot: 2, slag: 1 });
+    expect(b.stock).toBeNull();
+    expect(b.extra).toBeNull();
+  });
+
+  it('la bétonnière : 1 pierre écrasée + 1 scorie → 2 blocs de béton', () => {
+    const mixer = emptyMachine(1, 'mixer', 8, 0, 0);
+    expect(mixer.recipe).toBe('concrete');
+    mixer.slots.push({ item: 'crushed_stone', count: 2 }, { item: 'slag', count: 1 });
+    const f = powered(mixer);
+    run(f, 2.2);
+    expect(mixer.stock).toEqual({ item: 'concrete_block', count: 2 });
+    run(f, 2.2); // plus de scorie : s'arrête
+    expect(mixer.stock?.count).toBe(2);
+    expect(f.status(mixer)).toBe('idle');
+  });
+
+  it('le sous-produit survit à la sauvegarde', () => {
+    const b = emptyMachine(1, 'bessemer', 8, 0, 0);
+    b.extra = { item: 'slag', count: 7 };
+    const back = normalizeMachines(JSON.parse(JSON.stringify([b])));
+    expect(back[0].extra).toEqual({ item: 'slag', count: 7 });
+    expect(back[0].recipe).toBe('steel');
+  });
+});

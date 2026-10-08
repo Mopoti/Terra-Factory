@@ -179,6 +179,24 @@
       "color": "#4a4d52"
     },
     {
+      "id": "steel_ingot",
+      "weightKg": 0.4,
+      "volumeL": 0.15,
+      "color": "#c8d0d8"
+    },
+    {
+      "id": "slag",
+      "weightKg": 0.6,
+      "volumeL": 0.5,
+      "color": "#5d5a58"
+    },
+    {
+      "id": "concrete_block",
+      "weightKg": 2.0,
+      "volumeL": 1,
+      "color": "#9a9a96"
+    },
+    {
       "id": "iron_plate",
       "weightKg": 0.5,
       "volumeL": 0.2,
@@ -257,6 +275,28 @@
       "recipe": {
         "iron_ingot": 8,
         "stone": 12
+      }
+    },
+    {
+      "id": "machine_bessemer",
+      "weightKg": 40,
+      "volumeL": 45,
+      "color": "#7b4a3a",
+      "recipe": {
+        "iron_plate": 10,
+        "iron_gear": 6,
+        "copper_wire": 8
+      }
+    },
+    {
+      "id": "machine_mixer",
+      "weightKg": 26,
+      "volumeL": 35,
+      "color": "#7c7f82",
+      "recipe": {
+        "iron_plate": 8,
+        "iron_gear": 4,
+        "stone": 10
       }
     },
     {

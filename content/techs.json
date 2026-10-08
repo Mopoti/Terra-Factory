@@ -24,7 +24,15 @@
         "science_pack": 30
       },
       "requires": ["metallurgy", "electricity"],
-      "unlocks": ["zinc_ingot"]
+      "unlocks": ["zinc_ingot", "machine_bessemer"]
+    },
+    {
+      "id": "construction_2",
+      "cost": {
+        "science_pack": 30
+      },
+      "requires": ["metallurgy_2"],
+      "unlocks": ["machine_mixer", "concrete_block"]
     },
     {
       "id": "textile",

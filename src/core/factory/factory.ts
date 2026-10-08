@@ -1,7 +1,13 @@
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { energyKJ, itemById } from '../data/items';
-import { MOULD_CYCLES, recipeById, recipeProduct } from '../data/recipes';
+import {
+  AUTO_RECIPE,
+  MOULD_CYCLES,
+  recipeById,
+  recipeByproduct,
+  recipeProduct,
+} from '../data/recipes';
 import {
   hasOutput,
   isChest,
@@ -57,6 +63,8 @@ export interface Machine {
   input: Stack | null;
   /** Foreuse : minerai extrait ; fourneau : lingots, en attente de sortie. */
   stock: Stack | null;
+  /** Sous-produit (scorie du Bessemer…) : sort par la même face que le produit. */
+  extra: Stack | null;
   /** Avancement du travail en cours (s). */
   progress: number;
   /** Tapis : objets en route. */
@@ -307,6 +315,8 @@ export function ports(
     case 'furnace':
     case 'stamper':
     case 'crusher':
+    case 'bessemer':
+    case 'mixer':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
       return { ins: [], outs: [out(rot)] };
@@ -347,11 +357,12 @@ export function emptyMachine(
     fuel: null,
     input: null,
     stock: null,
+    extra: null,
     progress: 0,
     belt: [],
     slots: [],
-    // Le concasseur n'a qu'une recette : elle est choisie d'office.
-    recipe: type === 'crusher' ? 'crushed_stone' : null,
+    // Une machine qui n'a qu'une recette (concasseur, Bessemer, bétonnière) la prend d'office.
+    recipe: AUTO_RECIPE[type] ?? null,
     wear: 0,
     fluid: emptyFluid(),
     lift:
@@ -406,6 +417,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     machine.fuel = normalizeStack(m.fuel);
     machine.input = normalizeStack(m.input);
     machine.stock = normalizeStack(m.stock);
+    machine.extra = isSmith(machine.type) ? normalizeStack(m.extra) : null;
     machine.progress = isNum(m.progress) && m.progress > 0 ? m.progress : 0;
     if (Array.isArray(m.belt)) {
       for (const b of m.belt) {
@@ -467,6 +479,8 @@ const MACHINE_TYPES: MachineType[] = [
   'furnace',
   'stamper',
   'crusher',
+  'bessemer',
+  'mixer',
   'conveyor',
   'chest_wood',
   'chest_iron',
@@ -977,10 +991,14 @@ export class Factory {
       const r = recipeById(m.recipe);
       const product = productOf(m);
       if (!r || !product || !this.hasIngredients(m, r.in)) return 'idle';
-      if (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max))
+      if (
+        (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max)) ||
+        (m.extra && m.extra.count >= max)
+      )
         return 'full';
       if (r.mould && m.wear <= 0 && !(m.input?.item === r.mould && m.input.count > 0))
         return 'noMould';
+      if (def.consumesKw && this.powerFactor(m) <= 0) return 'noPower';
     }
     if (def.fuel && this.fuelSecondsLeft(m) <= 0) return 'noFuel';
     return 'running';
@@ -1017,6 +1035,7 @@ export class Factory {
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
+    if (isSmith(m.type)) return !!machineDef(m.type).consumesKw && this.smithReady(m);
     if (!isDrill(m.type)) return false;
     const max = machineDef(m.type).stockMax ?? 100;
     return !(m.stock && m.stock.count >= max) && this.pickOreCell(m) !== null;
@@ -1131,19 +1150,34 @@ export class Factory {
     return null;
   }
 
+  /** Le cycle de la recette peut-il démarrer (ingrédients, place pour les produits, moule) ? Sert à l'état et à la demande de courant. */
+  private smithReady(m: Machine): boolean {
+    const max = machineDef(m.type).stockMax ?? 100;
+    const r = recipeById(m.recipe);
+    const product = productOf(m);
+    if (!r || !product || !this.hasIngredients(m, r.in)) return false;
+    if (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max))
+      return false;
+    const by = recipeByproduct(r);
+    if (by && m.extra && (m.extra.item !== by.item || m.extra.count + by.count > max)) return false;
+    if (r.mould && m.wear <= 0 && !(m.input?.item === r.mould && m.input.count > 0)) return false;
+    return true;
+  }
+
   /**
-   * Fourneau et estampeuse : un cycle de la recette choisie. Il faut tous les ingrédients, de la place pour le produit,
-   * du combustible et, pour l'estampeuse, un moule (il s'use de 1 par cycle et se brise à zéro).
+   * Fourneau, estampeuse, concasseur, Bessemer, bétonnière : un cycle de la recette choisie. Il faut tous les
+   * ingrédients, de la place pour les produits et, pour l'estampeuse, un moule (il s'use de 1 par cycle et se
+   * brise à zéro). Les machines à combustible brûlent ; les machines électriques ralentissent sans courant.
    */
   private tickSmith(m: Machine, dt: number): void {
-    const max = machineDef(m.type).stockMax ?? 100;
+    const def = machineDef(m.type);
     const r = recipeById(m.recipe);
     const product = productOf(m);
     if (!r || !product || !this.hasIngredients(m, r.in)) {
       m.progress = 0;
       return;
     }
-    if (m.stock && (m.stock.item !== product.item || m.stock.count + product.count > max)) return;
+    if (!this.smithReady(m)) return;
     // Moule : on en engage un neuf quand le précédent est brisé.
     if (r.mould && m.wear <= 0) {
       if (m.input?.item !== r.mould || m.input.count <= 0) return;
@@ -1151,9 +1185,15 @@ export class Factory {
       if (m.input.count <= 0) m.input = null;
       m.wear = MOULD_CYCLES;
     }
-    if (!this.fire(m)) return;
-    this.burn(m, dt);
-    m.progress += dt;
+    if (def.consumesKw) {
+      const speed = this.powerFactor(m);
+      if (speed <= 0) return;
+      m.progress += dt * speed;
+    } else {
+      if (!this.fire(m)) return;
+      this.burn(m, dt);
+      m.progress += dt;
+    }
     if (m.progress < r.seconds) return;
     m.progress -= r.seconds;
     for (const [item, n] of Object.entries(r.in)) {
@@ -1166,6 +1206,12 @@ export class Factory {
     if (m.stock) m.stock.count += product.count;
     else m.stock = { item: product.item, count: product.count };
     this.made.set(product.item, (this.made.get(product.item) ?? 0) + product.count);
+    const by = recipeByproduct(r);
+    if (by) {
+      if (m.extra) m.extra.count += by.count;
+      else m.extra = { item: by.item, count: by.count };
+      this.made.set(by.item, (this.made.get(by.item) ?? 0) + by.count);
+    }
   }
 
   // --- Tapis et échanges ---------------------------------------------------------------------------
@@ -1445,13 +1491,17 @@ export class Factory {
 
   /** Foreuse / fourneau : pousse un objet du stock vers la case de sortie. */
   private pushOutput(m: Machine): void {
-    if (!m.stock || m.stock.count <= 0) return;
-    // Toute machine qui touche le côté de sortie convient (pas seulement celle de la case du milieu).
-    for (const target of this.neighbors(m, m.rot)) {
-      if (this.deliver(target, m, m.stock.item)) {
-        m.stock.count--;
-        if (m.stock.count <= 0) m.stock = null;
-        return;
+    // Produit puis sous-produit : un objet par pas, par la même face de sortie.
+    for (const key of ['stock', 'extra'] as const) {
+      const stack = m[key];
+      if (!stack || stack.count <= 0) continue;
+      // Toute machine qui touche le côté de sortie convient (pas seulement celle de la case du milieu).
+      for (const target of this.neighbors(m, m.rot)) {
+        if (this.deliver(target, m, stack.item)) {
+          stack.count--;
+          if (stack.count <= 0) m[key] = null;
+          return;
+        }
       }
     }
   }

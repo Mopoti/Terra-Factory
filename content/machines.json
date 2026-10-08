@@ -55,6 +55,32 @@
       "pollutionKind": "ground"
     },
     {
+      "id": "bessemer",
+      "w": 3,
+      "d": 3,
+      "item": "machine_bessemer",
+      "color": "#7b4a3a",
+      "fuel": false,
+      "consumesKw": 90,
+      "stockMax": 100,
+      "height": 1.5,
+      "pollution": 0.8,
+      "pollutionKind": "air"
+    },
+    {
+      "id": "mixer",
+      "w": 3,
+      "d": 3,
+      "item": "machine_mixer",
+      "color": "#7c7f82",
+      "fuel": false,
+      "consumesKw": 30,
+      "stockMax": 100,
+      "height": 1.0,
+      "pollution": 0.2,
+      "pollutionKind": "ground"
+    },
+    {
       "id": "conveyor",
       "w": 2,
       "d": 2,

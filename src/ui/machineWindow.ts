@@ -1,7 +1,15 @@
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import { isAssembler, isChest, isDrill, isSmith, machineDef } from '../core/data/machines';
-import { MOULD_CYCLES, recipeById, recipesFor } from '../core/data/recipes';
+import {
+  MOULD_CYCLES,
+  recipeById,
+  recipeByproduct,
+  recipesFor,
+  type Recipe,
+} from '../core/data/recipes';
+
+const EMPTY_RECIPE: Recipe = { id: '', machine: 'furnace', in: {}, out: {}, seconds: 0 };
 import {
   footprint,
   ingredientCap,
@@ -24,7 +32,9 @@ export interface MachineWindow {
   dispose(): void;
 }
 
-type SlotName = 'fuel' | 'input' | 'stock';
+type SlotName = 'fuel' | 'input' | 'stock' | 'extra';
+/** Cases de sortie : on y prend, on n'y dépose rien. */
+const isOutputSlot = (slot: SlotName): boolean => slot === 'stock' || slot === 'extra';
 /** Type MIME d'une case de machine que l'on glisse vers le sac pour la reprendre. */
 const MACHINE_SLOT_TYPE = 'text/x-terra-machine-slot';
 
@@ -157,7 +167,7 @@ export function mountMachineWindow(
         render();
       });
     } else box.textContent = t('factory.empty');
-    if (slot !== 'stock') {
+    if (!isOutputSlot(slot)) {
       box.classList.add('target');
       box.addEventListener('dragover', (e) => {
         if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
@@ -182,7 +192,7 @@ export function mountMachineWindow(
         return render();
       }
       if (state.hand) {
-        if (slot === 'stock') return playSfx('deny');
+        if (isOutputSlot(slot)) return playSfx('deny');
         return dropHand(m, slot);
       }
       if (e.ctrlKey || e.metaKey) {
@@ -193,7 +203,7 @@ export function mountMachineWindow(
         });
         return;
       }
-      if (selected && slot !== 'stock') return drop(m, slot, selected);
+      if (selected && !isOutputSlot(slot)) return drop(m, slot, selected);
       if (stack && state.takeSlotToHand(m, slot, stack.count) > 0) playSfx('pickup');
       render();
     });
@@ -591,6 +601,9 @@ export function mountMachineWindow(
           m.stock,
         ),
       );
+    }
+    if (isSmith(m.type) && (m.extra || recipeByproduct(recipeById(m.recipe) ?? EMPTY_RECIPE))) {
+      rows.append(machineSlot(m, 'extra', t('machine.byproduct'), m.extra));
     }
     if (isDrill(m.type)) {
       const ore = el(

@@ -1,5 +1,5 @@
 {
-  "_comment": "Recettes des machines à recette choisie (fourneau, estampeuse). « in » = ingrédients amenés dans la machine, « out » = produit (un seul objet), « seconds » = durée d'un cycle, « mould » = moule exigé (estampeuse : il s'use de 1 à chaque cycle, voir MOULD_CYCLES). L'assembleur, lui, fabrique n'importe quel objet qui a une recette dans items.json. Le charbon d'une recette est un réactif (il s'ajoute au combustible).",
+  "_comment": "Recettes des machines à recette choisie (fourneau, estampeuse). « in » = ingrédients amenés dans la machine, « out » = produit (un seul objet), « seconds » = durée d'un cycle, « mould » = moule exigé (estampeuse : il s'use de 1 à chaque cycle, voir MOULD_CYCLES). L'assembleur, lui, fabrique n'importe quel objet qui a une recette dans items.json. Le charbon d'une recette est un réactif (il s'ajoute au combustible). Plusieurs produits : le premier va dans la case de produit, le second (sous-produit, ex. la scorie) dans la case de sous-produit. Les machines électriques (« consumesKw ») n'ont pas de combustible.",
   "mouldCycles": 8,
   "recipes": [
     {
@@ -139,6 +139,30 @@
       },
       "seconds": 1.5,
       "mould": "mould_wire"
+    },
+    {
+      "id": "steel",
+      "machine": "bessemer",
+      "in": {
+        "cast_iron_ingot": 2
+      },
+      "out": {
+        "steel_ingot": 2,
+        "slag": 1
+      },
+      "seconds": 3
+    },
+    {
+      "id": "concrete",
+      "machine": "mixer",
+      "in": {
+        "crushed_stone": 1,
+        "slag": 1
+      },
+      "out": {
+        "concrete_block": 2
+      },
+      "seconds": 2
     }
   ]
 }

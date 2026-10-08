@@ -6,6 +6,8 @@ export type MachineType =
   | 'furnace'
   | 'stamper'
   | 'crusher'
+  | 'bessemer'
+  | 'mixer'
   | 'conveyor'
   | 'chest_wood'
   | 'chest_iron'
@@ -81,7 +83,11 @@ export const hasOutput = (type: MachineType): boolean =>
 
 /** Fourneau ou estampeuse : machine à combustible dont la recette (de `recipes.json`) se choisit dans la fenêtre. */
 export const isSmith = (type: MachineType): boolean =>
-  type === 'furnace' || type === 'stamper' || type === 'crusher';
+  type === 'furnace' ||
+  type === 'stamper' ||
+  type === 'crusher' ||
+  type === 'bessemer' ||
+  type === 'mixer';
 
 /** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
 export const isAssembler = (type: MachineType): boolean => type === 'assembler';
