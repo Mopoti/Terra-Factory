@@ -71,6 +71,13 @@ export interface HarvestResult {
  * État de jeu modifiable par le joueur : sac et changements du monde. Toute modification passe par
  * une méthode (« commande ») : c'est ce que le multijoueur et l'annulation rejoueront plus tard.
  */
+/** Composants T3 qu'exige la réparation d'un réacteur en panne. */
+export const REACTOR_REPAIR: Record<string, number> = {
+  steel_plate: 30,
+  cable_insulated: 10,
+  silicon_chip: 5,
+};
+
 /** Cases du sac en mode Créatif (le poids et le volume n'ont plus de limite). */
 export const CREATIVE_SLOTS = 120;
 
@@ -1091,6 +1098,25 @@ export class GameState {
     return true;
   }
 
+  /** Répare un réacteur en panne : demande des composants T3 dans le sac (30 plaques d'acier, 10 câbles isolés, 5 puces). */
+  repairReactor(m: Machine): 'ok' | 'missing' | 'notBroken' {
+    if (m.type !== 'fission_reactor' || !m.broken) return 'notBroken';
+    if (!this.creative) {
+      for (const [item, n] of Object.entries(REACTOR_REPAIR)) {
+        if ((this.inventory[item] ?? 0) < n) return 'missing';
+      }
+      for (const [item, n] of Object.entries(REACTOR_REPAIR))
+        this.inventory = remove(this.inventory, item, n).inventory;
+    }
+    m.broken = false;
+    m.fuelLeft = 0;
+    m.progress = 0;
+    m.fluid.dirty = 0;
+    this.emit({ type: 'factory' });
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
   /** Une machine détruite (par des ennemis) : elle disparaît avec son contenu, sans rien rendre. */
   destroyMachine(factory: Factory, id: number): boolean {
     const m = factory.remove(id);
@@ -1123,7 +1149,8 @@ export class GameState {
     if (
       slot === 'input' &&
       !(isSmith(m.type) && !!item && recipeById(m.recipe)?.mould === item) &&
-      !(m.type === 'turret' && item === 'magazine')
+      !(m.type === 'turret' && item === 'magazine') &&
+      !(m.type === 'fission_reactor' && item === 'uranium_rod')
     )
       return 0;
     const current: Stack | null = slot === 'fuel' ? m.fuel : m.input;

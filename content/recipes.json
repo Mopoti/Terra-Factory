@@ -378,6 +378,42 @@
       "seconds": 3
     },
     {
+      "id": "aluminium",
+      "machine": "furnace_electric",
+      "in": {
+        "bauxite": 2
+      },
+      "out": {
+        "aluminium_ingot": 1
+      },
+      "seconds": 4
+    },
+    {
+      "id": "zamak",
+      "machine": "furnace_electric",
+      "in": {
+        "zinc_ingot": 1,
+        "copper_ingot": 1,
+        "aluminium_ingot": 1
+      },
+      "out": {
+        "zamak_ingot": 2
+      },
+      "seconds": 4
+    },
+    {
+      "id": "enrich_uranium",
+      "machine": "centrifuge",
+      "in": {
+        "uraninite": 4
+      },
+      "out": {
+        "uranium_enriched": 1,
+        "uranium_depleted": 3
+      },
+      "seconds": 6
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {

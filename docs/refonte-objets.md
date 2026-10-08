@@ -343,3 +343,16 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 
 - **Ratio de distance** (curseur ×0,25 à ×3 dans l'éditeur, enregistré avec le monde, `distanceRatio`, ×1 par défaut = comportement d'avant) : multiplie l'effet de l'éloignement du départ sur les gisements — **richesse** `1 + ratio × (D/100)^1,5`, **taille** `1 + ratio × min(1, D/1000)`, **espacement** `1 / (1 + ratio × D/2000)`. Plus il est haut, plus les filons lointains sont massifs mais espacés. L'aperçu de l'éditeur en tient compte.
 - **Mode de jeu** (liste « Survie / Créatif » dans l'éditeur, `options.mode`) : en **Créatif**, selon la définition du PO — **recherche gratuite** (toute technologie se débloque d'un clic dès que ses prérequis sont là, sans objets ni paquets), **fabrication gratuite** (aucun ingrédient), **poids et volume du sac sans limite** (affiché « illimité » ; le nombre de cases passe à 120 pour l'affichage), **ignoré par les ennemis** (ni ciblé, ni gardiens réveillés). « Pas de faim » : le jeu n'a pas de faim pour l'instant, rien à désactiver.
+
+## 11. Point 11 — fin de partie
+
+- **Découpage (PO)** : **11a** fission ; **11b** déchets (eau contaminée, tour d'évaporation, vitrification) ; **11c** fusion + balise + séquence finale (avec accumulateurs T3) ; **11d** comptoir spatial. **Zamak, accumulateurs T3, etc. : ajoutés quand on en a besoin.** **Fin (choix du PO)** : la séquence du document (messages système + « Station Orion »), puis la partie **continue sans « Gestion Infinie »** : le relais devient un **comptoir commercial où tous les objets et toutes les ressources se vendent et s'achètent**.
+
+### 11.1 Point 11a : fission (Tour 110)
+
+- **Aluminium et zamak** : lingot d'aluminium (four électrique : 2 bauxite → 1) ; **zamak** (four électrique : 1 zinc + 1 cuivre + 1 aluminium → 2).
+- **Centrifugeuse T4** (`centrifuge`, 3×3, 120 kW ; 14 lingots d'acier + 10 engrenages + 14 fils + 4 blocs de béton) : **4 uraninite → 1 uranium enrichi + 3 uranium appauvri** (6 s). L'extraction d'uraninite pollue le sol (radioactivité, 2/s).
+- **Barre d'uranium** (assembleur) : 2 uranium enrichi + 2 zamak + 2 plaques d'acier.
+- **Réacteur à fission T4** (`fission_reactor`, 4×4, **10 MW**) : une barre dure **2 minutes** (déposée à la main ou par tapis, derrière). Une barre ne s'allume que si le refroidissement est prêt : **eau à 12 bar minimum** (côté gauche, 20 L/s, d'où surpresseurs et tuyaux d'acier) et place pour les rejets. Il rejette de l'**eau contaminée** (nouveau fluide, côté droit) et, à chaque barre usée, **1 déchet nucléaire solide** (sortie devant, évacuée par tapis). **Surchauffe** : si l'eau manque, si la pression tombe, ou si un rejet est plein pendant 5 s, il tombe en panne (« Rompu », plus de courant) ; **réparation** dans sa fenêtre : 30 plaques d'acier + 10 câbles isolés + 5 puces en silicium (composants T3).
+- **Paquet T4** : 1 puce + 1 plaque d'acier + 1 uranium appauvri (le déchet de la centrifugation). Technologies **Fission T4** (200 paquets T3 : centrifugeuse, aluminium, zamak, uranium, barre) et **Réacteur T4** (300 paquets T3 : réacteur, paquet T4).
+- **En attendant le 11b** : l'eau contaminée n'a pas encore de traitement (il faut la vider, par exemple en baril) ; sans évacuation le réacteur finit par surchauffer.

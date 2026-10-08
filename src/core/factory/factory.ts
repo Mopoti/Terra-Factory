@@ -226,7 +226,8 @@ export type MachineStatus =
   | 'noWater'
   | 'broken'
   | 'lowPressure'
-  | 'wrongPack';
+  | 'wrongPack'
+  | 'overheat';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -376,6 +377,8 @@ export function ports(
     case 'barreler':
     case 'builder':
     case 'furnace_electric':
+    case 'centrifuge':
+    case 'fission_reactor':
     case 'plastic_press':
     case 'heavy_press':
     case 'washer':
@@ -526,7 +529,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (isFluid(machine.type) && typeof m.fluid === 'object' && m.fluid !== null) {
       const f = m.fluid as Record<string, unknown>;
       const cap = machineDef(machine.type).fluidCap ?? 100;
-      for (const kind of ['water', 'steam', 'hot', 'oil', 'polymer'] as const) {
+      for (const kind of ['water', 'steam', 'hot', 'oil', 'polymer', 'dirty'] as const) {
         const v = f[kind];
         if (isNum(v) && v > 0) machine.fluid[kind] = Math.min(cap, v);
       }
@@ -543,7 +546,11 @@ export function normalizeMachines(raw: unknown): Machine[] {
     }
     if (oldPacks && isSciencePack(oldPacks.item) && machine.slots.length === 0)
       machine.slots.push({ ...oldPacks, count: Math.min(oldPacks.count, stackLimit(machine)) });
-    machine.broken = m.broken === true && (machine.type === 'pipe' || machine.type === 'conveyor');
+    machine.broken =
+      m.broken === true &&
+      (machine.type === 'pipe' ||
+        machine.type === 'conveyor' ||
+        machine.type === 'fission_reactor');
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -603,6 +610,8 @@ const MACHINE_TYPES: MachineType[] = [
   'pump',
   'pumpjack',
   'refinery',
+  'centrifuge',
+  'fission_reactor',
   'plastic_press',
   'boiler',
   'turbine',
@@ -1081,6 +1090,11 @@ export class Factory {
     }
     if ((m.type === 'pipe' || m.type === 'conveyor') && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'fission_reactor') {
+      if (m.broken) return 'broken';
+      if (m.progress > 0) return m.fuelLeft > 0 ? 'overheat' : 'running';
+      return 'idle';
+    }
     if (m.type === 'refinery') {
       if (m.fluid.oil < 0.5 && m.fluid.polymer < 0.5) return 'idle';
       if (m.pressure < Factory.REFINERY_MIN_BAR && m.fluid.oil >= 0.5) return 'lowPressure';
@@ -1183,6 +1197,7 @@ export class Factory {
       else if (m.type === 'pump') this.tickPump(m, dt);
       else if (m.type === 'pumpjack') this.tickPumpjack(m, dt);
       else if (m.type === 'refinery') this.tickRefinery(m, dt);
+      else if (m.type === 'fission_reactor') this.tickReactor(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
@@ -1292,7 +1307,9 @@ export class Factory {
       if (!g) continue;
       const def = machineDef(m.type);
       if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
-      if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
+      if (m.type === 'fission_reactor')
+        g.capacityKw += this.reactorRunning(m) ? (def.producesKw ?? 0) : 0;
+      else if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
       else if (m.type === 'waterwheel') g.capacityKw += def.producesKw ?? 0;
       else if (def.producesKw && (m.fuelLeft > 0 || (m.fuel && m.fuel.count > 0))) {
         g.capacityKw += def.producesKw;
@@ -1490,6 +1507,13 @@ export class Factory {
     if (target.type === 'boiler') return dir === target.rot && this.fuelRoom(target, item);
     if (isDrill(target.type)) return dir !== (target.rot + 2) % 4 && this.fuelRoom(target, item);
     if (isAssembler(target.type)) return this.ingredientRoom(target, item);
+    if (target.type === 'fission_reactor')
+      return (
+        item === 'uranium_rod' &&
+        !target.broken &&
+        (!target.input || target.input.item === item) &&
+        (target.input?.count ?? 0) < (machineDef('fission_reactor').stockMax ?? 20)
+      );
     if (isTurret(target.type))
       return (
         item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
@@ -1556,7 +1580,7 @@ export class Factory {
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
     else if (isLab(target.type)) chestPut(target, item, 1);
-    else if (isTurret(target.type)) {
+    else if (isTurret(target.type) || target.type === 'fission_reactor') {
       if (target.input) target.input.count++;
       else target.input = { item, count: 1 };
     } else if (isAssembler(target.type)) {
@@ -1657,6 +1681,63 @@ export class Factory {
     );
     m.fluid.oil -= moved;
     m.fluid.polymer += moved;
+  }
+
+  /** Pression d'eau minimale (bar) du réacteur, eau consommée (L/s), durée d'une barre (s), tolérance de surchauffe (s). */
+  static readonly REACTOR_MIN_BAR = 12;
+  static readonly REACTOR_WATER_LPS = 20;
+  static readonly ROD_SECONDS = 120;
+  static readonly OVERHEAT_S = 5;
+
+  /** Le réacteur produit-il du courant en ce moment (barre en cours, pas en panne) ? */
+  reactorRunning(m: Machine): boolean {
+    return !m.broken && m.progress > 0;
+  }
+
+  /**
+   * Réacteur à fission : une barre d'uranium dure 2 minutes ; tant qu'elle brûle, il faut de l'eau sous haute pression
+   * (consommée, rejetée contaminée) et de la place pour les rejets. Sinon il surchauffe et tombe en panne.
+   * Une barre usée donne un déchet nucléaire solide (case de sortie, évacuée par tapis).
+   */
+  private tickReactor(m: Machine, dt: number): void {
+    const def = machineDef('fission_reactor');
+    if (m.broken) return;
+    this.pushOutput(m);
+    // Une barre ne s'allume que si le refroidissement est prêt (réserve d'eau et pression suffisantes).
+    const ready =
+      m.fluid.water >= 2 * Factory.REACTOR_WATER_LPS && m.pressure >= Factory.REACTOR_MIN_BAR;
+    if (m.progress <= 0 && m.input && m.input.count > 0 && ready) {
+      m.input.count--;
+      if (m.input.count <= 0) m.input = null;
+      m.progress = Factory.ROD_SECONDS;
+    }
+    if (m.progress <= 0) {
+      m.fuelLeft = 0;
+      return;
+    }
+    const need = Factory.REACTOR_WATER_LPS * dt;
+    const cap = def.fluidCap ?? 200;
+    const cooled =
+      m.fluid.water >= need && m.pressure >= Factory.REACTOR_MIN_BAR && m.fluid.dirty + need <= cap;
+    if (cooled) {
+      m.fluid.water -= need;
+      m.fluid.dirty += need;
+      m.fuelLeft = Math.max(0, m.fuelLeft - dt);
+    } else m.fuelLeft += dt; // `fuelLeft` compte ici les secondes de surchauffe
+    const wasteFull = !!m.stock && m.stock.count >= (def.stockMax ?? 20);
+    m.progress -= dt;
+    if (m.progress <= 0) {
+      m.progress = 0;
+      if (wasteFull) m.fuelLeft += Factory.OVERHEAT_S;
+      else if (m.stock) m.stock.count++;
+      else m.stock = { item: 'nuclear_waste', count: 1 };
+      this.made.set('nuclear_waste', (this.made.get('nuclear_waste') ?? 0) + 1);
+    }
+    if (m.fuelLeft >= Factory.OVERHEAT_S) {
+      m.broken = true;
+      m.progress = 0;
+      m.fuelLeft = 0;
+    }
   }
 
   /** Première case de pétrole sous le chevalet. */

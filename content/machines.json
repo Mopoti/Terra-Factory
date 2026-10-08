@@ -454,6 +454,32 @@
       "height": 1.0
     },
     {
+      "id": "centrifuge",
+      "w": 3,
+      "d": 3,
+      "item": "machine_centrifuge",
+      "color": "#6a7a70",
+      "fuel": false,
+      "consumesKw": 120,
+      "stockMax": 100,
+      "height": 1.0
+    },
+    {
+      "id": "fission_reactor",
+      "w": 4,
+      "d": 4,
+      "item": "machine_fission_reactor",
+      "color": "#5a6a5f",
+      "fuel": false,
+      "producesKw": 10000,
+      "stockMax": 20,
+      "fluidCap": 200,
+      "startBar": 3,
+      "pollution": 0.2,
+      "pollutionKind": "ground",
+      "height": 2.5
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

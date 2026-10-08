@@ -110,7 +110,8 @@ export function mountMachineWindow(
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
     (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
-    (slot === 'input' && m.type === 'turret' && item === 'magazine');
+    (slot === 'input' && m.type === 'turret' && item === 'magazine') ||
+    (slot === 'input' && m.type === 'fission_reactor' && item === 'uranium_rod');
 
   function drop(m: Machine, slot: SlotName, item: string): void {
     if (!accepts(m, slot, item)) {
@@ -678,6 +679,22 @@ export function mountMachineWindow(
       }
     }
     if (m.type === 'turret') rows.append(machineSlot(m, 'input', t('machine.magazines'), m.input));
+    if (m.type === 'fission_reactor') {
+      rows.append(machineSlot(m, 'input', t('machine.rods'), m.input));
+      rows.append(machineSlot(m, 'stock', t('machine.wasteOut'), m.stock));
+      rows.append(el('div', 'mach-info', t('machine.reactor.help')));
+      if (m.broken) {
+        const fix = el('button', undefined, t('machine.repair'));
+        fix.type = 'button';
+        const out = el('div', 'mach-info');
+        fix.addEventListener('click', () => {
+          const r = state.repairReactor(m);
+          if (r === 'ok') return render();
+          out.textContent = t('machine.repair.missing');
+        });
+        rows.append(fix, out);
+      }
+    }
     if (isDrill(m.type) || isSmith(m.type) || isAssembler(m.type)) {
       rows.append(
         machineSlot(

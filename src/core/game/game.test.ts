@@ -1020,3 +1020,19 @@ describe('mode Créatif', () => {
     expect(s.isUnlocked('machine_assembler')).toBe(true);
   });
 });
+
+describe('réparation du réacteur', () => {
+  it('exige 30 plaques d’acier, 10 câbles isolés et 5 puces', () => {
+    const m = emptyMachine(1, 'fission_reactor', 0, 0, 0);
+    m.broken = true;
+    const s = new GameState({
+      inventory: { steel_plate: 30, cable_insulated: 9, silicon_chip: 5 },
+    });
+    expect(s.repairReactor(m)).toBe('missing');
+    s.inventory.cable_insulated = 10;
+    expect(s.repairReactor(m)).toBe('ok');
+    expect(m.broken).toBe(false);
+    expect(s.inventory.steel_plate ?? 0).toBe(0);
+    expect(s.repairReactor(m)).toBe('notBroken');
+  });
+});

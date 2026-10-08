@@ -1887,3 +1887,70 @@ describe('tapis abîmé par l’acide', () => {
     expect(f.upgradeOf('conveyor', 0, 0, 0, 1)).toBeNull();
   });
 });
+
+describe('fission (11a)', () => {
+  const water = (): FactoryWorld => ({ ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 });
+  /** Pompe (3 bar) + 5 surpresseurs (+2 chacun) = 13 bar, puis le réacteur (eau par son côté -z). */
+  const plant = (boosters: number): { f: Factory; r: Machine } => {
+    const list: Machine[] = [emptyMachine(1, 'pump', 10, -1, 0)];
+    let z = 1;
+    for (let i = 0; i < boosters; i++, z += 2) list.push(emptyMachine(10 + i, 'booster', 10, z, 0));
+    if (boosters === 0) z = 1;
+    const r = emptyMachine(2, 'fission_reactor', 8, z, 1);
+    r.input = { item: 'uranium_rod', count: 3 };
+    const gen = emptyMachine(90, 'generator', 16, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    list.push(r, gen, emptyMachine(91, 'pole', 13, 4, 0), emptyMachine(92, 'pole', 13, 12, 0));
+    return { f: new Factory(list, water()), r };
+  };
+
+  it('à 12 bar ou plus, le réacteur produit 10 MW, rejette l’eau contaminée et des déchets', () => {
+    const { f, r } = plant(5);
+    run(f, 5);
+    expect(r.pressure).toBeGreaterThanOrEqual(12);
+    expect(f.status(r)).toBe('running');
+    expect(f.gridInfo(r)?.capacityKw ?? 0).toBeGreaterThanOrEqual(10000);
+    expect(r.fluid.dirty).toBeGreaterThan(50);
+    // Sans évacuation l'eau contaminée finit par saturer le réacteur : ici on la vide à la main (11b la traitera).
+    for (let i = 0; i < 125; i++) {
+      run(f, 1);
+      r.fluid.dirty = 0;
+    }
+    expect(r.broken).toBe(false);
+    expect(r.stock).toEqual({ item: 'nuclear_waste', count: 1 });
+    expect(r.input?.count).toBe(1);
+  });
+
+  it('si l’eau contaminée ne part pas, le réacteur finit par surchauffer', () => {
+    const { f, r } = plant(5);
+    run(f, 25);
+    expect(r.broken).toBe(true);
+  });
+
+  it('une barre ne s’allume pas sans eau sous pression ; si l’eau manque en cours de route, il surchauffe puis tombe en panne', () => {
+    const idle = plant(1);
+    run(idle.f, 10);
+    expect(idle.r.progress).toBe(0);
+    expect(idle.f.status(idle.r)).toBe('idle');
+    const { f, r } = plant(1);
+    r.progress = 60; // une barre brûle déjà, mais la pression (5 bar) est trop basse
+    run(f, 4);
+    expect(f.status(r)).toBe('overheat');
+    run(f, 4);
+    expect(r.broken).toBe(true);
+    expect(f.status(r)).toBe('broken');
+    expect(f.gridInfo(r)?.capacityKw ?? 0).toBeLessThan(10000);
+  });
+
+  it('la centrifugeuse sépare l’uraninite en uranium enrichi et appauvri', () => {
+    const c = emptyMachine(1, 'centrifuge', 8, 0, 0);
+    c.recipe = 'enrich_uranium';
+    c.slots.push({ item: 'uraninite', count: 4 });
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), c], makeWorld().world);
+    run(f, 7);
+    expect(c.stock).toEqual({ item: 'uranium_enriched', count: 1 });
+    expect(c.extra).toEqual({ item: 'uranium_depleted', count: 3 });
+  });
+});

@@ -862,6 +862,83 @@
       "color": "#26262c"
     },
     {
+      "id": "aluminium_ingot",
+      "weightKg": 0.3,
+      "volumeL": 0.15,
+      "color": "#c9d3dc"
+    },
+    {
+      "id": "zamak_ingot",
+      "weightKg": 0.5,
+      "volumeL": 0.15,
+      "color": "#8d98a3"
+    },
+    {
+      "id": "uranium_enriched",
+      "weightKg": 1.5,
+      "volumeL": 0.2,
+      "color": "#7be07b"
+    },
+    {
+      "id": "uranium_depleted",
+      "weightKg": 2,
+      "volumeL": 0.2,
+      "color": "#6b8f6b"
+    },
+    {
+      "id": "uranium_rod",
+      "weightKg": 6,
+      "volumeL": 2,
+      "color": "#58c458",
+      "recipe": {
+        "uranium_enriched": 2,
+        "zamak_ingot": 2,
+        "steel_plate": 2
+      }
+    },
+    {
+      "id": "nuclear_waste",
+      "weightKg": 8,
+      "volumeL": 3,
+      "color": "#b6e03a"
+    },
+    {
+      "id": "science_pack_4",
+      "weightKg": 0.1,
+      "volumeL": 0.2,
+      "color": "#c4527a",
+      "recipe": {
+        "silicon_chip": 1,
+        "steel_plate": 1,
+        "uranium_depleted": 1
+      }
+    },
+    {
+      "id": "machine_centrifuge",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#6a7a70",
+      "recipe": {
+        "steel_ingot": 14,
+        "iron_gear": 10,
+        "copper_wire": 14,
+        "concrete_block": 4
+      }
+    },
+    {
+      "id": "machine_fission_reactor",
+      "weightKg": 400,
+      "volumeL": 600,
+      "color": "#5a6a5f",
+      "recipe": {
+        "steel_plate": 30,
+        "concrete_block": 40,
+        "cable_insulated": 20,
+        "silicon_chip": 10,
+        "zamak_ingot": 20
+      }
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

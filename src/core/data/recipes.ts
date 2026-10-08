@@ -11,6 +11,7 @@ export type SmithType =
   | 'builder'
   | 'furnace_electric'
   | 'plastic_press'
+  | 'centrifuge'
   | 'heavy_press'
   | 'washer';
 

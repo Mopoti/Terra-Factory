@@ -360,18 +360,21 @@ export class FactoryView {
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
     for (const m of this.factory.machines) {
       if (m.type !== 'pipe') continue;
-      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil + m.fluid.polymer;
+      const amount =
+        m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil + m.fluid.polymer + m.fluid.dirty;
       if (amount < 1) continue;
       const color =
-        m.fluid.polymer > 0.5
-          ? hexToRgb('#b58be0')
-          : m.fluid.oil > 0.5
-            ? hexToRgb('#1c1c22')
-            : m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
-              ? hexToRgb('#f08a3a')
-              : m.fluid.water >= m.fluid.steam
-                ? hexToRgb('#3fa9f5')
-                : hexToRgb('#f2f5f7');
+        m.fluid.dirty > 0.5
+          ? hexToRgb('#8fbf3a')
+          : m.fluid.polymer > 0.5
+            ? hexToRgb('#b58be0')
+            : m.fluid.oil > 0.5
+              ? hexToRgb('#1c1c22')
+              : m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
+                ? hexToRgb('#f08a3a')
+                : m.fluid.water >= m.fluid.steam
+                  ? hexToRgb('#3fa9f5')
+                  : hexToRgb('#f2f5f7');
       mb.box(
         center(m.gx),
         0.2,
@@ -686,6 +689,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   booster: 1.0,
   pumpjack: 1.5,
   refinery: 2.0,
+  centrifuge: 1.0,
+  fission_reactor: 2.5,
   plastic_press: 1.0,
   furnace_electric: 1.2,
   cooling_tower: 1.5,
@@ -995,6 +1000,32 @@ function addMachineBody(
     mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
     mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
+    return;
+  }
+  if (type === 'centrifuge') {
+    // Centrifugeuse : socle, cuve cylindrique (boîtes empilées) et couvercle.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.3, 0.5, sz - 0.3, color, true);
+    mb.box(x, 0.75, z, sx - 0.55, 0.15, sz - 0.55, shade(color, 1.3), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.3,
+      0.12,
+      fz !== 0 ? 0.1 : 0.3,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    return;
+  }
+  if (type === 'fission_reactor') {
+    // Réacteur : massif de béton, dôme de confinement (boîtes décroissantes) et cheminée de refroidissement.
+    mb.box(x, 0, z, sx, 0.5, sz, shade(color, 0.75), true);
+    mb.box(x, 0.5, z, sx - 0.4, 0.8, sz - 0.4, color, true);
+    mb.box(x, 1.3, z, sx - 1.0, 0.6, sz - 1.0, shade(color, 1.15), true);
+    mb.box(x, 1.9, z, sx - 1.8, 0.3, sz - 1.8, hexToRgb('#7be07b'), true);
+    mb.box(x - sx / 2 + 0.3, 0.5, z - sz / 2 + 0.3, 0.3, 1.8, 0.3, hexToRgb('#b9c2c8'), true);
     return;
   }
   if (type === 'refinery') {

@@ -1233,6 +1233,8 @@ export function startGameView(
         v < 0.5 ? t('factory.fluid.empty') : `${Math.round(v)} / ${cap}`;
       if (m.type !== 'turbine')
         rows.push(`<div>${t('factory.fluid.water', { v: fmt(m.fluid.water) })}</div>`);
+      if (m.fluid.dirty >= 0.5)
+        rows.push(`<div>${t('factory.fluid.dirty', { v: fmt(m.fluid.dirty) })}</div>`);
       if (m.fluid.polymer >= 0.5)
         rows.push(`<div>${t('factory.fluid.polymer', { v: fmt(m.fluid.polymer) })}</div>`);
       if (m.fluid.oil >= 0.5)
@@ -1251,7 +1253,13 @@ export function startGameView(
             : `<div>${t('factory.fluid.bars.free', { v: m.pressure.toFixed(1) })}</div>`,
         );
       } else if (
-        m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil + m.fluid.polymer > 0.5 &&
+        m.fluid.water +
+          m.fluid.steam +
+          m.fluid.hot +
+          m.fluid.oil +
+          m.fluid.polymer +
+          m.fluid.dirty >
+          0.5 &&
         m.type !== 'turbine'
       ) {
         rows.push(`<div class="sub">${t('factory.fluid.noPressure')}</div>`);
@@ -2384,6 +2392,11 @@ export function startGameView(
         if (rate > 0) {
           const c = machineCenter(m);
           threat.emit(c.x, c.z, rate, machineDef(m.type).pollutionKind ?? 'air');
+        }
+        // L'extraction d'uraninite pollue le sol de radioactivité.
+        if (m.stock?.item === 'uraninite' && factory.status(m) === 'running') {
+          const c = machineCenter(m);
+          threat.emit(c.x, c.z, 2, 'ground');
         }
       }
     }

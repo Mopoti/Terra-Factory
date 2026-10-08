@@ -156,6 +156,36 @@
       ]
     },
     {
+      "id": "fission_4",
+      "cost": {
+        "science_pack_3": 200
+      },
+      "requires": [
+        "plastic_3"
+      ],
+      "unlocks": [
+        "machine_centrifuge",
+        "aluminium_ingot",
+        "zamak_ingot",
+        "uranium_enriched",
+        "uranium_depleted",
+        "uranium_rod"
+      ]
+    },
+    {
+      "id": "reactor_4",
+      "cost": {
+        "science_pack_3": 300
+      },
+      "requires": [
+        "fission_4"
+      ],
+      "unlocks": [
+        "machine_fission_reactor",
+        "science_pack_4"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

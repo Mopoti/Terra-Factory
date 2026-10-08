@@ -23,7 +23,12 @@ export const techFor = (item: string): TechDef | null =>
 
 export const SCIENCE_PACK = 'science_pack';
 /** Paquets de science : T1, T2, T3 (un par palier ; le T4 viendra avec la fission). */
-export const SCIENCE_PACKS = ['science_pack', 'science_pack_2', 'science_pack_3'] as const;
+export const SCIENCE_PACKS = [
+  'science_pack',
+  'science_pack_2',
+  'science_pack_3',
+  'science_pack_4',
+] as const;
 export const isSciencePack = (item: string | null | undefined): boolean =>
   !!item && (SCIENCE_PACKS as readonly string[]).includes(item);
 

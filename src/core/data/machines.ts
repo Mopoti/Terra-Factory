@@ -36,6 +36,8 @@ export type MachineType =
   | 'pump'
   | 'pumpjack'
   | 'refinery'
+  | 'centrifuge'
+  | 'fission_reactor'
   | 'plastic_press'
   | 'boiler'
   | 'turbine';
@@ -109,7 +111,7 @@ export const isDrill = (type: MachineType): boolean =>
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean =>
-  isDrill(type) || isSmith(type) || type === 'assembler';
+  isDrill(type) || isSmith(type) || type === 'assembler' || type === 'fission_reactor';
 
 /** Fourneau ou estampeuse : machine à combustible dont la recette (de `recipes.json`) se choisit dans la fenêtre. */
 export const isSmith = (type: MachineType): boolean =>
@@ -122,6 +124,7 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'builder' ||
   type === 'furnace_electric' ||
   type === 'plastic_press' ||
+  type === 'centrifuge' ||
   type === 'heavy_press' ||
   type === 'washer';
 
@@ -157,6 +160,7 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'pump' ||
   type === 'pumpjack' ||
   type === 'refinery' ||
+  type === 'fission_reactor' ||
   type === 'plastic_press' ||
   type === 'boiler' ||
   type === 'turbine' ||
