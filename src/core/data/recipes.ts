@@ -10,6 +10,7 @@ export type SmithType =
   | 'barreler'
   | 'builder'
   | 'furnace_electric'
+  | 'plastic_press'
   | 'heavy_press'
   | 'washer';
 
@@ -23,7 +24,7 @@ export interface Recipe {
   /** Durée d'un cycle (s). */
   seconds: number;
   /** Fluide de la recette : `amount` > 0 est puisé dans la machine, < 0 y est versé (remplisseuse de barils). */
-  fluid?: { kind: 'water' | 'steam' | 'hot' | 'oil'; amount: number; minBar?: number };
+  fluid?: { kind: 'water' | 'steam' | 'hot' | 'oil' | 'polymer'; amount: number; minBar?: number };
   /** Moule exigé (estampeuse). */
   mould?: string;
 }
@@ -48,6 +49,7 @@ export const recipeByproduct = (r: Recipe): { item: string; count: number } | nu
 export const AUTO_RECIPE: Partial<Record<string, string>> = {
   crusher: 'crushed_stone',
   bessemer: 'steel',
+  plastic_press: 'plastic',
   mixer: 'concrete',
 };
 

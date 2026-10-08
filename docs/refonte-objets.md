@@ -283,3 +283,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Chevalet de pompage T3** (`pumpjack`, 3×3, 60 kW, réserve 200 L, 10 lingots d'acier + 8 engrenages + 10 plaques de fer + 6 fils) : se pose sur le gisement, **1 L/s**, **4 bar** (supporte le cuivre), sortie devant ; le gisement diminue d'1 par litre. Technologie **Pétrole T3** (140 paquets, après Barils T3 et Presse lourde T3).
 - **Barils de pétrole** : la remplisseuse/videuse accepte aussi le pétrole (recettes « Remplir / Vider un baril de pétrole », 100 L, objet `barrel_oil`).
 - À venir (7c) : raffinerie T3, qui exigera une haute pression (surpresseurs, tuyaux de laiton ou d'acier).
+
+### 7.3 Point 7c : raffinerie et plastique (Tour 102)
+
+- **Nouveau fluide : le polymère liquide** (violet dans les tuyaux).
+- **Raffinerie T3** (`refinery`, 3×3, 150 kW, réserve 200 L ; 16 lingots d'acier + 10 engrenages + 16 fils + 8 blocs de béton) : pétrole par le côté gauche, polymère par le côté droit, **1 L de pétrole → 1 L de polymère, 10 L/s**, pollue l'air. **Exige 8 bar** sur le pétrole (le chevalet n'en donne que 4 : deux surpresseurs en ligne, ou des tuyaux qui perdent peu) ; sinon état « Pression insuffisante ». Choix par défaut du PO non précisé : 8 bar.
+- **Presse à plastique T3** (`plastic_press`, 3×3, 80 kW ; 8 lingots d'acier + 6 engrenages + 10 fils) : recette unique **20 L de polymère (côté gauche) → 4 isolants en plastique** en 3 s ; les isolants sortent devant.
+- Technologie **Plastique T3** (160 paquets, après Pétrole T3).
+- À venir (7d) : câble isolé (4 fils de cuivre + 1 isolant → 4 câbles), puce en silicium, paquet de science T3.

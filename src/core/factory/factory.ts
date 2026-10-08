@@ -368,6 +368,7 @@ export function ports(
     case 'barreler':
     case 'builder':
     case 'furnace_electric':
+    case 'plastic_press':
     case 'heavy_press':
     case 'washer':
       return { ins: [into(back)], outs: [out(rot)] };
@@ -516,7 +517,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (isFluid(machine.type) && typeof m.fluid === 'object' && m.fluid !== null) {
       const f = m.fluid as Record<string, unknown>;
       const cap = machineDef(machine.type).fluidCap ?? 100;
-      for (const kind of ['water', 'steam', 'hot', 'oil'] as const) {
+      for (const kind of ['water', 'steam', 'hot', 'oil', 'polymer'] as const) {
         const v = f[kind];
         if (isNum(v) && v > 0) machine.fluid[kind] = Math.min(cap, v);
       }
@@ -586,6 +587,8 @@ const MACHINE_TYPES: MachineType[] = [
   'pipe',
   'pump',
   'pumpjack',
+  'refinery',
+  'plastic_press',
   'boiler',
   'turbine',
 ];
@@ -1063,6 +1066,16 @@ export class Factory {
     }
     if (m.type === 'pipe' && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'refinery') {
+      if (m.fluid.oil < 0.5 && m.fluid.polymer < 0.5) return 'idle';
+      if (m.pressure < Factory.REFINERY_MIN_BAR && m.fluid.oil >= 0.5) return 'lowPressure';
+      if (this.powerFactor(m) <= 0) return 'noPower';
+      return m.fluid.polymer >= (def.fluidCap ?? 200) - 1
+        ? 'full'
+        : this.refineryReady(m)
+          ? 'running'
+          : 'idle';
+    }
     if (m.type === 'pumpjack') {
       if (!this.oilCell(m)) return 'noOre';
       if (this.powerFactor(m) <= 0) return 'noPower';
@@ -1153,6 +1166,7 @@ export class Factory {
       else if (isLab(m.type)) this.tickLab(m, dt);
       else if (m.type === 'pump') this.tickPump(m, dt);
       else if (m.type === 'pumpjack') this.tickPumpjack(m, dt);
+      else if (m.type === 'refinery') this.tickRefinery(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
@@ -1171,6 +1185,7 @@ export class Factory {
     if (isLab(m.type)) return this.labWorking(m);
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
+    if (m.type === 'refinery') return this.refineryReady(m);
     if (m.type === 'pumpjack')
       return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
     if (m.type === 'sorter') return m.stock !== null;
@@ -1599,6 +1614,33 @@ export class Factory {
       m.progress -= 1;
       m.fluid.oil += 1;
     }
+  }
+
+  /** Pression d'huile minimale (bar) pour que la raffinerie travaille. */
+  static readonly REFINERY_MIN_BAR = 8;
+
+  private refineryReady(m: Machine): boolean {
+    const def = machineDef('refinery');
+    return (
+      m.pressure >= Factory.REFINERY_MIN_BAR &&
+      m.fluid.oil > 0.5 &&
+      m.fluid.polymer < (def.fluidCap ?? 200) - 0.5
+    );
+  }
+
+  /** Raffinerie : le pétrole sous haute pression devient du polymère liquide (1 L pour 1 L). */
+  private tickRefinery(m: Machine, dt: number): void {
+    const def = machineDef('refinery');
+    if (!this.refineryReady(m)) return;
+    const speed = this.powerFactor(m);
+    if (speed <= 0) return;
+    const moved = Math.min(
+      (def.pumpRate ?? 10) * dt * speed,
+      m.fluid.oil,
+      (def.fluidCap ?? 200) - m.fluid.polymer,
+    );
+    m.fluid.oil -= moved;
+    m.fluid.polymer += moved;
   }
 
   /** Première case de pétrole sous le chevalet. */

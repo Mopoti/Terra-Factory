@@ -35,6 +35,8 @@ export type MachineType =
   | 'pipe'
   | 'pump'
   | 'pumpjack'
+  | 'refinery'
+  | 'plastic_press'
   | 'boiler'
   | 'turbine';
 
@@ -119,6 +121,7 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'barreler' ||
   type === 'builder' ||
   type === 'furnace_electric' ||
+  type === 'plastic_press' ||
   type === 'heavy_press' ||
   type === 'washer';
 
@@ -153,6 +156,8 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'pipe' ||
   type === 'pump' ||
   type === 'pumpjack' ||
+  type === 'refinery' ||
+  type === 'plastic_press' ||
   type === 'boiler' ||
   type === 'turbine' ||
   type === 'barreler' ||
@@ -175,6 +180,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'pipe' ||
     type === 'pump' ||
     type === 'pumpjack' ||
+    type === 'refinery' ||
     type === 'booster' ||
     type === 'cooling_tower' ||
     type === 'turbine'

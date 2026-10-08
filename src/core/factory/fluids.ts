@@ -1,8 +1,8 @@
 import { machineDef, type MachineType } from '../data/machines';
 import type { Cell, Machine } from './factory';
 
-export type FluidKind = 'water' | 'steam' | 'hot' | 'oil';
-export const FLUID_KINDS: FluidKind[] = ['water', 'steam', 'hot', 'oil'];
+export type FluidKind = 'water' | 'steam' | 'hot' | 'oil' | 'polymer';
+export const FLUID_KINDS: FluidKind[] = ['water', 'steam', 'hot', 'oil', 'polymer'];
 /** Machines qui poussent un fluide (donc qui donnent une pression de départ) : le fluide qu'elles émettent. */
 export const SOURCE_KIND: Partial<Record<MachineType, FluidKind>> = {
   pump: 'water',
@@ -11,6 +11,7 @@ export const SOURCE_KIND: Partial<Record<MachineType, FluidKind>> = {
   furnace_electric: 'hot',
   cooling_tower: 'water',
   pumpjack: 'oil',
+  refinery: 'polymer',
 };
 
 /** Une prise de fluide sur un côté d'une machine : sens `in` (reçoit), `out` (émet) ou `both` (tuyau). */
@@ -27,7 +28,7 @@ export interface FluidPort {
 const FLOW_RATE = 20;
 
 export function emptyFluid(): Record<FluidKind, number> {
-  return { water: 0, steam: 0, hot: 0, oil: 0 };
+  return { water: 0, steam: 0, hot: 0, oil: 0, polymer: 0 };
 }
 
 /** Prises de fluide d'une machine posée avec l'orientation `rot`. */
@@ -77,6 +78,14 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
         { side: (rot + 1) % 4, mode: 'both', fluid: ['water', 'oil'] },
         { side: (rot + 3) % 4, mode: 'both', fluid: ['water', 'oil'] },
       ];
+    case 'refinery':
+      // Pétrole par un côté, polymère liquide par l'autre.
+      return [
+        { side: (rot + 1) % 4, mode: 'in', fluid: 'oil' },
+        { side: (rot + 3) % 4, mode: 'out', fluid: 'polymer' },
+      ];
+    case 'plastic_press':
+      return [{ side: (rot + 1) % 4, mode: 'in', fluid: 'polymer' }];
     case 'pumpjack':
       return [{ side: rot % 4, mode: 'out', fluid: 'oil' }];
     case 'turbine':

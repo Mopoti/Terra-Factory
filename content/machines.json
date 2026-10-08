@@ -426,6 +426,33 @@
       "height": 1.5
     },
     {
+      "id": "refinery",
+      "w": 3,
+      "d": 3,
+      "item": "machine_refinery",
+      "color": "#6a7a86",
+      "fuel": false,
+      "consumesKw": 150,
+      "fluidCap": 200,
+      "startBar": 3,
+      "pumpRate": 10,
+      "pollution": 0.8,
+      "pollutionKind": "air",
+      "height": 2.0
+    },
+    {
+      "id": "plastic_press",
+      "w": 3,
+      "d": 3,
+      "item": "machine_plastic_press",
+      "color": "#4a5a6a",
+      "fuel": false,
+      "consumesKw": 80,
+      "stockMax": 100,
+      "fluidCap": 100,
+      "height": 1.0
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

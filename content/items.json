@@ -786,6 +786,35 @@
       "color": "#26262c"
     },
     {
+      "id": "machine_refinery",
+      "weightKg": 80,
+      "volumeL": 120,
+      "color": "#6a7a86",
+      "recipe": {
+        "steel_ingot": 16,
+        "iron_gear": 10,
+        "copper_wire": 16,
+        "concrete_block": 8
+      }
+    },
+    {
+      "id": "machine_plastic_press",
+      "weightKg": 45,
+      "volumeL": 60,
+      "color": "#4a5a6a",
+      "recipe": {
+        "steel_ingot": 8,
+        "iron_gear": 6,
+        "copper_wire": 10
+      }
+    },
+    {
+      "id": "plastic_insulator",
+      "weightKg": 0.05,
+      "volumeL": 0.1,
+      "color": "#26262c"
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

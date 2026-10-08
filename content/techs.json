@@ -114,6 +114,20 @@
       ]
     },
     {
+      "id": "plastic_3",
+      "cost": {
+        "science_pack": 160
+      },
+      "requires": [
+        "oil_3"
+      ],
+      "unlocks": [
+        "machine_refinery",
+        "machine_plastic_press",
+        "plastic_insulator"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

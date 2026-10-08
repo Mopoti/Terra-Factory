@@ -353,6 +353,19 @@
       "seconds": 4
     },
     {
+      "id": "plastic",
+      "machine": "plastic_press",
+      "in": {},
+      "out": {
+        "plastic_insulator": 4
+      },
+      "fluid": {
+        "kind": "polymer",
+        "amount": 20
+      },
+      "seconds": 3
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {

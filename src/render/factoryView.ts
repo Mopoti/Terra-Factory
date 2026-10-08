@@ -356,16 +356,18 @@ export class FactoryView {
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
     for (const m of this.factory.machines) {
       if (m.type !== 'pipe') continue;
-      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil;
+      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil + m.fluid.polymer;
       if (amount < 1) continue;
       const color =
-        m.fluid.oil > 0.5
-          ? hexToRgb('#1c1c22')
-          : m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
-            ? hexToRgb('#f08a3a')
-            : m.fluid.water >= m.fluid.steam
-              ? hexToRgb('#3fa9f5')
-              : hexToRgb('#f2f5f7');
+        m.fluid.polymer > 0.5
+          ? hexToRgb('#b58be0')
+          : m.fluid.oil > 0.5
+            ? hexToRgb('#1c1c22')
+            : m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
+              ? hexToRgb('#f08a3a')
+              : m.fluid.water >= m.fluid.steam
+                ? hexToRgb('#3fa9f5')
+                : hexToRgb('#f2f5f7');
       mb.box(
         center(m.gx),
         0.2,
@@ -679,6 +681,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   barreler: 1.0,
   booster: 1.0,
   pumpjack: 1.5,
+  refinery: 2.0,
+  plastic_press: 1.0,
   furnace_electric: 1.2,
   cooling_tower: 1.5,
   builder: 1.0,
@@ -987,6 +991,32 @@ function addMachineBody(
     mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
     mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
+    return;
+  }
+  if (type === 'refinery') {
+    // Raffinerie : socle, tour de distillation, deuxième colonne plus fine et échelle.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x - 0.2, 0.25, z, 0.5, 1.6, 0.5, color, true);
+    mb.box(x + 0.35, 0.25, z + 0.2, 0.3, 1.1, 0.3, shade(color, 1.2), true);
+    mb.box(x - 0.2, 1.85, z, 0.3, 0.2, 0.3, hexToRgb('#cfd8de'), true);
+    mb.box(x + 0.35, 0.3, z - 0.3, 0.08, 1.4, 0.08, hexToRgb('#d9a441'), true);
+    return;
+  }
+  if (type === 'plastic_press') {
+    // Presse à injection : bâti, moule et vérin horizontal.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.3, 0.5, sz - 0.3, color, true);
+    mb.box(x, 0.75, z, sx - 0.6, 0.15, sz - 0.6, hexToRgb('#d0d6dc'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.3,
+      0.12,
+      fz !== 0 ? 0.1 : 0.3,
+      hexToRgb('#3d3a38'),
+      true,
+    );
     return;
   }
   if (type === 'pumpjack') {

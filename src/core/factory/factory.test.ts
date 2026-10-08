@@ -1754,3 +1754,48 @@ describe('pétrole (7b)', () => {
     expect(b.fluid.oil).toBeCloseTo(20);
   });
 });
+
+describe('raffinerie et plastique (7c)', () => {
+  it('la presse à plastique : 20 L de polymère → 4 isolants', () => {
+    const p = emptyMachine(1, 'plastic_press', 8, 0, 0);
+    expect(p.recipe).toBe('plastic');
+    p.fluid.polymer = 45;
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), p], makeWorld().world);
+    run(f, 7);
+    expect(p.stock).toEqual({ item: 'plastic_insulator', count: 8 });
+    expect(p.fluid.polymer).toBeCloseTo(5);
+  });
+
+  it('la raffinerie exige 8 bar : chevalet (4) + 2 surpresseurs (+2 chacun)', () => {
+    const oil = { n: 5000 };
+    const world: FactoryWorld = {
+      oreAt: (_x, gz) =>
+        gz < 3 && oil.n > 0 ? { id: 'oil', item: 'crude_oil', amount: oil.n } : null,
+      mineOre: (_x, _z, n) => {
+        oil.n -= n;
+        return n;
+      },
+    };
+    const build = (boosters: number): { f: Factory; r: Machine } => {
+      const list: Machine[] = [emptyMachine(1, 'pumpjack', 10, 0, 0)];
+      let z = 3;
+      for (let i = 0; i < boosters; i++, z += 2)
+        list.push(emptyMachine(10 + i, 'booster', 10, z, 0));
+      const r = emptyMachine(2, 'refinery', 9, z, 1);
+      const gen = emptyMachine(90, 'generator', 15, 3, 0);
+      gen.fuel = { item: 'coal', count: 20 };
+      list.push(r, gen, emptyMachine(91, 'pole', 13, 5, 0));
+      return { f: new Factory(list, world), r };
+    };
+    const weak = build(1);
+    run(weak.f, 30);
+    expect(weak.r.fluid.polymer).toBe(0);
+    expect(weak.f.status(weak.r)).toBe('lowPressure');
+    const strong = build(2);
+    run(strong.f, 30);
+    expect(strong.r.pressure).toBeGreaterThanOrEqual(8);
+    expect(strong.r.fluid.polymer).toBeGreaterThan(5);
+  });
+});
