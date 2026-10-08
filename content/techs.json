@@ -87,6 +87,19 @@
       ]
     },
     {
+      "id": "silicon_3",
+      "cost": {
+        "science_pack": 120
+      },
+      "requires": [
+        "heavy_press_3"
+      ],
+      "unlocks": [
+        "machine_furnace_electric",
+        "silicon_raw"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

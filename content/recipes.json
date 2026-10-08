@@ -300,6 +300,29 @@
       "seconds": 3
     },
     {
+      "id": "silica_sand",
+      "machine": "crusher",
+      "in": {
+        "crushed_stone": 2
+      },
+      "out": {
+        "silica_sand": 1
+      },
+      "seconds": 3
+    },
+    {
+      "id": "silicon",
+      "machine": "furnace_electric",
+      "in": {
+        "silica_sand": 4,
+        "coal": 1
+      },
+      "out": {
+        "silicon_raw": 2
+      },
+      "seconds": 4
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {

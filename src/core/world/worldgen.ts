@@ -97,6 +97,10 @@ const SHAPE_REACH = 1.3;
 const SHAPE_NOISE_M = 7;
 const SHAPE_NOISE_AMPLITUDE = 0.6;
 const OBJECT_SLOT_CELLS = 2;
+/** Bande de sable autour d'un étang : largeur de 2 à 4 m (4 à 8 cases), quantité finie par case. */
+const POND_BAND_MIN_M = 2;
+const POND_BAND_MAX_M = 4;
+const POND_BAND_AMOUNT = 400;
 const STARTER_MIN_DISTANCE_M = 60;
 const STARTER_DISTANCE_RANGE_M = 50;
 const STARTER_MIN_RADIUS_M = 4;
@@ -229,13 +233,14 @@ export class WorldGenerator {
   ): Patch[] {
     const fam = this.params.families[res.family];
     const size = fam.size;
-    const reach = res.radiusM[1] * size * SHAPE_REACH;
+    const extra = res.kind === 'pond' ? POND_BAND_MAX_M : 0;
+    const reach = res.radiusM[1] * size * SHAPE_REACH + extra;
     const s = this.candidateSize(res);
     const id = res.id;
     const result: Patch[] = [];
     for (const p of this.starters) {
       if (p.res.id !== id) continue;
-      const r = p.radiusM * SHAPE_REACH;
+      const r = p.radiusM * SHAPE_REACH + extra;
       if (p.xM + r >= minX && p.xM - r <= maxX && p.zM + r >= minZ && p.zM - r <= maxZ)
         result.push(p);
     }
@@ -262,7 +267,7 @@ export class WorldGenerator {
             (res.radiusM[1] - res.radiusM[0]) * hash01(this.seed, ix, iz, saltId + 4)) *
           size *
           grow;
-        const r = radiusM * SHAPE_REACH;
+        const r = radiusM * SHAPE_REACH + extra;
         if (xM + r < minX || xM - r > maxX || zM + r < minZ || zM - r > maxZ) continue;
         const richness =
           res.kind === 'deposit'
@@ -290,6 +295,11 @@ export class WorldGenerator {
       (valueNoise(this.seed, x / SHAPE_NOISE_M, z / SHAPE_NOISE_M, p.noiseSalt) - 0.5) *
       SHAPE_NOISE_AMPLITUDE;
     return d / p.radiusM + dev;
+  }
+
+  /** Part (0 à 1) de la largeur de bande de sable propre à un étang. */
+  private bandShare(p: Patch): number {
+    return hash01(this.seed, Math.round(p.xM), Math.round(p.zM), this.salt('pond.band'));
   }
 
   /** Nombre de minerais dans une case : max au centre, `edgeRatio` × le max au bord. */
@@ -376,6 +386,7 @@ export class WorldGenerator {
     const oreAmount = new Float64Array(n * n);
     const oreId: (string | null)[] = new Array<string | null>(n * n).fill(null);
     const clear = new Uint8Array(n * n);
+    const sandCells = new Uint8Array(n * n);
 
     for (let lz = 0; lz < n; lz++) {
       for (let lx = 0; lx < n; lx++) {
@@ -387,7 +398,7 @@ export class WorldGenerator {
     for (const res of RESOURCES) {
       if (res.kind !== 'deposit' && res.kind !== 'pond') continue;
       for (const p of this.patchesIn(res, minX, maxX, minZ, maxZ)) {
-        const reach = p.radiusM * SHAPE_REACH;
+        const reach = p.radiusM * SHAPE_REACH + (res.kind === 'pond' ? POND_BAND_MAX_M : 0);
         const lxMin = Math.max(0, Math.floor((p.xM - reach) / CELL_SIZE_M) - gx0);
         const lxMax = Math.min(n - 1, Math.floor((p.xM + reach) / CELL_SIZE_M) - gx0);
         const lzMin = Math.max(0, Math.floor((p.zM - reach) / CELL_SIZE_M) - gz0);
@@ -397,7 +408,16 @@ export class WorldGenerator {
             const i = lz * n + lx;
             if (clear[i]) continue;
             const t = this.patchT(p, gx0 + lx, gz0 + lz);
-            if (t >= 1) continue;
+            if (t >= 1) {
+              if (res.kind === 'pond' && !water[i]) {
+                const band =
+                  POND_BAND_MIN_M + (POND_BAND_MAX_M - POND_BAND_MIN_M) * this.bandShare(p);
+                if (t < 1 + band / p.radiusM && oreAmount[i] <= 0) {
+                  sandCells[i] = 1;
+                }
+              }
+              continue;
+            }
             if (res.kind === 'pond') {
               water[i] = 1;
             } else {
@@ -409,6 +429,14 @@ export class WorldGenerator {
             }
           }
         }
+      }
+    }
+
+    // Rivage : du sable fini autour des étangs (sauf sur l'eau et sur un minerai).
+    for (let i = 0; i < n * n; i++) {
+      if (sandCells[i] && !water[i] && oreAmount[i] <= 0) {
+        oreAmount[i] = POND_BAND_AMOUNT;
+        oreId[i] = 'sand';
       }
     }
 

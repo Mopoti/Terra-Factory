@@ -165,26 +165,25 @@
       }
     },
     {
-      "id": "quartz",
+      "id": "sand",
       "family": "ores",
       "kind": "deposit",
-      "color": "#d8e6ee",
+      "color": "#e3d49a",
       "candidateSizeM": 96,
-      "presence": 0.3,
-      "radiusM": [5, 12],
-      "minDistanceM": 600,
-      "centerAmount": 1000,
-      "edgeRatio": 0.09,
+      "presence": 0.5,
+      "radiusM": [8, 20],
+      "centerAmount": 600,
+      "edgeRatio": 0.2,
       "richness": [0.8, 1.2],
       "biomeWeight": {
-        "prairie": 1,
-        "forest": 0.8,
-        "desert": 1,
-        "tundra": 1
+        "prairie": 0.15,
+        "forest": 0.1,
+        "desert": 2.4,
+        "tundra": 0.2
       },
       "harvest": {
-        "item": "quartz",
-        "secondsPerUnit": 0.4
+        "item": "silica_sand",
+        "secondsPerUnit": 0.3
       }
     },
     {

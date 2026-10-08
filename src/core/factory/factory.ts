@@ -24,6 +24,7 @@ import {
   isRouter,
   machineDef,
   isSmith,
+  drillCanMine,
   visualHeight,
   type MachineType,
 } from '../data/machines';
@@ -366,6 +367,7 @@ export function ports(
     case 'mixer':
     case 'barreler':
     case 'builder':
+    case 'furnace_electric':
     case 'heavy_press':
     case 'washer':
       return { ins: [into(back)], outs: [out(rot)] };
@@ -562,6 +564,7 @@ const MACHINE_TYPES: MachineType[] = [
   'booster',
   'cooling_tower',
   'builder',
+  'furnace_electric',
   'heavy_press',
   'washer',
   'conveyor',
@@ -1026,7 +1029,7 @@ export class Factory {
     let total = 0;
     for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
       const ore = this.world.oreAt(c.gx, c.gz);
-      if (ore && ore.amount > 0) {
+      if (ore && ore.amount > 0 && drillCanMine(m.type, ore.item)) {
         byItem[ore.item] = (byItem[ore.item] ?? 0) + ore.amount;
         total += ore.amount;
       }
@@ -1329,7 +1332,12 @@ export class Factory {
   private pickOreCell(m: Machine): { cell: Cell; item: string } | null {
     for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
       const ore = this.world.oreAt(c.gx, c.gz);
-      if (ore && ore.amount > 0 && (!m.stock || m.stock.item === ore.item))
+      if (
+        ore &&
+        ore.amount > 0 &&
+        drillCanMine(m.type, ore.item) &&
+        (!m.stock || m.stock.item === ore.item)
+      )
         return { cell: c, item: ore.item };
     }
     return null;

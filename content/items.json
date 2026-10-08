@@ -46,10 +46,16 @@
       "color": "#b5532f"
     },
     {
-      "id": "quartz",
-      "weightKg": 0.3,
+      "id": "silica_sand",
+      "weightKg": 0.4,
       "volumeL": 0.3,
-      "color": "#d8e6ee"
+      "color": "#e3d49a"
+    },
+    {
+      "id": "silicon_raw",
+      "weightKg": 0.3,
+      "volumeL": 0.2,
+      "color": "#6b7480"
     },
     {
       "id": "uraninite",
@@ -742,6 +748,17 @@
         "iron_plate": 12,
         "iron_gear": 4,
         "stone": 10
+      }
+    },
+    {
+      "id": "machine_furnace_electric",
+      "weightKg": 50,
+      "volumeL": 70,
+      "color": "#8a5f4a",
+      "recipe": {
+        "steel_ingot": 8,
+        "iron_gear": 6,
+        "copper_wire": 12
       }
     },
     {

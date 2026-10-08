@@ -1663,3 +1663,46 @@ describe('refroidissement (6c)', () => {
     expect(hot.fuelLeft).toBeGreaterThan(cold.fuelLeft);
   });
 });
+
+describe('sable et silicium (7a)', () => {
+  const sandWorld = (): FactoryWorld => ({
+    oreAt: () => ({ id: 'sand', item: 'silica_sand', amount: 500 }),
+    mineOre: (_x, _z, n) => n,
+  });
+
+  it('la foreuse à combustible ne mine pas le sable, la foreuse électrique oui', () => {
+    const t1 = emptyMachine(1, 'drill', 0, 0, 0);
+    t1.fuel = { item: 'coal', count: 5 };
+    const f1 = new Factory([t1], sandWorld());
+    run(f1, 5);
+    expect(t1.stock).toBeNull();
+    expect(f1.status(t1)).toBe('noOre');
+    const gen = emptyMachine(90, 'generator', 10, 0, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const t2 = emptyMachine(2, 'drill_electric', 0, 0, 0);
+    const f2 = new Factory([t2, gen, emptyMachine(91, 'pole', 6, 1, 0)], sandWorld());
+    run(f2, 3);
+    expect(t2.stock?.item).toBe('silica_sand');
+  });
+
+  it('le concasseur sur-broie : 2 pierres écrasées → 1 sable siliceux', () => {
+    const c = emptyMachine(1, 'crusher', 0, 0, 0);
+    c.recipe = 'silica_sand';
+    c.slots.push({ item: 'crushed_stone', count: 2 });
+    c.fuel = { item: 'coal', count: 5 };
+    const f = new Factory([c], makeWorld().world);
+    run(f, 4);
+    expect(c.stock).toEqual({ item: 'silica_sand', count: 1 });
+  });
+
+  it('le four électrique : 4 sable + 1 charbon → 2 silicium brut', () => {
+    const e = emptyMachine(1, 'furnace_electric', 8, 0, 0);
+    e.recipe = 'silicon';
+    e.slots.push({ item: 'silica_sand', count: 4 }, { item: 'coal', count: 1 });
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), e], makeWorld().world);
+    run(f, 5);
+    expect(e.stock).toEqual({ item: 'silicon_raw', count: 2 });
+  });
+});

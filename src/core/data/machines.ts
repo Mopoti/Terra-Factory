@@ -13,6 +13,7 @@ export type MachineType =
   | 'booster'
   | 'cooling_tower'
   | 'builder'
+  | 'furnace_electric'
   | 'heavy_press'
   | 'washer'
   | 'conveyor'
@@ -116,6 +117,7 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'mixer' ||
   type === 'barreler' ||
   type === 'builder' ||
+  type === 'furnace_electric' ||
   type === 'heavy_press' ||
   type === 'washer';
 
@@ -155,7 +157,8 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'washer' ||
   type === 'booster' ||
   type === 'cooling_tower' ||
-  type === 'builder';
+  type === 'builder' ||
+  type === 'furnace_electric';
 
 /** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
 export const isLinear = (type: MachineType): boolean => type === 'conveyor' || type === 'pipe';
@@ -210,3 +213,7 @@ export const itemOfTier = (def: MachineDef, tier: number): string =>
 /** Vitesse d'un tapis (cases/s) au palier donné. */
 export const beltSpeed = (tier: number): number =>
   machineDef('conveyor').tierSpeeds?.[tier - 1] ?? machineDef('conveyor').cellsPerSecond ?? 0.75;
+
+/** La foreuse à combustible (T1) ne sait pas extraire le sable : il faut une foreuse électrique. */
+export const drillCanMine = (type: MachineType, item: string): boolean =>
+  !(type === 'drill' && item === 'silica_sand');

@@ -8,6 +8,7 @@ export const SOURCE_KIND: Partial<Record<MachineType, FluidKind>> = {
   pump: 'water',
   boiler: 'steam',
   builder: 'hot',
+  furnace_electric: 'hot',
   cooling_tower: 'water',
 };
 
@@ -46,6 +47,7 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
         { side: (rot + 3) % 4, mode: 'both', fluid: 'liquid' },
         { side: rot % 4, mode: 'out', fluid: 'steam' },
       ];
+    case 'furnace_electric':
     case 'builder':
       // Refroidissement : eau froide par un côté, eau chaude rejetée par l'autre.
       return [

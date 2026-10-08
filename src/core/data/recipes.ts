@@ -9,6 +9,7 @@ export type SmithType =
   | 'mixer'
   | 'barreler'
   | 'builder'
+  | 'furnace_electric'
   | 'heavy_press'
   | 'washer';
 

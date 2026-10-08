@@ -396,6 +396,23 @@
       "height": 1.5
     },
     {
+      "id": "furnace_electric",
+      "w": 3,
+      "d": 3,
+      "item": "machine_furnace_electric",
+      "color": "#8a5f4a",
+      "fuel": false,
+      "consumesKw": 200,
+      "stockMax": 100,
+      "fluidCap": 100,
+      "startBar": 2,
+      "coolBoost": 0.5,
+      "coolLitersPerS": 4,
+      "height": 1.0,
+      "pollution": 0.5,
+      "pollutionKind": "air"
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

@@ -676,6 +676,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   mixer: 1.0,
   barreler: 1.0,
   booster: 1.0,
+  furnace_electric: 1.2,
   cooling_tower: 1.5,
   builder: 1.0,
   heavy_press: 1.2,
@@ -990,6 +991,24 @@ function addMachineBody(
     mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
     mb.box(x, 0.2, z, sx - 0.2, 0.5, sz - 0.2, color, true);
     mb.box(x, 0.7, z, 0.3, 0.2, 0.3, hexToRgb('#2f3a45'), true);
+    return;
+  }
+  if (type === 'furnace_electric') {
+    // Four électrique : caisson, hublot incandescent, câbles épais en haut et bec de sortie.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.15, 0.7, sz - 0.15, color, true);
+    mb.box(
+      x + fx * (sx / 2 - 0.08),
+      0.5,
+      z + fz * (sz / 2 - 0.08),
+      fx !== 0 ? 0.06 : 0.35,
+      0.25,
+      fz !== 0 ? 0.06 : 0.35,
+      hexToRgb('#ff9a3c'),
+      true,
+    );
+    mb.box(x, 0.95, z, 0.3, 0.25, 0.3, hexToRgb('#2f3a45'), true);
+    mb.box(x - fx * 0.3, 0.95, z - fz * 0.3, 0.12, 0.12, 0.12, hexToRgb('#d9a441'), true);
     return;
   }
   if (type === 'builder') {

@@ -92,7 +92,7 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 
 - **Base** : 1 000 au centre à D = 0 (au lieu de 3 500) × **1 + (D/100)^1,5** (D = distance du centre du gisement au départ). À 150 m : ×2,8 ; 500 m : ×12 ; 1 000 m : ×32.
 - **Distance** : change aussi la **taille** (rayon ×1 → ×2 à 1 000 m) et l'**espacement** (÷ (1 + D/2000) sur la présence).
-- **Nouveaux minerais par paliers** : sphalérite (zinc) et bauxite ≥ 300 m, quartz (silicium) ≥ 600 m, uraninite ≥ 1 200 m (`minDistanceM` dans `resources.json`) ; ils ne font pas partie des gisements garantis au départ.
+- **Nouveaux minerais par paliers** : sphalérite (zinc) et bauxite ≥ 300 m, uraninite ≥ 1 200 m (`minDistanceM` dans `resources.json`) ; ils ne font pas partie des gisements garantis au départ.
 - **Noms réels** : Hématite (iron_ore), Malachite (copper_ore) ; les identifiants ne changent pas. Les nouveaux minerais se récoltent mais **n'ont pas encore d'usage** (point 3).
 - **Ponts** (codé) : une dalle de sol posée sur une case d'eau la rend **praticable** (joueur, tapis, tuyaux, poteaux, machines) ; sans pilier. Limite actuelle : les machines posées sur un pont ont leur base dans la dalle (10 cm) ; rendu à reprendre avec le point 4 (grille et structure).
 
@@ -264,3 +264,14 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Tour de refroidissement T2** (`cooling_tower`, 3×3, sans énergie ; 12 plaques de fer + 4 engrenages + 10 pierre ; technologie Fabrication T2) : l'eau chaude entre derrière, ressort froide devant, 20 L/s.
 - **Chaudière** : accepte l'eau chaude par ses côtés (comme l'eau) et la chauffe en premier avec **moitié moins de combustible**.
 - **Eau sous pression pour le lavage** : les recettes de la station de lavage exigent **2 bar** au moins (`minBar`) ; état « Pression insuffisante » sinon.
+
+## 7. Point 7 — pétrole, plastique, câbles isolés, silicium
+
+- **Découpage (PO)** : **7a** sable et silicium (le PO a précisé la filière en détail) ; **7b** pétrole (gisement liquide comme les minerais, ≥ 500 m, chevalet de pompage 1 L/s, fluide pétrole, barils de pétrole) ; **7c** raffinerie T3 + presse → isolants en plastique ; **7d** câble isolé (4 fils de cuivre + 1 isolant → 4 câbles) et paquet de science T3 (1 puce en silicium + 1 câble isolé).
+
+### 7.1 Point 7a : sable et silicium (Tour 100)
+
+- **Quartz supprimé** du jeu (ressource, objet, légende de la carte).
+- **Sable sur la carte** : gisements de sable (ressource `sand`, ultra-abondants dans le **désert** : poids ×2,4 ; rares ailleurs ; un gisement de départ près du point d'apparition) + **bande de sable de 2 à 4 m (4 à 8 cases) autour des étangs**, 400 par case. Finis et épuisables. Récolte à la main (objet **sable siliceux**) ou à la **foreuse électrique** (T2, T3 éco) ; la **foreuse à combustible T1 ne sait pas le miner**.
+- **Sur-broyage** : seconde recette du concasseur, **2 pierres écrasées → 1 sable siliceux** (3 s), pour les joueurs sans eau ni désert à proximité. (Le concasseur reste à 100 % : 1 pierre → 1 pierre écrasée.)
+- **Four électrique T3** (`furnace_electric`, 3×3, 200 kW, 8 lingots d'acier + 6 engrenages + 12 fils ; technologie **Silicium T3**, 120 paquets, après Presse lourde T3) : **4 sable siliceux + 1 charbon (réactif) → 2 silicium brut** (4 s) ; pollue l'air. Il a aussi le **refroidissement à l'eau** du 6c (+50 %).

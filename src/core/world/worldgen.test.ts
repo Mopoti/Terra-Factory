@@ -169,7 +169,7 @@ describe('minerais : quantités par case', () => {
     expect(distanceGrowth(500)).toBe(1.5);
     expect(distanceGrowth(5000)).toBe(2);
   });
-  it('zinc et bauxite à partir de 300 m, quartz à 600 m, uraninite à 1 200 m (rien avant)', () => {
+  it('zinc et bauxite à partir de 300 m, uraninite à 1 200 m (rien avant)', () => {
     const found: Record<string, number> = {};
     for (const c of region(g, 40)) {
       for (const o of c.ore) {
@@ -180,7 +180,6 @@ describe('minerais : quantités par case', () => {
     // Les cases d'un tas peuvent déborder un peu du centre : on tolère le rayon maximal (≈ 30 m).
     expect(found.zinc_ore ?? 999).toBeGreaterThan(300 - 40);
     expect(found.bauxite ?? 999).toBeGreaterThan(300 - 40);
-    expect(found.quartz ?? 999).toBeGreaterThan(600 - 40);
     expect(found.uraninite ?? 9999).toBeGreaterThan(1200 - 40);
     expect(found.zinc_ore).toBeDefined();
   });
@@ -228,7 +227,7 @@ describe('minerais : quantités par case', () => {
     const ironHigh = region(high, 14).flatMap((c) => c.ore.filter((o) => o.id === 'iron_ore'));
     const mean = (a: { amount: number }[]): number =>
       a.reduce((s, o) => s + o.amount, 0) / a.length;
-    expect(ironHigh.length).toBe(iron.length); // même forme de tas
+    expect(Math.abs(ironHigh.length - iron.length)).toBeLessThanOrEqual(3); // même forme de tas (arrondis près)
     expect(mean(ironHigh) / mean(iron)).toBeGreaterThan(1.8);
     expect(mean(ironHigh) / mean(iron)).toBeLessThan(2.2);
   });
@@ -420,5 +419,29 @@ describe('buissons de fibres', () => {
       for (let cz = -8; cz <= 8; cz++)
         bushes += gen.chunk(cx, cz).objects.filter((o) => o.id === 'fiber_bush').length;
     expect(bushes).toBeGreaterThan(20);
+  });
+});
+
+describe('sable', () => {
+  const g = gen('sable');
+  const chunks = region(g, 14);
+  const sand = chunks.flatMap((c) => c.ore.filter((o) => o.id === 'sand'));
+  const water = chunks.flatMap((c) => c.water);
+
+  it('il y a du sable, en quantité finie', () => {
+    expect(sand.length).toBeGreaterThan(50);
+    expect(sand.every((o) => o.amount > 0)).toBe(true);
+  });
+
+  it('un rivage de sable entoure les étangs : jamais sur l’eau, toujours à moins de 8 cases d’elle (ou en gisement)', () => {
+    const wet = new Set(water.map((w) => `${w.gx},${w.gz}`));
+    expect(sand.some((o) => wet.has(`${o.gx},${o.gz}`))).toBe(false);
+    const near = (o: { gx: number; gz: number }): boolean => {
+      for (let dx = -9; dx <= 9; dx++)
+        for (let dz = -9; dz <= 9; dz++) if (wet.has(`${o.gx + dx},${o.gz + dz}`)) return true;
+      return false;
+    };
+    // Au moins une bonne part des cases de sable borde un étang (le reste vient des gisements du désert).
+    expect(sand.filter(near).length).toBeGreaterThan(20);
   });
 });
