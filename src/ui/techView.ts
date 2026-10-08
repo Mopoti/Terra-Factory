@@ -3,6 +3,7 @@ import { DISCOVERIES, type DiscoveryDef } from '../core/data/discoveries';
 import { itemById } from '../core/data/items';
 import { TECHS, isSciencePack, packCost, scienceCost, type TechDef } from '../core/data/techs';
 import type { GameState } from '../core/game/state';
+import type { CommandBus } from '../core/game/commands';
 import { t, type TranslationKey } from '../i18n';
 import './menu.css';
 
@@ -20,7 +21,7 @@ const itemName = (id: string): string => t(`item.${id}` as TranslationKey);
 export function mountTech(
   root: HTMLElement,
   state: GameState,
-  actions: { onOpenChange(open: boolean): void },
+  actions: { onOpenChange(open: boolean): void; bus: CommandBus },
 ): TechWindow {
   let isOpenNow = false;
   let message = '';
@@ -84,7 +85,7 @@ export function mountTech(
     button.disabled = done || blocked;
     button.addEventListener('click', () => {
       if (science > 0) {
-        state.study(studying ? null : tech.id);
+        actions.bus.dispatch<'study'>({ type: 'study', tech: studying ? null : tech.id });
         playSfx('craft');
         message = studying
           ? ''
@@ -92,7 +93,7 @@ export function mountTech(
         render();
         return;
       }
-      const result = state.research(tech.id);
+      const result = actions.bus.dispatch<'research'>({ type: 'research', tech: tech.id });
       playSfx(result === 'ok' ? 'craft' : 'deny');
       message =
         result === 'ok'

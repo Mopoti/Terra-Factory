@@ -17,6 +17,7 @@ import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
 import { PIECES } from '../core/data/buildings';
 import { machineForItem } from '../core/data/machines';
+import type { CommandBus } from '../core/game/commands';
 import { takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
 
@@ -28,6 +29,8 @@ const isPlaceable = (item: string): boolean =>
   machineForItem(item) !== null || PIECES.some((p) => p.item === item);
 
 export interface InventoryActions {
+  /** Commandes du joueur (fabrication, etc.). */
+  bus: CommandBus;
   /** Jette des objets du sac au sol. */
   drop(item: string, count: number): void;
   /** La fenêtre s'ouvre ou se ferme (met le jeu en pause / le relance). */
@@ -241,7 +244,7 @@ export function mountInventory(
   }
 
   function craft(item: string, times: number): void {
-    const result = state.queueCraft(item, times);
+    const result = actions.bus.dispatch<'queueCraft'>({ type: 'queueCraft', item, times });
     if (result !== 'ok') {
       playSfx('deny');
       message =
@@ -281,7 +284,7 @@ export function mountInventory(
       cancel.type = 'button';
       cancel.title = t('inv.cancelCraft');
       cancel.addEventListener('click', () => {
-        state.cancelCraft(i);
+        actions.bus.dispatch<'cancelCraft'>({ type: 'cancelCraft', index: i });
         render();
       });
       row.append(cancel);

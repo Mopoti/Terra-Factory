@@ -100,6 +100,7 @@ import {
 import { pipeMaxBar } from '../core/factory/fluids';
 import { Tutorial } from '../core/game/tutorial';
 import { WorldSimulation, type SimEvent } from '../core/game/simulation';
+import { CommandBus } from '../core/game/commands';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
@@ -169,6 +170,8 @@ export interface GameViewHandle {
   factory: Factory;
   /** Pollution et ennemis, pour la carte. */
   threat: Threat;
+  /** Commandes du joueur (poser, démolir, fabriquer, vendre…). */
+  bus: CommandBus;
   /** Le coffre d'un buggy vu comme une machine (identifiant négatif = −identifiant du buggy), ou null. */
   vehicleMachine(id: number): Machine | null;
   /** Identifiant (négatif, pour la fenêtre) du buggy que conduit le joueur, ou null. */
@@ -764,7 +767,7 @@ export function startGameView(
     if (id.startsWith('piece:')) {
       options.state.removeKeys([id.slice(6)], at);
     } else if (id.startsWith('machine:')) {
-      options.state.removeMachine(factory, Number(id.slice(8)), at);
+      bus.dispatch<'removeMachine'>({ type: 'removeMachine', id: Number(id.slice(8)), at });
     }
     demolishChain = true;
     playSfx('demolish');
@@ -819,7 +822,22 @@ export function startGameView(
       ([dx, dz]) => dx === Math.sign(to.gx - from.gx) && dz === Math.sign(to.gz - from.gz),
     );
 
-  function extendPoleLine(down: boolean, blockedHere: (c: Cell) => boolean): void {
+  /** Bus de commandes : les actions qui changent le monde passent par lui (voir core/game/commands.ts). */
+  const bus = new CommandBus({
+    state: options.state,
+    factory,
+    blockedFor: (type, level) => {
+      if (!isLinear(type) && level === UPPER_LEVEL) {
+        const pieces = options.state.changes.pieces;
+        return (cell) =>
+          !slabAt(pieces, Math.round(levelY(UPPER_LEVEL) / LAYER_HEIGHT_M), cell.gx, cell.gz);
+      }
+      if (type === 'pump') return (cell) => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz);
+      return machineBlocked;
+    },
+  });
+
+  function extendPoleLine(down: boolean): void {
     if (!down || !poleChain || !factory.machines.includes(poleChain)) {
       poleChain = null;
       return;
@@ -850,7 +868,17 @@ export function startGameView(
       const c = { gx: gx + ox, gz: gz + oz };
       const at = { x: (c.gx + w / 2) * CELL_SIZE_M, z: (c.gz + d / 2) * CELL_SIZE_M };
       if (Math.hypot(at.x - from.x, at.z - from.z) > reach) continue;
-      if (options.state.placeMachine(factory, 'pole', c.gx, c.gz, 0, blockedHere) === 'ok') {
+      if (
+        bus.dispatch<'placeMachine'>({
+          type: 'placeMachine',
+          machine: 'pole',
+          gx: c.gx,
+          gz: c.gz,
+          rot: 0,
+          lift: 0,
+          tier: 1,
+        }) === 'ok'
+      ) {
         poleChain = factory.machines[factory.machines.length - 1];
         playSfx('placeStone');
         renderBuildHud();
@@ -917,7 +945,15 @@ export function startGameView(
       if (down && !machineWasDown) {
         if (
           ok &&
-          options.state.placeMachine(factory, def.id, gx, gz, baseRot, blockedHere, level) === 'ok'
+          bus.dispatch<'placeMachine'>({
+            type: 'placeMachine',
+            machine: def.id,
+            gx,
+            gz,
+            rot: baseRot,
+            lift: level,
+            tier: 1,
+          }) === 'ok'
         ) {
           if (def.id === 'pole') poleChain = factory.machines[factory.machines.length - 1];
           playSfx('placeStone');
@@ -929,7 +965,7 @@ export function startGameView(
         renderBuildHud();
       }
       // Poteaux : en gardant le clic et en marchant, un nouveau se pose à la limite du câble.
-      if (def.id === 'pole') extendPoleLine(down, blockedHere);
+      if (def.id === 'pole') extendPoleLine(down);
       machineWasDown = down;
       return;
     }
@@ -1125,16 +1161,15 @@ export function startGameView(
       for (const g of ghosts) {
         if (
           g.ok &&
-          options.state.placeMachine(
-            factory,
-            def.id,
-            g.gx,
-            g.gz,
-            g.rot,
-            machineBlocked,
-            g.lift,
+          bus.dispatch<'placeMachine'>({
+            type: 'placeMachine',
+            machine: def.id,
+            gx: g.gx,
+            gz: g.gz,
+            rot: g.rot,
+            lift: g.lift,
             tier,
-          ) === 'ok'
+          }) === 'ok'
         )
           placed++;
       }
@@ -2943,6 +2978,7 @@ export function startGameView(
     getState: () => ({ x: playerX, y: playerY, z: playerZ, ...rig.getState() }),
     factory,
     threat,
+    bus,
     vehicleMachine,
     mountedMachineId: () => (mounted ? -mounted.id : null),
     dropItem: (item, count) => {

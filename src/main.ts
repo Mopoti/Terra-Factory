@@ -202,10 +202,11 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
   };
 
   s.machine = mountMachineWindow(machineEl, state, view.factory, {
+    bus: view.bus,
     onOpenChange: syncPaused,
     resolve: (id) => view.vehicleMachine(id),
   });
-  s.tech = mountTech(techEl, state, { onOpenChange: syncPaused });
+  s.tech = mountTech(techEl, state, { onOpenChange: syncPaused, bus: view.bus });
   s.map = mountMap(mapEl, {
     world: game.world,
     state,
@@ -218,6 +219,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     onOpenChange: syncPaused,
   });
   s.inventory = mountInventory(inventoryEl, state, {
+    bus: view.bus,
     drop: (item, count) => view.dropItem(item, count),
     onOpenChange: syncPaused,
   });

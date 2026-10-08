@@ -21,6 +21,7 @@ import {
 } from '../core/factory/factory';
 import { totals } from '../core/game/inventory';
 import { buyPrice, sellPrice } from '../core/game/trade';
+import type { CommandBus } from '../core/game/commands';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
@@ -66,6 +67,8 @@ export function mountMachineWindow(
   factory: Factory,
   actions: {
     onOpenChange(open: boolean): void;
+    /** Commandes du joueur : tout ce qui change le monde y passe. */
+    bus: CommandBus;
     /** Machines qui ne sont pas dans l'usine (le coffre d'un buggy : identifiant négatif). */
     resolve?: (id: number) => Machine | null;
   },
@@ -251,7 +254,8 @@ export function mountMachineWindow(
         const b = el('button', undefined, String(label));
         b.type = 'button';
         b.addEventListener('click', () => {
-          if (state.sellItem(slot.item, n) > 0) playSfx('pickup');
+          if (actions.bus.dispatch<'sell'>({ type: 'sell', item: slot.item, count: n }) > 0)
+            playSfx('pickup');
           render();
         });
         row.append(b);
@@ -283,7 +287,8 @@ export function mountMachineWindow(
         b.type = 'button';
         b.disabled = state.changes.credits < buyPrice(item.id);
         b.addEventListener('click', () => {
-          if (state.buyItem(item.id, n) > 0) playSfx('pickup');
+          if (actions.bus.dispatch<'buy'>({ type: 'buy', item: item.id, count: n }) > 0)
+            playSfx('pickup');
           else playSfx('deny');
           render();
         });
@@ -301,7 +306,12 @@ export function mountMachineWindow(
     let moved = 0;
     if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
-      moved = state.loadIngredient(m, item, count);
+      moved = actions.bus.dispatch<'loadIngredient'>({
+        type: 'loadIngredient',
+        id: m.id,
+        item,
+        count,
+      });
     else {
       for (const slot of ['input', 'fuel'] as const) {
         if (accepts(m, slot, item)) {
@@ -475,8 +485,20 @@ export function mountMachineWindow(
     const hand = state.hand;
     const moved =
       hand && hand.item === item
-        ? state.useHand((it, n) => state.loadIngredient(m, it, n))
-        : state.loadIngredient(m, item, 100);
+        ? state.useHand((it, n) =>
+            actions.bus.dispatch<'loadIngredient'>({
+              type: 'loadIngredient',
+              id: m.id,
+              item: it,
+              count: n,
+            }),
+          )
+        : actions.bus.dispatch<'loadIngredient'>({
+            type: 'loadIngredient',
+            id: m.id,
+            item,
+            count: 100,
+          });
     playSfx(moved > 0 ? 'pickup' : 'deny');
     render();
   }
@@ -503,7 +525,14 @@ export function mountMachineWindow(
     }
     select.value = m.recipe ?? '';
     select.addEventListener('change', () => {
-      if (state.setRecipe(m, select.value || null)) playSfx('pickup');
+      if (
+        actions.bus.dispatch<'setRecipe'>({
+          type: 'setRecipe',
+          id: m.id,
+          item: select.value || null,
+        })
+      )
+        playSfx('pickup');
       render();
     });
     row.append(select);
@@ -738,7 +767,8 @@ export function mountMachineWindow(
       fix.type = 'button';
       const out = el('div', 'mach-info');
       fix.addEventListener('click', () => {
-        if (state.repairReactor(m) === 'ok') return render();
+        if (actions.bus.dispatch<'repairReactor'>({ type: 'repairReactor', id: m.id }) === 'ok')
+          return render();
         out.textContent = t('machine.repair.missing');
       });
       rows.append(fix, out);
@@ -750,7 +780,7 @@ export function mountMachineWindow(
       go.type = 'button';
       const out = el('div', 'mach-info');
       go.addEventListener('click', () => {
-        const r = state.activateBeacon(factory, m);
+        const r = actions.bus.dispatch<'activateBeacon'>({ type: 'activateBeacon', id: m.id });
         out.textContent = t(`machine.beacon.${r}` as TranslationKey);
       });
       rows.append(note, go, out);
@@ -789,7 +819,7 @@ export function mountMachineWindow(
         fix.type = 'button';
         const out = el('div', 'mach-info');
         fix.addEventListener('click', () => {
-          const r = state.repairReactor(m);
+          const r = actions.bus.dispatch<'repairReactor'>({ type: 'repairReactor', id: m.id });
           if (r === 'ok') return render();
           out.textContent = t('machine.repair.missing');
         });
