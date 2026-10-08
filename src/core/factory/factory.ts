@@ -340,6 +340,7 @@ export function ports(
     case 'crusher':
     case 'bessemer':
     case 'mixer':
+    case 'barreler':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
     case 'drill_eco':
@@ -526,6 +527,7 @@ const MACHINE_TYPES: MachineType[] = [
   'crusher',
   'bessemer',
   'mixer',
+  'barreler',
   'conveyor',
   'chest_wood',
   'chest_iron',
@@ -1060,6 +1062,11 @@ export class Factory {
         return 'full';
       if (r.mould && m.wear <= 0 && !(m.input?.item === r.mould && m.input.count > 0))
         return 'noMould';
+      if (r.fluid) {
+        const have = m.fluid[r.fluid.kind];
+        if (r.fluid.amount > 0 && have < r.fluid.amount) return 'noWater';
+        if (r.fluid.amount < 0 && (def.fluidCap ?? 100) - have < -r.fluid.amount) return 'full';
+      }
       if (def.consumesKw && this.powerFactor(m) <= 0) return 'noPower';
     }
     if (def.fuel && this.fuelSecondsLeft(m) <= 0) return 'noFuel';
@@ -1215,7 +1222,8 @@ export class Factory {
 
   /** Le cycle de la recette peut-il démarrer (ingrédients, place pour les produits, moule) ? Sert à l'état et à la demande de courant. */
   private smithReady(m: Machine): boolean {
-    const max = machineDef(m.type).stockMax ?? 100;
+    const def = machineDef(m.type);
+    const max = def.stockMax ?? 100;
     const r = recipeById(m.recipe);
     const product = productOf(m);
     if (!r || !product || !this.hasIngredients(m, r.in)) return false;
@@ -1224,6 +1232,14 @@ export class Factory {
     const by = recipeByproduct(r);
     if (by && m.extra && (m.extra.item !== by.item || m.extra.count + by.count > max)) return false;
     if (r.mould && m.wear <= 0 && !(m.input?.item === r.mould && m.input.count > 0)) return false;
+    if (r.fluid) {
+      // Remplir un baril puise l'eau de la machine ; le vider l'y verse (il faut de la place dans sa réserve).
+      const have = m.fluid[r.fluid.kind];
+      if (
+        r.fluid.amount > 0 ? have < r.fluid.amount : (def.fluidCap ?? 100) - have < -r.fluid.amount
+      )
+        return false;
+    }
     return true;
   }
 
@@ -1266,6 +1282,7 @@ export class Factory {
       if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
     }
     if (r.mould) m.wear--;
+    if (r.fluid) m.fluid[r.fluid.kind] = Math.max(0, m.fluid[r.fluid.kind] - r.fluid.amount);
     if (m.stock) m.stock.count += product.count;
     else m.stock = { item: product.item, count: product.count };
     this.made.set(product.item, (this.made.get(product.item) ?? 0) + product.count);

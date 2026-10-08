@@ -1,7 +1,7 @@
 import raw from '../../../content/recipes.json';
 
 /** Machines à recette choisie dans leur fenêtre (comme l'assembleur, mais avec des recettes propres). */
-export type SmithType = 'furnace' | 'stamper' | 'crusher' | 'bessemer' | 'mixer';
+export type SmithType = 'furnace' | 'stamper' | 'crusher' | 'bessemer' | 'mixer' | 'barreler';
 
 export interface Recipe {
   id: string;
@@ -12,6 +12,8 @@ export interface Recipe {
   out: Record<string, number>;
   /** Durée d'un cycle (s). */
   seconds: number;
+  /** Fluide de la recette : `amount` > 0 est puisé dans la machine, < 0 y est versé (remplisseuse de barils). */
+  fluid?: { kind: 'water' | 'steam'; amount: number };
   /** Moule exigé (estampeuse). */
   mould?: string;
 }

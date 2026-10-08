@@ -623,6 +623,32 @@
       }
     },
     {
+      "id": "machine_barreler",
+      "weightKg": 12,
+      "volumeL": 20,
+      "color": "#4f6f8f",
+      "recipe": {
+        "steel_ingot": 4,
+        "iron_gear": 4,
+        "copper_wire": 8
+      }
+    },
+    {
+      "id": "barrel_empty",
+      "weightKg": 8,
+      "volumeL": 120,
+      "color": "#8a949c",
+      "recipe": {
+        "steel_ingot": 2
+      }
+    },
+    {
+      "id": "barrel_water",
+      "weightKg": 108,
+      "volumeL": 120,
+      "color": "#4a8fc4"
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

@@ -1249,6 +1249,28 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     expect(f.status(mixer)).toBe('idle');
   });
 
+  it('la remplisseuse met 100 L d’eau dans un baril, la videuse les rend', () => {
+    const b = emptyMachine(1, 'barreler', 8, 0, 0);
+    b.recipe = 'fill_water_barrel';
+    b.slots.push({ item: 'barrel_empty', count: 2 });
+    b.fluid.water = 150;
+    const f = powered(b);
+    run(f, 2.2);
+    expect(b.stock).toEqual({ item: 'barrel_water', count: 1 });
+    expect(b.fluid.water).toBeCloseTo(50);
+    run(f, 2.2); // il ne reste que 50 L : pas assez pour un second baril
+    expect(b.stock?.count).toBe(1);
+    expect(f.status(b)).toBe('noWater');
+    const d = emptyMachine(2, 'barreler', 8, 4, 0);
+    d.recipe = 'drain_water_barrel';
+    d.slots.push({ item: 'barrel_water', count: 1 });
+    const g = powered(d);
+    g.tick(0);
+    run(g, 2.2);
+    expect(d.stock).toEqual({ item: 'barrel_empty', count: 1 });
+    expect(d.fluid.water).toBeCloseTo(100);
+  });
+
   it('le sous-produit survit à la sauvegarde', () => {
     const b = emptyMachine(1, 'bessemer', 8, 0, 0);
     b.extra = { item: 'slag', count: 7 };

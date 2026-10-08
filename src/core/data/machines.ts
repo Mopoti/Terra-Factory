@@ -9,6 +9,7 @@ export type MachineType =
   | 'crusher'
   | 'bessemer'
   | 'mixer'
+  | 'barreler'
   | 'conveyor'
   | 'chest_wood'
   | 'chest_iron'
@@ -94,7 +95,8 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'stamper' ||
   type === 'crusher' ||
   type === 'bessemer' ||
-  type === 'mixer';
+  type === 'mixer' ||
+  type === 'barreler';
 
 /** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
 export const isAssembler = (type: MachineType): boolean => type === 'assembler';
@@ -124,7 +126,11 @@ export const TURRET_EVERY_S = 0.6;
 
 /** Machine du réseau de fluides (tuyau, pompe, chaudière, turbine). */
 export const isFluid = (type: MachineType): boolean =>
-  type === 'pipe' || type === 'pump' || type === 'boiler' || type === 'turbine';
+  type === 'pipe' ||
+  type === 'pump' ||
+  type === 'boiler' ||
+  type === 'turbine' ||
+  type === 'barreler';
 
 /** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
 export const isLinear = (type: MachineType): boolean => type === 'conveyor' || type === 'pipe';

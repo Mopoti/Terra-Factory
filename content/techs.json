@@ -167,6 +167,19 @@
       ]
     },
     {
+      "id": "barrels_3",
+      "cost": {
+        "science_pack": 80
+      },
+      "requires": [
+        "steam",
+        "logistics_3"
+      ],
+      "unlocks": [
+        "machine_barreler"
+      ]
+    },
+    {
       "id": "navigation",
       "cost": {
         "iron_ingot": 10,

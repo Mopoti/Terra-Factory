@@ -223,3 +223,9 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Patron** : PageDown sans tracer = entrée de tunnel avec la sortie fantôme à portée max devant ; en traçant, les tunnels s'enchaînent par paires (entrée, sortie, entrée…). Les tuyaux ne sont que « à plat » ou « entrée de tunnel ».
 - **Piliers de tapis** : un tapis surélevé (niveau 1 ou 2, rampes depuis le niveau 1 comprises) reçoit automatiquement et gratuitement un pilier de pierre s'il n'y a aucun support à moins de 2,5 m (`pillarsForFace`).
 - **À faire** : piliers pour les machines surélevées.
+
+### 5.5 Barils (5d)
+
+- **Remplisseuse / videuse de barils T3** (`barreler`, 2×2, électrique 20 kW, réserve 200 L) : une seule machine, deux recettes choisies dans sa fenêtre (« Remplir » : baril vide + 100 L d'eau → baril d'eau ; « Vider » : l'inverse), 2 s par cycle. Eau par les côtés (tuyaux), objets : entrée derrière, sortie devant. 4 lingots d'acier + 4 engrenages + 8 fils de cuivre. Débloquée par **Logistique : barils T3** (80 paquets, après Vapeur et Logistique T3).
+- **Baril vide** : 2 lingots d'acier (120 L de volume, 8 kg) ; **baril d'eau** : 100 L (108 kg). C'est un objet solide : tapis, coffre, sac.
+- Seule l'eau se met en baril pour l'instant ; les autres fluides (pétrole…) arriveront avec les points 6/7 en ajoutant une recette (`fluid` dans `recipes.json`).

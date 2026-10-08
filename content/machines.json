@@ -291,6 +291,18 @@
       "height": 1.0
     },
     {
+      "id": "barreler",
+      "w": 2,
+      "d": 2,
+      "item": "machine_barreler",
+      "color": "#4f6f8f",
+      "fuel": false,
+      "consumesKw": 20,
+      "stockMax": 20,
+      "fluidCap": 200,
+      "height": 1.0
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

@@ -38,6 +38,12 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
         { side: (rot + 3) % 4, mode: 'both', fluid: 'water' },
         { side: rot % 4, mode: 'out', fluid: 'steam' },
       ];
+    case 'barreler':
+      // Remplisseuse / videuse de barils : l'eau entre ou sort par les côtés (objets : entrée derrière, sortie devant).
+      return [
+        { side: (rot + 1) % 4, mode: 'both', fluid: 'water' },
+        { side: (rot + 3) % 4, mode: 'both', fluid: 'water' },
+      ];
     case 'turbine':
       return [
         { side: back, mode: 'in', fluid: 'steam' },

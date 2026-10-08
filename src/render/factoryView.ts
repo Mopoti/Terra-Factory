@@ -634,6 +634,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   crusher: 1.0,
   bessemer: 1.5,
   mixer: 1.0,
+  barreler: 1.0,
   waterwheel: 1.5,
   chest_wood: 0.6,
   chest_iron: 0.6,
@@ -919,6 +920,23 @@ function addMachineBody(
       true,
     );
     mb.box(x, 1.5, z, 0.14, 0.2, 0.14, hexToRgb('#ffd27a'), true);
+    return;
+  }
+  if (type === 'barreler') {
+    // Remplisseuse de barils : bâti, cuve bleue au centre, buse au-dessus et bec de sortie.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.3, 0.6, sz - 0.3, color, true);
+    mb.box(x, 0.85, z, 0.2, 0.12, 0.2, hexToRgb('#4a8fc4'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
     return;
   }
   if (type === 'mixer') {

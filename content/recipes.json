@@ -153,6 +153,36 @@
       "seconds": 3
     },
     {
+      "id": "fill_water_barrel",
+      "machine": "barreler",
+      "in": {
+        "barrel_empty": 1
+      },
+      "out": {
+        "barrel_water": 1
+      },
+      "fluid": {
+        "kind": "water",
+        "amount": 100
+      },
+      "seconds": 2
+    },
+    {
+      "id": "drain_water_barrel",
+      "machine": "barreler",
+      "in": {
+        "barrel_water": 1
+      },
+      "out": {
+        "barrel_empty": 1
+      },
+      "fluid": {
+        "kind": "water",
+        "amount": -100
+      },
+      "seconds": 2
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {
