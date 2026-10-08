@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 133** : tutoriel : étape « équiper l'outil » dans la case d'outils de la barre de raccourcis (14 étapes), vérifiée dans le navigateur.
 - **Tour 132** : tutoriel : 6 bois + 4 pierres (quantités de l'outil), l'étape « outil » se valide dès la fabrication (outil dans le sac) ; vérifié dans le navigateur.
 - **Tour 131** : panneau de fabrication : objets non débloqués cachés, 10 onglets par usage (`category` dans items.json), onglets vides masqués ; paquet T1 → tech Laboratoire, baril vide → Barils T3. Reste : essai à 5 joueurs réels, Steam, équilibrage (A–D en attente du PO).
 - **Tour 130** : tutoriel avec barre de progression (déplacement 4 directions, caméra 4 sens, 3 vues, 3 bois, 3 pierres), vérifié dans le navigateur. Reste : essai à 5 joueurs réels, Steam, équilibrage (A–D en attente du PO).

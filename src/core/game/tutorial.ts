@@ -24,6 +24,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   { id: 'wood', group: 2, keys: ['interact'] },
   { id: 'stone', group: 2, keys: ['interact'] },
   { id: 'tool', group: 2, keys: ['inventory'] },
+  { id: 'equip', group: 2, keys: ['inventory'] },
   { id: 'furnace', group: 3, keys: ['inventory'] },
   { id: 'coal', group: 3, keys: ['use'] },
   { id: 'iron', group: 3, keys: [] },
@@ -33,8 +34,10 @@ export interface TutorialContext {
   /** Signaux reçus depuis la dernière étape validée. */
   flags: ReadonlySet<string>;
   inventory: Inventory;
-  /** Le joueur a un outil en main (ou dans le sac). */
+  /** Le joueur a un outil (dans le sac ou rangé). */
   hasTool: boolean;
+  /** L'outil est rangé dans la case d'outils de la barre de raccourcis. */
+  toolEquipped: boolean;
   machines: {
     type: string;
     fuelCount: number;
@@ -77,7 +80,9 @@ export function stepComplete(id: string, ctx: TutorialContext): boolean {
   if (SIGNAL_STEPS.has(id)) return ctx.flags.has(id);
   switch (id) {
     case 'tool':
-      return ctx.hasTool;
+      return ctx.hasTool || ctx.toolEquipped;
+    case 'equip':
+      return ctx.toolEquipped;
     case 'furnace':
       return ctx.machines.some((m) => m.type === 'furnace');
     case 'coal':
@@ -98,7 +103,12 @@ export function stepComplete(id: string, ctx: TutorialContext): boolean {
 /** Progression d'un tutoriel (enregistrée dans les changements du monde). */
 export class Tutorial {
   private flags = new Set<string>();
-  private last: Omit<TutorialContext, 'flags'> = { inventory: {}, hasTool: false, machines: [] };
+  private last: Omit<TutorialContext, 'flags'> = {
+    inventory: {},
+    hasTool: false,
+    toolEquipped: false,
+    machines: [],
+  };
 
   constructor(
     private readonly saved: { tutorialDone: string[]; tutorialSkipped: boolean },

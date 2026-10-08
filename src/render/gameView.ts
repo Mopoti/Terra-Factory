@@ -2540,6 +2540,7 @@ export function startGameView(
     const finished = tutorial.update({
       inventory: options.state.inventory,
       // L'outil compte dès qu'il est fabriqué (dans le sac), pas seulement une fois rangé dans la case d'outils.
+      toolEquipped: options.state.harvestTool() !== null,
       hasTool:
         options.state.harvestTool() !== null ||
         ITEMS.some((i) => i.tool !== null && (options.state.inventory[i.id] ?? 0) > 0),

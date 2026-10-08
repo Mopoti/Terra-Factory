@@ -811,6 +811,7 @@
   "tutorial.step.wood": "Ramasse 6 bois : approche-toi d’un arbre ou d’une branche et maintiens {keys}",
   "tutorial.step.stone": "Frappe un rocher pour récolter 4 pierres : maintiens {keys}",
   "tutorial.step.tool": "Fabrique ton premier outil en pierre à la main (sac : {keys}) avec du bois et de la pierre : un seul outil sert à tout récolter",
+  "tutorial.step.equip": "Équipe ton outil : sélectionne-le dans le sac ({keys}) puis clique la dernière case de la barre de raccourcis (celle de l'outil, à droite), ou glisse-le dessus",
   "tutorial.step.furnace": "Fabrique un four (sac : {keys}), choisis-le dans la barre et pose-le au sol",
   "tutorial.step.coal": "Mets du charbon dans le four : vise-le et appuie sur {keys}, puis place le charbon en combustible",
   "tutorial.step.iron": "Mets aussi du minerai de fer, choisis la recette du fer et attends : tu obtiens des lingots de fer",

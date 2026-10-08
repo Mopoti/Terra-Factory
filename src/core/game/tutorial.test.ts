@@ -6,6 +6,7 @@ const ctx = (
 ): Parameters<Tutorial['update']>[0] => ({
   inventory: {},
   hasTool: false,
+  toolEquipped: false,
   machines: [],
   ...over,
 });
@@ -47,6 +48,11 @@ describe('tutoriel', () => {
     expect(t.update(ctx({ inventory: { wood: 6, stone: 4 } }))?.id).toBe('stone');
     expect(t.current()?.id).toBe('tool');
     t.update(ctx({ hasTool: true }));
+    // L'outil fabriqué ne suffit pas : il faut le ranger dans la case d'outils.
+    expect(t.current()?.id).toBe('equip');
+    t.update(ctx({ hasTool: true }));
+    expect(t.current()?.id).toBe('equip');
+    t.update(ctx({ hasTool: true, toolEquipped: true }));
     t.update(ctx({ machines: [{ type: 'furnace', fuelCount: 0, slots: [], stockItem: null }] }));
     expect(t.current()?.id).toBe('coal');
     t.update(ctx({ machines: [{ type: 'furnace', fuelCount: 3, slots: [], stockItem: null }] }));

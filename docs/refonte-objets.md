@@ -458,3 +458,9 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 
 - **Quantités alignées sur l'outil en pierre** (6 bois + 4 pierres) : l'étape « Récolte » demande **6 bois** puis **4 pierres**, pour que l'étape suivante (fabriquer l'outil) soit possible tout de suite.
 - **Étape « outil » qui ne se terminait pas** : elle exigeait que l'outil soit rangé dans la case d'outils. Elle est maintenant validée dès que l'outil est **fabriqué** (dans le sac ou en case d'outils). Vérifié dans le navigateur : après la fabrication, le tutoriel passe à « Fabrique un four ».
+
+## Tutoriel : étape « équiper l'outil » (Tour 133)
+
+- Nouvelle étape (groupe 2, entre « Fabrique ton premier outil » et « Fabrique un four » : 14 étapes au total) : **ranger l'outil dans la dernière case de la barre de raccourcis** (la case d'outils, 🛠, à droite). On le sélectionne dans le sac puis on clique la case, ou on le glisse dessus. L'étape est validée quand l'outil est en place et présent dans le sac.
+- L'étape précédente (fabriquer l'outil) reste validée dès que l'outil est dans le sac. Une partie en cours dont le tutoriel avait déjà passé l'outil se voit proposer cette étape (elle se valide d'elle-même si l'outil est déjà rangé).
+- Vérifié dans le navigateur : fabrication → « Équipe ton outil » → clic sur la case → « Fabrique un four ».
