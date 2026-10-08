@@ -216,7 +216,8 @@ export type MachineStatus =
   | 'noPower'
   | 'noSteam'
   | 'noWater'
-  | 'broken';
+  | 'broken'
+  | 'lowPressure';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -250,6 +251,9 @@ const GAP = 0.17;
 
 /** Intervalle (s) entre deux calculs de pression. */
 const PRESSURE_EVERY_S = 0.25;
+
+/** Part du combustible qu'il faut pour chauffer de l'eau déjà chaude. */
+const HOT_WATER_FUEL = 0.5;
 
 /** Part du débit de la pompe quand le réseau ne lui donne pas de courant. */
 export const PUMP_BACKUP = 0.2;
@@ -510,7 +514,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (isFluid(machine.type) && typeof m.fluid === 'object' && m.fluid !== null) {
       const f = m.fluid as Record<string, unknown>;
       const cap = machineDef(machine.type).fluidCap ?? 100;
-      for (const kind of ['water', 'steam'] as const) {
+      for (const kind of ['water', 'steam', 'hot'] as const) {
         const v = f[kind];
         if (isNum(v) && v > 0) machine.fluid[kind] = Math.min(cap, v);
       }
@@ -556,6 +560,7 @@ const MACHINE_TYPES: MachineType[] = [
   'mixer',
   'barreler',
   'booster',
+  'cooling_tower',
   'builder',
   'heavy_press',
   'washer',
@@ -1110,6 +1115,7 @@ export class Factory {
       if (r.fluid) {
         const have = m.fluid[r.fluid.kind];
         if (r.fluid.amount > 0 && have < r.fluid.amount) return 'noWater';
+        if (r.fluid.minBar && m.pressure < r.fluid.minBar) return 'lowPressure';
         if (r.fluid.amount < 0 && (def.fluidCap ?? 100) - have < -r.fluid.amount) return 'full';
       }
       if (def.consumesKw && this.powerFactor(m) <= 0) return 'noPower';
@@ -1138,6 +1144,7 @@ export class Factory {
       else if (isLab(m.type)) this.tickLab(m, dt);
       else if (m.type === 'pump') this.tickPump(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
+      else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
       else if (m.type === 'generator') this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
@@ -1343,6 +1350,7 @@ export class Factory {
     if (r.fluid) {
       // Remplir un baril puise l'eau de la machine ; le vider l'y verse (il faut de la place dans sa réserve).
       const have = m.fluid[r.fluid.kind];
+      if (r.fluid.minBar && m.pressure < r.fluid.minBar) return false;
       if (
         r.fluid.amount > 0 ? have < r.fluid.amount : (def.fluidCap ?? 100) - have < -r.fluid.amount
       )
@@ -1375,7 +1383,7 @@ export class Factory {
     if (def.consumesKw) {
       const speed = this.powerFactor(m);
       if (speed <= 0) return;
-      m.progress += dt * speed;
+      m.progress += dt * speed * this.coolingFactor(m, dt);
     } else {
       if (!this.fire(m)) return;
       this.burn(m, dt);
@@ -1570,16 +1578,47 @@ export class Factory {
     );
   }
 
+  /**
+   * Refroidissement actif : une machine qui a de l'eau froide et de la place pour rejeter l'eau chaude gagne le
+   * bonus de vitesse (+50 % pour le constructeur) ; l'eau est consommée et ressort chaude.
+   */
+  private coolingFactor(m: Machine, dt: number): number {
+    const def = machineDef(m.type);
+    if (!def.coolBoost || !def.coolLitersPerS) return 1;
+    const use = def.coolLitersPerS * dt;
+    if (m.fluid.water < use || (def.fluidCap ?? 100) - m.fluid.hot < use) return 1;
+    m.fluid.water -= use;
+    m.fluid.hot += use;
+    return 1 + def.coolBoost;
+  }
+
+  /** Tour de refroidissement : l'eau chaude qui arrive ressort froide, sans énergie. */
+  private tickCooler(m: Machine, dt: number): void {
+    const def = machineDef(m.type);
+    const moved = Math.min(
+      (def.coolRate ?? 20) * dt,
+      m.fluid.hot,
+      (def.fluidCap ?? 200) - m.fluid.water,
+    );
+    if (moved <= 0) return;
+    m.fluid.hot -= moved;
+    m.fluid.water += moved;
+  }
+
   /** Chaudière : transforme l'eau en vapeur tant qu'il y a du combustible et de la place pour la vapeur. */
   private tickBoiler(m: Machine, dt: number): void {
     const def = machineDef('boiler');
     const rate = def.boilRate ?? 60;
     const room = (def.fluidCap ?? 200) - m.fluid.steam;
-    const want = Math.min(rate * dt, m.fluid.water, room);
+    // L'eau chaude (rejetée par le refroidissement des machines) passe d'abord : elle coûte moitié moins de combustible.
+    const hot = Math.min(rate * dt, m.fluid.hot, room);
+    const cold = Math.min(rate * dt - hot, m.fluid.water, room - hot);
+    const want = hot + cold;
     if (want <= 1e-6 || !this.fire(m)) return;
-    m.fluid.water -= want;
+    m.fluid.hot -= hot;
+    m.fluid.water -= cold;
     m.fluid.steam += want;
-    this.burn(m, dt * (want / (rate * dt)));
+    this.burn(m, dt * ((cold + hot * HOT_WATER_FUEL) / (rate * dt)));
   }
 
   /** Laboratoire : a-t-il des paquets et une étude à mener ? */

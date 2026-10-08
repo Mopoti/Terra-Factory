@@ -65,6 +65,7 @@
         "machine_builder",
         "machine_pipe_2",
         "machine_booster",
+        "machine_cooling_tower",
         "machine_washer",
         "iron_ore_washed",
         "copper_ore_washed",

@@ -381,6 +381,8 @@ export function startGameView(
   const factory = new Factory(options.state.changes.machines, factoryWorld);
   const factoryView = new FactoryView(scene, factory);
   let simAcc = 0;
+  /** Tuyaux déjà signalés comme rompus (pour ne prévenir qu'une fois). */
+  const brokenSeen = new Set(factory.machines.filter((m) => m.broken).map((m) => m.id));
   let itemsTimer = 0;
   let chunkTimer = 0;
   let panelTimer = 0;
@@ -1229,6 +1231,8 @@ export function startGameView(
         v < 0.5 ? t('factory.fluid.empty') : `${Math.round(v)} / ${cap}`;
       if (m.type !== 'turbine')
         rows.push(`<div>${t('factory.fluid.water', { v: fmt(m.fluid.water) })}</div>`);
+      if (m.fluid.hot >= 0.5)
+        rows.push(`<div>${t('factory.fluid.hot', { v: fmt(m.fluid.hot) })}</div>`);
       if (m.type !== 'pump')
         rows.push(`<div>${t('factory.fluid.steam', { v: fmt(m.fluid.steam) })}</div>`);
       if (m.broken) rows.push(`<div class="warn">${t('factory.fluid.broken')}</div>`);
@@ -1238,7 +1242,7 @@ export function startGameView(
             ? `<div>${t('factory.fluid.bars', { v: m.pressure.toFixed(1), max: String(pipeMaxBar(m)) })}</div>`
             : `<div>${t('factory.fluid.bars.free', { v: m.pressure.toFixed(1) })}</div>`,
         );
-      } else if (m.fluid.water + m.fluid.steam > 0.5 && m.type !== 'turbine') {
+      } else if (m.fluid.water + m.fluid.steam + m.fluid.hot > 0.5 && m.type !== 'turbine') {
         rows.push(`<div class="sub">${t('factory.fluid.noPressure')}</div>`);
       }
       if (m.type === 'turbine') {
@@ -2775,6 +2779,14 @@ export function startGameView(
         options.state.addStudy(factory.takeLabPacks());
         for (const [item, n] of factory.takeProduced()) options.state.countProduced(item, n);
         simAcc -= 0.05;
+      }
+      for (const m of factory.machines) {
+        if (!m.broken) brokenSeen.delete(m.id);
+        else if (!brokenSeen.has(m.id)) {
+          brokenSeen.add(m.id);
+          playSfx('pipeBurst');
+          options.onMessage?.(t('factory.pipeBurst'));
+        }
       }
     }
     if (!paused) updateThreat(dt);

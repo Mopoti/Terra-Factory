@@ -1316,18 +1316,24 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     expect(p.stock).toEqual({ item: 'machine_pipe_3', count: 2 });
   });
 
-  it('la station de lavage : 2 minerais + 20 L d’eau → 3 minerais purifiés', () => {
-    const w = emptyMachine(1, 'washer', 8, 0, 0);
+  it('la station de lavage : 2 minerais + 20 L d’eau sous pression → 3 minerais purifiés', () => {
+    const w = emptyMachine(1, 'washer', 8, 3, 1);
     w.recipe = 'wash_iron';
     w.slots.push({ item: 'iron_ore', count: 2 });
-    const f = powered(w);
-    run(f, 3.2);
-    expect(f.status(w)).not.toBe('running'); // pas d'eau : rien n'a été lavé
+    const gen = emptyMachine(90, 'generator', 3, 3, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const pole = emptyMachine(91, 'pole', 6, 3, 0);
+    const dry = new Factory([w, gen, pole], makeWorld().world);
+    run(dry, 3.2);
+    expect(dry.status(w)).toBe('noWater');
     expect(w.stock).toBeNull();
-    w.fluid.water = 50;
-    run(f, 3.2);
+    const world: FactoryWorld = { ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 };
+    const f = new Factory(
+      [w, gen, pole, emptyMachine(2, 'pump', 8, -1, 0), emptyMachine(3, 'pipe', 8, 1, 0)],
+      world,
+    );
+    run(f, 8);
     expect(w.stock).toEqual({ item: 'iron_ore_washed', count: 3 });
-    expect(w.fluid.water).toBeCloseTo(30);
   });
 
   it('un tuyau de laiton remplace un tuyau de cuivre (amélioration sur place)', () => {
@@ -1605,5 +1611,55 @@ describe('pression (Bars) : friction, rupture, surpresseur', () => {
     expect(f.upgradeOf('pipe', 4, 4, 0, 1)?.id).toBe(1);
     pipe.broken = false;
     expect(f.upgradeOf('pipe', 4, 4, 0, 1)).toBeNull();
+  });
+});
+
+describe('refroidissement (6c)', () => {
+  const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 });
+  const plant = (cooled: boolean): { f: Factory; b: Machine; tower: Machine; boiler: Machine } => {
+    const b = emptyMachine(1, 'builder', 8, 3, 1); // eau côté -z (pipe en dessous), eau chaude côté +z
+    b.recipe = 'brass_pipe';
+    b.slots.push({ item: 'copper_ingot', count: 20 }, { item: 'zinc_ingot', count: 20 });
+    const gen = emptyMachine(90, 'generator', 3, 3, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const pole = emptyMachine(91, 'pole', 6, 3, 0);
+    const tower = emptyMachine(5, 'cooling_tower', 8, 7, 2); // entrée chaude derrière = côté +z du constructeur
+    const boiler = emptyMachine(6, 'boiler', 20, 20, 0);
+    const list = [b, gen, pole, tower, boiler];
+    if (cooled) list.push(emptyMachine(2, 'pump', 8, -1, 0), emptyMachine(3, 'pipe', 8, 1, 0));
+    return { f: new Factory(list, world()), b, tower, boiler };
+  };
+
+  it('l’eau froide sous pression donne +50 % de vitesse au constructeur et ressort chaude', () => {
+    const slow = plant(false);
+    run(slow.f, 12);
+    const fast = plant(true);
+    run(fast.f, 12);
+    const count = (m: Machine): number => m.stock?.count ?? 0;
+    expect(count(slow.b)).toBeGreaterThanOrEqual(10); // 2 s par cycle : 6 cycles = 12 tuyaux
+    expect(count(fast.b)).toBeGreaterThan(count(slow.b));
+  });
+
+  it('une tour de refroidissement rend de l’eau froide à partir de l’eau chaude', () => {
+    const { f, tower } = plant(true);
+    tower.fluid.hot = 100;
+    run(f, 3);
+    expect(tower.fluid.hot).toBeLessThan(100);
+    expect(tower.fluid.water).toBeGreaterThan(0);
+  });
+
+  it('une chaudière brûle moitié moins de combustible avec de l’eau chaude', () => {
+    const hot = emptyMachine(1, 'boiler', 9, 5, 1);
+    hot.fluid.hot = 100;
+    hot.fuel = { item: 'coal', count: 20 };
+    const cold = emptyMachine(2, 'boiler', 9, 5, 1);
+    cold.fluid.water = 100;
+    cold.fuel = { item: 'coal', count: 20 };
+    const a = new Factory([hot], world());
+    const b = new Factory([cold], world());
+    run(a, 1);
+    run(b, 1);
+    expect(hot.fluid.steam).toBeCloseTo(cold.fluid.steam);
+    expect(hot.fuelLeft).toBeGreaterThan(cold.fuelLeft);
   });
 });

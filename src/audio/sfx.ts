@@ -24,6 +24,7 @@ export type SfxId =
   | 'placeStone'
   | 'placeStairs'
   | 'demolish'
+  | 'pipeBurst'
   | 'craft'
   | 'doorOpen'
   | 'doorClose'
@@ -263,6 +264,14 @@ const RECIPES: Record<SfxId, Recipe> = {
       { at: 0.06, dur: 0.12, vol: 0.4, freq: 210, freqEnd: 110 },
     ],
     minGap: 0.04,
+  },
+  pipeBurst: {
+    noise: [
+      { dur: 0.15, vol: 0.5, filter: 'lowpass', freq: 900, freqEnd: 200 },
+      { at: 0.05, dur: 0.9, vol: 0.3, filter: 'highpass', freq: 3500, freqEnd: 2500 },
+    ],
+    tones: [{ dur: 0.18, vol: 0.35, freq: 160, freqEnd: 55 }],
+    minGap: 0.5,
   },
   demolish: {
     noise: [

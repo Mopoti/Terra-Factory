@@ -342,6 +342,10 @@
       "fuel": false,
       "consumesKw": 40,
       "stockMax": 100,
+      "fluidCap": 100,
+      "startBar": 2,
+      "coolBoost": 0.5,
+      "coolLitersPerS": 4,
       "height": 1.0
     },
     {
@@ -378,6 +382,18 @@
       "fluidCap": 50,
       "boostBar": 2,
       "height": 1.0
+    },
+    {
+      "id": "cooling_tower",
+      "w": 3,
+      "d": 3,
+      "item": "machine_cooling_tower",
+      "color": "#8a9aa6",
+      "fuel": false,
+      "fluidCap": 200,
+      "startBar": 2,
+      "coolRate": 20,
+      "height": 1.5
     },
     {
       "id": "boiler",

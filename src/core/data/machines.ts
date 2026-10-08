@@ -11,6 +11,7 @@ export type MachineType =
   | 'mixer'
   | 'barreler'
   | 'booster'
+  | 'cooling_tower'
   | 'builder'
   | 'heavy_press'
   | 'washer'
@@ -68,6 +69,11 @@ export interface MachineDef {
   fluidCap?: number;
   /** Pression de départ (bar) d'une pompe (eau) ou d'une chaudière (vapeur). */
   startBar?: number;
+  /** Refroidissement à l'eau : bonus de vitesse (0,5 = +50 %) et eau consommée (L/s). */
+  coolBoost?: number;
+  coolLitersPerS?: number;
+  /** Tour de refroidissement : eau chaude refroidie par seconde. */
+  coolRate?: number;
   /** Surpresseur : pression ajoutée (bar) à sa sortie. */
   boostBar?: number;
   /** Tuyaux : pression maximale (bar) et perte de charge (bar par tuile) à chaque palier. */
@@ -147,7 +153,9 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'turbine' ||
   type === 'barreler' ||
   type === 'washer' ||
-  type === 'booster';
+  type === 'booster' ||
+  type === 'cooling_tower' ||
+  type === 'builder';
 
 /** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
 export const isLinear = (type: MachineType): boolean => type === 'conveyor' || type === 'pipe';
@@ -162,6 +170,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'pipe' ||
     type === 'pump' ||
     type === 'booster' ||
+    type === 'cooling_tower' ||
     type === 'turbine'
   );
 

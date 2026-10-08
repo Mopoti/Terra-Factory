@@ -734,6 +734,17 @@
       }
     },
     {
+      "id": "machine_cooling_tower",
+      "weightKg": 40,
+      "volumeL": 60,
+      "color": "#8a9aa6",
+      "recipe": {
+        "iron_plate": 12,
+        "iron_gear": 4,
+        "stone": 10
+      }
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

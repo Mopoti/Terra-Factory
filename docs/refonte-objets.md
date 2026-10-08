@@ -255,4 +255,12 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Paliers de tuyaux** : cuivre T1 **5 bar max**, −0,1 bar/tuile ; laiton T2 **20 bar**, −0,05 ; acier T3 **50 bar**, −0,02. Un tunnel de tuyau compte autant de tuiles que sa longueur.
 - **Rupture** : un tuyau qui dépasse son maximum se **rompt** (rouge sombre, état « Rompu ») : il se vide, ne laisse rien passer et coupe la pression en aval. **Réparation** : poser un tuyau neuf du même palier (ou supérieur) par-dessus ; le tuyau rompu est jeté, pas rendu. Conséquence : la **vapeur (8 bar) exige du laiton** dès la sortie de la chaudière (chaudière collée à la turbine : aucun tuyau, aucun problème).
 - **Surpresseur T2** (`booster`, 2×2, 30 kW, 6 plaques de fer + 4 engrenages + 6 fils + 4 lingots de cuivre ; technologie Fabrication T2) : le fluide entre derrière et sort devant avec **+2 bar** ; sans courant il laisse passer sans rien ajouter. Attention : la pression ajoutée peut rompre des tuyaux de cuivre trop proches de leur maximum.
-- Non fait : la rupture d'un tuyau n'émet ni son ni particules ; la pression ne module pas le débit (seul le seuil 0 bar compte) ; fuite de l'eau sans effet sur le sol.
+- **Rupture visible** (Tour 99) : gerbe de vapeur blanche avec étincelles orangées pendant 1,5 s, puis jet continu qui siffle ; bruit d'éclatement et message « Un tuyau vient d'éclater ». Non fait : la pression ne module pas le débit (seul le seuil 0 bar compte).
+
+### 6.3 Point 6c : refroidissement à l'eau, eau chaude, eau sous pression (Tour 99)
+
+- **Nouveau fluide : l'eau chaude** (orange dans les tuyaux). Un tuyau ne porte toujours qu'un fluide à la fois.
+- **Refroidissement actif** : le **constructeur T2** a une entrée d'eau froide (côté gauche) et une sortie d'eau chaude (côté droit). Quand il travaille avec au moins 4 L d'eau par seconde et de la place pour rejeter l'eau chaude, sa vitesse passe à **+50 %**. Sans eau, il travaille à vitesse normale. (Le four électrique T3 du document n'existe pas encore : il reprendra le même mécanisme, champs `coolBoost` / `coolLitersPerS`.)
+- **Tour de refroidissement T2** (`cooling_tower`, 3×3, sans énergie ; 12 plaques de fer + 4 engrenages + 10 pierre ; technologie Fabrication T2) : l'eau chaude entre derrière, ressort froide devant, 20 L/s.
+- **Chaudière** : accepte l'eau chaude par ses côtés (comme l'eau) et la chauffe en premier avec **moitié moins de combustible**.
+- **Eau sous pression pour le lavage** : les recettes de la station de lavage exigent **2 bar** au moins (`minBar`) ; état « Pression insuffisante » sinon.

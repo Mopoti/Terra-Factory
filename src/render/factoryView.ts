@@ -186,6 +186,8 @@ export class FactoryView {
     }),
   );
   private ghostKey = '';
+  /** Instant (s) où chaque tuyau rompu a été vu pour la première fois (gerbe de vapeur). */
+  private readonly burstAt = new Map<number, number>();
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -269,6 +271,33 @@ export class FactoryView {
     const PER = 7;
     const pos: number[] = [];
     const col: number[] = [];
+    // Tuyaux rompus : explosion de vapeur au début (gerbe rapide), puis jet continu qui siffle par la fissure.
+    const live = new Set<number>();
+    for (const m of this.factory.machines) {
+      if (m.type !== 'pipe' || !m.broken) continue;
+      live.add(m.id);
+      const since = time - (this.burstAt.get(m.id) ?? (this.burstAt.set(m.id, time), time));
+      const cx = (m.gx + 1) * CELL_SIZE_M;
+      const cz = (m.gz + 1) * CELL_SIZE_M;
+      const N = since < 1.5 ? 22 : 9;
+      for (let i = 0; i < N; i++) {
+        const t = (time * (since < 1.5 ? 1.6 : 0.8) + i / N + m.id * 0.31) % 1;
+        const a = i * 2.399 + m.id;
+        const spread = (since < 1.5 ? 0.9 : 0.35) * t;
+        pos.push(
+          cx + Math.cos(a) * spread,
+          0.35 + t * (since < 1.5 ? 2.6 : 1.7),
+          cz + Math.sin(a) * spread,
+        );
+        // Vapeur blanche, quelques étincelles orangées au début.
+        if (since < 1.5 && i % 5 === 0) col.push(1, 0.55 - 0.3 * t, 0.15);
+        else {
+          const g = 1 - 0.3 * t;
+          col.push(g, g, g);
+        }
+      }
+    }
+    for (const id of [...this.burstAt.keys()]) if (!live.has(id)) this.burstAt.delete(id);
     for (const m of this.factory.machines) {
       if (m.type !== 'turbine') continue;
       const power = this.factory.turbineEfficiency(m);
@@ -327,9 +356,14 @@ export class FactoryView {
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
     for (const m of this.factory.machines) {
       if (m.type !== 'pipe') continue;
-      const amount = m.fluid.water + m.fluid.steam;
+      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot;
       if (amount < 1) continue;
-      const color = m.fluid.water >= m.fluid.steam ? hexToRgb('#3fa9f5') : hexToRgb('#f2f5f7');
+      const color =
+        m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
+          ? hexToRgb('#f08a3a')
+          : m.fluid.water >= m.fluid.steam
+            ? hexToRgb('#3fa9f5')
+            : hexToRgb('#f2f5f7');
       mb.box(
         center(m.gx),
         0.2,
@@ -642,6 +676,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   mixer: 1.0,
   barreler: 1.0,
   booster: 1.0,
+  cooling_tower: 1.5,
   builder: 1.0,
   heavy_press: 1.2,
   washer: 1.0,
@@ -940,6 +975,14 @@ function addMachineBody(
     mb.box(x, 0.2, z, 0.2, 0.6, 0.2, color, true);
     mb.box(x, 0.7, z, 0.6, 0.08, 0.1, hexToRgb('#3d3a38'), true);
     mb.box(x + 0.28, 0.5, z, 0.08, 0.28, 0.08, hexToRgb('#3d3a38'), true);
+    return;
+  }
+  if (type === 'cooling_tower') {
+    // Tour de refroidissement : socle, fût évasé (deux blocs) et couronne claire.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
+    mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
+    mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
     return;
   }
   if (type === 'booster') {

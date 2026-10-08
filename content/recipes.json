@@ -216,7 +216,8 @@
       },
       "fluid": {
         "kind": "water",
-        "amount": 20
+        "amount": 20,
+        "minBar": 2
       },
       "seconds": 3
     },
@@ -231,7 +232,8 @@
       },
       "fluid": {
         "kind": "water",
-        "amount": 20
+        "amount": 20,
+        "minBar": 2
       },
       "seconds": 3
     },
@@ -246,7 +248,8 @@
       },
       "fluid": {
         "kind": "water",
-        "amount": 20
+        "amount": 20,
+        "minBar": 2
       },
       "seconds": 3
     },

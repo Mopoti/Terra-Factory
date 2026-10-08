@@ -632,6 +632,8 @@ export function mountMachineWindow(
         current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
       ),
     );
+    if (machineDef(m.type).coolBoost)
+      rows.append(el('div', 'mach-info', t('machine.cooling.help')));
     if (m.type === 'crank') {
       const note = el('div', 'mach-info', t('machine.crank.help'));
       const out = el('div', 'mach-info');

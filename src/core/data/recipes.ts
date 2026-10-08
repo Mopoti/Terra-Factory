@@ -22,7 +22,7 @@ export interface Recipe {
   /** Durée d'un cycle (s). */
   seconds: number;
   /** Fluide de la recette : `amount` > 0 est puisé dans la machine, < 0 y est versé (remplisseuse de barils). */
-  fluid?: { kind: 'water' | 'steam'; amount: number };
+  fluid?: { kind: 'water' | 'steam'; amount: number; minBar?: number };
   /** Moule exigé (estampeuse). */
   mould?: string;
 }
