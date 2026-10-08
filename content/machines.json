@@ -273,6 +273,7 @@
       "fuel": false,
       "consumesKw": 30,
       "craftSeconds": 6,
+      "slots": 4,
       "stockMax": 20,
       "height": 1.0,
       "pollution": 0.1,

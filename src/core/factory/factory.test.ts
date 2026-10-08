@@ -601,7 +601,7 @@ describe('assembleur', () => {
 describe('laboratoire', () => {
   const lab = (): Machine => {
     const m = emptyMachine(1, 'lab', 10, 10, 0);
-    m.input = { item: 'science_pack', count: 5 };
+    m.slots.push({ item: 'science_pack', count: 5 });
     return m;
   };
   const power = (m: Machine): Factory => {
@@ -615,11 +615,11 @@ describe('laboratoire', () => {
     const f = power(m);
     f.labDemand = 0;
     run(f, 7);
-    expect(m.input?.count).toBe(5); // rien à étudier
+    expect(m.slots[0]?.count).toBe(5); // rien à étudier
     f.labDemand = 3;
     run(f, 13);
     expect(f.takeLabPacks()).toBe(2);
-    expect(m.input?.count).toBe(3);
+    expect(m.slots[0]?.count).toBe(3);
     expect(f.takeLabPacks()).toBe(0);
     const g = new Factory([lab()], makeWorld().world);
     g.labDemand = 3;
@@ -639,7 +639,7 @@ describe('laboratoire', () => {
     expect(belt.belt).toHaveLength(1);
     belt.belt[0].item = 'science_pack';
     run(f, 0.5);
-    expect(m.input?.count).toBe(1);
+    expect(m.slots[0]?.count).toBe(1);
   });
 });
 
@@ -670,7 +670,7 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     // De la demande électrique : plusieurs laboratoires alimentés.
     for (let i = 0; i < 3; i++) {
       const lab = emptyMachine(60 + i, 'lab', 16, 8 + 5 * i, 0);
-      lab.input = { item: 'science_pack', count: 20 };
+      lab.slots.push({ item: 'science_pack', count: 20 });
       list.push(lab);
     }
     const f = new Factory(list, world());
@@ -1185,7 +1185,7 @@ describe('roue à aubes (tier 0)', () => {
     const wheel = emptyMachine(1, 'waterwheel', 10, 0, 0);
     const pole = emptyMachine(2, 'pole', 14, 0, 0);
     const lamp = emptyMachine(3, 'lab', 17, 0, 0);
-    lamp.input = { item: 'science_pack', count: 5 };
+    lamp.slots.push({ item: 'science_pack', count: 5 });
     const f = new Factory([wheel, pole, lamp], world());
     f.labDemand = 5;
     run(f, 1);
@@ -1804,14 +1804,14 @@ describe('raffinerie et plastique (7c)', () => {
 describe('câble isolé, puce et paquet T3 (7d)', () => {
   it('un paquet de science T3 vaut 3 études au laboratoire', () => {
     const lab = emptyMachine(1, 'lab', 8, 0, 0);
-    lab.input = { item: 'science_pack_3', count: 2 };
+    lab.slots.push({ item: 'science_pack_3', count: 2 });
     const gen = emptyMachine(90, 'generator', 0, 0, 0);
     gen.fuel = { item: 'coal', count: 20 };
     const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), lab], makeWorld().world);
     f.labDemand = 10;
     run(f, 7);
     expect(f.takeLabPacks()).toBe(3);
-    expect(lab.input?.count).toBe(1);
+    expect(lab.slots[0]?.count).toBe(1);
     expect(f.labDemand).toBe(7);
   });
 
@@ -1820,5 +1820,42 @@ describe('câble isolé, puce et paquet T3 (7d)', () => {
     expect(itemById('cable_insulated').yield).toBe(4);
     expect(itemById('silicon_chip').recipe).toEqual({ silicon_raw: 1, copper_wire: 2 });
     expect(itemById('science_pack_3').recipe).toEqual({ silicon_chip: 1, cable_insulated: 1 });
+  });
+});
+
+describe('laboratoire à plusieurs emplacements', () => {
+  const lab = (): { f: Factory; l: Machine } => {
+    const l = emptyMachine(1, 'lab', 8, 0, 0);
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    return { f: new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), l], makeWorld().world), l };
+  };
+
+  it('4 emplacements de 20 paquets, de types différents ; les autres objets sont refusés', () => {
+    const { l } = lab();
+    expect(chestPut(l, 'science_pack', 50)).toBe(50); // 20 + 20 + 10 : trois emplacements
+    expect(chestPut(l, 'science_pack_3', 5)).toBe(5); // le quatrième
+    expect(chestPut(l, 'iron_ingot', 5)).toBe(0);
+    expect(chestPut(l, 'science_pack', 50)).toBe(10); // il ne reste que 10 de place
+    expect(chestRoom(l, 'science_pack_3')).toBe(15);
+  });
+
+  it('il use d’abord le paquet le moins précieux', () => {
+    const { f, l } = lab();
+    chestPut(l, 'science_pack_3', 2);
+    chestPut(l, 'science_pack', 1);
+    f.labDemand = 10;
+    run(f, 6.5);
+    expect(l.slots.map((s) => s.item)).toEqual(['science_pack_3']);
+    run(f, 6.5);
+    expect(f.takeLabPacks()).toBe(1 + 3);
+  });
+
+  it('un laboratoire d’une ancienne sauvegarde garde ses paquets', () => {
+    const [m] = normalizeMachines([
+      { id: 1, type: 'lab', gx: 0, gz: 0, rot: 0, input: { item: 'science_pack', count: 7 } },
+    ]);
+    expect(m.slots).toEqual([{ item: 'science_pack', count: 7 }]);
+    expect(m.input).toBeNull();
   });
 });

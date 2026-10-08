@@ -13,7 +13,7 @@ import {
   type Stack,
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
-import { TECHS, isSciencePack, scienceCost, techById, techFor } from '../data/techs';
+import { TECHS, scienceCost, techById, techFor } from '../data/techs';
 import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
@@ -1077,7 +1077,6 @@ export class GameState {
     if (
       slot === 'input' &&
       !(isSmith(m.type) && !!item && recipeById(m.recipe)?.mould === item) &&
-      !(m.type === 'lab' && isSciencePack(item)) &&
       !(m.type === 'turret' && item === 'magazine')
     )
       return 0;

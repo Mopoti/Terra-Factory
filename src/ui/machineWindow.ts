@@ -1,7 +1,6 @@
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
-import { isSciencePack } from '../core/data/techs';
-import { isAssembler, isChest, isDrill, isSmith, machineDef } from '../core/data/machines';
+import { isAssembler, isChest, isDrill, isLab, isSmith, machineDef } from '../core/data/machines';
 import {
   MOULD_CYCLES,
   recipeById,
@@ -111,7 +110,6 @@ export function mountMachineWindow(
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
     (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
-    (slot === 'input' && m.type === 'lab' && isSciencePack(item)) ||
     (slot === 'input' && m.type === 'turret' && item === 'magazine');
 
   function drop(m: Machine, slot: SlotName, item: string): void {
@@ -231,7 +229,7 @@ export function mountMachineWindow(
   function quickLoad(m: Machine, item: string, count: number): void {
     const max = machineDef(m.type).stockMax ?? 100;
     let moved = 0;
-    if (isChest(m.type)) moved = state.putInChest(m, item, count);
+    if (isChest(m.type) || isLab(m.type)) moved = state.putInChest(m, item, count);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
       moved = state.loadIngredient(m, item, count);
     else {
@@ -648,7 +646,11 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
-    if (isChest(m.type)) rows.append(chestGrid(m), el('small', 'help', t('machine.chestHint')));
+    if (isChest(m.type) || isLab(m.type))
+      rows.append(
+        chestGrid(m),
+        el('small', 'help', t(isLab(m.type) ? 'machine.labHint' : 'machine.chestHint')),
+      );
     if (def.fuel || m.id < 0) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));
@@ -673,7 +675,6 @@ export function mountMachineWindow(
         );
       }
     }
-    if (m.type === 'lab') rows.append(machineSlot(m, 'input', t('machine.packs'), m.input));
     if (m.type === 'turret') rows.append(machineSlot(m, 'input', t('machine.magazines'), m.input));
     if (isDrill(m.type) || isSmith(m.type) || isAssembler(m.type)) {
       rows.append(

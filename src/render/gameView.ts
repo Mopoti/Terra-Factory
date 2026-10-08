@@ -1271,7 +1271,10 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.lab.target', { v: id ? `${t(`tech.${id}` as TranslationKey)} (${options.state.changes.progress[id] ?? 0} / ${scienceCost(techById(id))})` : t('factory.lab.none') })}</div>`,
       );
-      rows.push(`<div>${t('factory.lab.packs', { v: stackText(m.input, def.stockMax) })}</div>`);
+      const packs = m.slots.map((s) => `${t(`item.${s.item}` as TranslationKey)} ${s.count}`);
+      rows.push(
+        `<div>${t('factory.lab.packs', { v: packs.length > 0 ? packs.join(' · ') : t('factory.empty') })}</div>`,
+      );
     } else if (isAssembler(m.type)) {
       const need = recipeOf(m);
       rows.push(
@@ -2776,7 +2779,7 @@ export function startGameView(
       // Un laboratoire qui a des paquets mais pas d'étude choisie lance la première technologie disponible.
       if (
         !options.state.changes.researching &&
-        factory.machines.some((m) => m.type === 'lab' && (m.input?.count ?? 0) > 0)
+        factory.machines.some((m) => m.type === 'lab' && factory.hasPacks(m))
       ) {
         const id = options.state.autoStudy();
         if (id)

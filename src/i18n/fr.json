@@ -758,6 +758,7 @@
   "item.cable_insulated": "Câble isolé",
   "item.silicon_chip": "Puce en silicium",
   "item.science_pack_3": "Paquet de science T3",
+  "machine.labHint": "4 emplacements de paquets de science (piles de 20), de types différents : le laboratoire use d’abord le paquet le moins précieux.",
   "tech.steam": "Vapeur",
   "factory.status.noSteam": "Pression de vapeur insuffisante",
   "factory.status.noWater": "Pas d'eau",

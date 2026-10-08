@@ -170,11 +170,17 @@ export const ingredientCap = (need: number): number => Math.max(10, need * 4);
 /** Taille d'une pile dans un coffre. */
 export const CHEST_STACK = 100;
 
-/** Combien d'unités de cet objet le coffre peut encore recevoir. */
+/** Taille d'une pile : 100 dans un coffre, `stockMax` (20) dans un laboratoire. */
+export const stackLimit = (m: Machine): number =>
+  isLab(m.type) ? (machineDef(m.type).stockMax ?? 20) : CHEST_STACK;
+
+/** Combien d'unités de cet objet le coffre (ou le laboratoire : paquets de science seulement) peut encore recevoir. */
 export function chestRoom(m: Machine, item: string): number {
+  if (isLab(m.type) && !isSciencePack(item)) return 0;
   const cap = machineDef(m.type).slots ?? 0;
-  let room = Math.max(0, cap - m.slots.length) * CHEST_STACK;
-  for (const s of m.slots) if (s.item === item) room += CHEST_STACK - s.count;
+  const limit = stackLimit(m);
+  let room = Math.max(0, cap - m.slots.length) * limit;
+  for (const s of m.slots) if (s.item === item) room += limit - s.count;
   return room;
 }
 
@@ -184,13 +190,13 @@ export function chestPut(m: Machine, item: string, count: number): number {
   const stored = left;
   for (const s of m.slots) {
     if (left <= 0) break;
-    if (s.item !== item || s.count >= CHEST_STACK) continue;
-    const n = Math.min(left, CHEST_STACK - s.count);
+    if (s.item !== item || s.count >= stackLimit(m)) continue;
+    const n = Math.min(left, stackLimit(m) - s.count);
     s.count += n;
     left -= n;
   }
   while (left > 0) {
-    const n = Math.min(left, CHEST_STACK);
+    const n = Math.min(left, stackLimit(m));
     m.slots.push({ item, count: n });
     left -= n;
   }
@@ -483,7 +489,8 @@ export function normalizeMachines(raw: unknown): Machine[] {
     );
     machine.fuelLeft = isNum(m.fuelLeft) && m.fuelLeft > 0 ? m.fuelLeft : 0;
     machine.fuel = normalizeStack(m.fuel);
-    machine.input = normalizeStack(m.input);
+    machine.input = isLab(machine.type) ? null : normalizeStack(m.input);
+    const oldPacks = isLab(machine.type) ? normalizeStack(m.input) : null;
     machine.stock = normalizeStack(m.stock);
     machine.extra = isSmith(machine.type) ? normalizeStack(m.extra) : null;
     if (Array.isArray(m.filters)) {
@@ -533,19 +540,25 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (typeof m.recipe === 'string' && isSmith(machine.type)) {
       if (recipeById(m.recipe)?.machine === machine.type) machine.recipe = m.recipe;
     }
+    if (oldPacks && isSciencePack(oldPacks.item) && machine.slots.length === 0)
+      machine.slots.push({ ...oldPacks, count: Math.min(oldPacks.count, stackLimit(machine)) });
     machine.broken = m.broken === true && machine.type === 'pipe';
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
-      (isChest(machine.type) || isAssembler(machine.type) || isSmith(machine.type))
+      (isChest(machine.type) ||
+        isLab(machine.type) ||
+        isAssembler(machine.type) ||
+        isSmith(machine.type))
     ) {
       for (const st of m.slots) {
         const stack = normalizeStack(st);
-        if (stack) machine.slots.push({ ...stack, count: Math.min(stack.count, CHEST_STACK) });
+        if (stack)
+          machine.slots.push({ ...stack, count: Math.min(stack.count, stackLimit(machine)) });
       }
       machine.slots.length = Math.min(
         machine.slots.length,
-        isChest(machine.type) ? (machineDef(machine.type).slots ?? 0) : 8,
+        isChest(machine.type) || isLab(machine.type) ? (machineDef(machine.type).slots ?? 0) : 8,
       );
     }
     out.push(machine);
@@ -1098,7 +1111,7 @@ export class Factory {
     if (isTurret(m.type)) return this.turretReady(m) ? 'idle' : 'noAmmo';
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
-      if ((m.input?.count ?? 0) > 0 && this.labDemand <= 0) return 'noStudy';
+      if (this.hasPacks(m) && this.labDemand <= 0) return 'noStudy';
       return this.labWorking(m) ? 'running' : 'idle';
     }
     if (isArm(m.type)) {
@@ -1476,12 +1489,7 @@ export class Factory {
       return (
         item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
       );
-    if (isLab(target.type))
-      return (
-        isSciencePack(item) &&
-        (!target.input || target.input.item === item) &&
-        (target.input?.count ?? 0) < (machineDef(target.type).stockMax ?? 20)
-      );
+    if (isLab(target.type)) return chestRoom(target, item) > 0;
     return false;
   }
 
@@ -1542,7 +1550,8 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
-    else if (isLab(target.type) || isTurret(target.type)) {
+    else if (isLab(target.type)) chestPut(target, item, 1);
+    else if (isTurret(target.type)) {
       if (target.input) target.input.count++;
       else target.input = { item, count: 1 };
     } else if (isAssembler(target.type)) {
@@ -1711,7 +1720,12 @@ export class Factory {
 
   /** Laboratoire : a-t-il des paquets et une étude à mener ? */
   private labWorking(m: Machine): boolean {
-    return (m.input?.count ?? 0) > 0 && this.labDemand > 0;
+    return this.hasPacks(m) && this.labDemand > 0;
+  }
+
+  /** Le laboratoire a-t-il au moins un paquet dans l'un de ses emplacements ? */
+  hasPacks(m: Machine): boolean {
+    return m.slots.some((s) => s.count > 0);
   }
 
   private tickLab(m: Machine, dt: number): void {
@@ -1724,10 +1738,12 @@ export class Factory {
     const seconds = machineDef(m.type).craftSeconds ?? 6;
     if (m.progress < seconds) return;
     m.progress -= seconds;
-    const value = m.input ? packValue(m.input.item) : 1;
-    if (m.input) {
-      m.input.count--;
-      if (m.input.count <= 0) m.input = null;
+    // On use d'abord le paquet le moins précieux (un paquet T3 ne sert pas tant qu'il reste des T1).
+    const stack = [...m.slots].sort((a, b) => packValue(a.item) - packValue(b.item))[0];
+    const value = stack ? packValue(stack.item) : 1;
+    if (stack) {
+      stack.count--;
+      if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
     }
     this.labDemand -= value;
     this.labDone += value;

@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 104** : laboratoire à 4 emplacements de paquets (piles de 20, types différents, paquet le moins précieux d'abord), migration des anciennes sauvegardes. Prépare le tableau type×tier (recherches à plusieurs types de paquets).
 - **Tour 103** : point 7d : câble isolé, puce en silicium (recette provisoire), paquet de science T3 (vaut 3 études au labo, provisoire). Point 7 terminé. Reste : 8 ennemis, 10 tutoriel/UX, 11 fin de partie, 12 multiplateforme, temps de fabrication à la main, tableau type×tier + paquets T2/T4.
 - **Tour 102** : point 7c : fluide polymère, raffinerie T3 (pétrole ≥ 8 bar → polymère), presse à plastique T3 (20 L → 4 isolants), technologie Plastique T3. Reste : 7d câble isolé + puce + paquet T3, puis 8, 10, 11, 12.
 - **Tour 101** : point 7b : gisements de pétrole (≥ 500 m, liquides), fluide pétrole, chevalet de pompage T3 (1 L/s, 4 bar), barils de pétrole. Reste : 7c raffinerie/plastique, 7d câble isolé + paquet T3 (puce en silicium), puis 8, 10, 11, 12.

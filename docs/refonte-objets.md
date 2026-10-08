@@ -298,3 +298,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Puce en silicium** (recette provisoire du PO à confirmer) : 1 silicium brut + 2 fils de cuivre → 1 puce (technologie Silicium T3).
 - **Paquet de science T3** : 1 puce en silicium + 1 câble isolé → 1 paquet (comme le tableau du §1.3). Le laboratoire l'accepte (un seul type de paquet à la fois dans sa case) et **1 paquet T3 compte pour 3 études** : valeur provisoire en attendant le tableau type × tier (technologies qui exigent chacune leur paquet).
 - Point 7 terminé. Reste à faire : paquets T2 (plaque d'acier + tuyau de laiton) et T4, tableau type × tier.
+
+### 7.5 Laboratoire à plusieurs emplacements (Tour 104)
+
+- Demande du PO : le laboratoire a **plusieurs emplacements** pour des piles de paquets, et les piles peuvent être de **types différents** (plus tard, des recherches demanderont plusieurs types de paquets à la fois).
+- **4 emplacements**, piles de **20** ; seuls les paquets de science y entrent (à la main, par tapis ou bras). Même fenêtre qu'un coffre (glisser, clic, Maj + clic).
+- Pour l'instant une étude consomme **un paquet par cycle, le moins précieux d'abord** (un paquet T3 ne sert pas tant qu'il reste des T1) ; le tableau type × tier remplacera cette règle par les besoins de chaque recherche.
+- Les anciennes sauvegardes gardent leurs paquets (l'ancienne case unique passe dans le premier emplacement).

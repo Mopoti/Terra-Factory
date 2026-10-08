@@ -758,6 +758,7 @@
   "item.cable_insulated": "Insulated cable",
   "item.silicon_chip": "Silicon chip",
   "item.science_pack_3": "Science pack T3",
+  "machine.labHint": "4 science pack slots (stacks of 20), of different types: the lab uses the least valuable pack first.",
   "tech.steam": "Steam",
   "factory.status.noSteam": "Steam pressure too low",
   "factory.status.noWater": "No water",
