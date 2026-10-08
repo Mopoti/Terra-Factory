@@ -60,3 +60,9 @@
 - `public/models/nature/pebbles.gltf` + `pebbles.bin` : tas de cailloux, cuit en couleurs par sommet et fusionné au décor ; remplace les deux octaèdres des rochers.
 - `src/render/nature.ts` charge le tout en arrière-plan ; les chunks déjà construits sont refaits quand c'est prêt. Sans fichier, les anciennes formes simples servent de secours. L'aura de transparence du décor s'applique aussi au feuillage.
 - Non utilisés pour l'instant : les autres objets de la scène (autres conifères, buissons, herbes, tas de feuilles).
+
+## Pioche : piolet (Tour 146)
+- **Source** (fournie par le PO) : « Ice climbing pick » (FBX, 3 438 sommets, textures PBR). **Licence non précisée** : à vérifier comme pour les arbres.
+- `public/models/tool/icepick.glb` : converti depuis le FBX, texture de couleur réduite à 512 px (les cartes normale/rugosité/métal, très lourdes, ne sont pas reprises). Modèle redressé et mis à 0,75 m, manche vers soi, pointe vers l'avant (`src/render/toolModel.ts`).
+- Il remplace la pioche en boîtes tenue en main (1re personne) et portée par le personnage ; l'outil en pierre est teinté brun, l'outil en fer garde les couleurs d'origine. Sans fichier, les formes simples servent de secours.
+- Le style (piolet moderne noir et orange) détonne avec le reste ; à remplacer par un outil de pierre/fer plus rustique quand on en trouvera un.

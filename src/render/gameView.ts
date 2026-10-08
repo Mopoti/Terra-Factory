@@ -118,6 +118,7 @@ import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import { loadModels } from './models';
 import { loadNature } from './nature';
+import { loadPickModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -252,8 +253,12 @@ export function startGameView(
   const metal = new THREE.MeshStandardMaterial({ color: 0xa9b2bb });
   const stoneHead = new THREE.MeshStandardMaterial({ color: 0x8a8f98 });
   const toolHeads: THREE.Mesh[] = [];
+  const tools: THREE.Group[] = [];
+  /** Modèle de la pioche (piolet) une fois chargé : teinté selon le matériau de l'outil. */
+  const pickMaterials: THREE.MeshStandardMaterial[] = [];
   function makeTool(): THREE.Group {
     const tool = new THREE.Group();
+    tools.push(tool);
     const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), handle);
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.1), metal);
     head.position.z = 0.32;
@@ -264,6 +269,18 @@ export function startGameView(
     });
     return tool;
   }
+  /** Remplace les formes simples de chaque outil par le piolet 3D (long d'environ 0,75 m, tête vers +z). */
+  void loadPickModel().then((model) => {
+    if (!model || !viewAlive) return;
+    for (const tool of tools) {
+      for (const child of [...tool.children]) tool.remove(child);
+      toolHeads.length = 0;
+      const pick = model.clone();
+      const material = (pick.getObjectByProperty('isMesh', true) as THREE.Mesh).material;
+      pickMaterials.push(material as THREE.MeshStandardMaterial);
+      tool.add(pick);
+    }
+  });
   const hand = makeTool();
   // En main, la tête de la pioche est loin devant (vers -z de la caméra), le manche vers soi.
   hand.position.set(0.34, -0.36, -0.85);
@@ -3025,6 +3042,7 @@ export function startGameView(
     const usingTool = interaction.working === 'tool' && !armedNow;
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
+    for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
     hand.visible = rig.view === 'first' && views.first.showHands && usingTool;
     bodyTool.visible = rig.view !== 'first' && usingTool;
     bareHand.visible = rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
