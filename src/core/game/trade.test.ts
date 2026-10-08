@@ -26,9 +26,8 @@ describe('comptoir spatial', () => {
     expect(earned).toBe(10 * sellPrice('iron_ore'));
     expect(s.inventory.iron_ore).toBe(90);
     expect(s.changes.credits).toBe(earned);
-    const bought = s.buyItem('uraninite', 1000);
-    expect(bought).toBeLessThan(1000);
-    expect(s.changes.credits).toBeLessThan(earned);
+    expect(s.buyItem('uraninite', 1000)).toBe(0); // pas assez de crédits
+    expect(s.changes.credits).toBe(earned);
     s.changes.credits = 1000;
     expect(s.buyItem('copper_ore', 5)).toBe(5);
     const spent = 1000 - s.changes.credits;
