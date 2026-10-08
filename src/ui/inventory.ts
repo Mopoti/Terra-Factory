@@ -18,11 +18,10 @@ import { ITEM_DRAG_TYPE } from './hotbar';
 import { PIECES } from '../core/data/buildings';
 import { machineForItem } from '../core/data/machines';
 import type { CommandBus } from '../core/game/commands';
-import { takeAsked, takeHalf, updateHandCursor } from './pick';
+import { BAG_SLOT_TYPE, bagCellsShown, takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
 
 /** Type MIME d'une pile du sac que l'on déplace (numéro de case). */
-const BAG_SLOT_TYPE = 'text/x-terra-bag-slot';
 
 /** Objet que l'on peut poser (machine ou pièce de construction). */
 const isPlaceable = (item: string): boolean =>
@@ -76,6 +75,8 @@ export function mountInventory(
 ): InventoryWindow {
   let isOpenNow = false;
   let selected: string | null = null;
+  /** Case du sac de la pile choisie (pour fusionner avec une autre pile du même objet). */
+  let selectedSlot: number | null = null;
   let craftTab: ItemCategory | null = null;
   let hovered: string | null = null;
   let message = '';
@@ -344,7 +345,7 @@ export function mountInventory(
     // Gauche : les cases du sac.
     const bag = el('div', 'inv-bag');
     const grid = el('div', 'slot-grid');
-    for (let i = 0; i < state.limits.maxSlots; i++) {
+    for (let i = 0; i < bagCellsShown(state); i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');
       cell.type = 'button';
@@ -380,7 +381,16 @@ export function mountInventory(
             void takeAsked(state, slot.item, itemName(slot.item), slot.count, e, i).then(render);
             return;
           }
+          // Une pile est déjà choisie et on clique une autre pile du même objet : elles fusionnent.
+          if (selected === slot.item && selectedSlot !== null && selectedSlot !== i) {
+            state.moveBagSlot(selectedSlot, i);
+            selectedSlot = null;
+            playSfx('pickup');
+            render();
+            return;
+          }
           selected = selected === slot.item ? null : slot.item;
+          selectedSlot = selected ? i : null;
           // L'objet choisi peut être rangé dans une case de la barre de raccourcis d'un clic.
           state.carried = selected;
           render();

@@ -797,6 +797,7 @@
   "editor.tutorial": "Tutoriel pas à pas",
   "editor.tutorial.help": "Un panneau en haut à droite guide les premiers pas : déplacement, caméra, récolte, premier four. On peut le passer à tout moment.",
   "tutorial.title": "Tutoriel",
+  "tutorial.close": "Fermer",
   "tutorial.skip": "Passer le tutoriel",
   "tutorial.step": "Étape {n} / {total}",
   "tutorial.group.1": "Les fondations mobiles",

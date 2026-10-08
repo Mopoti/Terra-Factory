@@ -797,6 +797,7 @@
   "editor.tutorial": "Step-by-step tutorial",
   "editor.tutorial.help": "A panel in the top right guides your first steps: movement, camera, gathering, first furnace. You can skip it at any time.",
   "tutorial.title": "Tutorial",
+  "tutorial.close": "Close",
   "tutorial.skip": "Skip the tutorial",
   "tutorial.step": "Step {n} / {total}",
   "tutorial.group.1": "Moving around",

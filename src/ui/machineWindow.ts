@@ -25,7 +25,14 @@ import type { CommandBus } from '../core/game/commands';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
-import { askAmount, takeAsked, takeHalf, updateHandCursor } from './pick';
+import {
+  BAG_SLOT_TYPE,
+  askAmount,
+  bagCellsShown,
+  takeAsked,
+  takeHalf,
+  updateHandCursor,
+} from './pick';
 import './menu.css';
 
 export interface MachineWindow {
@@ -77,6 +84,8 @@ export function mountMachineWindow(
   let timer = 0;
   /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
   let selected: string | null = null;
+  /** Case du sac de la pile choisie (pour fusionner avec une autre pile du même objet). */
+  let selectedSlot: number | null = null;
   /** Pendant un glisser-déposer on ne redessine pas (cela l'annulerait). */
   let dragging = false;
 
@@ -342,7 +351,7 @@ export function mountMachineWindow(
     );
     const slots = state.bagSlots();
     const grid = el('div', 'slot-grid');
-    for (let i = 0; i < state.limits.maxSlots; i++) {
+    for (let i = 0; i < bagCellsShown(state); i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');
       cell.type = 'button';
@@ -357,6 +366,7 @@ export function mountMachineWindow(
         cell.addEventListener('dragstart', (e) => {
           dragging = true;
           e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item);
+          e.dataTransfer?.setData(BAG_SLOT_TYPE, String(i));
         });
         cell.addEventListener('dragend', () => {
           dragging = false;
@@ -365,6 +375,14 @@ export function mountMachineWindow(
         cell.addEventListener('click', (e) => {
           if (state.hand) {
             if (!state.placeHand(i)) playSfx('deny');
+            render();
+            return;
+          }
+          // Une pile est déjà choisie et on clique une autre pile du même objet : elles fusionnent.
+          if (selected === slot.item && selectedSlot !== null && selectedSlot !== i) {
+            state.moveBagSlot(selectedSlot, i);
+            selectedSlot = null;
+            playSfx('pickup');
             render();
             return;
           }
@@ -378,6 +396,7 @@ export function mountMachineWindow(
             return;
           }
           selected = selected === slot.item ? null : slot.item;
+          selectedSlot = selected ? i : null;
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
@@ -392,6 +411,19 @@ export function mountMachineWindow(
           render();
         });
       }
+      // Glisser une pile du sac sur une autre case : on la déplace, la fusionne (même objet) ou l'échange.
+      cell.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(BAG_SLOT_TYPE)) e.preventDefault();
+      });
+      cell.addEventListener('drop', (e) => {
+        const from = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+        if (from === undefined || from === '') return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragging = false;
+        state.moveBagSlot(Number(from), i);
+        render();
+      });
       grid.append(cell);
     }
     grid.addEventListener('dragover', (e) => {
@@ -912,6 +944,7 @@ export function mountMachineWindow(
     if (current === null) return;
     current = null;
     selected = null;
+    selectedSlot = null;
     dragging = false;
     state.returnHand();
     updateHandCursor(state, selected);

@@ -3,6 +3,9 @@ import { t, type TranslationKey } from '../i18n';
 import { actionLabel, getDevice } from './keyHints';
 import { getSettings } from '../settings/store';
 
+/** Durée d'affichage du message de fin de tutoriel (2 minutes). */
+export const DONE_SHOWN_MS = 120_000;
+
 /** Noms des objets cités dans les textes : toujours ceux du jeu (hématite, fourneau…), jamais écrits en dur. */
 function names(): Record<string, string> {
   const item = (id: string): string => t(`item.${id}` as TranslationKey).toLocaleLowerCase();
@@ -32,7 +35,8 @@ export function mountTutorialPanel(
   let shown = '';
 
   function refresh(finished = false): void {
-    if (finished) doneUntil = performance.now() + 6000;
+    // Tutoriel terminé : le panneau reste affiché 2 minutes (ou jusqu'à ce que le joueur le ferme).
+    if (finished) doneUntil = performance.now() + DONE_SHOWN_MS;
     const step = tutorial.current();
     if (!step) {
       if (performance.now() < doneUntil) {
@@ -40,9 +44,17 @@ export function mountTutorialPanel(
         if (shown !== key) {
           shown = key;
           panel.hidden = false;
+          const close = document.createElement('button');
+          close.type = 'button';
+          close.textContent = t('tutorial.close');
+          close.addEventListener('click', () => {
+            doneUntil = 0;
+            refresh();
+          });
           panel.replaceChildren(
             textLine('h3', t('tutorial.title')),
             textLine('p', t('tutorial.done')),
+            close,
           );
         }
       } else {

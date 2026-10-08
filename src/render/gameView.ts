@@ -2547,7 +2547,11 @@ export function startGameView(
   }
   let tutorialClock = 0;
   function updateTutorial(dt: number): void {
-    if (!tutorial.current()) return;
+    if (!tutorial.current()) {
+      // Tutoriel terminé : le panneau de fin se referme tout seul au bout de 2 minutes.
+      tutorialPanel.refresh();
+      return;
+    }
     // La vue dans laquelle on est compte déjà pour l'étape « les 3 vues ».
     if (tutorial.current()?.id === 'view') tutorial.signal(`view:${rig.view}`);
     for (const dir of ['forward', 'backward', 'left', 'right'] as const)

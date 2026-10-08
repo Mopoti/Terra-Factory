@@ -89,3 +89,21 @@ export async function takeAsked(
   const n = await askAmount(itemName, stackCount, at);
   if (n !== null) state.takeToHand(item, n, slot);
 }
+
+/** Type de glisser-déposer d'une pile du sac (numéro de la case) : sert à déplacer, fusionner ou échanger des piles. */
+export const BAG_SLOT_TYPE = 'text/x-terra-bag-slot';
+
+/**
+ * Nombre de cases du sac à dessiner : toutes en survie, mais en mode Créatif (sac énorme) seulement les cases
+ * utilisées plus quelques cases libres (arrondi à une rangée de 5) pour ne pas faire une fenêtre démesurée.
+ */
+export function bagCellsShown(state: GameState): number {
+  const max = state.limits.maxSlots;
+  if (max <= 40) return max;
+  const slots = state.bagSlots();
+  let last = -1;
+  slots.forEach((s, i) => {
+    if (s) last = i;
+  });
+  return Math.min(max, Math.max(30, Math.ceil((last + 1 + 10) / 5) * 5));
+}

@@ -491,3 +491,9 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 ## Modèles 3D du Factory Kit (Tour 138)
 
 Premiers vrais modèles dans le jeu : 24 modèles du Factory Kit de Kenney (CC0) sur 24 types de machines (fourneau, estampeuse, concasseur, assembleur, coffres, bras…). Détails, table machine → modèle et suite : `docs/modeles3d.md`.
+
+## Interface : sac en Créatif, fusion de piles, fin du tutoriel (Tour 140)
+
+- **Sac en mode Créatif** : le sac a 120 cases, ce qui faisait des fenêtres démesurées (sac et machine). On n'affiche plus que les cases utilisées plus 10 cases libres (arrondi à une rangée de 5, au moins 30) ; en survie (30 cases) rien ne change. Fonction `bagCellsShown`.
+- **Fusionner des piles du sac depuis la fenêtre d'une machine** (c'était possible seulement dans la fenêtre du sac) : **glisser une pile sur une autre** (déplace, fusionne si même objet, échange sinon), ou **cliquer une pile puis cliquer une autre pile du même objet** (aussi dans la fenêtre du sac).
+- **Fin du tutoriel** : le message de fin reste **2 minutes** avec un bouton **Fermer** (avant : 6 secondes, sans bouton, et le panneau ne se refermait pas faute de rafraîchissement) ; il se ferme seul ensuite.
