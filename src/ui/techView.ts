@@ -1,7 +1,14 @@
 import { playSfx } from '../audio/sfx';
 import { DISCOVERIES, type DiscoveryDef } from '../core/data/discoveries';
 import { itemById } from '../core/data/items';
-import { TECHS, isSciencePack, packCost, scienceCost, type TechDef } from '../core/data/techs';
+import {
+  TECHS,
+  isSciencePack,
+  isTechVisible,
+  packCost,
+  scienceCost,
+  type TechDef,
+} from '../core/data/techs';
 import type { GameState } from '../core/game/state';
 import type { CommandBus } from '../core/game/commands';
 import { t, type TranslationKey } from '../i18n';
@@ -154,7 +161,8 @@ export function mountTech(
     const grid = document.createElement('div');
     grid.className = 'tech-grid';
     for (const d of DISCOVERIES) grid.append(discoveryCard(d));
-    for (const tech of TECHS) grid.append(card(tech));
+    for (const tech of TECHS)
+      if (isTechVisible(tech, state.changes.unlocked, state.creative)) grid.append(card(tech));
     const msg = document.createElement('div');
     msg.className = 'inv-message';
     msg.textContent = message;

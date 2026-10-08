@@ -1,163 +1,122 @@
 {
-  "_comment": "Technologies : coût (objets du sac consommés), prérequis, objets débloqués à la fabrication. Un objet qui n'est dans aucune technologie est disponible dès le départ.",
+  "_comment": "Technologies : coût (objets du sac consommés), prérequis, objets débloqués à la fabrication. Un objet qui n'est dans aucune technologie est disponible dès le départ. « tier » : palier (1 à 5). Les technologies de palier 2 et plus sont cachées tant que « reveal » (à défaut : leurs prérequis) n'est pas recherché ; en mode Créatif tout est visible. Les premières technologies (Métallurgie, Électricité, Laboratoire) se paient en objets ; les autres de palier 1 en paquets de science T1.",
   "techs": [
     {
       "id": "logistics",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 20
+        "science_pack": 10
       },
       "requires": [],
-      "unlocks": [
-        "machine_splitter",
-        "machine_merger"
-      ]
+      "unlocks": ["machine_splitter", "machine_merger"]
     },
     {
       "id": "handling",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 20
+        "science_pack": 10
       },
-      "requires": [
-        "logistics"
-      ],
-      "unlocks": [
-        "machine_chest_iron",
-        "machine_arm"
-      ]
+      "requires": ["logistics"],
+      "unlocks": ["machine_chest_iron", "machine_arm"]
     },
     {
       "id": "metallurgy",
+      "tier": 1,
       "cost": {
         "iron_ingot": 20,
         "stone": 10
       },
       "requires": [],
-      "unlocks": [
-        "machine_stamper",
-        "machine_crusher"
-      ]
+      "unlocks": ["machine_stamper", "machine_crusher"]
     },
     {
       "id": "metallurgy_2",
+      "tier": 2,
       "cost": {
         "science_pack": 30
       },
-      "requires": [
-        "metallurgy",
-        "laboratory"
-      ],
-      "unlocks": [
-        "zinc_ingot",
-        "machine_bessemer",
-        "steel_plate"
-      ]
+      "requires": ["metallurgy", "laboratory"],
+      "reveal": ["metallurgy"],
+      "unlocks": ["zinc_ingot", "machine_bessemer", "steel_plate"]
     },
     {
       "id": "construction_2",
+      "tier": 2,
       "cost": {
         "science_pack": 30
       },
-      "requires": [
-        "metallurgy_2"
-      ],
-      "unlocks": [
-        "machine_mixer",
-        "concrete_block"
-      ]
+      "requires": ["metallurgy_2"],
+      "reveal": ["handling"],
+      "unlocks": ["machine_mixer", "concrete_block"]
     },
     {
       "id": "manufacturing_2",
+      "tier": 2,
       "cost": {
         "science_pack": 40
       },
-      "requires": [
-        "metallurgy_2"
-      ],
-      "unlocks": [
-        "machine_builder",
-        "machine_pipe_2",
-        "science_pack_2"
-      ]
+      "requires": ["metallurgy_2"],
+      "reveal": ["automation"],
+      "unlocks": ["machine_builder", "machine_pipe_2", "science_pack_2"]
     },
     {
       "id": "fluids_2",
+      "tier": 2,
       "cost": {
         "science_pack": 40
       },
-      "requires": [
-        "manufacturing_2"
-      ],
-      "unlocks": [
-        "machine_booster",
-        "machine_cooling_tower"
-      ]
+      "requires": ["manufacturing_2"],
+      "reveal": ["steam"],
+      "unlocks": ["machine_booster", "machine_cooling_tower"]
     },
     {
       "id": "washing_2",
+      "tier": 2,
       "cost": {
         "science_pack": 40
       },
-      "requires": [
-        "manufacturing_2"
-      ],
-      "unlocks": [
-        "machine_washer",
-        "iron_ore_washed",
-        "copper_ore_washed",
-        "zinc_ore_washed"
-      ]
+      "requires": ["manufacturing_2"],
+      "reveal": ["metallurgy"],
+      "unlocks": ["machine_washer", "iron_ore_washed", "copper_ore_washed", "zinc_ore_washed"]
     },
     {
       "id": "heavy_press_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 100
       },
-      "requires": [
-        "manufacturing_2",
-        "construction_2"
-      ],
-      "unlocks": [
-        "machine_heavy_press",
-        "machine_pipe_3"
-      ]
+      "requires": ["manufacturing_2", "construction_2"],
+      "reveal": ["metallurgy_2"],
+      "unlocks": ["machine_heavy_press", "machine_pipe_3"]
     },
     {
       "id": "silicon_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 120
       },
-      "requires": [
-        "heavy_press_3"
-      ],
-      "unlocks": [
-        "machine_furnace_electric",
-        "silicon_raw",
-        "silicon_chip"
-      ]
+      "requires": ["heavy_press_3"],
+      "reveal": ["manufacturing_2"],
+      "unlocks": ["machine_furnace_electric", "silicon_raw", "silicon_chip"]
     },
     {
       "id": "oil_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 140
       },
-      "requires": [
-        "barrels_3",
-        "heavy_press_3"
-      ],
-      "unlocks": [
-        "machine_pumpjack",
-        "barrel_oil"
-      ]
+      "requires": ["barrels_3", "heavy_press_3"],
+      "reveal": ["fluids_2"],
+      "unlocks": ["machine_pumpjack", "barrel_oil"]
     },
     {
       "id": "plastic_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 160
       },
-      "requires": [
-        "oil_3",
-        "silicon_3"
-      ],
+      "requires": ["oil_3", "silicon_3"],
+      "reveal": ["fluids_2"],
       "unlocks": [
         "machine_refinery",
         "machine_plastic_press",
@@ -168,12 +127,12 @@
     },
     {
       "id": "fission_4",
+      "tier": 4,
       "cost": {
         "science_pack_3": 200
       },
-      "requires": [
-        "plastic_3"
-      ],
+      "requires": ["plastic_3"],
+      "reveal": ["heavy_press_3"],
       "unlocks": [
         "machine_centrifuge",
         "aluminium_ingot",
@@ -185,293 +144,215 @@
     },
     {
       "id": "reactor_4",
+      "tier": 4,
       "cost": {
         "science_pack_3": 300
       },
-      "requires": [
-        "fission_4"
-      ],
-      "unlocks": [
-        "machine_fission_reactor",
-        "science_pack_4"
-      ]
+      "requires": ["fission_4"],
+      "reveal": ["silicon_3"],
+      "unlocks": ["machine_fission_reactor", "science_pack_4"]
     },
     {
       "id": "waste_4",
+      "tier": 4,
       "cost": {
         "science_pack_3": 250
       },
-      "requires": [
-        "reactor_4"
-      ],
-      "unlocks": [
-        "machine_evaporation_tower",
-        "machine_vitrifier",
-        "contaminated_glass"
-      ]
+      "requires": ["reactor_4"],
+      "reveal": ["extraction_3"],
+      "unlocks": ["machine_evaporation_tower", "machine_vitrifier", "contaminated_glass"]
     },
     {
       "id": "storage_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 120
       },
-      "requires": [
-        "plastic_3"
-      ],
-      "unlocks": [
-        "machine_accumulator"
-      ]
+      "requires": ["plastic_3"],
+      "reveal": ["construction_2"],
+      "unlocks": ["machine_accumulator"]
     },
     {
       "id": "fusion_5",
+      "tier": 5,
       "cost": {
         "science_pack_4": 200,
         "science_pack_3": 100
       },
-      "requires": [
-        "waste_4",
-        "storage_3"
-      ],
-      "unlocks": [
-        "machine_fusion_reactor"
-      ]
+      "requires": ["waste_4", "storage_3"],
+      "reveal": ["fission_4"],
+      "unlocks": ["machine_fusion_reactor"]
     },
     {
       "id": "beacon_5",
+      "tier": 5,
       "cost": {
         "science_pack_4": 300,
         "science_pack_3": 150
       },
-      "requires": [
-        "fusion_5"
-      ],
-      "unlocks": [
-        "machine_relay",
-        "machine_antenna"
-      ]
+      "requires": ["fusion_5"],
+      "reveal": ["reactor_4"],
+      "unlocks": ["machine_relay", "machine_antenna"]
     },
     {
       "id": "logistics_2",
+      "tier": 2,
       "cost": {
         "science_pack": 40
       },
-      "requires": [
-        "logistics",
-        "metallurgy_2"
-      ],
-      "unlocks": [
-        "machine_conveyor_2"
-      ]
+      "requires": ["logistics", "metallurgy_2"],
+      "reveal": ["logistics"],
+      "unlocks": ["machine_conveyor_2"]
     },
     {
       "id": "logistics_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 100
       },
-      "requires": [
-        "logistics_2"
-      ],
-      "unlocks": [
-        "machine_conveyor_3",
-        "machine_arm_filter"
-      ]
+      "requires": ["logistics_2"],
+      "reveal": ["logistics_2"],
+      "unlocks": ["machine_conveyor_3", "machine_arm_filter"]
     },
     {
       "id": "sorting_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 120
       },
-      "requires": [
-        "logistics_3"
-      ],
-      "unlocks": [
-        "machine_sorter"
-      ]
+      "requires": ["logistics_3"],
+      "reveal": ["logistics_2"],
+      "unlocks": ["machine_sorter"]
     },
     {
       "id": "extraction_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 60
       },
-      "requires": [
-        "metallurgy_2",
-        "power_generation"
-      ],
-      "unlocks": [
-        "machine_drill_eco"
-      ]
+      "requires": ["metallurgy_2", "power_generation"],
+      "reveal": ["washing_2"],
+      "unlocks": ["machine_drill_eco"]
     },
     {
       "id": "textile",
+      "tier": 1,
       "cost": {
-        "fiber": 20
+        "science_pack": 10
       },
       "requires": [],
-      "unlocks": [
-        "cloth",
-        "backpack",
-        "hood"
-      ]
+      "unlocks": ["cloth", "backpack", "hood"]
     },
     {
       "id": "clothing",
+      "tier": 1,
       "cost": {
-        "fiber": 20
+        "science_pack": 10
       },
-      "requires": [
-        "textile"
-      ],
-      "unlocks": [
-        "trousers",
-        "boots"
-      ]
+      "requires": ["textile"],
+      "unlocks": ["trousers", "boots"]
     },
     {
       "id": "handwear",
+      "tier": 1,
       "cost": {
-        "fiber": 20
+        "science_pack": 10
       },
-      "requires": [
-        "textile"
-      ],
-      "unlocks": [
-        "gloves"
-      ]
+      "requires": ["textile"],
+      "unlocks": ["gloves"]
     },
     {
       "id": "bedding",
+      "tier": 1,
       "cost": {
-        "fiber": 20
+        "science_pack": 10
       },
-      "requires": [
-        "textile"
-      ],
-      "unlocks": [
-        "sleeping_bag",
-        "bed"
-      ]
+      "requires": ["textile"],
+      "unlocks": ["sleeping_bag", "bed"]
     },
     {
       "id": "electricity",
+      "tier": 1,
       "cost": {
         "iron_ingot": 15,
         "copper_ingot": 10
       },
       "requires": [],
-      "unlocks": [
-        "machine_pole",
-        "machine_crank"
-      ]
+      "unlocks": ["machine_pole", "machine_crank"]
     },
     {
       "id": "power_generation",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 15,
-        "copper_ingot": 10
+        "science_pack": 15
       },
-      "requires": [
-        "electricity"
-      ],
-      "unlocks": [
-        "machine_generator",
-        "machine_drill_electric"
-      ]
+      "requires": ["electricity"],
+      "unlocks": ["machine_generator", "machine_drill_electric"]
     },
     {
       "id": "laboratory",
+      "tier": 1,
       "cost": {
         "iron_ingot": 10,
         "copper_ingot": 10
       },
-      "requires": [
-        "electricity"
-      ],
-      "unlocks": [
-        "machine_lab",
-        "science_pack"
-      ]
+      "requires": ["electricity"],
+      "unlocks": ["machine_lab", "science_pack"]
     },
     {
       "id": "automation",
+      "tier": 1,
       "cost": {
         "science_pack": 20
       },
-      "requires": [
-        "electricity",
-        "logistics"
-      ],
-      "unlocks": [
-        "machine_arm_electric",
-        "machine_assembler"
-      ]
+      "requires": ["electricity", "logistics"],
+      "unlocks": ["machine_arm_electric", "machine_assembler"]
     },
     {
       "id": "steam",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 15,
-        "copper_ingot": 8,
-        "stone": 5
+        "science_pack": 15
       },
-      "requires": [
-        "electricity"
-      ],
-      "unlocks": [
-        "machine_pipe",
-        "machine_pump"
-      ]
+      "requires": ["electricity"],
+      "unlocks": ["machine_pipe", "machine_pump"]
     },
     {
       "id": "steam_power",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 15,
-        "copper_ingot": 7,
-        "stone": 5
+        "science_pack": 15
       },
-      "requires": [
-        "steam"
-      ],
-      "unlocks": [
-        "machine_boiler",
-        "machine_turbine"
-      ]
+      "requires": ["steam"],
+      "unlocks": ["machine_boiler", "machine_turbine"]
     },
     {
       "id": "barrels_3",
+      "tier": 3,
       "cost": {
         "science_pack_2": 80
       },
-      "requires": [
-        "steam",
-        "logistics_3"
-      ],
-      "unlocks": [
-        "machine_barreler",
-        "barrel_empty"
-      ]
+      "requires": ["steam", "logistics_3"],
+      "reveal": ["fluids_2"],
+      "unlocks": ["machine_barreler", "barrel_empty"]
     },
     {
       "id": "navigation",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 10,
-        "copper_ingot": 5
+        "science_pack": 5
       },
       "requires": [],
-      "unlocks": [
-        "compass"
-      ]
+      "unlocks": ["compass"]
     },
     {
       "id": "defense",
+      "tier": 1,
       "cost": {
-        "iron_ingot": 30,
-        "copper_ingot": 10
+        "science_pack": 15
       },
-      "requires": [
-        "logistics"
-      ],
-      "unlocks": [
-        "machine_turret"
-      ]
+      "requires": ["logistics"],
+      "unlocks": ["machine_turret"]
     }
   ]
 }

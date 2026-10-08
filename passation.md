@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 144** : technologies — palier 1 : Métallurgie/Électricité/Laboratoire payés en objets, les autres en paquets T1 ; paliers 2+ cachés jusqu'à la technologie du palier inférieur (`tier`/`reveal`, `isTechVisible`), tout visible en Créatif ; tests mis à jour (545).
 - **Tour 143** : patron de pose = le vrai modèle teinté vert/rouge ; plus d'ouverture automatique de la machine posée (clic commencé pendant la pose) ; pause de 0,5 s entre deux cycles + 1 s sur les recettes de 2 s ou moins, barre de cycle à 10 Hz.
 - **Tour 142** : coudes de tapis corrigés (le modèle du kit relie les côtés −x et +z, coin extérieur arrondi en +x/−z : décalage de 2 quarts de tour) ; question du PO sur la fonte : aucune recette n'exige du minerai purifié (fonte = 2 hématite brute + 3 charbon), la variante « purifié » est facultative.
 - **Tour 141** : tapis droits assortis aux coudes (même famille claire du kit) ; question du PO sur « minerai enrichi » = station de lavage (minerai lavé) ou centrifugeuse (uranium enrichi).

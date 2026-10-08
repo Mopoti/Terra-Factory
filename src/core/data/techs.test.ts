@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, ITEM_CATEGORIES, categoryOf, itemById } from './items';
-import { expandLegacyTechs, TECHS } from './techs';
+import { expandLegacyTechs, isTechVisible, scienceCost, techById, TECHS } from './techs';
 
 /** Machines et équipements : seuls objets comptés dans la limite de 2 par technologie (les matériaux sont libres). */
 const counted = (item: string): boolean =>
@@ -55,5 +55,30 @@ describe('onglets de fabrication', () => {
       expect(counts.get(c) ?? 0, c).toBeGreaterThan(0);
       expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(12);
     }
+  });
+});
+
+describe('visibilité des technologies', () => {
+  const vis = (id: string, done: string[], creative = false): boolean =>
+    isTechVisible(techById(id), done, creative);
+
+  it('palier 1 toujours visible ; paliers supérieurs cachés jusqu’à la technologie du palier inférieur', () => {
+    expect(vis('logistics', [])).toBe(true);
+    expect(vis('metallurgy_2', [])).toBe(false);
+    expect(vis('metallurgy_2', ['metallurgy'])).toBe(true);
+    expect(vis('logistics_3', ['logistics'])).toBe(false);
+    expect(vis('logistics_3', ['logistics_2'])).toBe(true);
+    expect(vis('fusion_5', [])).toBe(false);
+  });
+
+  it('le mode Créatif montre tout', () => {
+    expect(TECHS.every((t) => isTechVisible(t, [], true))).toBe(true);
+  });
+
+  it('les technologies du palier 1 sont payées en objets (départ) ou en paquets T1', () => {
+    for (const t of TECHS.filter((x) => x.tier === 1))
+      expect(Object.keys(t.cost).every((k) => k === 'science_pack') || scienceCost(t) === 0).toBe(
+        true,
+      );
   });
 });

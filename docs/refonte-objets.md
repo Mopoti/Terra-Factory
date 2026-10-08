@@ -504,3 +504,9 @@ Premiers vrais modèles dans le jeu : 24 modèles du Factory Kit de Kenney (CC0)
 - **Plus d'ouverture automatique** : quand on posait le dernier exemplaire, le clic encore enfoncé tombait sur la machine fraîchement posée et ouvrait sa fenêtre. Un clic commencé pendant la pose ne compte plus pour ouvrir ou récolter : il faut relâcher puis recliquer.
 - **Cycles des machines** : **pause de 0,5 s entre deux cycles** (la barre revient à zéro et la machine ne travaille pas) pour le fourneau, l'estampeuse, les machines de recettes et l'assembleur ; **+1 s** sur toutes les recettes qui duraient 2 s ou moins (estampeuse : plaques et engrenages 3 s, fil 2,5 s ; concasseur de pierre, constructeur, bétonnière, remplisseuses de barils : 3 s ; assembleur : 3 s). Le moule suivant est engagé après la pause. La barre de la fenêtre se met à jour 10 fois par seconde.
 - Les tests lisent les durées dans les recettes (`secs`, `cycle`) : ces délais restent à régler en jouant (voir `docs/equilibrage.md`).
+
+## Visibilité et coût des technologies (Tour 144)
+- Chaque technologie a un `tier` (1 à 5) et, pour le palier 2 et plus, un `reveal` : la ou les technologies à avoir recherchées pour la faire apparaître (par défaut ses `requires`). Ex. : Métallurgie T2 apparaît avec Métallurgie, Logistique T2 avec Logistique, Fusion avec Fission.
+- Palier 1 toujours visible. Paliers 2+ cachés tant que la technologie du palier inférieur n'est pas recherchée. Mode Créatif : tout est visible (`isTechVisible`).
+- Technologies de départ payées en objets à la main : Métallurgie (lingots de fer + pierre), Électricité (fer + cuivre), Laboratoire (fer + cuivre). La roue à aubes reste une découverte (10 plaques de cuivre).
+- Les autres technologies du palier 1 se découvrent en laboratoire avec des paquets T1 : Logistique, Manutention, Textile, Vêtements, Gants, Literie 10 ; Électricité de production, Vapeur, Machine à vapeur 15 ; Défense 15 ; Navigation 5 ; Automatisation 20.

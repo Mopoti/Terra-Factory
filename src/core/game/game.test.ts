@@ -669,35 +669,36 @@ describe('équipement et sac à dos', () => {
 
 describe('technologies', () => {
   it('fabriquer un objet verrouillé est refusé tant que la technologie n’est pas recherchée', () => {
-    const s = new GameState({ inventory: { iron_ingot: 35 } });
-    expect(s.isUnlocked('machine_splitter')).toBe(false);
-    expect(s.craft('machine_splitter', 1)).toEqual({ made: 0, stopped: 'locked' });
+    const s = new GameState({ inventory: { iron_ingot: 60, copper_ingot: 20, wood: 10 } });
+    expect(s.isUnlocked('machine_pole')).toBe(false);
+    expect(s.craft('machine_pole', 1)).toEqual({ made: 0, stopped: 'locked' });
     expect(s.isUnlocked('machine_conveyor')).toBe(true);
-    expect(s.research('logistics')).toBe('ok');
-    expect(s.inventory.iron_ingot).toBe(15);
-    expect(s.research('logistics')).toBe('done');
-    expect(s.craft('machine_splitter', 1).made).toBe(1);
+    expect(s.research('electricity')).toBe('ok');
+    expect(s.inventory.iron_ingot).toBe(45);
+    expect(s.research('electricity')).toBe('done');
+    expect(s.craft('machine_pole', 1).made).toBe(1);
   });
 
   it('prérequis et coût sont vérifiés ; la recherche est enregistrée', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
     expect(s.research('automation')).toBe('lab');
     expect(s.study('automation')).toBe('locked');
-    expect(s.research('logistics')).toBe('ok');
+    expect(s.research('logistics')).toBe('lab');
+    s.changes.unlocked.push('logistics');
     expect(s.research('electricity')).toBe('ok');
     expect(s.study('automation')).toBe('ok');
     s.addStudy({ science_pack: 20 });
-    expect(s.research('textile')).toBe('missing');
+    expect(s.research('textile')).toBe('lab');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
   });
 
   it('l’étude en laboratoire avance par paquets, se débloque à la fin et se sauvegarde', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
-    s.research('logistics');
+    s.changes.unlocked.push('logistics');
     s.research('electricity');
     expect(s.studyRemaining()).toBe(0);
-    expect(s.study('textile')).toBe('notLab');
+    expect(s.study('metallurgy')).toBe('notLab');
     expect(s.study('automation')).toBe('ok');
     expect(s.studyRemaining()).toBe(20);
     s.addStudy({ science_pack: 8 });

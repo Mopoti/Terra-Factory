@@ -5,6 +5,10 @@ export interface TechDef {
   /** Objets du sac consommés à la recherche. */
   cost: Record<string, number>;
   requires: string[];
+  /** Palier (1 à 5). */
+  tier: number;
+  /** Technologies à avoir recherchées pour faire apparaître celle-ci (palier ≥ 2 ; par défaut `requires`). */
+  reveal?: string[];
   /** Objets dont la fabrication est débloquée. */
   unlocks: string[];
 }
@@ -20,6 +24,16 @@ export function techById(id: string): TechDef {
 /** Technologie qui débloque cet objet, ou null s'il est disponible dès le départ. */
 export const techFor = (item: string): TechDef | null =>
   TECHS.find((t) => t.unlocks.includes(item)) ?? null;
+
+/** Visible dans la fenêtre : palier 1, déjà recherchée, ou technologie du palier inférieur recherchée. Tout en Créatif. */
+export function isTechVisible(
+  tech: TechDef,
+  researched: readonly string[],
+  creative: boolean,
+): boolean {
+  if (creative || tech.tier <= 1 || researched.includes(tech.id)) return true;
+  return (tech.reveal ?? tech.requires).every((r) => researched.includes(r));
+}
 
 export const SCIENCE_PACK = 'science_pack';
 /** Paquets de science : T1, T2, T3 (un par palier ; le T4 viendra avec la fission). */

@@ -162,14 +162,14 @@ describe('jouer ensemble', () => {
   it('technologies communes : une recherche de l’invité profite à l’hôte ; individuelle sinon', async () => {
     const shared = await setup();
     const a = await GuestClient.connect(shared.net, shared.code, { name: 'Ana' });
-    shared.state.inventory = { iron_ingot: 50 };
-    expect(await a.command<'research'>({ type: 'research', tech: 'logistics' })).toBe('ok');
-    expect(shared.state.changes.unlocked).toContain('logistics');
+    shared.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
+    expect(await a.command<'research'>({ type: 'research', tech: 'electricity' })).toBe('ok');
+    expect(shared.state.changes.unlocked).toContain('electricity');
     const own = await setup({ share: { research: false, credits: true, inventory: true } });
     const b = await GuestClient.connect(own.net, own.code, { name: 'Bob' });
-    own.state.inventory = { iron_ingot: 50 };
-    expect(await b.command<'research'>({ type: 'research', tech: 'logistics' })).toBe('ok');
-    expect(own.state.changes.unlocked).not.toContain('logistics');
+    own.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
+    expect(await b.command<'research'>({ type: 'research', tech: 'electricity' })).toBe('ok');
+    expect(own.state.changes.unlocked).not.toContain('electricity');
   });
 
   it('une commande inconnue ou mal formée ne fait pas tomber l’hôte', async () => {
