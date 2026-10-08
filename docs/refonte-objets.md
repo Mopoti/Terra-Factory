@@ -17,7 +17,7 @@
 | 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | à faire                                                                                                |
 | 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                                                           |
 | 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | à faire                                                                                                |
-| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | à faire (en dernier)                                                                                   |
+| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | 12a tactile et 12b manette faits ; Steam plus tard                                                     |
 | 12  | Multiplateforme : tactile, manettes, Steam                                                                       | à faire (en dernier)                                                                                   |
 
 Les contradictions des points #4 et #9 ont été tranchées au Tour 86 (voir §4 et §9).
@@ -395,3 +395,12 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 ## 13. Multijoueur (Tour 116)
 
 Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs max, code d'invitation, partie privée ou publique avec mot de passe facultatif, partage configurable et tout partagé par défaut) et feuille de route M0 → M3. **M0 codé** : section « Multijoueur » de l'éditeur de partie, réglages enregistrés (`options.multiplayer`), sans effet pour l'instant.
+
+## Point 12b — manette (Tour 121)
+
+- **Module** `src/input/gamepad.ts` (disposition « standard » des navigateurs, branchée dans la vue 3D) : `readPad` traduit l'état d'une manette en actions maintenues, regard et appuis (testé) ; `mountGamepad` lit les manettes à chaque image et agit sur `Input.setVirtual`, comme le tactile.
+- **Jeu** : stick gauche = déplacement ; stick droit = caméra (zone morte 20 %, 700 px/s) ; A saut, X utiliser, B s'accroupir, Y changer de vue, gâchette droite = clic (récolter, tirer, poser), gâchette gauche = clic droit (démolir), clic du stick gauche = courir, clic du stick droit = tourner la pièce, Retour = carte, croix haut = technologies, croix bas = sac, croix gauche / droite = étage −/+, épaules = case précédente / suivante de la barre d'objets, Start = pause.
+- **Menus** (pause, sac, machines, technologies…) : la croix ou le stick gauche déplace le focus, A valide, B / Start ferment (ils envoient Échap). Le jeu ne bouge pas pendant ce temps.
+- **Visée** : sans curseur, la manette vise le centre de l'écran (en vue de dessus et à la 3e personne aussi).
+- Vérifié dans un navigateur avec une fausse manette (Start ouvre la pause, la croix déplace le focus) ; 5 tests.
+- **Pas encore** : réglages de la manette (sensibilité, zone morte, remappage des boutons), menu principal et écran de création navigables à la manette, icônes de boutons dans les textes, vibrations.

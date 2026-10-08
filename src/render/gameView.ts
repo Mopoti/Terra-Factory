@@ -105,6 +105,7 @@ import type { HostSession } from '../core/net/host';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
+import { mountGamepad } from '../input/gamepad';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -1559,6 +1560,27 @@ export function startGameView(
       })
     : null;
 
+  // Manette : déplacement, regard, actions, et navigation dans les menus (voir input/gamepad.ts).
+  const gamepad = mountGamepad({
+    input,
+    inMenu: () => paused || uiOpen,
+    onLook: (dx, dy) => {
+      rig.look(dx, dy, getSettings().views);
+      if (Math.hypot(dx, dy) > 0.5) tutorial.signal('look');
+    },
+    onHotbarStep: (step) => {
+      const hotbar = options.state.changes.hotbar;
+      let i = options.state.selectedSlot ?? (step > 0 ? -1 : 0);
+      for (let n = 0; n < hotbar.length; n++) {
+        i = (i + step + hotbar.length) % hotbar.length;
+        if (hotbar[i]) {
+          if (options.state.selectedSlot !== i) options.state.selectSlot(i);
+          return;
+        }
+      }
+    },
+  });
+
   let rightMoved = 0;
   /** Après une démolition, le clic droit toujours maintenu continue de démolir les suivants (même en bougeant la souris). */
   let demolishChain = false;
@@ -2902,6 +2924,11 @@ export function startGameView(
     hint.hidden = !(rig.view === 'first' && !paused && !uiOpen && !isLocked());
     sun.position.set(playerX + 8, 16, playerZ + 6);
     sun.target.position.set(playerX, 0, playerZ);
+    // Manette : pas de curseur, on vise au centre de l'écran.
+    if (gamepad.active() && !isLocked()) {
+      mouseX = window.innerWidth / 2;
+      mouseY = window.innerHeight / 2;
+    }
     updateGhost(views);
     updateCompass();
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
@@ -3085,6 +3112,7 @@ export function startGameView(
       window.removeEventListener('mouseup', onMouseUp);
       tutorialPanel.dispose();
       disposeTouch?.();
+      gamepad.dispose();
       craftHud.remove();
       closeFinale?.();
       window.removeEventListener('blur', onMouseUp);
