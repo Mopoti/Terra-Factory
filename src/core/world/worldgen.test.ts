@@ -180,6 +180,7 @@ describe('minerais : quantités par case', () => {
     // Les cases d'un tas peuvent déborder un peu du centre : on tolère le rayon maximal (≈ 30 m).
     expect(found.zinc_ore ?? 999).toBeGreaterThan(300 - 40);
     expect(found.bauxite ?? 999).toBeGreaterThan(300 - 40);
+    expect(found.oil ?? 999).toBeGreaterThan(500 - 40);
     expect(found.uraninite ?? 9999).toBeGreaterThan(1200 - 40);
     expect(found.zinc_ore).toBeDefined();
   });

@@ -356,14 +356,16 @@ export class FactoryView {
     // Contenu des tuyaux : un cœur coloré dont la hauteur suit le remplissage.
     for (const m of this.factory.machines) {
       if (m.type !== 'pipe') continue;
-      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot;
+      const amount = m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil;
       if (amount < 1) continue;
       const color =
-        m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
-          ? hexToRgb('#f08a3a')
-          : m.fluid.water >= m.fluid.steam
-            ? hexToRgb('#3fa9f5')
-            : hexToRgb('#f2f5f7');
+        m.fluid.oil > 0.5
+          ? hexToRgb('#1c1c22')
+          : m.fluid.hot >= m.fluid.water && m.fluid.hot >= m.fluid.steam
+            ? hexToRgb('#f08a3a')
+            : m.fluid.water >= m.fluid.steam
+              ? hexToRgb('#3fa9f5')
+              : hexToRgb('#f2f5f7');
       mb.box(
         center(m.gx),
         0.2,
@@ -676,6 +678,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   mixer: 1.0,
   barreler: 1.0,
   booster: 1.0,
+  pumpjack: 1.5,
   furnace_electric: 1.2,
   cooling_tower: 1.5,
   builder: 1.0,
@@ -984,6 +987,33 @@ function addMachineBody(
     mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
     mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
+    return;
+  }
+  if (type === 'pumpjack') {
+    // Chevalet de pompage : socle, pylône, balancier incliné (boîtes) et tête de puits.
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x - fx * 0.15, 0.2, z - fz * 0.15, 0.2, 0.9, 0.2, color, true);
+    mb.box(
+      x + fx * 0.1,
+      1.05,
+      z + fz * 0.1,
+      fx !== 0 ? 1.0 : 0.16,
+      0.14,
+      fz !== 0 ? 1.0 : 0.16,
+      shade(color, 1.3),
+      true,
+    );
+    mb.box(x + fx * 0.55, 0.3, z + fz * 0.55, 0.1, 0.75, 0.1, hexToRgb('#8fa0ad'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.3,
+      0.12,
+      fz !== 0 ? 0.1 : 0.3,
+      hexToRgb('#1c1c22'),
+      true,
+    );
     return;
   }
   if (type === 'booster') {

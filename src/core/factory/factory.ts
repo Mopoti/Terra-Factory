@@ -516,7 +516,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (isFluid(machine.type) && typeof m.fluid === 'object' && m.fluid !== null) {
       const f = m.fluid as Record<string, unknown>;
       const cap = machineDef(machine.type).fluidCap ?? 100;
-      for (const kind of ['water', 'steam', 'hot'] as const) {
+      for (const kind of ['water', 'steam', 'hot', 'oil'] as const) {
         const v = f[kind];
         if (isNum(v) && v > 0) machine.fluid[kind] = Math.min(cap, v);
       }
@@ -585,6 +585,7 @@ const MACHINE_TYPES: MachineType[] = [
   'turret',
   'pipe',
   'pump',
+  'pumpjack',
   'boiler',
   'turbine',
 ];
@@ -1062,6 +1063,11 @@ export class Factory {
     }
     if (m.type === 'pipe' && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'pumpjack') {
+      if (!this.oilCell(m)) return 'noOre';
+      if (this.powerFactor(m) <= 0) return 'noPower';
+      return m.fluid.oil >= (def.fluidCap ?? 200) - 1 ? 'full' : 'running';
+    }
     if (m.type === 'pump') {
       if (!this.pumpsOk.has(m.id)) return 'noWater';
       return m.fluid.water >= (machineDef('pump').fluidCap ?? 100) - 1 ? 'full' : 'running';
@@ -1146,6 +1152,7 @@ export class Factory {
       else if (isAssembler(m.type)) this.tickAssembler(m, dt);
       else if (isLab(m.type)) this.tickLab(m, dt);
       else if (m.type === 'pump') this.tickPump(m, dt);
+      else if (m.type === 'pumpjack') this.tickPumpjack(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
@@ -1164,6 +1171,8 @@ export class Factory {
     if (isLab(m.type)) return this.labWorking(m);
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
+    if (m.type === 'pumpjack')
+      return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
     if (m.type === 'sorter') return m.stock !== null;
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (isSmith(m.type)) return !!machineDef(m.type).consumesKw && this.smithReady(m);
@@ -1572,6 +1581,33 @@ export class Factory {
       0,
       m.fluid.steam - (machineDef('turbine').steamUse ?? 20) * dt * e * load,
     );
+  }
+
+  /** Chevalet de pompage : 1 L de pétrole par seconde, tiré du gisement (fini) sous son emprise. */
+  private tickPumpjack(m: Machine, dt: number): void {
+    const def = machineDef('pumpjack');
+    const speed = this.powerFactor(m);
+    if (speed <= 0 || m.fluid.oil >= (def.fluidCap ?? 200) - 0.01) return;
+    const cell = this.oilCell(m);
+    if (!cell) return;
+    m.progress += dt * speed * (def.pumpRate ?? 1);
+    while (m.progress >= 1 && m.fluid.oil < (def.fluidCap ?? 200)) {
+      if (this.world.mineOre(cell.gx, cell.gz, 1) <= 0) {
+        m.progress = 0;
+        return;
+      }
+      m.progress -= 1;
+      m.fluid.oil += 1;
+    }
+  }
+
+  /** Première case de pétrole sous le chevalet. */
+  private oilCell(m: Machine): Cell | null {
+    for (const c of footprint(m.type, m.gx, m.gz, m.rot)) {
+      const ore = this.world.oreAt(c.gx, c.gz);
+      if (ore && ore.item === 'crude_oil' && ore.amount > 0) return c;
+    }
+    return null;
   }
 
   private tickPump(m: Machine, dt: number): void {

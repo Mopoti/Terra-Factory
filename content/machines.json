@@ -413,6 +413,19 @@
       "pollutionKind": "air"
     },
     {
+      "id": "pumpjack",
+      "w": 3,
+      "d": 3,
+      "item": "machine_pumpjack",
+      "color": "#3a3f47",
+      "fuel": false,
+      "consumesKw": 60,
+      "fluidCap": 200,
+      "startBar": 4,
+      "pumpRate": 1,
+      "height": 1.5
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

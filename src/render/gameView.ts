@@ -1231,6 +1231,10 @@ export function startGameView(
         v < 0.5 ? t('factory.fluid.empty') : `${Math.round(v)} / ${cap}`;
       if (m.type !== 'turbine')
         rows.push(`<div>${t('factory.fluid.water', { v: fmt(m.fluid.water) })}</div>`);
+      if (m.fluid.oil >= 0.5)
+        rows.push(`<div>${t('factory.fluid.oil', { v: fmt(m.fluid.oil) })}</div>`);
+      if (m.type === 'pumpjack')
+        rows.push(`<div>${t('factory.ore', { n: String(factory.oreUnder(m).total) })}</div>`);
       if (m.fluid.hot >= 0.5)
         rows.push(`<div>${t('factory.fluid.hot', { v: fmt(m.fluid.hot) })}</div>`);
       if (m.type !== 'pump')
@@ -1242,7 +1246,10 @@ export function startGameView(
             ? `<div>${t('factory.fluid.bars', { v: m.pressure.toFixed(1), max: String(pipeMaxBar(m)) })}</div>`
             : `<div>${t('factory.fluid.bars.free', { v: m.pressure.toFixed(1) })}</div>`,
         );
-      } else if (m.fluid.water + m.fluid.steam + m.fluid.hot > 0.5 && m.type !== 'turbine') {
+      } else if (
+        m.fluid.water + m.fluid.steam + m.fluid.hot + m.fluid.oil > 0.5 &&
+        m.type !== 'turbine'
+      ) {
         rows.push(`<div class="sub">${t('factory.fluid.noPressure')}</div>`);
       }
       if (m.type === 'turbine') {

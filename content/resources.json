@@ -187,6 +187,30 @@
       }
     },
     {
+      "id": "oil",
+      "family": "ores",
+      "kind": "deposit",
+      "liquid": true,
+      "color": "#1c1c22",
+      "candidateSizeM": 96,
+      "presence": 0.3,
+      "radiusM": [5, 11],
+      "minDistanceM": 500,
+      "centerAmount": 1000,
+      "edgeRatio": 0.15,
+      "richness": [0.8, 1.2],
+      "biomeWeight": {
+        "prairie": 1,
+        "forest": 0.8,
+        "desert": 1.5,
+        "tundra": 1
+      },
+      "harvest": {
+        "item": "crude_oil",
+        "secondsPerUnit": 1
+      }
+    },
+    {
       "id": "uraninite",
       "family": "ores",
       "kind": "deposit",

@@ -297,7 +297,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(resourceById('copper_ore').color, t('item.copper_ore' as TranslationKey)),
       legendItem(resourceById('coal').color, t('item.coal' as TranslationKey)),
       legendItem(resourceById('sand').color, t('item.silica_sand' as TranslationKey)),
-      ...['zinc_ore', 'bauxite', 'uraninite'].map((id) =>
+      ...['zinc_ore', 'bauxite', 'oil', 'uraninite'].map((id) =>
         legendItem(resourceById(id).color, t(`item.${id}` as TranslationKey)),
       ),
       legendItem(OBJECT_COLORS.tree, t('map.trees')),

@@ -58,6 +58,12 @@
       "color": "#6b7480"
     },
     {
+      "id": "crude_oil",
+      "weightKg": 0.9,
+      "volumeL": 1,
+      "color": "#1c1c22"
+    },
+    {
       "id": "uraninite",
       "weightKg": 0.9,
       "volumeL": 0.3,
@@ -760,6 +766,24 @@
         "iron_gear": 6,
         "copper_wire": 12
       }
+    },
+    {
+      "id": "machine_pumpjack",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#3a3f47",
+      "recipe": {
+        "steel_ingot": 10,
+        "iron_gear": 8,
+        "iron_plate": 10,
+        "copper_wire": 6
+      }
+    },
+    {
+      "id": "barrel_oil",
+      "weightKg": 98,
+      "volumeL": 120,
+      "color": "#26262c"
     },
     {
       "id": "machine_boiler",

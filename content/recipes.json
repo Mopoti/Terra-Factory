@@ -168,6 +168,36 @@
       "seconds": 2
     },
     {
+      "id": "fill_oil_barrel",
+      "machine": "barreler",
+      "in": {
+        "barrel_empty": 1
+      },
+      "out": {
+        "barrel_oil": 1
+      },
+      "fluid": {
+        "kind": "oil",
+        "amount": 100
+      },
+      "seconds": 2
+    },
+    {
+      "id": "drain_oil_barrel",
+      "machine": "barreler",
+      "in": {
+        "barrel_oil": 1
+      },
+      "out": {
+        "barrel_empty": 1
+      },
+      "fluid": {
+        "kind": "oil",
+        "amount": -100
+      },
+      "seconds": 2
+    },
+    {
       "id": "drain_water_barrel",
       "machine": "barreler",
       "in": {

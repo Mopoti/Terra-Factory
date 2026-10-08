@@ -275,3 +275,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Sable sur la carte** : gisements de sable (ressource `sand`, ultra-abondants dans le **désert** : poids ×2,4 ; rares ailleurs ; un gisement de départ près du point d'apparition) + **bande de sable de 2 à 4 m (4 à 8 cases) autour des étangs**, 400 par case. Finis et épuisables. Récolte à la main (objet **sable siliceux**) ou à la **foreuse électrique** (T2, T3 éco) ; la **foreuse à combustible T1 ne sait pas le miner**.
 - **Sur-broyage** : seconde recette du concasseur, **2 pierres écrasées → 1 sable siliceux** (3 s), pour les joueurs sans eau ni désert à proximité. (Le concasseur reste à 100 % : 1 pierre → 1 pierre écrasée.)
 - **Four électrique T3** (`furnace_electric`, 3×3, 200 kW, 8 lingots d'acier + 6 engrenages + 12 fils ; technologie **Silicium T3**, 120 paquets, après Presse lourde T3) : **4 sable siliceux + 1 charbon (réactif) → 2 silicium brut** (4 s) ; pollue l'air. Il a aussi le **refroidissement à l'eau** du 6c (+50 %).
+
+### 7.2 Point 7b : pétrole, chevalet de pompage, barils de pétrole (Tour 101)
+
+- **Gisements de pétrole** (`oil`, liquide) : à partir de **500 m** du départ, même formule de richesse et de taille que les minerais (plus riche loin) ; un peu plus fréquents dans le désert. **Non récoltables à la main** ; invisibles pour les foreuses. Sur la carte : légende « Pétrole ».
+- **Nouveau fluide : le pétrole** (noir dans les tuyaux ; un seul fluide par tuyau).
+- **Chevalet de pompage T3** (`pumpjack`, 3×3, 60 kW, réserve 200 L, 10 lingots d'acier + 8 engrenages + 10 plaques de fer + 6 fils) : se pose sur le gisement, **1 L/s**, **4 bar** (supporte le cuivre), sortie devant ; le gisement diminue d'1 par litre. Technologie **Pétrole T3** (140 paquets, après Barils T3 et Presse lourde T3).
+- **Barils de pétrole** : la remplisseuse/videuse accepte aussi le pétrole (recettes « Remplir / Vider un baril de pétrole », 100 L, objet `barrel_oil`).
+- À venir (7c) : raffinerie T3, qui exigera une haute pression (surpresseurs, tuyaux de laiton ou d'acier).

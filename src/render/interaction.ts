@@ -188,6 +188,7 @@ export class Interaction {
     }
     for (const o of data.ore) {
       const res = resourceById(o.id) as DepositResource;
+      if (res.liquid) continue;
       const key = cellKey(o.gx, o.gz);
       add({
         kind: 'ore',

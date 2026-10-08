@@ -1,8 +1,8 @@
 import { machineDef, type MachineType } from '../data/machines';
 import type { Cell, Machine } from './factory';
 
-export type FluidKind = 'water' | 'steam' | 'hot';
-export const FLUID_KINDS: FluidKind[] = ['water', 'steam', 'hot'];
+export type FluidKind = 'water' | 'steam' | 'hot' | 'oil';
+export const FLUID_KINDS: FluidKind[] = ['water', 'steam', 'hot', 'oil'];
 /** Machines qui poussent un fluide (donc qui donnent une pression de départ) : le fluide qu'elles émettent. */
 export const SOURCE_KIND: Partial<Record<MachineType, FluidKind>> = {
   pump: 'water',
@@ -10,6 +10,7 @@ export const SOURCE_KIND: Partial<Record<MachineType, FluidKind>> = {
   builder: 'hot',
   furnace_electric: 'hot',
   cooling_tower: 'water',
+  pumpjack: 'oil',
 };
 
 /** Une prise de fluide sur un côté d'une machine : sens `in` (reçoit), `out` (émet) ou `both` (tuyau). */
@@ -18,15 +19,15 @@ export interface FluidPort {
   side: number;
   mode: 'in' | 'out' | 'both';
   /** Fluide admis / émis (un tuyau accepte les deux, un à la fois). */
-  /** `liquid` : eau ou eau chaude (jamais de vapeur). */
-  fluid: FluidKind | 'any' | 'liquid';
+  /** Un fluide, une liste de fluides admis, ou `any` (tous). */
+  fluid: FluidKind | FluidKind[] | 'any';
 }
 
 /** Débit : part de l'écart de niveau (0 à 1) qui passe par seconde, multipliée par la plus petite capacité. */
 const FLOW_RATE = 20;
 
 export function emptyFluid(): Record<FluidKind, number> {
-  return { water: 0, steam: 0, hot: 0 };
+  return { water: 0, steam: 0, hot: 0, oil: 0 };
 }
 
 /** Prises de fluide d'une machine posée avec l'orientation `rot`. */
@@ -43,8 +44,8 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
     case 'boiler':
       // Eau par un côté et qui ressort de l'autre (chaudières en série) ; vapeur devant, combustible derrière.
       return [
-        { side: (rot + 1) % 4, mode: 'both', fluid: 'liquid' },
-        { side: (rot + 3) % 4, mode: 'both', fluid: 'liquid' },
+        { side: (rot + 1) % 4, mode: 'both', fluid: ['water', 'hot'] },
+        { side: (rot + 3) % 4, mode: 'both', fluid: ['water', 'hot'] },
         { side: rot % 4, mode: 'out', fluid: 'steam' },
       ];
     case 'furnace_electric':
@@ -66,12 +67,18 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
         { side: rot % 4, mode: 'out', fluid: 'any' },
       ];
     case 'washer':
-    case 'barreler':
-      // Remplisseuse / videuse de barils : l'eau entre ou sort par les côtés (objets : entrée derrière, sortie devant).
       return [
         { side: (rot + 1) % 4, mode: 'both', fluid: 'water' },
         { side: (rot + 3) % 4, mode: 'both', fluid: 'water' },
       ];
+    case 'barreler':
+      // Remplisseuse / videuse de barils : eau ou pétrole par les côtés (objets : entrée derrière, sortie devant).
+      return [
+        { side: (rot + 1) % 4, mode: 'both', fluid: ['water', 'oil'] },
+        { side: (rot + 3) % 4, mode: 'both', fluid: ['water', 'oil'] },
+      ];
+    case 'pumpjack':
+      return [{ side: rot % 4, mode: 'out', fluid: 'oil' }];
     case 'turbine':
       return [
         { side: back, mode: 'in', fluid: 'steam' },
@@ -118,9 +125,12 @@ export function fluidLinks(
 const capOf = (m: Machine): number => machineDef(m.type).fluidCap ?? 100;
 
 /** Un tuyau ne porte qu'un fluide à la fois ; les autres machines ont une réserve par fluide. */
+const portAccepts = (port: FluidPort, kind: FluidKind): boolean =>
+  port.fluid === 'any' ||
+  (Array.isArray(port.fluid) ? port.fluid.includes(kind) : port.fluid === kind);
+
 export function canHold(m: Machine, port: FluidPort, kind: FluidKind): boolean {
-  if (port.fluid === 'liquid' ? kind === 'steam' : port.fluid !== 'any' && port.fluid !== kind)
-    return false;
+  if (!portAccepts(port, kind)) return false;
   if (m.type !== 'pipe') return true;
   return FLUID_KINDS.every((other) => other === kind || m.fluid[other] < 0.5);
 }

@@ -34,6 +34,7 @@ export type MachineType =
   | 'turret'
   | 'pipe'
   | 'pump'
+  | 'pumpjack'
   | 'boiler'
   | 'turbine';
 
@@ -151,6 +152,7 @@ export const TURRET_EVERY_S = 0.6;
 export const isFluid = (type: MachineType): boolean =>
   type === 'pipe' ||
   type === 'pump' ||
+  type === 'pumpjack' ||
   type === 'boiler' ||
   type === 'turbine' ||
   type === 'barreler' ||
@@ -172,6 +174,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'pole' ||
     type === 'pipe' ||
     type === 'pump' ||
+    type === 'pumpjack' ||
     type === 'booster' ||
     type === 'cooling_tower' ||
     type === 'turbine'
@@ -214,6 +217,8 @@ export const itemOfTier = (def: MachineDef, tier: number): string =>
 export const beltSpeed = (tier: number): number =>
   machineDef('conveyor').tierSpeeds?.[tier - 1] ?? machineDef('conveyor').cellsPerSecond ?? 0.75;
 
-/** La foreuse à combustible (T1) ne sait pas extraire le sable : il faut une foreuse électrique. */
+/** Les foreuses ne touchent pas au pétrole (chevalet de pompage). La foreuse à combustible (T1) ne sait pas extraire le sable : il faut une foreuse électrique. */
 export const drillCanMine = (type: MachineType, item: string): boolean =>
-  !(type === 'drill' && item === 'silica_sand');
+  type === 'pumpjack'
+    ? item === 'crude_oil'
+    : item !== 'crude_oil' && !(type === 'drill' && item === 'silica_sand');

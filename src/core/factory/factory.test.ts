@@ -1706,3 +1706,51 @@ describe('sable et silicium (7a)', () => {
     expect(e.stock).toEqual({ item: 'silicon_raw', count: 2 });
   });
 });
+
+describe('pétrole (7b)', () => {
+  const oilWorld = (left: { n: number }): FactoryWorld => ({
+    oreAt: () => (left.n > 0 ? { id: 'oil', item: 'crude_oil', amount: left.n } : null),
+    mineOre: (_x, _z, n) => {
+      const got = Math.min(n, left.n);
+      left.n -= got;
+      return got;
+    },
+  });
+  const gridFor = (...ms: Machine[]): Machine[] => {
+    const gen = emptyMachine(90, 'generator', 20, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    return [gen, emptyMachine(91, 'pole', 16, 0, 0), ...ms];
+  };
+
+  it('le chevalet pompe 1 L/s sur un gisement et l’épuise', () => {
+    const left = { n: 5 };
+    const j = emptyMachine(1, 'pumpjack', 10, 0, 0);
+    const f = new Factory(gridFor(j), oilWorld(left));
+    run(f, 3.5);
+    expect(j.fluid.oil).toBeCloseTo(3, 0);
+    run(f, 10);
+    expect(j.fluid.oil).toBe(5);
+    expect(left.n).toBe(0);
+    expect(f.status(j)).toBe('noOre');
+  });
+
+  it('les foreuses ne touchent pas au pétrole', () => {
+    const d = emptyMachine(1, 'drill_electric', 10, 0, 0);
+    const f = new Factory(gridFor(d), oilWorld({ n: 100 }));
+    run(f, 3);
+    expect(d.stock).toBeNull();
+  });
+
+  it('la remplisseuse met 100 L de pétrole dans un baril', () => {
+    const b = emptyMachine(1, 'barreler', 8, 0, 0);
+    b.recipe = 'fill_oil_barrel';
+    b.slots.push({ item: 'barrel_empty', count: 1 });
+    b.fluid.oil = 120;
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), b], makeWorld().world);
+    run(f, 2.5);
+    expect(b.stock).toEqual({ item: 'barrel_oil', count: 1 });
+    expect(b.fluid.oil).toBeCloseTo(20);
+  });
+});

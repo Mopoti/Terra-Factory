@@ -39,6 +39,8 @@ interface PatchBase extends Base {
 }
 export interface DepositResource extends PatchBase {
   kind: 'deposit';
+  /** Gisement liquide (pétrole) : pas récoltable à la main, on y pose un chevalet de pompage. */
+  liquid?: boolean;
   /** Distance minimale (m) au point de départ pour que le gisement apparaisse (0 = partout). */
   minDistanceM?: number;
   harvest: Harvest;
