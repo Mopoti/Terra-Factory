@@ -1,5 +1,5 @@
 import { normalizePieces, type Pieces } from '../build/pieces';
-import { CELL_SIZE_M } from '../constants';
+import { CELL_SIZE_M, CHUNK_CELLS } from '../constants';
 import { footprint, normalizeMachines, type Machine } from '../factory/factory';
 import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
@@ -9,7 +9,17 @@ import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
 import { TECHS, expandLegacyTechs, isSciencePack } from '../data/techs';
 import { TUTORIAL_STEPS } from './tutorial';
-import type { ChunkData } from '../world/worldgen';
+import type { ChunkData, PlacedObject } from '../world/worldgen';
+
+/** Nid créé pendant la partie : case d'ancrage et côté (cases). */
+export interface ExtraNest {
+  gx: number;
+  gz: number;
+  cells: number;
+}
+
+/** Plafond de nids créés par l'expansion (au-delà, les colonies cessent de s'étendre). */
+export const MAX_EXTRA_NESTS = 60;
 
 /** Un véhicule posé dans le monde : position, cap (rad) et carburant (secondes de marche). */
 export interface Vehicle {
@@ -112,6 +122,8 @@ export interface WorldChanges {
   time: number;
   /** Véhicules posés dans le monde. */
   vehicles: Vehicle[];
+  /** Nids nés de l'expansion des colonies (les nids d'origine viennent du monde généré). */
+  nests: ExtraNest[];
   /** Balles dans le pistolet. */
   ammo: number;
   /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
@@ -165,6 +177,7 @@ export function emptyChanges(): WorldChanges {
     enemies: [],
     time: 0,
     vehicles: [],
+    nests: [],
     ammo: 0,
     energyVersion: 1,
     footprintVersion: FOOTPRINT_VERSION,
@@ -175,10 +188,26 @@ export function emptyChanges(): WorldChanges {
 /** Points de vie d'un nid : le « taken » du nid compte les dégâts reçus. */
 export const NEST_HP = 150;
 
+/** Nids créés par l'expansion dont la case d'ancrage est dans ce bloc, comme des objets du monde. */
+export function extraNestsIn(changes: WorldChanges, cx: number, cz: number): PlacedObject[] {
+  return changes.nests
+    .filter((n) => Math.floor(n.gx / CHUNK_CELLS) === cx && Math.floor(n.gz / CHUNK_CELLS) === cz)
+    .map((n) => ({
+      id: 'nest',
+      gx: n.gx,
+      gz: n.gz,
+      cells: n.cells,
+      scale: 1,
+      rotation: 0,
+      amount: 0,
+    }));
+}
+
 export function applyChanges(chunk: ChunkData, changes: WorldChanges): ChunkData {
   const hasTaken = Object.keys(changes.taken).length > 0;
-  if (!hasTaken) return chunk;
-  const objects = chunk.objects.flatMap((o) => {
+  const extra = extraNestsIn(changes, chunk.cx, chunk.cz);
+  if (!hasTaken && extra.length === 0) return chunk;
+  const objects = [...chunk.objects, ...extra].flatMap((o) => {
     if (o.id === 'nest') return (changes.taken[cellKey(o.gx, o.gz)] ?? 0) >= NEST_HP ? [] : [o];
     const taken = changes.taken[cellKey(o.gx, o.gz)] ?? 0;
     const left = resourceById(o.id).kind === 'object' ? o.amount - taken : o.amount;
@@ -323,6 +352,18 @@ export function normalizeChanges(raw: unknown): WorldChanges {
           ? { kind: e.kind }
           : {}),
         ...(home && isNum(home.x) && isNum(home.z) ? { home: { x: home.x, z: home.z } } : {}),
+      });
+    }
+  }
+  if (Array.isArray(r.nests)) {
+    for (const raw of r.nests.slice(0, MAX_EXTRA_NESTS)) {
+      if (typeof raw !== 'object' || raw === null) continue;
+      const n = raw as Record<string, unknown>;
+      if (!isNum(n.gx) || !isNum(n.gz)) continue;
+      result.nests.push({
+        gx: Math.floor(n.gx),
+        gz: Math.floor(n.gz),
+        cells: isNum(n.cells) ? Math.max(1, Math.min(24, Math.floor(n.cells))) : 4,
       });
     }
   }

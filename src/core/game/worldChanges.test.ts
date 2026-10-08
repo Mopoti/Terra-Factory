@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CHUNK_CELLS } from '../constants';
 import { energyKJ } from '../data/items';
 import { machineDef } from '../data/machines';
 import { emptyMachine } from '../factory/factory';
@@ -67,5 +68,20 @@ describe('énergie des combustibles', () => {
       expect(machineDef(type).burnKw).toBeGreaterThan(0);
     // un charbon fait tourner une foreuse (90 kW) pendant 100 s
     expect(energyKJ('coal') / (machineDef('drill').burnKw ?? 1)).toBe(100);
+  });
+});
+
+describe('nids créés par l’expansion', () => {
+  it('sont enregistrés, relus, et apparaissent dans leur bloc comme des objets du monde', () => {
+    const c = emptyChanges();
+    c.nests.push({ gx: 70, gz: 5, cells: 4 });
+    const back = normalizeChanges(JSON.parse(JSON.stringify(c)));
+    expect(back.nests).toEqual([{ gx: 70, gz: 5, cells: 4 }]);
+    const cx = Math.floor(70 / CHUNK_CELLS);
+    const chunk = applyChanges({ cx, cz: 0, objects: [], ore: [], water: [] }, back);
+    expect(chunk.objects.map((o) => o.id)).toEqual(['nest']);
+    // Détruit (dégâts cumulés) : il disparaît.
+    back.taken[cellKey(70, 5)] = NEST_HP;
+    expect(applyChanges({ cx, cz: 0, objects: [], ore: [], water: [] }, back).objects).toEqual([]);
   });
 });

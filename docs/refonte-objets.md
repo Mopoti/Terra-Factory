@@ -10,11 +10,11 @@
 | 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé et codé (Tour 85)**                                           |
 | 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **codé** (richesse selon la distance, minerais par paliers, ponts)     |
 | 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **codé** (3a Tour 87, 3b Tours 90–96)                                  |
-| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **codé**, sauf 4b : piliers automatiques des tapis et tuyaux surélevés |
+| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **codé** (4b : les tapis surélevés ont leurs piliers depuis le Tour 94 ; les tuyaux restent au sol) |
 | 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | **codé** (5a–5d, Tours 92–95)                                          |
 | 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | **codé** (6a–6c, Tours 97–99)                                          |
 | 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | **codé** (7a–7d, Tours 100–103)                                        |
-| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | **codé** (Tour 106) ; expansion des colonies non codée                 |
+| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | **codé** (Tour 106) ; expansion des colonies (Tour 127)                 |
 | 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                           |
 | 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | **codé** (10a–10c, Tours 107–109)                                      |
 | 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | **codé** (11a–11d, Tours 110–113)                                      |
@@ -417,3 +417,10 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Tactile** : **appui long** (0,5 s sans bouger) sur le monde = démolir ce qui est visé (clic droit maintenu) ; **pincement** à deux doigts = zoom de la caméra. Correction : un appui très bref sur un bouton passait parfois inaperçu (relâché avant l'image suivante) ; il dure maintenant au moins 60 ms.
 - **Petits écrans** (largeur ≤ 700 px ou hauteur ≤ 520 px) : sac, machines, carte et technologies occupent tout l'écran, boutons de 40 px minimum, une seule colonne de technologies. Vérifié à 660 × 360 avec un écran tactile simulé.
 - **Pas encore** : remappage des boutons de la manette, menu principal navigable à la manette, icônes de boutons dans les textes.
+
+## Expansion des colonies (Tour 127)
+
+- Option de partie `enemies.expand` (activée par défaut, déjà dans l'éditeur) : un nid qui a absorbé **600 points de pollution** fonde un **nouveau nid à 25–45 m** (direction tirée au hasard, générateur déterministe de la menace). Plus la pollution est forte près d'un nid, plus la colonie s'étend.
+- Le monde refuse la fondation : à moins de **250 m du départ** (comme les nids d'origine), sur l'eau, à moins de 10 m d'un autre nid, à moins de **15 m d'une machine ou du joueur**, ou au-delà de **60 nids créés**. Après un refus, le nid réessaie plus tôt (70 % du coût).
+- Les nids créés sont enregistrés dans la partie (`changes.nests`, ancienne sauvegarde sans le champ = aucun), s'affichent comme les autres nids, se détruisent de la même façon (150 PV) et sont envoyés aux invités avec l'état du monde.
+- Équilibrage à affiner en jouant (coût 600, distance, plafond 60).

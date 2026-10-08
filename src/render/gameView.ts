@@ -33,7 +33,7 @@ import {
 import type { GameState } from '../core/game/state';
 import { DISCOVERIES } from '../core/data/discoveries';
 import { MOULD_CYCLES, recipeById } from '../core/data/recipes';
-import { applyChanges, NEST_HP } from '../core/game/worldChanges';
+import { applyChanges, extraNestsIn, MAX_EXTRA_NESTS, NEST_HP } from '../core/game/worldChanges';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
@@ -2306,6 +2306,20 @@ export function startGameView(
             });
           } else if (o.id === 'tree') trees++;
         }
+        for (const o of extraNestsIn(
+          options.state.changes,
+          pcx * cellChunks + dx,
+          pcz * cellChunks + dz,
+        )) {
+          if ((options.state.changes.taken[cellKey(o.gx, o.gz)] ?? 0) >= NEST_HP) continue;
+          nests.push({
+            gx: o.gx,
+            gz: o.gz,
+            cells: o.cells,
+            x: (o.gx + o.cells / 2) * CELL_SIZE_M,
+            z: (o.gz + o.cells / 2) * CELL_SIZE_M,
+          });
+        }
       }
     }
     nestCache.set(k, nests);
@@ -2362,6 +2376,29 @@ export function startGameView(
   const threatWorld: ThreatWorld = {
     nestsNear,
     nestsIn: (pcx, pcz) => (scanCell(pcx, pcz), nestCache.get(`${pcx},${pcz}`) ?? []),
+    addNest: (x, z) => {
+      const changes = options.state.changes;
+      const gx = Math.floor(x / CELL_SIZE_M);
+      const gz = Math.floor(z / CELL_SIZE_M);
+      const clearM =
+        (resourceById('nest') as { minDistanceFromSpawnM?: number }).minDistanceFromSpawnM ?? 250;
+      if (changes.nests.length >= MAX_EXTRA_NESTS) return false;
+      if (Math.hypot(x - DEFAULT_PLAYER_STATE.x, z - DEFAULT_PLAYER_STATE.z) < clearM) return false;
+      if (waterCellAt(gx, gz) || waterCellAt(gx + 1, gz + 1)) return false;
+      if (nestsNear(x, z, 10).length > 0) return false;
+      // Jamais sur une base : à 15 m d'une machine ou d'un joueur, on ne fonde pas.
+      if (
+        factory.machines.some(
+          (m) => Math.hypot((m.gx + 1) * CELL_SIZE_M - x, (m.gz + 1) * CELL_SIZE_M - z) < 15,
+        )
+      )
+        return false;
+      if (Math.hypot(playerX - x, playerZ - z) < 15) return false;
+      changes.nests.push({ gx, gz, cells: 4 });
+      nestCache.delete(`${Math.floor(x / POLLUTION_CELL_M)},${Math.floor(z / POLLUTION_CELL_M)}`);
+      dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+      return true;
+    },
     treesIn: (pcx, pcz) => (scanCell(pcx, pcz), treeCache.get(`${pcx},${pcz}`) ?? 0),
   };
   const threat = new Threat(
@@ -2370,6 +2407,7 @@ export function startGameView(
     threatWorld,
     {
       aggressive: game.options.enemies.aggressive,
+      expand: game.options.enemies.expand,
     },
     options.state.changes.enemies,
   );
@@ -2381,7 +2419,10 @@ export function startGameView(
   if (guest) {
     // L'état du monde reçu de l'hôte : les arbres et rochers récoltés, les nids… se redessinent.
     guest.onWorldChange((changed) => {
-      if (changed.includes('taken')) for (const k of chunks.keys()) dirtyChunks.add(k);
+      if (changed.includes('taken') || changed.includes('nests')) {
+        nestCache.clear();
+        for (const k of chunks.keys()) dirtyChunks.add(k);
+      }
     });
     guest.onHit((amount) => onSimEvent({ type: 'playerHit', player: guest.client.you.id, amount }));
   }

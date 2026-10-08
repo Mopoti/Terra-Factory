@@ -36,6 +36,8 @@ export interface ThreatWorld {
   treesIn(pcx: number, pcz: number): number;
   /** Nids (positions en mètres) à moins de `radiusM` mètres du point. */
   nestsNear(x: number, z: number, radiusM: number): { x: number; z: number }[];
+  /** Crée un nid près de ce point (m) ; le monde refuse s'il est trop près du départ, d'une base, de l'eau… */
+  addNest?(x: number, z: number): boolean;
 }
 
 export interface ThreatTarget {
@@ -48,6 +50,8 @@ export interface ThreatTarget {
 export interface ThreatOptions {
   /** Ennemis agressifs : ils attaquent aussi le joueur de loin et se fabriquent plus vite. */
   aggressive: boolean;
+  /** Les colonies s'étendent : un nid qui se nourrit assez de pollution en fonde un autre. */
+  expand?: boolean;
 }
 
 export interface Damage {
@@ -76,6 +80,10 @@ const NEST_ABSORB_PER_S = 3;
 const SPAWN_COST = 12;
 const SPAWN_COST_AGGRESSIVE = 8;
 const MAX_ENEMIES = 25;
+/** Pollution absorbée par un nid avant qu'il fonde un nouveau nid, distance du nouveau nid (m). */
+export const EXPAND_COST = 600;
+const EXPAND_MIN_M = 25;
+const EXPAND_MAX_M = 45;
 /** Les nids à moins de cette distance (m) d'une vapeur toxique mutent ; points de vie des mutants ×. */
 export const TOXIC_RANGE_M = 90;
 export const MUTANT_HP_FACTOR = 2;
@@ -244,6 +252,7 @@ export class Threat {
             const take = Math.min(p, NEST_ABSORB_PER_S);
             p -= take;
             const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
+            this.grow(nest, nk, take);
             const c = (this.charge.get(nk) ?? 0) + take;
             if (c >= cost && this.enemies.length < MAX_ENEMIES) {
               this.charge.set(nk, c - cost);
@@ -290,6 +299,7 @@ export class Threat {
             const take = Math.min(p, NEST_ABSORB_PER_S * 0.5);
             p -= take;
             const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
+            this.grow(nest, nk, take);
             const c = (this.charge.get(nk) ?? 0) + take;
             if (c >= cost && this.enemies.length < MAX_ENEMIES) {
               this.charge.set(nk, c - cost);
@@ -302,6 +312,23 @@ export class Threat {
       if (p < 0.05) delete this.ground[k];
       else this.ground[k] = p;
     }
+  }
+
+  /** Croissance de chaque colonie : pollution absorbée depuis la dernière fondation (par nid). */
+  private readonly growth = new Map<string, number>();
+
+  private grow(nest: { x: number; z: number }, nk: string, taken: number): void {
+    if (!this.options.expand || !this.world.addNest) return;
+    const g = (this.growth.get(nk) ?? 0) + taken;
+    if (g < EXPAND_COST) {
+      this.growth.set(nk, g);
+      return;
+    }
+    const a = this.random() * Math.PI * 2;
+    const d = EXPAND_MIN_M + this.random() * (EXPAND_MAX_M - EXPAND_MIN_M);
+    // Si le monde refuse (eau, base, départ…), on réessaie un peu plus tard, ailleurs.
+    const ok = this.world.addNest(nest.x + Math.cos(a) * d, nest.z + Math.sin(a) * d);
+    this.growth.set(nk, ok ? 0 : EXPAND_COST * 0.7);
   }
 
   /** Les nids proches du joueur gardent quelques gardiens ; un gardien tué revient après un moment. */

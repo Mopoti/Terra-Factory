@@ -193,3 +193,32 @@ describe('mutants (vapeur toxique)', () => {
     expect(calm.enemies.some((e) => e.mutant)).toBe(false);
   });
 });
+
+describe('expansion des colonies', () => {
+  const feed = (t: Threat, seconds: number): void => {
+    for (let i = 0; i < seconds; i++) {
+      t.emit(100, 0, 6);
+      run(t, 1);
+    }
+  };
+
+  it('un nid qui se nourrit de pollution en fonde un autre à 25–45 m', () => {
+    const founded: { x: number; z: number }[] = [];
+    const w: ThreatWorld = { ...world, addNest: (x, z) => (founded.push({ x, z }), true) };
+    const t = new Threat({}, {}, w, { aggressive: false, expand: true });
+    feed(t, 400);
+    expect(founded.length).toBeGreaterThan(0);
+    const d = Math.hypot(founded[0].x - 100, founded[0].z);
+    expect(d).toBeGreaterThanOrEqual(25);
+    expect(d).toBeLessThanOrEqual(45);
+  });
+
+  it('sans l’option, ou si le monde refuse, rien n’est fondé (et on réessaie plus tard)', () => {
+    let asked = 0;
+    const w: ThreatWorld = { ...world, addNest: () => (asked++, false) };
+    feed(new Threat({}, {}, w, { aggressive: false, expand: false }), 400);
+    expect(asked).toBe(0);
+    feed(new Threat({}, {}, w, { aggressive: false, expand: true }), 400);
+    expect(asked).toBeGreaterThan(1);
+  });
+});
