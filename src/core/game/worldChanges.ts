@@ -80,6 +80,9 @@ export interface WorldChanges {
   /** Tutoriel : étapes validées, et tutoriel passé par le joueur. */
   tutorialDone: string[];
   tutorialSkipped: boolean;
+  /** Balise hyperfréquence activée (fin de partie) et séquence finale déjà montrée. */
+  beacon: boolean;
+  finaleShown: boolean;
   /** Quantités récoltées à la main, par objet (compteurs des découvertes). */
   harvested: Record<string, number>;
   /** Quantités fabriquées (machines ou à la main), par objet (compteurs des découvertes). */
@@ -142,6 +145,8 @@ export function emptyChanges(): WorldChanges {
     admin: false,
     tutorialDone: [],
     tutorialSkipped: false,
+    beacon: false,
+    finaleShown: false,
     harvested: {},
     produced: {},
     discovered: [],
@@ -223,6 +228,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
   result.tutorialSkipped = r.tutorialSkipped === true;
+  result.beacon = r.beacon === true;
+  result.finaleShown = r.finaleShown === true;
   if (Array.isArray(r.tutorialDone)) {
     result.tutorialDone = r.tutorialDone.filter(
       (x): x is string => typeof x === 'string' && TUTORIAL_STEPS.some((s) => s.id === x),

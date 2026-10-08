@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { itemById } from '../data/items';
 import { machineDef } from '../data/machines';
+import { GameState } from '../game/state';
 import { MOULD_CYCLES } from '../data/recipes';
 import {
   Factory,
@@ -1981,5 +1982,95 @@ describe('déchets (11b)', () => {
     run(f, 9);
     expect(v.stock).toEqual({ item: 'contaminated_glass', count: 1 });
     expect(v.fluid.dirty).toBeCloseTo(50);
+  });
+});
+
+describe('fusion (11c)', () => {
+  const plant = (accumulators: number, fuel = 1): { f: Factory; r: Machine; acc: Machine[] } => {
+    const list: Machine[] = [];
+    const acc: Machine[] = [];
+    for (let i = 0; i < accumulators; i++) {
+      const a = emptyMachine(
+        10 + i,
+        'accumulator',
+        20 + (i % 2) * 2,
+        14 + Math.floor(i / 2) * 2,
+        0,
+      );
+      a.fuelLeft = 1_000_000; // plein : 1 GJ
+      acc.push(a);
+      list.push(a);
+    }
+    const r = emptyMachine(2, 'fusion_reactor', 30, 20, 0);
+    r.slots.push(
+      { item: 'nuclear_waste', count: fuel },
+      { item: 'contaminated_glass', count: fuel },
+    );
+    list.push(r, emptyMachine(91, 'pole', 27, 21, 0), emptyMachine(92, 'pole', 17, 18, 0));
+    return { f: new Factory(list, makeWorld().world), r, acc };
+  };
+
+  it('dix accumulateurs pleins amorcent la fusion (500 MW pendant 10 s), puis le plasma produit 500 MW', () => {
+    const { f, r, acc } = plant(10);
+    run(f, 5);
+    expect(f.status(r)).toBe('priming');
+    run(f, 7);
+    expect(f.status(r)).toBe('plasma');
+    expect(f.gridInfo(r)?.capacityKw ?? 0).toBeGreaterThanOrEqual(500000);
+    expect(acc.reduce((a, m) => a + m.fuelLeft, 0)).toBeLessThan(10 * 1_000_000 - 4_000_000);
+  });
+
+  it('avec trop peu d’accumulateurs, l’amorçage échoue', () => {
+    const { f, r } = plant(3);
+    run(f, 20);
+    expect(f.status(r)).not.toBe('plasma');
+  });
+
+  it('sans combustible, le plasma s’effondre ; la réparation remet le réacteur à froid', () => {
+    const { f, r } = plant(10);
+    run(f, 12);
+    expect(f.fusionOn(r)).toBe(true);
+    run(f, 75); // un déchet + un cylindre = 30 s, puis plus rien
+    expect(r.broken).toBe(true);
+    expect(f.status(r)).toBe('broken');
+    const s = new GameState({
+      inventory: { steel_plate: 100, zamak_ingot: 40, cable_insulated: 40 },
+    });
+    expect(s.repairReactor(r)).toBe('ok');
+    expect(r.broken).toBe(false);
+    expect(r.wear).toBe(0);
+  });
+
+  it('un accumulateur se charge avec le surplus du réseau', () => {
+    const a = emptyMachine(1, 'accumulator', 0, 0, 0);
+    const gen = emptyMachine(90, 'generator', 4, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([a, gen, emptyMachine(91, 'pole', 3, 3, 0)], makeWorld().world);
+    run(f, 10);
+    expect(a.fuelLeft).toBeGreaterThan(0);
+  });
+});
+
+describe('balise', () => {
+  it('le relais ne lance la séquence que si le plasma brûle et qu’une antenne est raccordée', () => {
+    const relay = emptyMachine(1, 'relay', 0, 0, 0);
+    const antenna = emptyMachine(2, 'antenna', 6, 0, 0);
+    const reactor = emptyMachine(3, 'fusion_reactor', 14, 0, 0);
+    reactor.wear = 1;
+    const pole = emptyMachine(4, 'pole', 8, 3, 0);
+    const f = new Factory([relay, antenna, reactor, pole], makeWorld().world);
+    f.tick(0.05);
+    const s = new GameState({ inventory: {} });
+    reactor.wear = 0;
+    expect(s.activateBeacon(f, relay)).toBe('noPlasma');
+    reactor.wear = 1;
+    f.machines.splice(f.machines.indexOf(antenna), 1);
+    expect(s.activateBeacon(f, relay)).toBe('noAntenna');
+    f.machines.push(antenna);
+    f.reindex();
+    f.tick(0.05);
+    expect(s.activateBeacon(f, relay)).toBe('ok');
+    expect(s.changes.beacon).toBe(true);
+    expect(s.activateBeacon(f, relay)).toBe('done');
   });
 });

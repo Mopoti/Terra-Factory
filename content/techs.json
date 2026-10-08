@@ -200,6 +200,44 @@
       ]
     },
     {
+      "id": "storage_3",
+      "cost": {
+        "science_pack_2": 120
+      },
+      "requires": [
+        "plastic_3"
+      ],
+      "unlocks": [
+        "machine_accumulator"
+      ]
+    },
+    {
+      "id": "fusion_5",
+      "cost": {
+        "science_pack_4": 200
+      },
+      "requires": [
+        "waste_4",
+        "storage_3"
+      ],
+      "unlocks": [
+        "machine_fusion_reactor"
+      ]
+    },
+    {
+      "id": "beacon_5",
+      "cost": {
+        "science_pack_4": 300
+      },
+      "requires": [
+        "fusion_5"
+      ],
+      "unlocks": [
+        "machine_relay",
+        "machine_antenna"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

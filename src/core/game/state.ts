@@ -78,6 +78,13 @@ export const REACTOR_REPAIR: Record<string, number> = {
   silicon_chip: 5,
 };
 
+/** Composants qu'exige la réparation du réacteur à fusion après l'effondrement du plasma. */
+export const FUSION_REPAIR: Record<string, number> = {
+  steel_plate: 100,
+  zamak_ingot: 40,
+  cable_insulated: 40,
+};
+
 /** Cases du sac en mode Créatif (le poids et le volume n'ont plus de limite). */
 export const CREATIVE_SLOTS = 120;
 
@@ -1098,22 +1105,40 @@ export class GameState {
     return true;
   }
 
-  /** Répare un réacteur en panne : demande des composants T3 dans le sac (30 plaques d'acier, 10 câbles isolés, 5 puces). */
+  /** Répare un réacteur (fission ou fusion) en panne : demande des composants dans le sac. */
   repairReactor(m: Machine): 'ok' | 'missing' | 'notBroken' {
-    if (m.type !== 'fission_reactor' || !m.broken) return 'notBroken';
+    if ((m.type !== 'fission_reactor' && m.type !== 'fusion_reactor') || !m.broken)
+      return 'notBroken';
+    const cost = m.type === 'fusion_reactor' ? FUSION_REPAIR : REACTOR_REPAIR;
     if (!this.creative) {
-      for (const [item, n] of Object.entries(REACTOR_REPAIR)) {
+      for (const [item, n] of Object.entries(cost)) {
         if ((this.inventory[item] ?? 0) < n) return 'missing';
       }
-      for (const [item, n] of Object.entries(REACTOR_REPAIR))
+      for (const [item, n] of Object.entries(cost))
         this.inventory = remove(this.inventory, item, n).inventory;
     }
     m.broken = false;
     m.fuelLeft = 0;
     m.progress = 0;
+    m.wear = 0;
     m.fluid.dirty = 0;
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /**
+   * Balise hyperfréquence : le relais lance la séquence finale si le plasma de fusion brûle et qu'une antenne est sur
+   * le même réseau. Une seule fois par partie ; ensuite la partie continue (le relais devient un comptoir, point 11d).
+   */
+  activateBeacon(factory: Factory, relay: Machine): 'ok' | 'done' | 'noPlasma' | 'noAntenna' {
+    if (this.changes.beacon) return 'done';
+    const grid = factory.gridInfo(relay);
+    const sameGrid = (m: Machine): boolean => !!grid && factory.gridInfo(m)?.id === grid.id;
+    if (!factory.machines.some((m) => factory.fusionOn(m) && sameGrid(m))) return 'noPlasma';
+    if (!factory.machines.some((m) => m.type === 'antenna' && sameGrid(m))) return 'noAntenna';
+    this.changes.beacon = true;
+    this.emit({ type: 'factory' });
     return 'ok';
   }
 

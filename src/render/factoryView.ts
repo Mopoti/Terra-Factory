@@ -691,6 +691,10 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   refinery: 2.0,
   centrifuge: 1.0,
   evaporation_tower: 2.0,
+  accumulator: 1.2,
+  fusion_reactor: 3.0,
+  relay: 1.5,
+  antenna: 3.0,
   vitrifier: 1.2,
   fission_reactor: 2.5,
   plastic_press: 1.0,
@@ -1002,6 +1006,55 @@ function addMachineBody(
     mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
     mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
+    return;
+  }
+  if (type === 'accumulator') {
+    // Accumulateur : bloc de cellules avec bandeau lumineux et bornes.
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x, 0.2, z, sx - 0.15, 0.85, sz - 0.15, color, true);
+    mb.box(x, 0.8, z, sx - 0.05, 0.08, sz - 0.05, hexToRgb('#5be0a0'), true);
+    mb.box(x - 0.2, 1.05, z, 0.12, 0.12, 0.12, hexToRgb('#d9a441'), true);
+    mb.box(x + 0.2, 1.05, z, 0.12, 0.12, 0.12, hexToRgb('#d9a441'), true);
+    return;
+  }
+  if (type === 'fusion_reactor') {
+    // Tokamak : socle massif, tore (anneau de blocs), cœur lumineux et aimants.
+    mb.box(x, 0, z, sx, 0.4, sz, shade(color, 0.6), true);
+    mb.box(x, 0.4, z, sx - 0.6, 1.4, sz - 0.6, color, true);
+    mb.box(x, 1.8, z, sx - 1.2, 0.8, sz - 1.2, shade(color, 1.2), true);
+    mb.box(x, 1.2, z, sx - 2.2, 1.6, sz - 2.2, hexToRgb('#ff9ad5'), true);
+    for (const [dx, dz] of [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ]) {
+      mb.box(
+        x + dx * (sx / 2 - 0.4),
+        0.4,
+        z + dz * (sz / 2 - 0.4),
+        0.4,
+        2.4,
+        0.4,
+        hexToRgb('#cfd8e0'),
+        true,
+      );
+    }
+    return;
+  }
+  if (type === 'relay') {
+    // Relais : mât court et parabole (boîte inclinée vers l'antenne).
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x, 0.2, z, 0.2, 0.9, 0.2, color, true);
+    mb.box(x, 1.1, z, 0.7, 0.35, 0.7, shade(color, 1.3), true);
+    return;
+  }
+  if (type === 'antenna') {
+    // Antenne d'alignement : socle, mât haut et réseau de bras.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, 0.25, 2.6, 0.25, color, true);
+    mb.box(x, 2.2, z, sx - 0.3, 0.1, 0.1, shade(color, 1.3), true);
+    mb.box(x, 2.6, z, 0.1, 0.1, sz - 0.3, shade(color, 1.3), true);
     return;
   }
   if (type === 'evaporation_tower') {

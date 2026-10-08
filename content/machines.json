@@ -505,6 +505,52 @@
       "height": 1.2
     },
     {
+      "id": "accumulator",
+      "w": 2,
+      "d": 2,
+      "item": "machine_accumulator",
+      "color": "#4a6a8a",
+      "fuel": false,
+      "producesKw": 0.001,
+      "storageKJ": 1000000,
+      "chargeKw": 25000,
+      "dischargeKw": 50000,
+      "height": 1.2
+    },
+    {
+      "id": "fusion_reactor",
+      "w": 6,
+      "d": 6,
+      "item": "machine_fusion_reactor",
+      "color": "#7a8ad0",
+      "fuel": false,
+      "consumesKw": 50000,
+      "producesKw": 500000,
+      "slots": 2,
+      "stockMax": 20,
+      "height": 3.0
+    },
+    {
+      "id": "relay",
+      "w": 2,
+      "d": 2,
+      "item": "machine_relay",
+      "color": "#5a8ab0",
+      "fuel": false,
+      "consumesKw": 1000,
+      "height": 1.5
+    },
+    {
+      "id": "antenna",
+      "w": 3,
+      "d": 3,
+      "item": "machine_antenna",
+      "color": "#8aa0c0",
+      "fuel": false,
+      "consumesKw": 5000,
+      "height": 3.0
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

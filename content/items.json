@@ -968,6 +968,54 @@
       }
     },
     {
+      "id": "machine_accumulator",
+      "weightKg": 80,
+      "volumeL": 60,
+      "color": "#4a6a8a",
+      "recipe": {
+        "steel_plate": 8,
+        "cable_insulated": 6,
+        "zamak_ingot": 4,
+        "silicon_chip": 2
+      }
+    },
+    {
+      "id": "machine_fusion_reactor",
+      "weightKg": 3000,
+      "volumeL": 4000,
+      "color": "#7a8ad0",
+      "recipe": {
+        "steel_plate": 200,
+        "concrete_block": 200,
+        "cable_insulated": 100,
+        "silicon_chip": 50,
+        "zamak_ingot": 100
+      }
+    },
+    {
+      "id": "machine_relay",
+      "weightKg": 40,
+      "volumeL": 50,
+      "color": "#5a8ab0",
+      "recipe": {
+        "steel_plate": 10,
+        "cable_insulated": 10,
+        "silicon_chip": 6
+      }
+    },
+    {
+      "id": "machine_antenna",
+      "weightKg": 120,
+      "volumeL": 200,
+      "color": "#8aa0c0",
+      "recipe": {
+        "steel_plate": 20,
+        "zamak_ingot": 10,
+        "cable_insulated": 20,
+        "silicon_chip": 10
+      }
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

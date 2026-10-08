@@ -40,6 +40,10 @@ export type MachineType =
   | 'fission_reactor'
   | 'evaporation_tower'
   | 'vitrifier'
+  | 'accumulator'
+  | 'fusion_reactor'
+  | 'relay'
+  | 'antenna'
   | 'plastic_press'
   | 'boiler'
   | 'turbine';
@@ -77,6 +81,10 @@ export interface MachineDef {
   fluidCap?: number;
   /** Pression de départ (bar) d'une pompe (eau) ou d'une chaudière (vapeur). */
   startBar?: number;
+  /** Accumulateur : énergie stockée (kJ) et puissances de charge / décharge (kW). */
+  storageKJ?: number;
+  chargeKw?: number;
+  dischargeKw?: number;
   /** Refroidissement à l'eau : bonus de vitesse (0,5 = +50 %) et eau consommée (L/s). */
   coolBoost?: number;
   coolLitersPerS?: number;
@@ -193,6 +201,8 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'evaporation_tower' ||
     type === 'booster' ||
     type === 'cooling_tower' ||
+    type === 'accumulator' ||
+    type === 'antenna' ||
     type === 'turbine'
   );
 

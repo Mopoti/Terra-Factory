@@ -103,6 +103,7 @@ import {
 import { emptyFluid, pipeMaxBar } from '../core/factory/fluids';
 import { Tutorial } from '../core/game/tutorial';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
+import { showFinale } from '../ui/finale';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -1239,6 +1240,21 @@ export function startGameView(
         rows.push(`<div>${t('factory.fluid.polymer', { v: fmt(m.fluid.polymer) })}</div>`);
       if (m.fluid.oil >= 0.5)
         rows.push(`<div>${t('factory.fluid.oil', { v: fmt(m.fluid.oil) })}</div>`);
+      if (m.type === 'accumulator') {
+        rows.push(
+          `<div>${Math.round(m.fuelLeft / 1000).toLocaleString()} / ${Math.round((def.storageKJ ?? 0) / 1000)} MJ</div>`,
+        );
+      }
+      if (m.type === 'fusion_reactor') {
+        const fuel = (item: string): number => m.slots.find((s) => s.item === item)?.count ?? 0;
+        rows.push(
+          `<div>${t('factory.fusion.fuel', { waste: String(fuel('nuclear_waste')), glass: String(fuel('contaminated_glass')) })}</div>`,
+        );
+        if (m.wear === 0 && !m.broken && m.progress > 0)
+          rows.push(
+            `<div>${t('factory.fusion.priming', { s: m.progress.toFixed(1), total: '10' })}</div>`,
+          );
+      }
       if (m.type === 'pumpjack')
         rows.push(`<div>${t('factory.ore', { n: String(factory.oreUnder(m).total) })}</div>`);
       if (m.fluid.hot >= 0.5)
@@ -2346,6 +2362,15 @@ export function startGameView(
     tutorial.skip();
     tutorialPanel.refresh();
   });
+  // Séquence finale : montrée une seule fois, quand la balise est activée.
+  let closeFinale: (() => void) | null = null;
+  function checkFinale(): void {
+    if (!options.state.changes.beacon || options.state.changes.finaleShown || closeFinale) return;
+    options.state.changes.finaleShown = true;
+    closeFinale = showFinale(container, () => {
+      closeFinale = null;
+    });
+  }
   let tutorialClock = 0;
   function updateTutorial(dt: number): void {
     if (!tutorial.current()) return;
@@ -2717,6 +2742,7 @@ export function startGameView(
     }
     if (pressed('techTree')) options.onToggleTech?.();
     updateTutorial(dt);
+    checkFinale();
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {
@@ -3024,6 +3050,7 @@ export function startGameView(
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       tutorialPanel.dispose();
+      closeFinale?.();
       window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
       window.removeEventListener('keydown', retryLock, true);

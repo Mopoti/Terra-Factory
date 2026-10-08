@@ -172,11 +172,18 @@ export const CHEST_STACK = 100;
 
 /** Taille d'une pile : 100 dans un coffre, `stockMax` (20) dans un laboratoire. */
 export const stackLimit = (m: Machine): number =>
-  isLab(m.type) ? (machineDef(m.type).stockMax ?? 20) : CHEST_STACK;
+  hasSlotStore(m.type) ? (machineDef(m.type).stockMax ?? 20) : CHEST_STACK;
+
+/** Machine dont les `slots` reçoivent des objets précis (laboratoire : paquets ; réacteur à fusion : déchets). */
+export const hasSlotStore = (type: MachineType): boolean =>
+  type === 'lab' || type === 'fusion_reactor';
+/** Combustible du réacteur à fusion. */
+export const FUSION_FUEL = ['nuclear_waste', 'contaminated_glass'] as const;
 
 /** Combien d'unités de cet objet le coffre (ou le laboratoire : paquets de science seulement) peut encore recevoir. */
 export function chestRoom(m: Machine, item: string): number {
   if (isLab(m.type) && !isSciencePack(item)) return 0;
+  if (m.type === 'fusion_reactor' && !(FUSION_FUEL as readonly string[]).includes(item)) return 0;
   const cap = machineDef(m.type).slots ?? 0;
   const limit = stackLimit(m);
   let room = Math.max(0, cap - m.slots.length) * limit;
@@ -227,7 +234,9 @@ export type MachineStatus =
   | 'broken'
   | 'lowPressure'
   | 'wrongPack'
-  | 'overheat';
+  | 'overheat'
+  | 'plasma'
+  | 'priming';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -402,6 +411,7 @@ export function ports(
     case 'turret':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     case 'boiler':
+    case 'fusion_reactor':
       return { ins: [into(back)], outs: [] };
     default:
       return { ins: [], outs: [] };
@@ -551,12 +561,13 @@ export function normalizeMachines(raw: unknown): Machine[] {
       m.broken === true &&
       (machine.type === 'pipe' ||
         machine.type === 'conveyor' ||
-        machine.type === 'fission_reactor');
+        machine.type === 'fission_reactor' ||
+        machine.type === 'fusion_reactor');
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
       (isChest(machine.type) ||
-        isLab(machine.type) ||
+        hasSlotStore(machine.type) ||
         isAssembler(machine.type) ||
         isSmith(machine.type))
     ) {
@@ -567,7 +578,9 @@ export function normalizeMachines(raw: unknown): Machine[] {
       }
       machine.slots.length = Math.min(
         machine.slots.length,
-        isChest(machine.type) || isLab(machine.type) ? (machineDef(machine.type).slots ?? 0) : 8,
+        isChest(machine.type) || hasSlotStore(machine.type)
+          ? (machineDef(machine.type).slots ?? 0)
+          : 8,
       );
     }
     out.push(machine);
@@ -615,6 +628,10 @@ const MACHINE_TYPES: MachineType[] = [
   'fission_reactor',
   'evaporation_tower',
   'vitrifier',
+  'accumulator',
+  'fusion_reactor',
+  'relay',
+  'antenna',
   'plastic_press',
   'boiler',
   'turbine',
@@ -1093,6 +1110,10 @@ export class Factory {
     }
     if ((m.type === 'pipe' || m.type === 'conveyor') && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'fusion_reactor') {
+      if (m.broken) return 'broken';
+      return this.fusionOn(m) ? 'plasma' : this.fusionPriming(m) ? 'priming' : 'idle';
+    }
     if (m.type === 'evaporation_tower') return m.fluid.dirty > 0.5 ? 'running' : 'idle';
     if (m.type === 'fission_reactor') {
       if (m.broken) return 'broken';
@@ -1203,6 +1224,7 @@ export class Factory {
       else if (m.type === 'refinery') this.tickRefinery(m, dt);
       else if (m.type === 'fission_reactor') this.tickReactor(m, dt);
       else if (m.type === 'evaporation_tower') this.tickEvaporator(m, dt);
+      else if (m.type === 'fusion_reactor') this.tickFusion(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
@@ -1221,6 +1243,7 @@ export class Factory {
     if (isLab(m.type)) return this.labWorking(m);
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
+    if (m.type === 'relay' || m.type === 'antenna') return true;
     if (m.type === 'refinery') return this.refineryReady(m);
     if (m.type === 'pumpjack')
       return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
@@ -1302,6 +1325,103 @@ export class Factory {
     }
   }
 
+  /** Plasma allumé dans le réacteur à fusion ? (`wear` = 1 tant que le plasma brûle.) */
+  fusionOn(m: Machine): boolean {
+    return m.type === 'fusion_reactor' && !m.broken && m.wear === 1;
+  }
+
+  private fusionFuelCount(m: Machine, item: string): number {
+    return m.slots.find((s) => s.item === item)?.count ?? 0;
+  }
+
+  /** Le réacteur à fusion a-t-il de quoi (au moins un déchet et un cylindre) s'amorcer ? */
+  fusionFueled(m: Machine): boolean {
+    return FUSION_FUEL.every((i) => this.fusionFuelCount(m, i) > 0);
+  }
+
+  /** Amorçage : 500 MW pendant 10 s, fournis par le réseau (accumulateurs). */
+  static readonly FUSION_PRIME_KW = 500000;
+  static readonly FUSION_PRIME_S = 10;
+  /** Un déchet et un cylindre brûlent toutes les 30 s. */
+  static readonly FUSION_CYCLE_S = 30;
+
+  private fusionPriming(m: Machine): boolean {
+    return m.type === 'fusion_reactor' && !m.broken && m.wear === 0 && this.fusionFueled(m);
+  }
+
+  /** Réacteur à fusion : amorçage sur le réseau, puis plasma qui brûle son combustible ; il s'effondre s'il en manque ou si le réseau disjoncte. */
+  private tickFusion(m: Machine, dt: number): void {
+    if (m.broken) return;
+    const g = this.gridInfo(m);
+    if (m.wear === 0) {
+      // Amorçage : il faut toute la puissance demandée, d'affilée.
+      if (this.fusionPriming(m) && g && !g.blackout && g.satisfaction >= 0.999) m.progress += dt;
+      else m.progress = 0;
+      if (m.progress >= Factory.FUSION_PRIME_S) {
+        m.wear = 1;
+        m.progress = 0;
+      }
+      return;
+    }
+    // Plasma : les aimants exigent le réseau ; le combustible se consomme au rythme du cycle.
+    if (!g || g.blackout || g.satisfaction < 0.5) return this.collapse(m);
+    m.progress += dt;
+    if (m.progress >= Factory.FUSION_CYCLE_S) {
+      m.progress -= Factory.FUSION_CYCLE_S;
+      if (!this.fusionFueled(m)) return this.collapse(m);
+      for (const item of FUSION_FUEL) {
+        const stack = m.slots.find((s) => s.item === item);
+        if (!stack) continue;
+        stack.count--;
+        if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
+      }
+    }
+  }
+
+  private collapse(m: Machine): void {
+    m.broken = true;
+    m.wear = 0;
+    m.progress = 0;
+  }
+
+  /** Accumulateurs : chargent avec le surplus du réseau, donnent leur énergie quand la demande dépasse la production. */
+  private storeEnergy(dt: number): void {
+    const byGrid = new Map<number, Machine[]>();
+    for (const m of this.machines) {
+      if (m.type !== 'accumulator') continue;
+      const g = this.gridInfo(m);
+      if (!g) continue;
+      const list = byGrid.get(g.id) ?? [];
+      list.push(m);
+      byGrid.set(g.id, list);
+    }
+    for (const [id, accs] of byGrid) {
+      const g = this.grids.get(id);
+      if (!g || g.blackout) continue;
+      const def = machineDef('accumulator');
+      const max = def.storageKJ ?? 0;
+      if (g.demandKw > g.capacityKw) {
+        // Décharge : au plus la puissance de chaque accumulateur et ce qu'il lui reste.
+        let need = g.demandKw - g.capacityKw;
+        for (const a of accs) {
+          const give = Math.min(need, def.dischargeKw ?? 0, a.fuelLeft / dt);
+          if (give <= 0) continue;
+          a.fuelLeft -= give * dt;
+          g.capacityKw += give;
+          need -= give;
+        }
+      } else {
+        let surplus = g.capacityKw - g.demandKw;
+        for (const a of accs) {
+          const take = Math.min(surplus, def.chargeKw ?? 0, (max - a.fuelLeft) / dt);
+          if (take <= 0) continue;
+          a.fuelLeft += take * dt;
+          surplus -= take;
+        }
+      }
+    }
+  }
+
   private updateGrids(dt: number): void {
     for (const g of this.grids.values()) {
       g.capacityKw = 0;
@@ -1311,7 +1431,16 @@ export class Factory {
       const g = this.gridInfo(m);
       if (!g) continue;
       const def = machineDef(m.type);
+      if (m.type === 'fusion_reactor') {
+        // Amorçage : 500 MW ; plasma : aimants 50 MW et production 500 MW.
+        if (this.fusionOn(m)) {
+          g.demandKw += def.consumesKw ?? 0;
+          g.capacityKw += def.producesKw ?? 0;
+        } else if (this.fusionPriming(m)) g.demandKw += Factory.FUSION_PRIME_KW;
+        continue;
+      }
       if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
+      if (m.type === 'accumulator') continue;
       if (m.type === 'fission_reactor')
         g.capacityKw += this.reactorRunning(m) ? (def.producesKw ?? 0) : 0;
       else if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
@@ -1320,6 +1449,7 @@ export class Factory {
         g.capacityKw += def.producesKw;
       }
     }
+    this.storeEnergy(dt);
     for (const g of this.grids.values()) {
       g.satisfaction = g.demandKw <= 0 ? 1 : Math.min(1, g.capacityKw / g.demandKw);
       const ratio = g.capacityKw > 0 ? g.demandKw / g.capacityKw : 0;
@@ -1523,7 +1653,8 @@ export class Factory {
       return (
         item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
       );
-    if (isLab(target.type)) return chestRoom(target, item) > 0;
+    if (isLab(target.type) || target.type === 'fusion_reactor')
+      return !target.broken && chestRoom(target, item) > 0;
     return false;
   }
 
@@ -1584,7 +1715,7 @@ export class Factory {
     if (isChest(target.type)) return chestPut(target, item, 1) > 0;
     if (isRouter(target.type)) target.stock = { item, count: 1 };
     else if (target.type === 'conveyor') target.belt.push({ item, pos: 0 });
-    else if (isLab(target.type)) chestPut(target, item, 1);
+    else if (isLab(target.type) || target.type === 'fusion_reactor') chestPut(target, item, 1);
     else if (isTurret(target.type) || target.type === 'fission_reactor') {
       if (target.input) target.input.count++;
       else target.input = { item, count: 1 };

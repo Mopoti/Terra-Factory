@@ -12,6 +12,7 @@ import {
 const EMPTY_RECIPE: Recipe = { id: '', machine: 'furnace', in: {}, out: {}, seconds: 0 };
 import {
   footprint,
+  hasSlotStore,
   ingredientCap,
   recipeOf,
   type Factory,
@@ -230,7 +231,7 @@ export function mountMachineWindow(
   function quickLoad(m: Machine, item: string, count: number): void {
     const max = machineDef(m.type).stockMax ?? 100;
     let moved = 0;
-    if (isChest(m.type) || isLab(m.type)) moved = state.putInChest(m, item, count);
+    if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
       moved = state.loadIngredient(m, item, count);
     else {
@@ -649,11 +650,42 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
-    if (isChest(m.type) || isLab(m.type))
+    if (isChest(m.type) || hasSlotStore(m.type))
       rows.append(
         chestGrid(m),
-        el('small', 'help', t(isLab(m.type) ? 'machine.labHint' : 'machine.chestHint')),
+        el(
+          'small',
+          'help',
+          t(
+            isLab(m.type)
+              ? 'machine.labHint'
+              : m.type === 'fusion_reactor'
+                ? 'machine.fusion.help'
+                : 'machine.chestHint',
+          ),
+        ),
       );
+    if (m.type === 'fusion_reactor' && m.broken) {
+      const fix = el('button', undefined, t('machine.repair.fusion'));
+      fix.type = 'button';
+      const out = el('div', 'mach-info');
+      fix.addEventListener('click', () => {
+        if (state.repairReactor(m) === 'ok') return render();
+        out.textContent = t('machine.repair.missing');
+      });
+      rows.append(fix, out);
+    }
+    if (m.type === 'relay') {
+      const note = el('div', 'mach-info', t('machine.beacon.help'));
+      const go = el('button', undefined, t('machine.beacon'));
+      go.type = 'button';
+      const out = el('div', 'mach-info');
+      go.addEventListener('click', () => {
+        const r = state.activateBeacon(factory, m);
+        out.textContent = t(`machine.beacon.${r}` as TranslationKey);
+      });
+      rows.append(note, go, out);
+    }
     if (def.fuel || m.id < 0) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));
