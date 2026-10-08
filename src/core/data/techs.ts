@@ -39,3 +39,22 @@ export const packCost = (tech: TechDef): Record<string, number> =>
 /** Total de paquets à étudier (0 = recherche à la main avec des objets). */
 export const scienceCost = (tech: TechDef): number =>
   Object.values(packCost(tech)).reduce((a, b) => a + b, 0);
+
+/**
+ * Technologies de tier 1 découpées (2 objets au plus chacune) : une ancienne sauvegarde qui avait recherché l'ancienne
+ * technologie garde tout ce qu'elle débloquait.
+ */
+export const LEGACY_TECH_SPLITS: Record<string, string[]> = {
+  logistics: ['handling'],
+  electricity: ['power_generation', 'laboratory'],
+  steam: ['steam_power'],
+  textile: ['clothing', 'handwear', 'bedding'],
+};
+
+/** Technologies connues parmi `ids`, avec celles qui remplacent une ancienne technologie découpée. */
+export function expandLegacyTechs(ids: readonly unknown[]): string[] {
+  const have = new Set(ids);
+  for (const [old, parts] of Object.entries(LEGACY_TECH_SPLITS))
+    if (have.has(old)) for (const p of parts) have.add(p);
+  return TECHS.map((t) => t.id).filter((id) => have.has(id));
+}

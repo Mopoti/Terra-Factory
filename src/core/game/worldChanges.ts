@@ -7,7 +7,7 @@ import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
-import { TECHS, isSciencePack } from '../data/techs';
+import { TECHS, expandLegacyTechs, isSciencePack } from '../data/techs';
 import { TUTORIAL_STEPS } from './tutorial';
 import type { ChunkData } from '../world/worldgen';
 
@@ -281,7 +281,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   result.nextSpawnId = result.spawns.reduce((m, s) => Math.max(m, s.id), 0) + 1;
   result.unlocked = Array.isArray(r.unlocked)
-    ? TECHS.map((t) => t.id).filter((id) => (r.unlocked as unknown[]).includes(id))
+    ? expandLegacyTechs(r.unlocked as unknown[])
     : TECHS.map((t) => t.id);
   if (typeof r.progress === 'object' && r.progress !== null) {
     for (const t of TECHS) {

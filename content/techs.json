@@ -9,7 +9,18 @@
       "requires": [],
       "unlocks": [
         "machine_splitter",
-        "machine_merger",
+        "machine_merger"
+      ]
+    },
+    {
+      "id": "handling",
+      "cost": {
+        "iron_ingot": 20
+      },
+      "requires": [
+        "logistics"
+      ],
+      "unlocks": [
         "machine_chest_iron",
         "machine_arm"
       ]
@@ -33,7 +44,7 @@
       },
       "requires": [
         "metallurgy",
-        "electricity"
+        "laboratory"
       ],
       "unlocks": [
         "zinc_ingot",
@@ -282,7 +293,7 @@
       },
       "requires": [
         "metallurgy_2",
-        "electricity"
+        "power_generation"
       ],
       "unlocks": [
         "machine_drill_eco"
@@ -291,16 +302,49 @@
     {
       "id": "textile",
       "cost": {
-        "fiber": 30
+        "fiber": 20
       },
       "requires": [],
       "unlocks": [
         "cloth",
         "backpack",
-        "hood",
+        "hood"
+      ]
+    },
+    {
+      "id": "clothing",
+      "cost": {
+        "fiber": 20
+      },
+      "requires": [
+        "textile"
+      ],
+      "unlocks": [
         "trousers",
-        "boots",
-        "gloves",
+        "boots"
+      ]
+    },
+    {
+      "id": "handwear",
+      "cost": {
+        "fiber": 20
+      },
+      "requires": [
+        "textile"
+      ],
+      "unlocks": [
+        "gloves"
+      ]
+    },
+    {
+      "id": "bedding",
+      "cost": {
+        "fiber": 20
+      },
+      "requires": [
+        "textile"
+      ],
+      "unlocks": [
         "sleeping_bag",
         "bed"
       ]
@@ -308,15 +352,39 @@
     {
       "id": "electricity",
       "cost": {
-        "iron_ingot": 30,
-        "copper_ingot": 20
+        "iron_ingot": 15,
+        "copper_ingot": 10
       },
       "requires": [],
       "unlocks": [
         "machine_pole",
-        "machine_crank",
+        "machine_crank"
+      ]
+    },
+    {
+      "id": "power_generation",
+      "cost": {
+        "iron_ingot": 15,
+        "copper_ingot": 10
+      },
+      "requires": [
+        "electricity"
+      ],
+      "unlocks": [
         "machine_generator",
-        "machine_drill_electric",
+        "machine_drill_electric"
+      ]
+    },
+    {
+      "id": "laboratory",
+      "cost": {
+        "iron_ingot": 10,
+        "copper_ingot": 10
+      },
+      "requires": [
+        "electricity"
+      ],
+      "unlocks": [
         "machine_lab"
       ]
     },
@@ -337,16 +405,29 @@
     {
       "id": "steam",
       "cost": {
-        "iron_ingot": 30,
-        "copper_ingot": 15,
-        "stone": 10
+        "iron_ingot": 15,
+        "copper_ingot": 8,
+        "stone": 5
       },
       "requires": [
         "electricity"
       ],
       "unlocks": [
         "machine_pipe",
-        "machine_pump",
+        "machine_pump"
+      ]
+    },
+    {
+      "id": "steam_power",
+      "cost": {
+        "iron_ingot": 15,
+        "copper_ingot": 7,
+        "stone": 5
+      },
+      "requires": [
+        "steam"
+      ],
+      "unlocks": [
         "machine_boiler",
         "machine_turbine"
       ]
