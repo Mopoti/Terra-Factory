@@ -220,6 +220,14 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   realismControl.append(realism);
   realismRow.append(realismControl);
   form.append(realismRow, el('small', 'help', t('editor.realism.help')));
+  form.append(
+    checkbox(
+      t('editor.tutorial'),
+      t('editor.tutorial.help'),
+      options.tutorial,
+      (v) => (options.tutorial = v),
+    ),
+  );
 
   // --- Temps : jour, nuit, saisons (trois réglages indépendants) ------------------------------------
   form.append(

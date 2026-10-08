@@ -321,3 +321,13 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Gardiens** : poursuivent le joueur à moins de 30 m ; sinon **attaquent les machines polluantes dans leur zone de 90 m** autour du nid (10 dégâts/s), puis rentrent.
 - **Acide (choix du PO)** : le jet **abîme** un tapis ou un tuyau (rouge sombre, état « Abîmé / Rompu », il ne transporte plus et un tuyau se vide) ; **réparation = poser un élément neuf du même palier (ou supérieur) par-dessus** ; l'ancien est jeté. Un message prévient (au plus un toutes les 8 s). Les anciennes sauvegardes gardent leurs ennemis (gardien s'ils ont un nid, sinon éclaireur).
 - Non fait : projectile d'acide visible ; cracheurs qui visent le joueur ; réparation au lingot (remplacée par la pose d'un élément neuf).
+
+## 10. Point 10 — interface et tutoriel
+
+- **Découpage (PO)** : **10a** tutoriel ; **10b** menu « Continuer » (tier technologique et miniature de l'usine) ; **10c** éditeur de partie (ratio de distance des ressources, mode Survie / Créatif). Mode Créatif voulu par le PO : **recherche gratuite, coût des fabrications gratuit, poids et espace du sac illimités, pas de faim, ignoré par les ennemis**.
+
+### 10.1 Point 10a : tutoriel pas à pas (Tour 107)
+
+- Panneau **en haut à droite**, étape par étape (la suivante n'est testée que quand la précédente est validée) : **1 fondations** (se déplacer, sauter, s'accroupir, courir, tourner la caméra, changer de vue, ouvrir la carte) ; **2 récolte** (bois, pierre, première hache en pierre fabriquée à la main) ; **3 premier réseau** (fabriquer et poser un four, y mettre du charbon, obtenir un lingot de fer). Les touches affichées suivent les commandes choisies dans les réglages.
+- **Quand** : activé par défaut dans une **nouvelle partie** (case « Tutoriel pas à pas » de l'éditeur), jamais dans une ancienne ; bouton **« Passer le tutoriel »** à tout moment ; la progression est enregistrée avec la partie (`tutorialDone`, `tutorialSkipped`).
+- À venir : adaptation tactile / manette (le texte parlera des icônes de boutons au point 12).

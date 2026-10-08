@@ -101,6 +101,8 @@ import {
   type Machine,
 } from '../core/factory/factory';
 import { emptyFluid, pipeMaxBar } from '../core/factory/fluids';
+import { Tutorial } from '../core/game/tutorial';
+import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -1491,6 +1493,7 @@ export function startGameView(
     else rightMoved = 0;
     if (isLocked() || input.isBindingActive('Mouse2')) {
       rig.look(e.movementX, e.movementY, getSettings().views);
+      if (Math.hypot(e.movementX, e.movementY) > 2) tutorial.signal('look');
     }
   };
   window.addEventListener('mousemove', onMouseMove);
@@ -1601,6 +1604,7 @@ export function startGameView(
     if (view === 'cycle') rig.cycleView(views);
     else rig.setView(view, views);
     if (rig.view === before) return;
+    tutorial.signal('view');
     if (rig.view !== 'first') releaseLock();
     if (rig.view === 'first') requestLock();
     options.onViewChange?.(rig.view);
@@ -2328,6 +2332,38 @@ export function startGameView(
   const hurtOverlay = document.createElement('div');
   hurtOverlay.className = 'hurt-overlay';
   container.appendChild(hurtOverlay);
+  // --- Tutoriel pas à pas (en haut à droite) ---
+  const tutorial = new Tutorial(options.state.changes, game.options.tutorial);
+  const tutorialPanel = mountTutorialPanel(container, tutorial, () => {
+    tutorial.skip();
+    tutorialPanel.refresh();
+  });
+  let tutorialClock = 0;
+  function updateTutorial(dt: number): void {
+    if (!tutorial.current()) return;
+    if (input.isActionActive('forward') || input.isActionActive('backward'))
+      tutorial.signal('move');
+    if (input.isActionActive('left') || input.isActionActive('right')) tutorial.signal('move');
+    if (input.isActionActive('jump')) tutorial.signal('jump');
+    if (input.isActionActive('crouch')) tutorial.signal('crouch');
+    if (input.isActionActive('sprint') && input.isActionActive('forward'))
+      tutorial.signal('sprint');
+    tutorialClock += dt;
+    if (tutorialClock < 0.25) return;
+    tutorialClock = 0;
+    const finished = tutorial.update({
+      inventory: options.state.inventory,
+      hasTool: options.state.harvestTool() !== null,
+      machines: factory.machines.map((m) => ({
+        type: m.type,
+        fuelCount: m.fuel?.count ?? 0,
+        slots: m.slots,
+        stockItem: m.stock?.item ?? null,
+      })),
+    });
+    if (finished) playSfx('select');
+    tutorialPanel.refresh(finished !== null && tutorial.current() === null);
+  }
   const healthBar = document.createElement('div');
   healthBar.className = 'health-bar';
   healthBar.innerHTML = '<div class="health-fill"></div><span></span>';
@@ -2645,7 +2681,10 @@ export function startGameView(
     const views = getSettings().views;
 
     if (pressed('inventory')) options.onToggleInventory?.();
-    if (pressed('map')) options.onToggleMap?.();
+    if (pressed('map')) {
+      tutorial.signal('map');
+      options.onToggleMap?.();
+    }
     if (pressed('debug')) {
       debugOn = !debugOn;
       applyDebug();
@@ -2655,6 +2694,7 @@ export function startGameView(
       }
     }
     if (pressed('techTree')) options.onToggleTech?.();
+    updateTutorial(dt);
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {
@@ -2809,7 +2849,10 @@ export function startGameView(
         factory.labNeeds = options.state.studyNeeds();
         factory.tick(0.05);
         options.state.addStudy(factory.takeLabPacks());
-        for (const [item, n] of factory.takeProduced()) options.state.countProduced(item, n);
+        for (const [item, n] of factory.takeProduced()) {
+          options.state.countProduced(item, n);
+          if (item === 'iron_ingot') tutorial.signal('iron');
+        }
         simAcc -= 0.05;
       }
       for (const m of factory.machines) {
@@ -2958,6 +3001,7 @@ export function startGameView(
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      tutorialPanel.dispose();
       window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
       window.removeEventListener('keydown', retryLock, true);

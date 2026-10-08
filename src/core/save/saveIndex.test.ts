@@ -171,6 +171,7 @@ describe('options et réglages de la partie', () => {
       options: {
         enemies: { aggressive: true, expand: false },
         realism: 'realistic',
+        tutorial: false,
         time: DEFAULT_TIME,
       },
     });
@@ -180,6 +181,7 @@ describe('options et réglages de la partie', () => {
     expect(back?.options).toEqual({
       enemies: { aggressive: true, expand: false },
       realism: 'realistic',
+      tutorial: false,
       time: DEFAULT_TIME,
     });
   });
@@ -189,6 +191,7 @@ describe('options et réglages de la partie', () => {
     expect(g.options).toEqual({
       enemies: { aggressive: false, expand: true },
       realism: 'balanced',
+      tutorial: true,
       time: DEFAULT_TIME,
     });
   });
@@ -205,7 +208,7 @@ describe('options et réglages de la partie', () => {
   });
   it('une ancienne partie reçoit les options par défaut', () => {
     const [g] = normalizeGame({ id: 'old', name: 'Ancienne' });
-    expect(g.options).toEqual(DEFAULT_GAME_OPTIONS);
+    expect(g.options).toEqual({ ...DEFAULT_GAME_OPTIONS, tutorial: false });
   });
 });
 

@@ -1601,3 +1601,44 @@
   width: 100%;
   margin-top: 6px;
 }
+
+.tutorial-panel {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  z-index: 6;
+  width: min(300px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: #0a0e14db;
+  font-size: 13px;
+  line-height: 1.4;
+  display: grid;
+  gap: 4px;
+}
+.tutorial-panel h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+.tutorial-panel p {
+  margin: 2px 0 4px;
+}
+.tutorial-panel small {
+  color: #9fb0bf;
+}
+.tutorial-panel button {
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  justify-self: end;
+  background: transparent;
+  border: 1px solid #33414f;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.tutorial-panel button:hover {
+  border-color: var(--accent);
+}

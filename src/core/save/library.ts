@@ -104,7 +104,7 @@ export class SaveLibrary implements SaveIndex {
       name: cleanName(name) || 'Partie',
       createdAt: now,
       world: normalizeWorldParams(seed, extras.families),
-      options: normalizeOptions(extras.options),
+      options: normalizeOptions(extras.options, true),
       saves: [],
     };
     this.games.push(game);

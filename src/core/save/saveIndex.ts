@@ -39,6 +39,8 @@ export interface GameOptions {
     expand: boolean;
   };
   realism: Realism;
+  /** Tutoriel pas à pas (en haut à droite) : oui par défaut dans une nouvelle partie. */
+  tutorial: boolean;
   /** Jour, nuit et saisons (réglages indépendants). */
   time: TimeSettings;
 }
@@ -46,10 +48,12 @@ export interface GameOptions {
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
   enemies: { aggressive: false, expand: true },
   realism: 'balanced',
+  tutorial: true,
   time: DEFAULT_TIME,
 };
 
-export function normalizeOptions(raw: unknown): GameOptions {
+/** `tutorialDefault` : valeur si le tutoriel n'est pas précisé (non pour une ancienne partie, oui pour une nouvelle). */
+export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOptions {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   const e = (typeof o.enemies === 'object' && o.enemies !== null ? o.enemies : {}) as Record<
     string,
@@ -62,6 +66,8 @@ export function normalizeOptions(raw: unknown): GameOptions {
       expand: typeof e.expand === 'boolean' ? e.expand : d.enemies.expand,
     },
     realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
+    // Une ancienne partie n'a pas de tutoriel.
+    tutorial: typeof o.tutorial === 'boolean' ? o.tutorial : tutorialDefault,
     time: normalizeTime(o.time),
   };
 }

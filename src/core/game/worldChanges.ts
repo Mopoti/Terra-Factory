@@ -8,6 +8,7 @@ import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
 import { TECHS, isSciencePack } from '../data/techs';
+import { TUTORIAL_STEPS } from './tutorial';
 import type { ChunkData } from '../world/worldgen';
 
 /** Un véhicule posé dans le monde : position, cap (rad) et carburant (secondes de marche). */
@@ -76,6 +77,9 @@ export interface WorldChanges {
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
   admin: boolean;
+  /** Tutoriel : étapes validées, et tutoriel passé par le joueur. */
+  tutorialDone: string[];
+  tutorialSkipped: boolean;
   /** Quantités récoltées à la main, par objet (compteurs des découvertes). */
   harvested: Record<string, number>;
   /** Quantités fabriquées (machines ou à la main), par objet (compteurs des découvertes). */
@@ -136,6 +140,8 @@ export function emptyChanges(): WorldChanges {
     equipment: {},
     unlocked: [],
     admin: false,
+    tutorialDone: [],
+    tutorialSkipped: false,
     harvested: {},
     produced: {},
     discovered: [],
@@ -216,6 +222,12 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
+  result.tutorialSkipped = r.tutorialSkipped === true;
+  if (Array.isArray(r.tutorialDone)) {
+    result.tutorialDone = r.tutorialDone.filter(
+      (x): x is string => typeof x === 'string' && TUTORIAL_STEPS.some((s) => s.id === x),
+    );
+  }
   for (const counter of ['harvested', 'produced'] as const) {
     const raw = r[counter];
     if (typeof raw !== 'object' || raw === null) continue;

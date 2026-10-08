@@ -155,6 +155,7 @@ describe('gérer les sauvegardes', () => {
       options: {
         enemies: { aggressive: true, expand: false },
         realism: 'realistic',
+        tutorial: false,
         time: DEFAULT_TIME,
       },
     });
