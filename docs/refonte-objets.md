@@ -5,20 +5,20 @@
 
 ## 0. Carte des points
 
-| #   | Point                                                                                                            | Statut                                                                                                 |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé (Tour 85)**                                                                                   |
-| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **en discussion**                                                                                      |
-| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **3a validé et codé (Tour 87)**, 3b à faire                                                            |
-| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **validé et codé (Tour 86)** : on garde le 2×2 ; piliers automatiques à 2,5 m (pièces) ; belts à faire |
-| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | à faire                                                                                                |
-| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | à faire                                                                                                |
-| 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | à faire                                                                                                |
-| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | à faire                                                                                                |
-| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                                                           |
-| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | à faire                                                                                                |
-| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | 12a tactile et 12b manette faits ; Steam plus tard                                                     |
-| 12  | Multiplateforme : tactile, manettes, Steam                                                                       | à faire (en dernier)                                                                                   |
+| #   | Point                                                                                                            | Statut                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé et codé (Tour 85)**                                           |
+| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **codé** (richesse selon la distance, minerais par paliers, ponts)     |
+| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **codé** (3a Tour 87, 3b Tours 90–96)                                  |
+| 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **codé**, sauf 4b : piliers automatiques des tapis et tuyaux surélevés |
+| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | **codé** (5a–5d, Tours 92–95)                                          |
+| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | **codé** (6a–6c, Tours 97–99)                                          |
+| 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | **codé** (7a–7d, Tours 100–103)                                        |
+| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | **codé** (Tour 106) ; expansion des colonies non codée                 |
+| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                           |
+| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | **codé** (10a–10c, Tours 107–109)                                      |
+| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | **codé** (11a–11d, Tours 110–113)                                      |
+| 12  | Multiplateforme : tactile, manettes, Steam                                                                       | **codé** : 12a tactile, 12b manette ; Steam plus tard                  |
 
 Les contradictions des points #4 et #9 ont été tranchées au Tour 86 (voir §4 et §9).
 
