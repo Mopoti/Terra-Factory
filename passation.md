@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 136** : fourneau primitif plus lent (fer 10 s, fonte 15 s, cuivre/zinc/moules 8 s ; `docs/equilibrage.md`), tests indépendants des durées ; objet choisi dans le sac affiché au bout du curseur avec sa quantité. Question ouverte du PO : modèles 3D (réponse : procéduraux possibles, plan à valider).
 - **Tour 135** : tutoriel avec les vrais noms d'objets (hématite, fourneau…) par paramètres + test ; Échap : délais d'ignorance réduits après reprise, touche reconnue par son code. Problème d'Échap non reproduit en test : à confirmer avec le PO (vue, navigateur).
 - **Tour 134** : patron de pose : disparaît au dernier exemplaire posé (tenu en main ou case de barre), clic droit bref = mains vides (`clearHand`), vérifié dans le navigateur.
 - **Tour 133** : tutoriel : étape « équiper l'outil » dans la case d'outils de la barre de raccourcis (14 étapes), vérifiée dans le navigateur.

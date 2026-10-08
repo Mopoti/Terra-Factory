@@ -476,3 +476,7 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 
 - **Noms du jeu dans le tutoriel** : les étapes four / charbon / fer citent maintenant les objets par leur nom réel, pris dans les traductions (`{furnace}` = fourneau, `{ore}` = hématite (fer), `{recipe}`, `{ingot}`, `{tool}`, `{coal}`…), au lieu de « four » et « minerai de fer » écrits en dur. Un test refuse les anciens noms dans les textes du tutoriel.
 - **Échap** : le menu pause s'ouvre bien dans les cas que j'ai pu essayer (3e personne, 1ère personne avec souris verrouillée, patron de pose actif, sac ouvert puis refermé, partie multijoueur). Deux durcissements : un Échap pressé juste après avoir repris le jeu (moins de 0,6 s) était ignoré en 1ère personne — le délai passe de 600 à 150 ms (reprise du jeu) et 300 ms (fermeture d'une fenêtre) ; la touche est aussi reconnue par son code (`Escape`) ou l'ancien nom (`Esc`). Si le problème persiste, il faut connaître la vue, le navigateur et ce qui était ouvert.
+
+## Objet choisi qui suit le curseur (Tour 136)
+
+- Quand le joueur clique une ressource dans le sac (ou dans la fenêtre d'une machine), **son nom et la quantité qu'il en a** suivent le curseur (cadre de la couleur de l'objet) jusqu'à ce qu'il la dépose, la désélectionne ou ferme la fenêtre. La pile prise « en main » (clic droit, Ctrl + clic) s'affichait déjà ; l'objet simplement choisi n'avait aucune marque.

@@ -868,7 +868,7 @@ export function mountMachineWindow(
     x.addEventListener('click', close);
     panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel);
-    updateHandCursor(state);
+    updateHandCursor(state, selected);
   }
 
   function open(id: number): void {
@@ -888,7 +888,7 @@ export function mountMachineWindow(
     selected = null;
     dragging = false;
     state.returnHand();
-    updateHandCursor(state);
+    updateHandCursor(state, selected);
     window.clearInterval(timer);
     root.hidden = true;
     root.replaceChildren();

@@ -12,7 +12,7 @@
       "out": {
         "iron_ingot": 2
       },
-      "seconds": 2
+      "seconds": 10
     },
     {
       "id": "cast_iron",
@@ -24,7 +24,7 @@
       "out": {
         "cast_iron_ingot": 2
       },
-      "seconds": 4
+      "seconds": 15
     },
     {
       "id": "copper",
@@ -35,7 +35,7 @@
       "out": {
         "copper_ingot": 2
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "zinc",
@@ -46,7 +46,7 @@
       "out": {
         "zinc_ingot": 2
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "crushed_stone",
@@ -68,7 +68,7 @@
       "out": {
         "mould_plate": 1
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "mould_gear",
@@ -79,7 +79,7 @@
       "out": {
         "mould_gear": 1
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "mould_wire",
@@ -90,7 +90,7 @@
       "out": {
         "mould_wire": 1
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "steel_plate",
@@ -305,7 +305,7 @@
       "out": {
         "iron_ingot": 2
       },
-      "seconds": 2
+      "seconds": 10
     },
     {
       "id": "cast_iron_washed",
@@ -317,7 +317,7 @@
       "out": {
         "cast_iron_ingot": 2
       },
-      "seconds": 4
+      "seconds": 15
     },
     {
       "id": "copper_washed",
@@ -328,7 +328,7 @@
       "out": {
         "copper_ingot": 2
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "zinc_washed",
@@ -339,7 +339,7 @@
       "out": {
         "zinc_ingot": 2
       },
-      "seconds": 3
+      "seconds": 8
     },
     {
       "id": "silica_sand",

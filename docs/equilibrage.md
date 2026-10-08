@@ -66,3 +66,11 @@ Mesures faites par calcul sur les données du jeu (valeur d'un objet = celle du 
 - **D. Prix du comptoir** : inchangés (vente 50 %, achat 150 % de la valeur) ; seule la valeur des paquets monte avec B.
 
 Autres réglages (portées, rendements, vitesses de foreuse, taux de pollution) : pas d'anomalie visible sans partie jouée ; à retoucher après des essais en conditions réelles.
+
+## Délais de fabrication : le fourneau primitif (Tour 136)
+
+Décision du PO : le fer se produit trop vite avec un four primitif ; il faut faire attendre le joueur. Une fois **le bon délai du fourneau trouvé**, on en déduit les délais de chaque recette de chaque machine, pour que construire une chaîne de production soit un casse-tête et une satisfaction de l'optimiser.
+
+- **Valeurs de départ** (à ajuster en jouant, `content/recipes.json`, champ `seconds`) : lingots de fer **10 s** (avant : 2 s), fonte **15 s** (4 s), cuivre et zinc **8 s** (3 s), moules **8 s** (3 s) ; mêmes valeurs pour les versions « minerai lavé ». Les machines électriques (four électrique T3) gardent leurs 4 s : elles sont plus rapides que le four primitif.
+- Les tests lisent les durées dans les recettes : changer un délai ne casse plus rien.
+- **Méthode proposée pour les autres machines** : fixer d'abord le débit d'un fourneau primitif (ici 2 lingots / 10 s = 0,2 lingot/s), puis donner à chaque machine un débit par paliers cohérent avec le tapis (T1 ≈ 2 objets/s, T2 ≈ 4, T3 ≈ 8) : il faut plusieurs machines pour saturer un tapis au palier 1, et des machines plus chères pour le palier suivant. Le calcul se fait sur « objets par seconde par machine » plutôt que sur des secondes de recette.

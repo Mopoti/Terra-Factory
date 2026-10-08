@@ -19,10 +19,14 @@ window.addEventListener(
   true,
 );
 
-/** Affiche (ou cache) la pile tenue au bout du curseur. */
-export function updateHandCursor(state: GameState): void {
-  const hand = state.hand;
-  if (!hand) {
+/**
+ * Affiche (ou cache) au bout du curseur ce que le joueur « tient » : la pile prise en main, ou à défaut l'objet qu'il
+ * vient de choisir dans le sac (avec la quantité qu'il en a), pour voir ce qu'on s'apprête à déposer.
+ */
+export function updateHandCursor(state: GameState, chosen: string | null = null): void {
+  const held =
+    state.hand ?? (chosen ? { item: chosen, count: state.inventory[chosen] ?? 0 } : null);
+  if (!held || held.count <= 0) {
     cursor?.remove();
     cursor = null;
     return;
@@ -32,8 +36,8 @@ export function updateHandCursor(state: GameState): void {
     cursor.className = 'hand-cursor';
     document.body.append(cursor);
   }
-  cursor.style.setProperty('--item', itemById(hand.item).color);
-  cursor.textContent = `${t(`item.${hand.item}` as TranslationKey)} ×${hand.count}`;
+  cursor.style.setProperty('--item', itemById(held.item).color);
+  cursor.textContent = `${t(`item.${held.item}` as TranslationKey)} ×${held.count}`;
   place();
 }
 

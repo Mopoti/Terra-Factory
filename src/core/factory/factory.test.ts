@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { itemById } from '../data/items';
 import { machineDef } from '../data/machines';
 import { GameState } from '../game/state';
-import { MOULD_CYCLES } from '../data/recipes';
+import { MOULD_CYCLES, RECIPES } from '../data/recipes';
 import {
   Factory,
   filterPasses,
@@ -43,6 +43,9 @@ function makeWorld(amount = 5): { world: FactoryWorld; left: Map<string, number>
 const run = (f: Factory, seconds: number): void => {
   for (let i = 0; i < seconds * 20; i++) f.tick(0.05);
 };
+
+/** Durée (s) d'une recette du fourneau : le délai se règle dans content/recipes.json, pas dans les tests. */
+const secs = (id: string): number => RECIPES.find((r) => r.id === id)?.seconds ?? 0;
 
 describe('emprise et sorties', () => {
   it('une foreuse fait 4 x 4 cases, la sortie est au milieu du côté choisi', () => {
@@ -143,14 +146,14 @@ describe('tapis et fourneau', () => {
     expect(pos[0] - pos[1]).toBeGreaterThanOrEqual(0.16);
     expect(pos[1] - pos[2]).toBeGreaterThanOrEqual(0.16);
   });
-  it("un fourneau cuit le minerai en lingots, 3 s pièce, et ne prend que ce qu'il sait cuire", () => {
+  it("un fourneau cuit le minerai en lingots, et ne prend que ce qu'il sait cuire", () => {
     const { world } = makeWorld();
     const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
     f1.fuel = { item: 'wood', count: 3 };
     f1.recipe = 'copper';
     f1.slots.push({ item: 'copper_ore', count: 2 });
     const f = new Factory([f1], world);
-    run(f, 6.5);
+    run(f, secs('copper') + 0.5);
     expect(f1.stock).toEqual({ item: 'copper_ingot', count: 2 });
     expect(f1.slots).toHaveLength(0);
     expect(f.status(f1)).toBe('idle');
@@ -1048,7 +1051,7 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     m.slots.push({ item, count });
   };
 
-  it('le fer demande hématite ET charbon : 2 hématite + 1 charbon → 2 lingots en 2 s', () => {
+  it('le fer demande hématite ET charbon : 2 hématite + 1 charbon → 2 lingots (durée de la recette)', () => {
     const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
     f1.recipe = 'iron';
     f1.fuel = { item: 'wood', count: 5 };
@@ -1058,19 +1061,19 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     expect(f.status(f1)).toBe('idle'); // il manque le charbon
     expect(f1.stock).toBeNull();
     stock(f1, 'coal', 1);
-    run(f, 2.5);
+    run(f, secs('iron') + 0.5);
     expect(f1.stock).toEqual({ item: 'iron_ingot', count: 2 });
     expect(f1.slots).toHaveLength(0);
   });
 
-  it('la fonte : 2 hématite + 3 charbon → 2 lingots de fonte en 4 s', () => {
+  it('la fonte : 2 hématite + 3 charbon → 2 lingots de fonte (durée de la recette)', () => {
     const f1 = emptyMachine(1, 'furnace', 0, 0, 0);
     f1.recipe = 'cast_iron';
     f1.fuel = { item: 'wood', count: 5 };
     stock(f1, 'iron_ore', 2);
     stock(f1, 'coal', 3);
     const f = new Factory([f1], makeWorld().world);
-    run(f, 3.5);
+    run(f, secs('cast_iron') - 0.5);
     expect(f1.stock).toBeNull();
     run(f, 1);
     expect(f1.stock).toEqual({ item: 'cast_iron_ingot', count: 2 });
@@ -1210,13 +1213,13 @@ describe('métallurgie 3b-1 : zinc, concasseur, tuyau de cuivre', () => {
     expect(f.takeProduced()).toEqual([['crushed_stone', 1]]);
   });
 
-  it('le zinc : 2 sphalérite → 2 lingots de zinc en 3 s, sans charbon', () => {
+  it('le zinc : 2 sphalérite → 2 lingots de zinc, sans charbon', () => {
     const furnace = emptyMachine(1, 'furnace', 0, 0, 0);
     furnace.recipe = 'zinc';
     furnace.fuel = { item: 'wood', count: 5 };
     furnace.slots.push({ item: 'zinc_ore', count: 2 });
     const f = new Factory([furnace], makeWorld().world);
-    run(f, 3.2);
+    run(f, secs('zinc') + 0.2);
     expect(furnace.stock).toEqual({ item: 'zinc_ingot', count: 2 });
   });
 });

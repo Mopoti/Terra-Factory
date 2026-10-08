@@ -484,7 +484,7 @@ export function mountInventory(
     panel.append(x);
     root.replaceChildren(el('div', 'pause-dim'), panel, tooltip);
     showTooltip();
-    updateHandCursor(state);
+    updateHandCursor(state, selected);
   }
 
   const onMove = (e: MouseEvent): void => {
@@ -509,7 +509,8 @@ export function mountInventory(
       state.setHeld(selected);
     state.carried = null;
     state.returnHand();
-    updateHandCursor(state);
+    // Fenêtre fermée : l'objet choisi n'est plus au bout du curseur (s'il est posable, il est en main).
+    updateHandCursor(state, null);
     hovered = null;
     message = '';
     root.hidden = true;
