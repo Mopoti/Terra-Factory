@@ -23,7 +23,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   { id: 'map', group: 1, keys: ['map'] },
   { id: 'wood', group: 2, keys: ['interact'] },
   { id: 'stone', group: 2, keys: ['interact'] },
-  { id: 'axe', group: 2, keys: ['inventory'] },
+  { id: 'tool', group: 2, keys: ['inventory'] },
   { id: 'furnace', group: 3, keys: ['inventory'] },
   { id: 'coal', group: 3, keys: ['use'] },
   { id: 'iron', group: 3, keys: [] },
@@ -52,7 +52,7 @@ export function stepComplete(id: string, ctx: TutorialContext): boolean {
       return (ctx.inventory.wood ?? 0) > 0;
     case 'stone':
       return (ctx.inventory.stone ?? 0) > 0;
-    case 'axe':
+    case 'tool':
       return ctx.hasTool;
     case 'furnace':
       return ctx.machines.some((m) => m.type === 'furnace');

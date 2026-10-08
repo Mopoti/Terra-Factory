@@ -330,4 +330,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 
 - Panneau **en haut à droite**, étape par étape (la suivante n'est testée que quand la précédente est validée) : **1 fondations** (se déplacer, sauter, s'accroupir, courir, tourner la caméra, changer de vue, ouvrir la carte) ; **2 récolte** (bois, pierre, première hache en pierre fabriquée à la main) ; **3 premier réseau** (fabriquer et poser un four, y mettre du charbon, obtenir un lingot de fer). Les touches affichées suivent les commandes choisies dans les réglages.
 - **Quand** : activé par défaut dans une **nouvelle partie** (case « Tutoriel pas à pas » de l'éditeur), jamais dans une ancienne ; bouton **« Passer le tutoriel »** à tout moment ; la progression est enregistrée avec la partie (`tutorialDone`, `tutorialSkipped`).
+- **Un seul outil** (décision du point 1) : l'étape de récolte demande de fabriquer **l'outil en pierre**, pas une hache.
+- **Règle du PO pour le multijoueur** : le tutoriel se lance pour **chaque joueur qui entre pour la première fois** dans une partie, que ce soit une partie qu'il crée ou la partie / le serveur d'un autre joueur. Aujourd'hui (un seul joueur) la progression est enregistrée avec la partie ; au multijoueur elle devra suivre **le joueur** dans chaque monde.
 - À venir : adaptation tactile / manette (le texte parlera des icônes de boutons au point 12).
+
+### 10.2 Point 10b : menu « Continuer » (Tour 108)
+
+- **Décision du PO** : on n'affiche **pas le tier** mais le **temps de jeu** (heures, minutes, secondes) ; **pas de miniature** pour l'instant.
+- Le bouton « Continuer » montre le nom de la partie, la sauvegarde, la date et « 2 h 05 min 09 s de jeu » ; la liste des sauvegardes de « Charger une partie » affiche aussi le temps de jeu de chacune. Le temps de jeu est l'horloge du monde (celle des saisons), qui n'avance pas en pause.

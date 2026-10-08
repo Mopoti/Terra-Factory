@@ -1,4 +1,5 @@
 import type { SaveLibrary } from '../core/save/library';
+import { splitPlayTime } from '../core/save/playTime';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import {
   lastSavedAt,
@@ -58,6 +59,16 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** « 2 h 05 min 09 s » : temps de jeu d'une sauvegarde. */
+function formatPlayTime(seconds: number): string {
+  const { h, m, s } = splitPlayTime(seconds);
+  return t('menu.playTime', {
+    h: String(h),
+    m: String(m).padStart(2, '0'),
+    s: String(s).padStart(2, '0'),
+  });
+}
+
 function formatDate(ms: number): string {
   const format = getSettings().display.timeFormat;
   return new Intl.DateTimeFormat(getLocale(), {
@@ -107,6 +118,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
           name: game.name,
           save: latestSlot(game)?.name ?? '',
           date: formatDate(lastSavedAt(game)),
+          time: formatPlayTime(latestSlot(game)?.changes.time ?? 0),
         }),
       ),
     );
@@ -382,7 +394,14 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
         el('span', undefined, slot.name),
         el('span', `badge ${slot.kind}`, t(`save.kind.${slot.kind}` as TranslationKey)),
       );
-      b.append(top, el('small', undefined, formatDate(slot.savedAt)));
+      b.append(
+        top,
+        el(
+          'small',
+          undefined,
+          `${formatDate(slot.savedAt)} · ${formatPlayTime(slot.changes.time)}`,
+        ),
+      );
       const row = el('div', 'game-row');
       row.append(b);
       if (slot.kind === 'auto') {
