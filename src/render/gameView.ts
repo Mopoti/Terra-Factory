@@ -104,6 +104,7 @@ import { emptyFluid, pipeMaxBar } from '../core/factory/fluids';
 import { Tutorial } from '../core/game/tutorial';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
+import { isTouchMode, mountTouchControls } from '../ui/touchControls';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -1504,6 +1505,18 @@ export function startGameView(
   let mouseY = window.innerHeight / 2;
 
   const isLocked = (): boolean => document.pointerLockElement === renderer.domElement;
+  // Écran tactile : joystick, glissement pour la caméra et boutons à l'écran.
+  const disposeTouch = isTouchMode()
+    ? mountTouchControls(container, {
+        input,
+        onLook: (dx, dy) => {
+          if (!paused && !uiOpen) rig.look(dx, dy, getSettings().views);
+          if (Math.hypot(dx, dy) > 2) tutorial.signal('look');
+        },
+        onPause: () => options.onRequestPause?.(),
+        canvas: renderer.domElement,
+      })
+    : null;
 
   let rightMoved = 0;
   /** Après une démolition, le clic droit toujours maintenu continue de démolir les suivants (même en bougeant la souris). */
@@ -3069,6 +3082,7 @@ export function startGameView(
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       tutorialPanel.dispose();
+      disposeTouch?.();
       craftHud.remove();
       closeFinale?.();
       window.removeEventListener('blur', onMouseUp);

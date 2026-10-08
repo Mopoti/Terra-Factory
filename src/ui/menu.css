@@ -1752,3 +1752,84 @@
   font-size: 13px;
   pointer-events: none;
 }
+
+.touch-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-look {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 55%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
+.touch-stick {
+  position: absolute;
+  left: 16px;
+  bottom: 92px;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 2px solid #ffffff55;
+  background: #0a0e1466;
+  pointer-events: auto;
+  touch-action: none;
+}
+.touch-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: #ffffff88;
+}
+.touch-pad {
+  position: absolute;
+  right: 12px;
+  bottom: 92px;
+  display: grid;
+  grid-template-columns: repeat(3, 58px);
+  gap: 6px;
+  pointer-events: none;
+}
+.touch-btn {
+  height: 38px;
+  border-radius: 19px;
+  border: 1px solid #ffffff55;
+  background: #0a0e14aa;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  pointer-events: auto;
+  touch-action: none;
+}
+.touch-btn.on {
+  background: var(--accent);
+  color: #111;
+}
+.touch-pause {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 48px;
+}
+
+body.touch-mode .tutorial-panel {
+  top: 8px;
+  right: auto;
+  left: 72px;
+  width: min(300px, 45vw);
+}
+body.touch-mode .craft-hud {
+  bottom: 84px;
+}

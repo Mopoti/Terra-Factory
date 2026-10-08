@@ -2,9 +2,14 @@ import { TUTORIAL_STEPS, type Tutorial } from '../core/game/tutorial';
 import { t, type TranslationKey } from '../i18n';
 import { bindingLabel, type ActionId } from '../settings/controls';
 import { getSettings } from '../settings/store';
+import { isTouchMode } from './touchControls';
 
 /** Texte d'une touche d'après les réglages du joueur (première liaison libre de l'action). */
 function keyLabel(action: string): string {
+  if (isTouchMode())
+    return t(
+      `touch.${action === 'interact' ? 'interact' : action === 'cycleView' ? 'view' : action === 'techTree' ? 'tech' : ['forward', 'left', 'backward', 'right'].includes(action) ? 'stick' : action}` as TranslationKey,
+    );
   const pair = getSettings().controls[action as ActionId];
   const code = pair?.[0] ?? pair?.[1];
   return code
@@ -50,7 +55,7 @@ export function mountTutorialPanel(
     if (shown === key) return;
     shown = key;
     panel.hidden = false;
-    const keys = step.keys.map(keyLabel).join(' ');
+    const keys = [...new Set(step.keys.map(keyLabel))].join(' ');
     const skip = document.createElement('button');
     skip.type = 'button';
     skip.textContent = t('tutorial.skip');

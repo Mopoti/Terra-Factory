@@ -383,3 +383,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 
 - **Durée (choix du PO)** : **0,5 s par ingrédient**, **divisée par la vitesse de l'outil** (outil en pierre ×2…) ; sans outil ×1 ; minimum 0,25 s ; **instantanée en Créatif**. Ex. outil en pierre (6 bois + 4 pierre) = 5 s à mains nues.
 - **File d'attente avec barre de progression** (choix du PO) : clic gauche / droit sur un objet = 1 / 5 fabrications mises en file ; elles se font l'une après l'autre **en continuant à jouer** ; les ingrédients sont pris au **démarrage** de chaque fabrication et l'objet arrive à la fin (attend de la place si le sac est plein). Barre dans la fenêtre du sac (avec ✕ pour annuler : la fabrication en cours rend ses ingrédients) et petite barre au-dessus de la barre d'objets. La file n'est pas enregistrée.
+
+### 12.2 Point 12a : commandes tactiles (Tour 115)
+
+- **Choix du PO** : le **tactile d'abord** (joysticks virtuels), la manette ensuite, sans le multijoueur. Steam et consoles : plus tard.
+- **Détection** : écran tactile (`pointer: coarse`) ; `?touch=1` / `?touch=0` dans l'adresse force le choix pour tester.
+- **Commandes à l'écran** : **joystick** à gauche (marche, 4 directions), **glissement du doigt** sur la moitié droite pour la caméra, **appui bref** sur le monde = clic (poser une machine, viser), boutons **Saut, Agir (maintenir), Utiliser, Accroupi (bascule), Courir (bascule), Vue, Sac, Carte, Tech** et **☰ Menu** (pause). Les boutons passent par des **actions virtuelles** (`Input.setVirtual`) : tout le jeu les lit comme des touches, donc les commandes configurées restent valables.
+- **Tutoriel** : en mode tactile il parle du joystick et des boutons au lieu des touches.
+- **Pas encore** : réglage dans les paramètres (taille, position, gauchers), appui long = clic droit (démolir), pincement pour le zoom, interface des fenêtres adaptée aux petits écrans, manette (12b).

@@ -31,6 +31,8 @@ const MODIFIER_CODES: Record<string, string[]> = {
  */
 export class Input {
   private readonly pressed = new Set<string>();
+  /** Actions maintenues par des commandes à l'écran (tactile) : elles s'ajoutent aux touches. */
+  private readonly virtual = new Set<ActionId>();
   private wheelUp = false;
   private wheelDown = false;
   private attached = false;
@@ -88,6 +90,7 @@ export class Input {
     this.wheelTarget.removeEventListener('wheel', this.onWheel);
     this.wheelTarget.removeEventListener('contextmenu', this.onContextMenu);
     this.pressed.clear();
+    this.virtual.clear();
   }
 
   private partActive(part: string): boolean {
@@ -102,7 +105,14 @@ export class Input {
     return splitBinding(binding).every((part) => this.partActive(part));
   }
 
+  /** Maintient ou relâche une action depuis une commande à l'écran. */
+  setVirtual(action: ActionId, down: boolean): void {
+    if (down) this.virtual.add(action);
+    else this.virtual.delete(action);
+  }
+
   isActionActive(action: ActionId): boolean {
+    if (this.virtual.has(action)) return true;
     return getSettings().controls[action].some((b) => b !== null && this.isBindingActive(b));
   }
 
