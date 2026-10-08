@@ -117,6 +117,7 @@ import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import { loadModels } from './models';
+import { loadNature } from './nature';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -402,6 +403,14 @@ export function startGameView(
   let viewAlive = true;
   void loadModels().then(() => {
     if (viewAlive) factoryView.rebuild();
+  });
+  // Arbres et cailloux du décor : les chunks déjà construits sont refaits une fois le chargement terminé.
+  void loadNature().then(() => {
+    if (!viewAlive) return;
+    for (const key of [...chunks.keys()]) {
+      const [cx, cz] = key.split(',').map(Number);
+      buildInto(cx, cz);
+    }
   });
   let itemsTimer = 0;
   let chunkTimer = 0;

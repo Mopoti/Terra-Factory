@@ -6,6 +6,7 @@ import { hash01 } from '../core/world/rng';
 import { BIOME_COLORS, type BiomeId } from '../core/world/biomes';
 import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
+import { TREE_MODEL_HEIGHT_M, foliageMaterial, rockModel, treeModel } from './nature';
 
 const GROUND_COLORS = Object.fromEntries(
   Object.entries(BIOME_COLORS).map(([id, hex]) => [id, hexToRgb(hex)]),
@@ -48,7 +49,7 @@ export const setGroundTint = (
   groundMaterial.emissive.setRGB(...snow);
 };
 export const propsMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
-propsMaterial.onBeforeCompile = (shader) => {
+const ghostShader = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
   Object.assign(shader.uniforms, ghostUniforms);
   // Hauteur dans le monde : ce qui est bas (tapis, tuyaux, cailloux) ne cache pas le joueur, on ne le troue pas.
   shader.vertexShader = shader.vertexShader
@@ -78,6 +79,8 @@ if (uGhostOn > 0.5 && vGhostY > 0.45 && -vViewPosition.z < uGhostDepth - 0.35) {
 }`,
     );
 };
+propsMaterial.onBeforeCompile = ghostShader;
+foliageMaterial.onBeforeCompile = ghostShader;
 
 function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry {
   const n = CHUNK_CELLS;
@@ -123,12 +126,52 @@ function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry
   return geometry;
 }
 
+/** Feuillage texturé accumulé pendant la construction du décor (arbres du modèle). */
+interface Foliage {
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  index: number[];
+}
+
+/** Ajoute un conifère du modèle : base du tronc en (x, z), tourné de `angle`, ramené à ~5,5 m × `scale`. */
+function addTree(
+  f: Foliage,
+  m: NonNullable<ReturnType<typeof treeModel>>,
+  x: number,
+  z: number,
+  angle: number,
+  scale: number,
+): void {
+  const k = (TREE_MODEL_HEIGHT_M / m.height) * scale;
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const first = f.positions.length / 3;
+  for (let i = 0; i < m.positions.length / 3; i++) {
+    const px = (m.positions[i * 3] - m.base.x) * k;
+    const pz = (m.positions[i * 3 + 2] - m.base.z) * k;
+    f.positions.push(
+      x + px * c + pz * s,
+      (m.positions[i * 3 + 1] - m.base.minY) * k,
+      z - px * s + pz * c,
+    );
+    const nx = m.normals[i * 3];
+    const nz = m.normals[i * 3 + 2];
+    f.normals.push(nx * c + nz * s, m.normals[i * 3 + 1], -nx * s + nz * c);
+    f.uvs.push(m.uvs[i * 2], m.uvs[i * 2 + 1]);
+  }
+  for (let i = 0; i < m.index.length; i++) f.index.push(first + m.index[i]);
+}
+
 function buildProps(
   data: ChunkData,
   blocked: string[],
   tall: [string, number][],
+  foliage: Foliage,
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
+  const treeMesh = treeModel();
+  const rockMesh = rockModel();
   const ox = data.cx * CHUNK_SIZE_M;
   const oz = data.cz * CHUNK_SIZE_M;
   const markBlocked = (gx: number, gz: number, cells: number): void => {
@@ -160,10 +203,13 @@ function buildProps(
       const x = cxm + Math.cos(o.rotation) * 0.2;
       const z = czm + Math.sin(o.rotation) * 0.2;
       // Tronc haut et fin (le personnage de 1,70 m passe dessous), feuillage au-dessus de 2 m.
-      b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
-      const green = shade(base, jitter);
-      b.cone(x, 2.0 * o.scale, z, 0.95 * o.scale, 1.7 * o.scale, 8, green);
-      b.cone(x, 2.9 * o.scale, z, 0.65 * o.scale, 1.4 * o.scale, 8, shade(green, 1.12));
+      if (treeMesh) addTree(foliage, treeMesh, x, z, o.rotation, o.scale);
+      else {
+        b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
+        const green = shade(base, jitter);
+        b.cone(x, 2.0 * o.scale, z, 0.95 * o.scale, 1.7 * o.scale, 8, green);
+        b.cone(x, 2.9 * o.scale, z, 0.65 * o.scale, 1.4 * o.scale, 8, shade(green, 1.12));
+      }
     } else if (o.id === 'fiber_bush') {
       // Touffe de brins clairs.
       const x = cxm + Math.cos(o.rotation) * 0.1;
@@ -184,26 +230,31 @@ function buildProps(
     } else if (o.id === 'rock') {
       const x = cxm + Math.cos(o.rotation) * 0.15;
       const z = czm + Math.sin(o.rotation) * 0.15;
-      b.octahedron(
-        x,
-        0,
-        z,
-        0.45 * o.scale,
-        0.34 * o.scale,
-        0.38 * o.scale,
-        shade(base, jitter),
-        o.rotation,
-      );
-      b.octahedron(
-        x + 0.3 * o.scale,
-        0,
-        z - 0.2 * o.scale,
-        0.2 * o.scale,
-        0.15 * o.scale,
-        0.18 * o.scale,
-        shade(base, jitter * 0.9),
-        o.rotation + 1,
-      );
+      if (rockMesh) {
+        const k = 0.26 * o.scale;
+        b.model(rockMesh, x, 0, z, Math.round(o.rotation * 2) % 4, k, undefined, 0, false, k * 1.6);
+      } else {
+        b.octahedron(
+          x,
+          0,
+          z,
+          0.45 * o.scale,
+          0.34 * o.scale,
+          0.38 * o.scale,
+          shade(base, jitter),
+          o.rotation,
+        );
+        b.octahedron(
+          x + 0.3 * o.scale,
+          0,
+          z - 0.2 * o.scale,
+          0.2 * o.scale,
+          0.15 * o.scale,
+          0.18 * o.scale,
+          shade(base, jitter * 0.9),
+          o.rotation + 1,
+        );
+      }
     } else if (o.id === 'nest') {
       const radius = o.cells * 0.25;
       const k = radius; // 1 m de rayon pour l'emprise de départ (4 cases)
@@ -271,12 +322,29 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   ground.receiveShadow = true;
   group.add(ground);
 
-  const propsGeometry = buildProps(data, blocked, tall);
+  const foliage: Foliage = { positions: [], normals: [], uvs: [], index: [] };
+  const propsGeometry = buildProps(data, blocked, tall, foliage);
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
     props.castShadow = true;
     props.receiveShadow = true;
     group.add(props);
+  }
+  let foliageGeometry: THREE.BufferGeometry | null = null;
+  if (foliage.positions.length > 0) {
+    foliageGeometry = new THREE.BufferGeometry();
+    foliageGeometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(foliage.positions, 3),
+    );
+    foliageGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(foliage.normals, 3));
+    foliageGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(foliage.uvs, 2));
+    foliageGeometry.setIndex(foliage.index);
+    foliageGeometry.computeBoundingSphere();
+    const leaves = new THREE.Mesh(foliageGeometry, foliageMaterial);
+    leaves.castShadow = true;
+    leaves.receiveShadow = true;
+    group.add(leaves);
   }
   return {
     group,
@@ -285,6 +353,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
     dispose: () => {
       groundGeometry.dispose();
       propsGeometry?.dispose();
+      foliageGeometry?.dispose();
     },
   };
 }

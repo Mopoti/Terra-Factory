@@ -53,3 +53,10 @@
 - **Tuyaux** (`pipe-large-*`), foreuses (`crane`, aimant), poteaux, tourelle, réacteurs, accumulateurs : formes simples pour l'instant.
 - **Objets du sac et ressources** posés au sol (caisses `box-*`, engrenages `cog-*`), **panneaux, portes, passerelles** (`catwalk-*`, `structure-*`, `door-*`) pour les pièces de construction.
 - **Autres animations** (engrenages `cog-*` sur les machines, ventilateurs, foreuses).
+
+## Arbres et cailloux (Tour 145)
+- **Sources** (fournies par le PO) : « Stylized Nature Pack Vol.1 – 3D Tree » (scène OBJ exportée de Nomad Sculpt, textures peintes) et « Pebbles » (glTF Unity, une couleur unie). **Licence non précisée dans les archives** : à vérifier sur la page d'origine avant toute publication (mention d'auteur éventuelle à ajouter ici).
+- `public/models/nature/tree.obj` + `tree.png` : un seul conifère extrait de la scène (objet `default_54`, 1050 sommets, 1264 triangles). Le feuillage est fait de cartes à transparence, donc il garde la texture (matériau `foliageMaterial`, `alphaTest`, double face) au lieu des couleurs par sommet. Ramené à 5,5 m × l'échelle de l'arbre, tourné au hasard ; le tronc bloque toujours une seule case.
+- `public/models/nature/pebbles.gltf` + `pebbles.bin` : tas de cailloux, cuit en couleurs par sommet et fusionné au décor ; remplace les deux octaèdres des rochers.
+- `src/render/nature.ts` charge le tout en arrière-plan ; les chunks déjà construits sont refaits quand c'est prêt. Sans fichier, les anciennes formes simples servent de secours. L'aura de transparence du décor s'applique aussi au feuillage.
+- Non utilisés pour l'instant : les autres objets de la scène (autres conifères, buissons, herbes, tas de feuilles).

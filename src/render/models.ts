@@ -69,6 +69,9 @@ export const modelFor = (type: MachineType): BakedModel | null => {
 /** Enregistre un modèle déjà préparé (tests, ou modèle fabriqué ailleurs). */
 export const registerModel = (name: string, model: BakedModel): void => void baked.set(name, model);
 
+/** Modèle déjà préparé sous ce nom (ou null). */
+export const bakedModel = (name: string): BakedModel | null => baked.get(name) ?? null;
+
 /** Y a-t-il déjà au moins un modèle prêt ? */
 export const modelsReady = (): boolean => baked.size > 0;
 
@@ -91,7 +94,7 @@ function paletteOf(
   };
 }
 
-function bake(root: THREE.Object3D): BakedModel | null {
+export function bake(root: THREE.Object3D): BakedModel | null {
   const pos: number[] = [];
   const nor: number[] = [];
   const col: number[] = [];
@@ -128,7 +131,8 @@ function bake(root: THREE.Object3D): BakedModel | null {
           (palette.data[k + 1] / 255) ** 2.2,
           (palette.data[k + 2] / 255) ** 2.2,
         );
-      } else col.push(0.6, 0.6, 0.7);
+      } else if (material.color) col.push(material.color.r, material.color.g, material.color.b);
+      else col.push(0.6, 0.6, 0.7);
     }
     const ix = g.getIndex();
     if (ix) for (let i = 0; i < ix.count; i++) idx.push(base + ix.getX(i));
