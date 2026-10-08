@@ -37,7 +37,7 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 - **Commandes** (`src/core/game/commands.ts`, `CommandBus`) : 12 commandes sérialisables (poser / démolir une machine, recette, ingrédients, réparer le réacteur, balise, vendre, acheter, recherche, étude, fabrication, annulation). Le terrain est fourni par l'hôte (`blockedFor`). Branchées dans le jeu, la fenêtre des machines, les technologies et le sac. Une commande survit à `JSON.stringify` (testé).
 - **Pas encore passé par des commandes** (à faire en M2, quand on branche le réseau) : récolte et ramassage, pièces de construction, sac ↔ coffres et cases des machines (`putInChest`, `loadMachine`…, qui manipulent encore la machine elle-même), duvets / lits, véhicules, filtres, combat du joueur. Le bus est synchrone ; pour un invité il deviendra asynchrone (envoi à l'hôte).
 
-## M2 — réseau à deux (Tour 118) : socle fait, jeu en réseau à finir
+## M2 — réseau à deux (Tour 118) : fait
 
 **Fait et testé**
 
@@ -48,9 +48,23 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 - **Menus** : pause → **Multijoueur** (ouvrir la partie aux invités, code et lien, liste des joueurs, fermer) ; menu principal → **Rejoindre une partie** (code, nom, mot de passe). Une partie privée demande à l'hôte d'accepter chaque arrivant (boîte de confirmation).
 - **Vérifié avec deux vrais navigateurs** (service de mise en relation local) : l'hôte ouvre la partie, l'invité entre avec le code, l'hôte accepte, les deux voient la liste des joueurs. 13 tests en mémoire (refus, mot de passe, sac commun / individuel, technologies communes, commandes mal formées, retour d'un joueur…).
 
-**Pas encore fait (M2c : l'invité joue vraiment)**
+**Reste (voir M2c ci-dessous et M3)**
 
-- Aujourd'hui l'invité se connecte puis voit une liste de joueurs : **il n'a pas encore le monde 3D**. À faire : lancer sa vue avec le monde reçu (même seed), appliquer les états du monde (machines, pièces, ennemis) à son usine locale sans la faire tourner, afficher les autres joueurs, envoyer sa position.
-- Brancher par commandes la récolte, les pièces de construction, les coffres et cases des machines, les véhicules (listés en M1) : sans cela, l'invité ne peut pas encore récolter ni construire des pièces.
-- Le bus d'un invité doit être asynchrone (réponse de l'hôte) ; l'état du monde est envoyé en entier à chaque fois (à remplacer par des différences en M3).
 - Le service de mise en relation PeerJS est un tiers gratuit : sans lui on ne peut pas se trouver (une fois connectés, les joueurs échangent directement). Mot de passe encore stocké en clair dans la partie.
+
+## M2c — l'invité joue vraiment (Tour 119) : fait
+
+- **Vue invité** : en rejoignant, l'invité démarre une vraie partie (`startGuest` dans `main.ts`) avec la même seed et les mêmes règles ; **rien n'est enregistré** sur son appareil (pas de sauvegarde, menu pause sans « Sauvegarder », ni de menu Multijoueur). Sa vue 3D ne fait **pas tourner le monde** (ni simulation, ni fabrication à la main) : elle affiche ce que l'hôte envoie.
+- **Monde reçu appliqué sur place** (`src/core/net/worldSync.ts`, `applyWorldPart`) : tableaux et objets gardent la même identité (l'usine, la menace, la pollution les tiennent par référence) ; si les machines changent, l'usine est ré-indexée et redessinée ; pièces, objets au sol et ressources récoltées se redessinent aussi.
+- **Autres joueurs** (`src/render/remotePlayers.ts`) : une silhouette colorée avec le nom, lissée entre deux envois ; affichée chez l'hôte (invités) et chez les invités (hôte et autres invités). L'invité envoie sa position 10 fois par seconde.
+- **Actions de l'invité = prédiction + hôte fait foi** : la commande est jouée tout de suite chez lui (`GuestBus`, même code que l'hôte), puis envoyée ; l'hôte la rejoue sur la fiche de ce joueur avec son terrain ; son état (monde toutes les 0,5 s, fiche après chaque action et chaque seconde) corrige tout écart, et un message prévient si l'hôte a refusé (« L'hôte n'a pas validé une de tes actions »).
+- **Actions qui n'étaient pas des commandes** : au lieu de les réécrire une à une, les méthodes de `GameState` de la liste blanche `REMOTE_CALLS` (récolte, jeter / ramasser, portes, démolition, pièces, cadavres, duvets / lits, véhicules, coffres, cases des machines, filtres) sont **enveloppées côté invité** : jouées localement puis rejouées chez l'hôte (message `call`, machines et véhicules par identifiant, une seule fois même si une méthode en appelle une autre). Toute autre méthode est ignorée par l'hôte.
+- **Fiche du joueur** : l'hôte fait avancer la file de fabrication à la main de chaque invité et lui renvoie sa fiche (`me` : sac, part individuelle, file) ; le sac n'est pas écrasé tant qu'un objet est tenu en main. Barre d'objets, outils, équipement, munitions et tutoriel sont décidés par l'invité et envoyés à l'hôte (`loadout`), qui en a besoin pour les limites du sac.
+- **Coups reçus** : l'hôte renvoie les coups d'ennemis (`hit`) ; la vie est suivie chez l'invité. Le mot de passe de l'hôte n'est plus envoyé aux invités.
+- **Vérifié avec deux navigateurs** : l'invité entre avec le code, voit les murs posés par l'hôte, et l'hôte voit « Ana ». 10 tests supplémentaires en mémoire (application en place, machine posée par l'hôte vue par l'invité, commande prédite puis rejouée, divergence signalée, jeter rejoué une fois, méthode hors liste ignorée, barre d'objets, fabrication à la main, mot de passe masqué).
+
+**Limites connues (à traiter en M3)**
+
+- **Combat de l'invité** : tirs et coups au corps à corps modifient la copie locale des ennemis, vite écrasée par l'état de l'hôte ; il faudra des commandes de tir.
+- **Identifiants de machines posées** : une machine posée par prédiction reçoit l'identifiant prévu par l'invité ; si l'hôte ou un autre invité en pose une au même moment, l'état de l'hôte remplace tout au prochain envoi (la commande suivante vise alors la bonne machine).
+- L'état du monde est encore envoyé **en entier** à chaque fois (différences en M3) ; mort de l'invité (cadavre, réapparition) non rejouée chez l'hôte ; reconnexion automatique, sauvegarde des joueurs dans la partie de l'hôte, mot de passe haché : M3.

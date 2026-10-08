@@ -23,6 +23,10 @@ import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
 import { PeerNetwork } from './net/peerNetwork';
 import { HostSession } from './core/net/host';
+import type { GuestClient } from './core/net/guest';
+import { GuestSync } from './core/net/worldSync';
+import { mergeChanges } from './core/game/playerData';
+import type { WorldChanges } from './core/game/worldChanges';
 
 initLocale();
 await initKeyboardLayout();
@@ -64,6 +68,8 @@ interface Session {
   tech: TechWindow;
   /** Sac et changements du monde de cette session. */
   state: GameState;
+  /** Partie rejointe chez un autre joueur (aucune sauvegarde locale). */
+  guest: { client: GuestClient; sync: GuestSync } | null;
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
   lastManualName: string | null;
   lastAutosaveAt: number;
@@ -72,7 +78,13 @@ interface Session {
 }
 
 const network = new PeerNetwork();
-const resetMenu = mountMenu(uiEl, { saves, devMode, onStartGame: startGame, network });
+const resetMenu = mountMenu(uiEl, {
+  saves,
+  devMode,
+  onStartGame: startGame,
+  network,
+  onJoin: startGuest,
+});
 let stopBackground: () => void = () => undefined;
 let session: Session | null = null;
 /** Partie ouverte aux invités (multijoueur) : fermée quand on quitte la partie. */
@@ -93,6 +105,7 @@ function showToast(text: string): void {
 }
 
 function saveAuto(s: Session): void {
+  if (s.guest) return;
   const result = saves.saveSlot(
     s.game.id,
     { name: t('save.autoName'), kind: 'auto', player: s.view.getState(), ...s.state.snapshot() },
@@ -124,6 +137,8 @@ function quitToMenu(): void {
   s.hotbar.dispose();
   s.machine.dispose();
   s.view.dispose();
+  s.guest?.sync.dispose();
+  s.guest?.client.leave();
   host?.close();
   host = null;
   hostCode = null;
@@ -131,7 +146,29 @@ function quitToMenu(): void {
   showMenu();
 }
 
-function startGame(game: GameSummary, slot?: SaveSlot): void {
+/** Rejoint la partie d'un autre joueur : le monde vient de l'hôte, rien n'est enregistré sur cet appareil. */
+function startGuest(client: GuestClient): void {
+  const game: GameSummary = {
+    id: `guest-${client.you.id}`,
+    name: client.players[0]?.name ?? client.you.name,
+    world: client.worldParams,
+    options: client.options,
+    createdAt: Date.now(),
+    saves: [],
+  };
+  const state = new GameState({
+    inventory: client.inventory,
+    changes: mergeChanges(client.world as WorldChanges, client.changes),
+  });
+  startGame(game, undefined, { client, sync: new GuestSync(client, state) }, state);
+}
+
+function startGame(
+  game: GameSummary,
+  slot?: SaveSlot,
+  guest: { client: GuestClient; sync: GuestSync } | null = null,
+  guestState?: GameState,
+): void {
   stopBackground();
   bgEl.hidden = true;
   uiEl.hidden = true;
@@ -143,11 +180,12 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       : undefined;
   const start = slot?.player ?? devStart ?? DEFAULT_PLAYER_STATE;
 
-  const state = new GameState(slot);
+  const state = guestState ?? new GameState(slot);
   state.creative = game.options.mode === 'creative';
   const view = startGameView(appEl, game, {
     state,
     start,
+    guest: guest?.sync,
     onToggleInventory: () => {
       if (!session?.pause.isOpen() && !session?.map.isOpen() && !session?.tech.isOpen()) {
         // Au volant du buggy, l'inventaire est celui du buggy (carburant et objets).
@@ -195,6 +233,7 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
     map: null as unknown as MapWindow,
     tech: null as unknown as TechWindow,
     state,
+    guest,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
     timer: 0,
@@ -252,32 +291,34 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       s.lastManualName = name;
       showToast(t('pause.saved', { name }));
     },
-    multi: game.options.multiplayer.enabled
-      ? {
-          code: () => hostCode,
-          players: () => host?.players().map((p) => p.name) ?? [],
-          start: async () => {
-            host = new HostSession({
-              state,
-              factory: view.factory,
-              blockedFor: view.blockedFor,
-              world: game.world,
-              options: game.options,
-              hostName: t('join.defaultName'),
-              approve: (name) => window.confirm(t('pause.multi.approve', { name })),
-            });
-            hostCode = await host.open(network);
-            view.setHost(host);
-            return hostCode;
-          },
-          stop: () => {
-            view.setHost(null);
-            host?.close();
-            host = null;
-            hostCode = null;
-          },
-        }
-      : undefined,
+    guest: guest !== null,
+    multi:
+      game.options.multiplayer.enabled && !guest
+        ? {
+            code: () => hostCode,
+            players: () => host?.players().map((p) => p.name) ?? [],
+            start: async () => {
+              host = new HostSession({
+                state,
+                factory: view.factory,
+                blockedFor: view.blockedFor,
+                world: game.world,
+                options: game.options,
+                hostName: t('join.defaultName'),
+                approve: (name) => window.confirm(t('pause.multi.approve', { name })),
+              });
+              hostCode = await host.open(network);
+              view.setHost(host);
+              return hostCode;
+            },
+            stop: () => {
+              view.setHost(null);
+              host?.close();
+              host = null;
+              hostCode = null;
+            },
+          }
+        : undefined,
     quit: quitToMenu,
   });
 

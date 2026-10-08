@@ -18,6 +18,8 @@ export interface PauseActions {
     start(): Promise<string>;
     stop(): void;
   };
+  /** Partie rejointe chez un autre joueur : l'hôte sauvegarde, pas l'invité. */
+  guest?: boolean;
   /** Quitte vers le menu principal (une sauvegarde automatique est faite avant). */
   quit(): void;
 }
@@ -68,7 +70,7 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
     panel.append(
       el('h1', undefined, t('pause.title')),
       button(t('pause.resume'), close, 'menu-btn primary'),
-      button(t('pause.save'), () => setScreen('save')),
+      ...(actions.guest ? [] : [button(t('pause.save'), () => setScreen('save'))]),
       ...(actions.multi ? [button(t('pause.multi'), () => setScreen('multi'))] : []),
       button(t('pause.settings'), () => setScreen('settings')),
     );

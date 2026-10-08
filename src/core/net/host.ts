@@ -11,6 +11,7 @@ import type { SimEvent, SimPlayer } from '../game/simulation';
 import { GameState } from '../game/state';
 import { MAX_PLAYERS, type GameOptions } from '../save/saveIndex';
 import type { WorldParams } from '../world/worldgen';
+import { LOADOUT_KEYS, REMOTE_CALLS } from './worldSync';
 import {
   PROTOCOL_VERSION,
   type PlayerInfo,
@@ -34,6 +35,8 @@ export interface HostOptions {
   /** Secondes entre deux envois de l'état du monde / des positions. */
   snapshotEveryS?: number;
   playersEveryS?: number;
+  /** Secondes entre deux envois de la fiche de chaque invité (sac, fabrications). */
+  meEveryS?: number;
 }
 
 interface Remote {
@@ -75,6 +78,7 @@ export class HostSession {
   private tick = 0;
   private snapClock = 0;
   private playersClock = 0;
+  private meClock = 0;
   private hostInfo: PlayerInfo;
   private changeCb: (() => void) | null = null;
 
@@ -128,6 +132,13 @@ export class HostSession {
   advance(dt: number, host: { x: number; y: number; z: number; yaw: number }): void {
     Object.assign(this.hostInfo, host);
     if (this.remotes.size === 0) return;
+    // Les fabrications à la main des invités avancent chez l'hôte ; leur fiche leur est renvoyée une fois par seconde.
+    for (const r of this.remotes.values()) r.state.tickCraft(dt);
+    this.meClock += dt;
+    if (this.meClock >= (this.opts.meEveryS ?? 1)) {
+      this.meClock = 0;
+      for (const r of this.remotes.values()) this.sendMe(r);
+    }
     this.snapClock += dt;
     this.playersClock += dt;
     if (this.playersClock >= (this.opts.playersEveryS ?? 0.1)) {
@@ -175,6 +186,8 @@ export class HostSession {
       }
       if (!player) return; // rien n'est accepté avant l'arrivée
       if (msg.t === 'cmd') this.command(player, msg.seq, msg.cmd);
+      else if (msg.t === 'call') this.call(player, msg.method, msg.args);
+      else if (msg.t === 'loadout') this.loadout(player, msg.loadout);
       else if (msg.t === 'pos') {
         const i = player.info;
         for (const k of ['x', 'y', 'z', 'yaw'] as const) {
@@ -226,7 +239,11 @@ export class HostSession {
       t: 'welcome',
       you: info,
       world: this.opts.world,
-      options: this.opts.options,
+      // Le mot de passe de l'hôte n'est pas communiqué aux invités.
+      options: {
+        ...this.opts.options,
+        multiplayer: { ...this.opts.options.multiplayer, password: '' },
+      },
       snapshot: this.worldSnapshot(),
       profile: { inventory: state.inventory, changes: profile.changes },
     } satisfies ToGuest);
@@ -246,13 +263,50 @@ export class HostSession {
     }
     player.link.send({ t: 'result', seq, result: result ?? null } satisfies ToGuest);
     // Le sac d'un invité change à chaque action : on lui renvoie sa fiche avec la réponse.
+    this.sendMe(player);
+  }
+
+  private sendMe(player: Remote): void {
     const profile = this.profiles.get(player.info.name);
-    if (profile) {
-      player.link.send({
-        t: 'me',
-        inventory: player.state.inventory,
-        changes: profile.changes,
-      } satisfies ToGuest);
+    if (!profile) return;
+    player.link.send({
+      t: 'me',
+      inventory: player.state.inventory,
+      changes: profile.changes,
+      craft: player.state.craftQueue,
+    } satisfies ToGuest);
+  }
+
+  /** Barre d'objets, outils, équipement, munitions, tutoriel : l'invité décide, l'hôte garde la copie (limites du sac…). */
+  private loadout(player: Remote, loadout: Record<string, unknown>): void {
+    if (!isObject(loadout)) return;
+    const own = player.state.changes as unknown as Record<string, unknown>;
+    for (const k of LOADOUT_KEYS) {
+      if (k in loadout && loadout[k] !== undefined) own[k] = loadout[k];
     }
+  }
+
+  /** Rejoue une action du monde d'un invité (liste blanche) ; machines et véhicules arrivent par identifiant. */
+  private call(player: Remote, method: string, args: unknown[]): void {
+    if (!(REMOTE_CALLS as readonly string[]).includes(method) || !Array.isArray(args)) return;
+    const decode = (a: unknown): unknown => {
+      if (!isObject(a)) return a;
+      if (typeof a.__m === 'number') {
+        return this.opts.factory.machines.find((m) => m.id === a.__m) ?? undefined;
+      }
+      if (typeof a.__v === 'number') {
+        return this.opts.state.changes.vehicles.find((v) => v.id === a.__v) ?? undefined;
+      }
+      return a;
+    };
+    const decoded = args.map(decode);
+    if (decoded.some((a, i) => a === undefined && isObject(args[i]))) return; // machine ou véhicule disparu
+    try {
+      const state = player.state as unknown as Record<string, (...a: unknown[]) => unknown>;
+      state[method](...decoded);
+    } catch {
+      // Une action mal formée ne doit jamais faire tomber l'hôte.
+    }
+    this.sendMe(player);
   }
 }

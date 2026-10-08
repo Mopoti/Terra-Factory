@@ -87,6 +87,8 @@ export interface MenuOptions {
   onStartGame: (game: GameSummary, slot?: SaveSlot) => void;
   /** Réseau réel (WebRTC) pour rejoindre la partie d'un autre joueur. */
   network?: Network;
+  /** Rejoindre une partie : le client connecté démarre une partie « invité ». */
+  onJoin?: (client: GuestClient) => void;
 }
 
 /** Monte le menu une seule fois ; la fonction renvoyée le remet sur l'écran principal. */
@@ -444,43 +446,13 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     return panel;
   }
 
-  /** Rejoindre la partie d'un autre joueur : code d'invitation, nom, mot de passe. (Test de connexion : le jeu en réseau lui-même arrive à l'étape M2c.) */
-  let guest: GuestClient | null = null;
-  let joinTimer = 0;
+  /** Rejoindre la partie d'un autre joueur : code d'invitation, nom, mot de passe ; une fois accepté, la partie démarre. */
   function joinPanel(): HTMLElement {
     const panel = el('div', 'panel');
     panel.append(el('h2', undefined, t('menu.join')));
     const network = options.network;
-    if (!network) return panel;
-    const leave = (): void => {
-      window.clearInterval(joinTimer);
-      guest?.leave();
-      guest = null;
-    };
-    if (guest) {
-      const g = guest;
-      const list = el('ul', 'mp-players');
-      const refresh = (): void => {
-        list.replaceChildren(...g.players.map((p) => el('li', undefined, p.name)));
-      };
-      refresh();
-      window.clearInterval(joinTimer);
-      joinTimer = window.setInterval(refresh, 1000);
-      g.onClose(() => {
-        guest = null;
-        render();
-      });
-      panel.append(
-        el('p', 'note', t('join.connected', { seed: g.worldParams.seed })),
-        list,
-        el('p', 'note', t('join.m2c')),
-        button(t('join.leave'), () => {
-          leave();
-          render();
-        }),
-      );
-      return panel;
-    }
+    if (!network || !options.onJoin) return panel;
+    const onJoin = options.onJoin;
     const fields = (label: string, type: string, value = ''): HTMLInputElement => {
       const f = el('label', 'field');
       f.append(el('span', undefined, label));
@@ -514,10 +486,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
           name: who.value.trim() || 'Joueur',
           password: pass.value,
         }).then(
-          (g) => {
-            guest = g;
-            render();
-          },
+          (g) => onJoin(g),
           (e: unknown) => {
             go.disabled = false;
             status.textContent =
@@ -539,7 +508,6 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
   const go_ = (next: Screen): void => go(next);
 
   function render(): void {
-    window.clearInterval(joinTimer);
     // Plus aucune partie (la dernière vient d'être supprimée) : retour à l'écran principal.
     if (screen === 'loadGame' && saves.list().length === 0) screen = 'main';
     disposeEditor();

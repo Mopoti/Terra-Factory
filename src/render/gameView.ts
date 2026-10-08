@@ -113,6 +113,9 @@ import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
 import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
+import { RemotePlayersView } from './remotePlayers';
+import { GuestBus, type GuestSync } from '../core/net/worldSync';
+import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
 import { POLLUTION_CELL_M, Threat, type ThreatWorld } from '../core/game/threat';
 
@@ -155,6 +158,8 @@ export interface GameViewOptions {
   onMessage?: (text: string) => void;
   /** Le joueur veut ouvrir l'interface de la machine visée (touche « Utiliser »). */
   onOpenMachine?: (id: number) => void;
+  /** Partie rejointe chez un autre joueur : le monde vient de l'hôte (pas de simulation locale). */
+  guest?: GuestSync;
 }
 
 export interface GameViewHandle {
@@ -841,7 +846,7 @@ export function startGameView(
       return machineBlocked;
     },
   };
-  const bus = new CommandBus(busContext);
+  const bus = options.guest ? new GuestBus(busContext, options.guest) : new CommandBus(busContext);
 
   function extendPoleLine(down: boolean): void {
     if (!down || !poleChain || !factory.machines.includes(poleChain)) {
@@ -2344,6 +2349,19 @@ export function startGameView(
     options.state.changes.enemies,
   );
   const sim = new WorldSimulation(options.state, factory, threat);
+  const guest = options.guest ?? null;
+  guest?.attach(factory);
+  let guestClock = 0;
+  const remotePlayers = new RemotePlayersView(scene);
+  if (guest) {
+    // L'état du monde reçu de l'hôte : les arbres et rochers récoltés, les nids… se redessinent.
+    guest.onWorldChange((changed) => {
+      if (changed.includes('taken')) for (const k of chunks.keys()) dirtyChunks.add(k);
+    });
+    guest.client.onHit((amount) =>
+      onSimEvent({ type: 'playerHit', player: guest.client.you.id, amount }),
+    );
+  }
   /** Session d'hôte multijoueur (quand la partie est ouverte aux invités). */
   let hostSession: HostSession | null = null;
   const enemyView = new EnemyView(scene);
@@ -2756,7 +2774,7 @@ export function startGameView(
     if (pressed('techTree')) options.onToggleTech?.();
     updateTutorial(dt);
     checkFinale();
-    if (!paused) options.state.tickCraft(dt);
+    if (!paused && !guest) options.state.tickCraft(dt);
     updateCraftHud();
 
     let motion = { speed: 0, strafe: 0 };
@@ -2896,7 +2914,16 @@ export function startGameView(
     buildingView.setVisibility(99, inRoom && !building ? inRoom.level : null);
     if (building && !paused && !uiOpen) updateBuild(dt);
     // Monde : simulation à pas fixe (20 par seconde), la même que celle d'un hôte multijoueur.
-    if (!paused) {
+    if (guest) {
+      // Invité : le monde est simulé par l'hôte ; on lui envoie notre position et on affiche les autres joueurs.
+      guestClock += dt;
+      if (guestClock >= 0.1) {
+        guestClock = 0;
+        guest.client.sendPosition({ x: playerX, y: playerY, z: playerZ, yaw: facing });
+        guest.syncLoadout();
+      }
+      remotePlayers.update(guest.client.players, guest.client.you.id, dt);
+    } else if (!paused) {
       const me = { x: playerX, z: playerZ };
       const events = sim.advance(
         dt,
@@ -2908,6 +2935,13 @@ export function startGameView(
         hostSession.advance(dt, { x: playerX, y: playerY, z: playerZ, yaw: facing });
       }
     }
+    if (hostSession) {
+      remotePlayers.update(
+        hostSession.players().filter((p) => p.id !== HOST_ID),
+        HOST_ID,
+        dt,
+      );
+    } else if (!guest) remotePlayers.update([], HOST_ID, dt);
     if (!paused) updateThreat(dt);
     factoryView.updateSmoke(now / 1000);
     enemyView.update(
@@ -3035,6 +3069,7 @@ export function startGameView(
     },
     dispose: () => {
       enemyView.dispose();
+      remotePlayers.dispose();
       healthBar.remove();
       hurtOverlay.remove();
       unsubscribe();

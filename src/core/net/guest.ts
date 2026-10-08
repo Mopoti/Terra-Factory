@@ -4,6 +4,7 @@
  */
 import type { Command, CommandOf, CommandSpecs, CommandType } from '../game/commands';
 import type { Inventory } from '../game/inventory';
+import type { CraftJob } from '../game/state';
 import type { PlayerChanges, WorldPart } from '../game/playerData';
 import type { GameOptions } from '../save/saveIndex';
 import type { WorldParams } from '../world/worldgen';
@@ -35,6 +36,10 @@ export class GuestClient {
   private readonly pending = new Map<number, (result: unknown) => void>();
   private worldCb: ((w: WorldPart) => void) | null = null;
   private playersCb: ((p: PlayerInfo[]) => void) | null = null;
+  private meCb:
+    ((me: { inventory: Inventory; changes: PlayerChanges; craft: CraftJob[] }) => void) | null =
+    null;
+  private hitCb: ((amount: number) => void) | null = null;
   private closeCb: (() => void) | null = null;
   private closed = false;
 
@@ -95,9 +100,11 @@ export class GuestClient {
       case 'me':
         this.inventory = msg.inventory;
         this.changes = msg.changes;
+        this.meCb?.({ inventory: msg.inventory, changes: msg.changes, craft: msg.craft ?? [] });
         break;
       case 'hit':
         this.hits.push(msg.amount);
+        this.hitCb?.(msg.amount);
         break;
       default:
         break;
@@ -118,6 +125,15 @@ export class GuestClient {
   onPlayers(cb: (p: PlayerInfo[]) => void): void {
     this.playersCb = cb;
   }
+  /** Sa fiche à jour (sac, part individuelle, file de fabrication) envoyée par l'hôte. */
+  onMe(
+    cb: (me: { inventory: Inventory; changes: PlayerChanges; craft: CraftJob[] }) => void,
+  ): void {
+    this.meCb = cb;
+  }
+  onHit(cb: (amount: number) => void): void {
+    this.hitCb = cb;
+  }
   onClose(cb: () => void): void {
     this.closeCb = cb;
   }
@@ -135,6 +151,15 @@ export class GuestClient {
   /** Position du joueur (à envoyer une dizaine de fois par seconde). */
   sendPosition(p: { x: number; y: number; z: number; yaw: number }): void {
     if (!this.closed) this.link.send({ t: 'pos', ...p } satisfies ToHost);
+  }
+
+  /** Rejoue chez l'hôte une action du monde (sans attendre de réponse : l'état reçu ensuite fait foi). */
+  call(method: string, args: unknown[]): void {
+    if (!this.closed) this.link.send({ t: 'call', method, args } satisfies ToHost);
+  }
+
+  sendLoadout(loadout: Record<string, unknown>): void {
+    if (!this.closed) this.link.send({ t: 'loadout', loadout } satisfies ToHost);
   }
 
   leave(): void {
