@@ -464,3 +464,10 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - Nouvelle étape (groupe 2, entre « Fabrique ton premier outil » et « Fabrique un four » : 14 étapes au total) : **ranger l'outil dans la dernière case de la barre de raccourcis** (la case d'outils, 🛠, à droite). On le sélectionne dans le sac puis on clique la case, ou on le glisse dessus. L'étape est validée quand l'outil est en place et présent dans le sac.
 - L'étape précédente (fabriquer l'outil) reste validée dès que l'outil est dans le sac. Une partie en cours dont le tutoriel avait déjà passé l'outil se voit proposer cette étape (elle se valide d'elle-même si l'outil est déjà rangé).
 - Vérifié dans le navigateur : fabrication → « Équipe ton outil » → clic sur la case → « Fabrique un four ».
+
+## Pose d'objets : le patron disparaît quand il n'y a plus rien à poser (Tour 134)
+
+- **Dernier exemplaire posé** : quand le stock de l'objet tenu en main (pris dans le sac) ou de la case sélectionnée de la barre tombe à zéro, le patron disparaît et la main redevient vide. S'il en reste, le patron reste pour en poser d'autres. Avant, le patron restait affiché sans rien à poser et bloquait les autres actions.
+- **Clic droit bref** (sans bouger) : range l'objet tenu ou désélectionne la case de la barre (`clearHand`) ; le patron disparaît et la main est vide. Un clic droit maintenu garde son rôle (démolir).
+- Une case de la barre dont le stock est à zéro ne se sélectionne plus (il n'y a rien à poser).
+- Vérifié dans le navigateur : pose de deux fours (le patron reste après le premier, disparaît après le second) ; clic droit bref.

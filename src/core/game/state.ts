@@ -578,9 +578,26 @@ export class GameState {
   selectedItem(): string | null {
     if (this.held) {
       if ((this.inventory[this.held] ?? 0) > 0) return this.held;
+      // Le dernier exemplaire est posé : la main redevient vide (pas de patron fantôme).
       this.held = null;
+      this.selectedSlot = null;
+      return null;
     }
-    return this.selectedSlot === null ? null : this.changes.hotbar[this.selectedSlot];
+    if (this.selectedSlot === null) return null;
+    const item = this.changes.hotbar[this.selectedSlot];
+    if (item && (this.inventory[item] ?? 0) <= 0) {
+      // Une case de la barre sans plus aucun exemplaire ne garde pas son patron actif.
+      this.selectedSlot = null;
+      return null;
+    }
+    return item;
+  }
+
+  /** Mains vides : plus d'objet tenu ni de case sélectionnée. */
+  clearHand(): void {
+    this.held = null;
+    this.selectedSlot = null;
+    this.emit({ type: 'hotbar' });
   }
 
   /** Prend en main un objet posable choisi dans le sac (prioritaire sur la barre de raccourcis). */

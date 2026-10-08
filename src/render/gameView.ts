@@ -505,6 +505,8 @@ export function startGameView(
         );
     }
     if (e.type === 'inventory') refreshWorn();
+    // Le dernier exemplaire vient d'être posé : le patron disparaît.
+    if (e.type === 'inventory' && building) syncBuilding();
     if (e.type === 'build') buildingView.rebuild(options.state.changes.pieces);
     if (e.type === 'hotbar') syncBuilding();
     if (e.type === 'factory') factoryView.rebuild();
@@ -1612,19 +1614,18 @@ export function startGameView(
   window.addEventListener('mousedown', onMouseDown);
   const onMouseUp = (e?: Event): void => {
     rig.endLook(getSettings().views);
-    // Un clic droit bref, sans bouger : l'objet tenu en main est rangé (mains vides).
+    // Un clic droit bref, sans bouger : l'objet tenu en main (ou le patron de la barre) est rangé : mains vides.
     if (
       e instanceof MouseEvent &&
       e.button === 2 &&
       !paused &&
       !uiOpen &&
-      options.state.held &&
+      (options.state.held || building) &&
       performance.now() - rightDownAt < 300 &&
       rightMoved < 10 &&
       !demolishChain
     ) {
-      options.state.setHeld(null);
-      building = false;
+      options.state.clearHand();
     }
   };
   window.addEventListener('mouseup', onMouseUp);

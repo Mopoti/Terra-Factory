@@ -368,7 +368,7 @@ describe('murs en plan vertical', () => {
 
 describe('barre de raccourcis et orientation', () => {
   it('une case vide ne se sélectionne pas, une case pleine se bascule', () => {
-    const s = new GameState({ inventory: {} });
+    const s = new GameState({ inventory: { piece_wall_stone: 2 } });
     s.selectSlot(0);
     expect(s.selectedSlot).toBeNull();
     s.assignSlot(0, 'piece_wall_stone');
@@ -376,6 +376,34 @@ describe('barre de raccourcis et orientation', () => {
     expect(s.selectedItem()).toBe('piece_wall_stone');
     s.selectSlot(0);
     expect(s.selectedSlot).toBeNull();
+  });
+  it('le dernier exemplaire posé vide la main : plus de patron, ni tenu ni en barre', () => {
+    const s = new GameState({ inventory: { machine_furnace: 2 } });
+    s.setHeld('machine_furnace');
+    expect(s.selectedItem()).toBe('machine_furnace');
+    s.inventory = { machine_furnace: 1 };
+    expect(s.selectedItem()).toBe('machine_furnace'); // il en reste : le patron reste pour en poser d'autres
+    s.inventory = {};
+    expect(s.selectedItem()).toBeNull();
+    expect(s.held).toBeNull();
+    // Même chose pour une case de la barre dont le stock tombe à zéro.
+    s.inventory = { machine_furnace: 1 };
+    s.assignSlot(0, 'machine_furnace');
+    s.selectSlot(0);
+    expect(s.selectedItem()).toBe('machine_furnace');
+    s.inventory = {};
+    expect(s.selectedItem()).toBeNull();
+    expect(s.selectedSlot).toBeNull();
+  });
+  it('clearHand : mains vides, objet tenu comme case sélectionnée', () => {
+    const s = new GameState({ inventory: { machine_furnace: 2 } });
+    s.assignSlot(0, 'machine_furnace');
+    s.selectSlot(0);
+    s.setHeld('machine_furnace');
+    s.clearHand();
+    expect(s.held).toBeNull();
+    expect(s.selectedSlot).toBeNull();
+    expect(s.selectedItem()).toBeNull();
   });
   it("un objet n'occupe qu'une case ; vider la case sélectionnée la désélectionne", () => {
     const s = new GameState({ inventory: {} });
