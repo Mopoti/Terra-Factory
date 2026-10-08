@@ -49,7 +49,7 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
 /** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */
 export type BeltShape = 'straight' | 'corner';
 const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
-  straight: ['conveyor', 'conveyor-sides', 'conveyor-stripe-sides'],
+  straight: ['conveyor-sides', 'conveyor-sides', 'conveyor-stripe-sides'],
   corner: ['conveyor-corner', 'conveyor-corner', 'conveyor-stripe-corner'],
 };
 export const beltModel = (shape: BeltShape, tier: number): BakedModel | null =>

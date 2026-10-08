@@ -29,8 +29,10 @@
 
 ## Tapis (Tour 139)
 
-- **Tapis droit et coude** en modèles du kit, pour les 3 paliers (T1 : `conveyor`, T2 : `conveyor-sides`, T3 : `conveyor-stripe-sides` ; coudes `conveyor-corner` / `conveyor-stripe-corner`). Le modèle est aplati pour que le dessus soit à 20 cm (hauteur où roulent les objets, `BELT_H`, passée de 12 à 20 cm). Le coude relie la sortie au côté d'où arrivent les objets ; il est tourné pour couvrir la bonne paire de côtés, sans miroir. Une **flèche claire** marque le sens (les modèles n'en ont pas) ; un tapis abîmé est teinté de rouge.
+- **Tapis droit et coude** en modèles du kit, pour les 3 paliers (T1 et T2 : `conveyor-sides`, T3 : `conveyor-stripe-sides` ; coudes `conveyor-corner` / `conveyor-stripe-corner`). Le modèle est aplati pour que le dessus soit à 20 cm (hauteur où roulent les objets, `BELT_H`, passée de 12 à 20 cm). Le coude relie la sortie au côté d'où arrivent les objets ; il est tourné pour couvrir la bonne paire de côtés, sans miroir. Une **flèche claire** marque le sens (les modèles n'en ont pas) ; un tapis abîmé est teinté de rouge.
 - Les tapis surélevés prennent aussi ces modèles, avec nos piliers. **Les pentes et les tunnels gardent leurs formes simples** : la pente du kit ne monte que de 40 cm (la nôtre, 1 m), l'étirer la déformerait trop.
+
+- **Couleurs (Tour 141)** : le tapis droit `conveyor` du kit est la variante sombre, alors que les coudes n'existent qu'en clair (lavande) : le premier palier avait des droits sombres et des coudes clairs. Les trois paliers utilisent maintenant des droits « sides » (clairs), assortis aux coudes.
 
 ## Modèles articulés (Tour 139)
 

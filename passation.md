@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 141** : tapis droits assortis aux coudes (même famille claire du kit) ; question du PO sur « minerai enrichi » = station de lavage (minerai lavé) ou centrifugeuse (uranium enrichi).
 - **Tour 140** : sac en Créatif limité aux cases utiles (+10), fusion de piles par glisser ou double clic dans la fenêtre des machines et du sac, message de fin du tutoriel 2 min + bouton Fermer.
 - **Tour 139** : tapis en modèles du kit (droit + coude, 3 paliers, flèche de sens ; pentes et tunnels inchangés) ; modèles articulés (piston, bras, tête de scanner) via `splitModel` + `FactoryView.movers`, testés en code, à vérifier à l'œil en jeu.
 - **Tour 138** : modèles 3D : Factory Kit de Kenney (CC0, fourni par le PO) ; 24 fichiers dans `public/models/kenney/`, chargés et fusionnés dans le maillage des machines (`src/render/models.ts`, `MACHINE_MODELS`), repli sur les formes simples ; reste tapis, tuyaux, foreuses, objets au sol, pièces de construction, animations (`docs/modeles3d.md`).
