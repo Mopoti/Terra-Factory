@@ -89,7 +89,7 @@ export class GuestClient {
         this.pending.delete(msg.seq);
         break;
       case 'snap':
-        this.world = msg.world;
+        this.world = { ...this.world, ...msg.world };
         this.snapshots++;
         this.worldCb?.(msg.world);
         break;
@@ -164,6 +164,8 @@ export class GuestClient {
 
   leave(): void {
     if (!this.closed) this.link.send({ t: 'leave' } satisfies ToHost);
+    // Départ voulu : pas de reconnexion automatique.
+    this.closed = true;
     this.link.close();
   }
 }

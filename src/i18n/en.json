@@ -910,6 +910,8 @@
   "join.refused.denied": "The host refused you.",
   "join.refused.bad-request": "Invalid request.",
   "join.refused.closed-link": "The connection was lost.",
+  "join.reconnecting": "Reconnecting to the game…",
+  "join.reconnected": "Reconnected.",
   "join.lost": "The connection to the host was lost.",
   "join.diverged": "The host did not accept one of your actions.",
   "pause.save.guest": "Host's game: the host saves it.",

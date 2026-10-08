@@ -80,6 +80,13 @@ function formatDate(ms: number): string {
   }).format(new Date(ms));
 }
 
+/** Ce qui a servi à rejoindre la partie (pour se reconnecter après une coupure). */
+export interface JoinInfo {
+  code: string;
+  name: string;
+  password: string;
+}
+
 export interface MenuOptions {
   saves: SaveLibrary;
   devMode: boolean;
@@ -88,7 +95,7 @@ export interface MenuOptions {
   /** Réseau réel (WebRTC) pour rejoindre la partie d'un autre joueur. */
   network?: Network;
   /** Rejoindre une partie : le client connecté démarre une partie « invité ». */
-  onJoin?: (client: GuestClient) => void;
+  onJoin?: (client: GuestClient, who: JoinInfo) => void;
 }
 
 /** Monte le menu une seule fois ; la fonction renvoyée le remet sur l'écran principal. */
@@ -482,11 +489,16 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
         }
         go.disabled = true;
         status.textContent = t('join.connecting');
-        GuestClient.connect(network, parsed, {
+        const info: JoinInfo = {
+          code: parsed,
           name: who.value.trim() || 'Joueur',
           password: pass.value,
+        };
+        GuestClient.connect(network, info.code, {
+          name: info.name,
+          password: info.password,
         }).then(
-          (g) => onJoin(g),
+          (g) => onJoin(g, info),
           (e: unknown) => {
             go.disabled = false;
             status.textContent =

@@ -910,6 +910,8 @@
   "join.refused.denied": "L'hôte a refusé ton arrivée.",
   "join.refused.bad-request": "Demande invalide.",
   "join.refused.closed-link": "La connexion a été coupée.",
+  "join.reconnecting": "Reconnexion à la partie…",
+  "join.reconnected": "Reconnecté.",
   "join.lost": "La connexion avec l'hôte est perdue.",
   "join.diverged": "L'hôte n'a pas validé une de tes actions.",
   "pause.save.guest": "Partie de l'hôte : c'est lui qui la sauvegarde.",

@@ -125,6 +125,7 @@ export class SaveLibrary implements SaveIndex {
       player: PlayerState;
       inventory?: Inventory;
       changes?: WorldChanges;
+      players?: SaveSlot['players'];
     },
     keepAuto = 5,
     now = Date.now(),
@@ -141,6 +142,7 @@ export class SaveLibrary implements SaveIndex {
         existing.player = slot.player;
         existing.inventory = slot.inventory ?? {};
         existing.changes = slot.changes ?? emptyChanges();
+        existing.players = slot.players;
         saved = existing;
         replaced = true;
       }
@@ -154,6 +156,7 @@ export class SaveLibrary implements SaveIndex {
         player: slot.player,
         inventory: slot.inventory ?? {},
         changes: slot.changes ?? emptyChanges(),
+        players: slot.players,
       };
       game.saves.push(saved);
     }

@@ -177,3 +177,16 @@ describe('gérer les sauvegardes', () => {
     expect(memory().duplicateGame('absent', 'x')).toBeNull();
   });
 });
+
+describe('joueurs invités dans la sauvegarde', () => {
+  it('leurs fiches survivent à l’enregistrement et au rechargement', async () => {
+    const storage = new MemoryStorage();
+    const lib = SaveLibrary.empty(storage);
+    const g = lib.create('Coop', 'terra');
+    const players = { Ana: { inventory: { wood: 4 }, changes: { hotbar: ['wood'] } } };
+    lib.saveSlot(g.id, { name: 'A', kind: 'manual', player, players }, 5, 1);
+    await lib.flush();
+    const back = await SaveLibrary.open(storage);
+    expect(back.list()[0].saves[0].players).toEqual(players);
+  });
+});

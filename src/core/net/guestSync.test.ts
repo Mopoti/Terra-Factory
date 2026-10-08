@@ -38,7 +38,7 @@ async function setup() {
   const local = new GameState({ inventory: client.inventory, changes: client.changes });
   const localFactory = new Factory(local.changes.machines, flat);
   const sync = new GuestSync(client, local, localFactory);
-  return { host, state, factory, client, local, localFactory, sync };
+  return { host, state, factory, client, local, localFactory, sync, net };
 }
 
 describe('applyWorldPart', () => {
@@ -171,5 +171,65 @@ describe('invité : copie locale du monde', () => {
   it('le mot de passe de l’hôte n’est pas envoyé aux invités', async () => {
     const { client } = await setup();
     expect(client.options.multiplayer.password).toBe('');
+  });
+
+  it('l’état du monde n’est renvoyé que pour les champs qui ont changé', async () => {
+    const { host, state, client } = await setup();
+    const seen: string[][] = [];
+    client.onWorld((w) => seen.push(Object.keys(w)));
+    host.advance(0.6, { x: 0, y: 0, z: 0, yaw: 0 });
+    await flush();
+    expect(seen).toEqual([]); // rien n'a bougé depuis l'arrivée
+    state.changes.time = 42;
+    host.advance(0.6, { x: 0, y: 0, z: 0, yaw: 0 });
+    await flush();
+    expect(seen).toEqual([['time']]);
+    expect(client.world.time).toBe(42);
+    expect(client.world.machines).toBeDefined(); // le reste de la copie est conservé
+  });
+
+  it('les joueurs sont gardés dans la sauvegarde de l’hôte et retrouvés par leur nom', async () => {
+    const { host, client, net } = await setup();
+    host.remotes.get(client.you.id)!.state.inventory = { wood: 7 };
+    client.leave();
+    await flush();
+    const saved = host.exportProfiles();
+    expect(saved.Ana.inventory).toEqual({ wood: 7 });
+    // Nouvelle session d'hôte, chargée depuis la sauvegarde.
+    const state = new GameState();
+    const again = new HostSession({
+      state,
+      factory: new Factory(state.changes.machines, flat),
+      blockedFor: () => () => false,
+      world: defaultWorldParams('seed'),
+      options: {
+        ...DEFAULT_GAME_OPTIONS,
+        multiplayer: normalizeMultiplayer({
+          enabled: true,
+          visibility: 'public',
+          share: { research: true, credits: true, inventory: false },
+        }),
+      },
+      hostName: 'Hôte',
+      players: JSON.parse(JSON.stringify(saved)),
+    });
+    const code = await again.open(net, 'XYZ234');
+    const back = await GuestClient.connect(net, code, { name: 'Ana' });
+    expect(back.inventory).toEqual({ wood: 7 });
+  });
+
+  it('reconnexion : la nouvelle liaison reprend le monde et la fiche de l’hôte', async () => {
+    const { host, state, client, sync, net } = await setup();
+    const code = 'ABC234';
+    state.changes.time = 99;
+    host.remotes.get(client.you.id)!.state.inventory = { stone: 3 };
+    const lost = new Promise<void>((r) => sync.onLost(r));
+    (client as unknown as { link: { close(): void } }).link.close();
+    await lost;
+    const again = await GuestClient.connect(net, code, { name: 'Ana' });
+    sync.rebind(again);
+    expect(sync.state.changes.time).toBe(99);
+    expect(sync.state.inventory).toEqual({ stone: 3 });
+    expect(host.playerCount).toBe(2);
   });
 });

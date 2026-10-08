@@ -9,7 +9,7 @@ import type { Inventory } from '../game/inventory';
 import { perPlayerKeys, splitChanges, type PlayerChanges } from '../game/playerData';
 import type { SimEvent, SimPlayer } from '../game/simulation';
 import { GameState } from '../game/state';
-import { MAX_PLAYERS, type GameOptions } from '../save/saveIndex';
+import { MAX_PLAYERS, type GameOptions, type SavedPlayer } from '../save/saveIndex';
 import type { WorldParams } from '../world/worldgen';
 import { LOADOUT_KEYS, REMOTE_CALLS } from './worldSync';
 import {
@@ -35,6 +35,8 @@ export interface HostOptions {
   /** Secondes entre deux envois de l'état du monde / des positions. */
   snapshotEveryS?: number;
   playersEveryS?: number;
+  /** Fiches de joueurs retrouvées dans la sauvegarde (par nom). */
+  players?: Record<string, SavedPlayer>;
   /** Secondes entre deux envois de la fiche de chaque invité (sac, fabrications). */
   meEveryS?: number;
 }
@@ -44,6 +46,8 @@ interface Remote {
   link: Link;
   state: GameState;
   bus: CommandBus;
+  /** Dernière valeur envoyée de chaque champ du monde (JSON) : on n'envoie que les différences. */
+  sent: Map<string, string>;
 }
 
 interface Profile {
@@ -84,6 +88,26 @@ export class HostSession {
 
   constructor(private readonly opts: HostOptions) {
     this.hostInfo = { id: HOST_ID, name: opts.hostName, x: 0, y: 0, z: 0, yaw: 0 };
+    for (const [name, p] of Object.entries(opts.players ?? {})) {
+      this.profiles.set(name, {
+        id: `p${this.nextId++}`,
+        inventory: p.inventory,
+        changes: p.changes as PlayerChanges,
+      });
+    }
+  }
+
+  /** Fiches de tous les joueurs venus (sac à jour pour ceux qui sont là), à ranger dans la sauvegarde. */
+  exportProfiles(): Record<string, SavedPlayer> {
+    const out: Record<string, SavedPlayer> = {};
+    for (const [name, p] of this.profiles) {
+      const live = [...this.remotes.values()].find((r) => r.info.id === p.id);
+      out[name] = {
+        inventory: structuredClone(live ? live.state.inventory : p.inventory),
+        changes: structuredClone(p.changes) as Record<string, unknown>,
+      };
+    }
+    return out;
   }
 
   /** Ouvre la partie aux invités et renvoie le code d'invitation. */
@@ -148,7 +172,19 @@ export class HostSession {
     if (this.snapClock >= (this.opts.snapshotEveryS ?? 0.5)) {
       this.snapClock = 0;
       this.tick++;
-      this.broadcast({ t: 'snap', tick: this.tick, world: this.worldSnapshot() });
+      const world = this.worldSnapshot() as unknown as Record<string, unknown>;
+      const json = new Map(Object.entries(world).map(([k, v]) => [k, JSON.stringify(v)]));
+      for (const r of this.remotes.values()) {
+        const part: Record<string, unknown> = {};
+        for (const [k, j] of json) {
+          if (r.sent.get(k) === j) continue;
+          r.sent.set(k, j);
+          part[k] = world[k];
+        }
+        if (Object.keys(part).length > 0) {
+          r.link.send({ t: 'snap', tick: this.tick, world: part } as ToGuest);
+        }
+      }
     }
   }
 
@@ -198,6 +234,8 @@ export class HostSession {
     });
     link.onClose(() => {
       if (player && this.remotes.get(player.info.id) === player) {
+        const profile = this.profiles.get(player.info.name);
+        if (profile) profile.inventory = structuredClone(player.state.inventory);
         this.remotes.delete(player.info.id);
         this.broadcast({ t: 'players', players: this.players() });
         this.changeCb?.();
@@ -233,7 +271,11 @@ export class HostSession {
       blockedFor: this.opts.blockedFor,
     });
     const info: PlayerInfo = { id: profile.id, name, x: 0, y: 0, z: 0, yaw: 0 };
-    const remote: Remote = { info, link, state, bus };
+    const snapshot = this.worldSnapshot();
+    const sent = new Map(
+      Object.entries(snapshot).map(([k, v]) => [k, JSON.stringify(v)] as [string, string]),
+    );
+    const remote: Remote = { info, link, state, bus, sent };
     this.remotes.set(info.id, remote);
     link.send({
       t: 'welcome',
@@ -244,7 +286,7 @@ export class HostSession {
         ...this.opts.options,
         multiplayer: { ...this.opts.options.multiplayer, password: '' },
       },
-      snapshot: this.worldSnapshot(),
+      snapshot,
       profile: { inventory: state.inventory, changes: profile.changes },
     } satisfies ToGuest);
     this.broadcast({ t: 'players', players: this.players() });

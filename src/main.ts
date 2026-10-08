@@ -23,7 +23,8 @@ import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
 import { PeerNetwork } from './net/peerNetwork';
 import { HostSession } from './core/net/host';
-import type { GuestClient } from './core/net/guest';
+import { GuestClient, RefusedError } from './core/net/guest';
+import type { JoinInfo } from './ui/menu';
 import { GuestSync } from './core/net/worldSync';
 import { mergeChanges } from './core/game/playerData';
 import type { WorldChanges } from './core/game/worldChanges';
@@ -70,6 +71,8 @@ interface Session {
   state: GameState;
   /** Partie rejointe chez un autre joueur (aucune sauvegarde locale). */
   guest: { client: GuestClient; sync: GuestSync } | null;
+  /** Fiches des joueurs invités retrouvées dans la sauvegarde (ou celles de l'hôte, quand il a fermé la partie). */
+  savedPlayers: SaveSlot['players'];
   /** Dernier nom de sauvegarde manuelle utilisé pendant cette session. */
   lastManualName: string | null;
   lastAutosaveAt: number;
@@ -108,7 +111,13 @@ function saveAuto(s: Session): void {
   if (s.guest) return;
   const result = saves.saveSlot(
     s.game.id,
-    { name: t('save.autoName'), kind: 'auto', player: s.view.getState(), ...s.state.snapshot() },
+    {
+      name: t('save.autoName'),
+      kind: 'auto',
+      player: s.view.getState(),
+      players: host?.exportProfiles() ?? s.savedPlayers,
+      ...s.state.snapshot(),
+    },
     getSettings().game.autosaveKeep,
   );
   if (result) s.game = result.game;
@@ -147,7 +156,7 @@ function quitToMenu(): void {
 }
 
 /** Rejoint la partie d'un autre joueur : le monde vient de l'hôte, rien n'est enregistré sur cet appareil. */
-function startGuest(client: GuestClient): void {
+function startGuest(client: GuestClient, who: JoinInfo): void {
   const game: GameSummary = {
     id: `guest-${client.you.id}`,
     name: client.players[0]?.name ?? client.you.name,
@@ -160,7 +169,27 @@ function startGuest(client: GuestClient): void {
     inventory: client.inventory,
     changes: mergeChanges(client.world as WorldChanges, client.changes),
   });
-  startGame(game, undefined, { client, sync: new GuestSync(client, state) }, state);
+  const sync = new GuestSync(client, state);
+  sync.onLost(() => void reconnect(sync, who));
+  startGame(game, undefined, { client, sync }, state);
+}
+
+/** Liaison coupée : on retente de rejoindre la même partie sous le même nom (l'hôte rend sa fiche). */
+async function reconnect(sync: GuestSync, who: JoinInfo): Promise<void> {
+  for (let i = 0; i < 10; i++) {
+    showToast(t('join.reconnecting'));
+    await new Promise((r) => window.setTimeout(r, 3000));
+    if (session?.guest?.sync !== sync) return; // le joueur a quitté entre-temps
+    try {
+      sync.rebind(await GuestClient.connect(network, who.code, who));
+      showToast(t('join.reconnected'));
+      return;
+    } catch (e) {
+      if (e instanceof RefusedError && e.reason !== 'closed-link') break; // refus net : inutile d'insister
+    }
+  }
+  showToast(t('join.lost'));
+  quitToMenu();
 }
 
 function startGame(
@@ -234,6 +263,7 @@ function startGame(
     tech: null as unknown as TechWindow,
     state,
     guest,
+    savedPlayers: slot?.players,
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
     timer: 0,
@@ -284,6 +314,7 @@ function startGame(
         name,
         kind: 'manual',
         player: view.getState(),
+        players: host?.exportProfiles() ?? s.savedPlayers,
         ...s.state.snapshot(),
       });
       if (!result) return;
@@ -305,6 +336,7 @@ function startGame(
                 world: game.world,
                 options: game.options,
                 hostName: t('join.defaultName'),
+                players: s.savedPlayers,
                 approve: (name) => window.confirm(t('pause.multi.approve', { name })),
               });
               hostCode = await host.open(network);

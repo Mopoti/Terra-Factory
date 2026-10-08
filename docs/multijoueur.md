@@ -68,3 +68,12 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 - **Combat de l'invité** : tirs et coups au corps à corps modifient la copie locale des ennemis, vite écrasée par l'état de l'hôte ; il faudra des commandes de tir.
 - **Identifiants de machines posées** : une machine posée par prédiction reçoit l'identifiant prévu par l'invité ; si l'hôte ou un autre invité en pose une au même moment, l'état de l'hôte remplace tout au prochain envoi (la commande suivante vise alors la bonne machine).
 - L'état du monde est encore envoyé **en entier** à chaque fois (différences en M3) ; mort de l'invité (cadavre, réapparition) non rejouée chez l'hôte ; reconnexion automatique, sauvegarde des joueurs dans la partie de l'hôte, mot de passe haché : M3.
+
+## M3 — durcissement (Tour 120) : fait en partie
+
+- **Joueurs gardés dans la sauvegarde de l'hôte** : `SaveSlot.players` (par nom : sac et part individuelle). `HostSession.exportProfiles()` (sac à jour des joueurs présents) est rangé à chaque sauvegarde, manuelle ou automatique, et à la fermeture de la partie aux invités ; au rechargement, `HostOptions.players` rend à chacun ses affaires. Le format reste lisible par les anciennes versions (champ facultatif).
+- **Différences d'état** : l'hôte n'envoie à chaque invité que les champs du monde qui ont changé depuis son dernier envoi (comparaison par champ) ; l'invité fusionne dans sa copie. Un monde immobile ne coûte plus rien.
+- **Reconnexion** : si la liaison est coupée sans que le joueur l'ait voulu, l'invité retente toutes les 3 s (10 essais) sous le même nom ; l'hôte lui rend sa fiche, l'invité reprend le monde et son sac (`GuestSync.rebind`). Refus net (partie fermée, mot de passe…) ou échec final : retour au menu. Un départ voulu ne déclenche rien. Un joueur qui part garde son sac dans sa fiche.
+- **Règles de la partie appliquées** : 5 joueurs, privé (acceptation de l'hôte) / public (mot de passe), partage des technologies, crédits et sac (déjà en M2).
+
+**Reste (hors M3)** : combat de l'invité par commandes (tirs, corps à corps), mort de l'invité rejouée chez l'hôte, mot de passe haché dans la sauvegarde, serveur de mise en relation propre, essai à 5 joueurs réels.

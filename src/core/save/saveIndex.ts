@@ -124,6 +124,12 @@ export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOpt
 export type SlotKind = 'manual' | 'auto';
 
 /** Une sauvegarde : un instant d'une partie. */
+/** Fiche d'un joueur invité, gardée dans la sauvegarde de l'hôte pour qu'il retrouve ses affaires en revenant. */
+export interface SavedPlayer {
+  inventory: Inventory;
+  changes: Record<string, unknown>;
+}
+
 export interface SaveSlot {
   id: string;
   name: string;
@@ -135,6 +141,8 @@ export interface SaveSlot {
   inventory: Inventory;
   /** Ce que le joueur a changé dans le monde (ressources récoltées, objets au sol). */
   changes: WorldChanges;
+  /** Joueurs invités (par nom), si la partie a été ouverte à des invités. */
+  players?: Record<string, SavedPlayer>;
 }
 
 /** Une partie = un « dossier » contenant ses sauvegardes (manuelles et automatiques). */
@@ -205,6 +213,21 @@ function normalizePlayer(raw: unknown): PlayerState {
   };
 }
 
+function normalizePlayers(raw: unknown): Record<string, SavedPlayer> | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
+  const out: Record<string, SavedPlayer> = {};
+  for (const [name, v] of Object.entries(raw).slice(0, MAX_PLAYERS * 4)) {
+    if (typeof v !== 'object' || v === null) continue;
+    const p = v as Record<string, unknown>;
+    const changes = typeof p.changes === 'object' && p.changes !== null ? p.changes : {};
+    out[name.slice(0, 24)] = {
+      inventory: normalizeInventory(p.inventory),
+      changes: changes as Record<string, unknown>,
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function normalizeSlot(raw: unknown): SaveSlot[] {
   if (typeof raw !== 'object' || raw === null) return [];
   const s = raw as Record<string, unknown>;
@@ -218,6 +241,7 @@ function normalizeSlot(raw: unknown): SaveSlot[] {
       player: normalizePlayer(s.player),
       inventory: normalizeInventory(s.inventory),
       changes: normalizeChanges(s.changes),
+      players: normalizePlayers(s.players),
     },
   ];
 }

@@ -100,19 +100,45 @@ export class GuestSync {
     null;
   private offState: () => void;
   private worldCb: ((changed: string[]) => void) | null = null;
+  private hitCb: ((amount: number) => void) | null = null;
+  private lostCb: (() => void) | null = null;
   private refusedCb: ((call: string) => void) | null = null;
 
   constructor(
-    readonly client: GuestClient,
+    public client: GuestClient,
     readonly state: GameState,
     public factory: Factory | null = null,
   ) {
-    client.onWorld((w) => this.applyWorld(w));
-    client.onMe((me) => this.applyMe(me));
+    this.bind(client);
     this.offState = state.onChange((e) => {
       if (e.type === 'inventory' && this.pendingMe && !state.hand) this.flushMe();
     });
     this.wrapState();
+  }
+
+  private bind(client: GuestClient): void {
+    client.onWorld((w) => this.applyWorld(w));
+    client.onMe((me) => this.applyMe(me));
+    client.onHit((a) => this.hitCb?.(a));
+    client.onClose(() => this.lostCb?.());
+  }
+
+  /** Reprend la partie avec une nouvelle liaison (après une coupure) : monde et fiche repartent de l'hôte. */
+  rebind(client: GuestClient): void {
+    this.client = client;
+    this.bind(client);
+    this.lastLoadout = '';
+    this.applyWorld(client.world);
+    this.applyMe({ inventory: client.inventory, changes: client.changes, craft: [] });
+  }
+
+  onHit(cb: (amount: number) => void): void {
+    this.hitCb = cb;
+  }
+
+  /** La liaison avec l'hôte est coupée (sans que le joueur l'ait voulu). */
+  onLost(cb: () => void): void {
+    this.lostCb = cb;
   }
 
   /** L'usine est créée par la vue 3D (avec le terrain) : elle la confie ici. */

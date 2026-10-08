@@ -2358,9 +2358,7 @@ export function startGameView(
     guest.onWorldChange((changed) => {
       if (changed.includes('taken')) for (const k of chunks.keys()) dirtyChunks.add(k);
     });
-    guest.client.onHit((amount) =>
-      onSimEvent({ type: 'playerHit', player: guest.client.you.id, amount }),
-    );
+    guest.onHit((amount) => onSimEvent({ type: 'playerHit', player: guest.client.you.id, amount }));
   }
   /** Session d'hôte multijoueur (quand la partie est ouverte aux invités). */
   let hostSession: HostSession | null = null;
