@@ -1,4 +1,4 @@
-import { modelFor } from './models';
+import { beltModel, modelFor } from './models';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
@@ -30,7 +30,7 @@ import { fluidPorts } from '../core/factory/fluids';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 
-const BELT_H = 0.12;
+const BELT_H = 0.2;
 /** Un tapis occupe une tuile de 2 × 2 cases (1 m) ; les objets passent par son milieu. */
 const TILE_M = 2 * CELL_SIZE_M;
 const BELT_W = TILE_M;
@@ -583,7 +583,54 @@ function addBelt(
   }
   const height = levelY(shape.from);
   if (height > 0) pillar(mb, m, factory, color, height);
+  if (addBeltModel(mb, m, entry, height, color)) return;
   addFlatBelt(mb, gx, gz, rot, entry, color, height);
+}
+
+/**
+ * Orientation des modèles de tapis du kit (voir `RISE_DIR` : tourner de `t` quarts de tour envoie +z vers `RISE_DIR[t]`).
+ * Le tapis droit circule le long de l'axe x du modèle ; le coude relie les côtés +x et −z.
+ */
+const BELT_TURN_OFFSET = 3;
+
+/** Tapis plat (ou surélevé) en modèle 3D du kit ; renvoie faux si le modèle n'est pas encore chargé. */
+function addBeltModel(
+  mb: MeshBuilder,
+  m: Machine,
+  entry: { ex: number; ez: number; curved: boolean },
+  height: number,
+  color: Rgb,
+): boolean {
+  const model = beltModel(entry.curved ? 'corner' : 'straight', m.tier);
+  if (!model) return false;
+  const [dx, dz] = RISE_DIR[m.rot];
+  const x = (m.gx + 1) * CELL_SIZE_M;
+  const z = (m.gz + 1) * CELL_SIZE_M;
+  // Hauteur du dessus du modèle = hauteur où roulent les objets.
+  const scaleY = BELT_H / model.size.y;
+  const tint = m.broken ? hexToRgb('#7a2e2a') : color;
+  const mix = m.broken ? 0.7 : 0.1;
+  let turns = (m.rot + BELT_TURN_OFFSET) % 4;
+  if (entry.curved) {
+    // Coude : relie la sortie à un côté voisin ; le modèle (côtés +x et −z) est tourné pour couvrir cette paire.
+    const entrySide = RISE_DIR.findIndex(([ex, ez]) => ex === entry.ex && ez === entry.ez);
+    const first = entrySide === (m.rot + 1) % 4 ? m.rot : (m.rot + 3) % 4;
+    turns = (first + 3) % 4;
+  }
+  mb.model(model, x, height, z, turns, TILE_M / model.size.x, tint, mix, false, scaleY);
+  // Flèche de sens, claire, sur le dessus.
+  const top = height + BELT_H + 0.012;
+  const px = -dz;
+  const pz = dx;
+  flatTri(
+    mb,
+    [x + dx * 0.36, z + dz * 0.36],
+    [x - dx * 0.1 + px * 0.2, z - dz * 0.1 + pz * 0.2],
+    [x - dx * 0.1 - px * 0.2, z - dz * 0.1 - pz * 0.2],
+    top,
+    shade(color, 1.9),
+  );
+  return true;
 }
 
 /** Flèche de sens à plat sur une dalle (ou inclinée). */

@@ -46,7 +46,18 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
   chest_iron: 'box-large',
 };
 
-const NAMES = [...new Set(Object.values(MACHINE_MODELS))] as string[];
+/** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */
+export type BeltShape = 'straight' | 'corner';
+const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
+  straight: ['conveyor', 'conveyor-sides', 'conveyor-stripe-sides'],
+  corner: ['conveyor-corner', 'conveyor-corner', 'conveyor-stripe-corner'],
+};
+export const beltModel = (shape: BeltShape, tier: number): BakedModel | null =>
+  baked.get(BELT_MODELS[shape][Math.max(0, Math.min(2, tier - 1))]) ?? null;
+
+const NAMES = [
+  ...new Set([...Object.values(MACHINE_MODELS), ...Object.values(BELT_MODELS).flat()]),
+] as string[];
 const baked = new Map<string, BakedModel>();
 let loading: Promise<void> | null = null;
 

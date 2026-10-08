@@ -44,6 +44,8 @@ export class MeshBuilder {
     scale: number,
     tint?: Rgb,
     mix = 0,
+    mirror = false,
+    scaleY = scale,
   ): void {
     const a = (turns * Math.PI) / 2;
     const c = Math.cos(a);
@@ -51,11 +53,12 @@ export class MeshBuilder {
     const cx = m.min.x + m.size.x / 2;
     const cz = m.min.z + m.size.z / 2;
     const place = (i: number): void => {
-      const px = (m.positions[i * 3] - cx) * scale;
-      const py = (m.positions[i * 3 + 1] - m.min.y) * scale;
+      const flip = mirror ? -1 : 1;
+      const px = (m.positions[i * 3] - cx) * scale * flip;
+      const py = (m.positions[i * 3 + 1] - m.min.y) * scaleY;
       const pz = (m.positions[i * 3 + 2] - cz) * scale;
       this.positions.push(x + px * c + pz * s, y + py, z - px * s + pz * c);
-      const nx = m.normals[i * 3];
+      const nx = m.normals[i * 3] * flip;
       const nz = m.normals[i * 3 + 2];
       this.normals.push(nx * c + nz * s, m.normals[i * 3 + 1], -nx * s + nz * c);
       const r = m.colors[i * 3];
@@ -65,7 +68,18 @@ export class MeshBuilder {
         this.colors.push(r + (tint.r - r) * mix, g + (tint.g - g) * mix, b + (tint.b - b) * mix);
       } else this.colors.push(r, g, b);
     };
-    for (let k = 0; k < m.index.length; k++) place(m.index[k]);
+    // Un modèle retourné (miroir) a ses triangles à l'envers : on inverse l'ordre des sommets.
+    for (let k = 0; k < m.index.length; k += 3) {
+      if (mirror) {
+        place(m.index[k]);
+        place(m.index[k + 2]);
+        place(m.index[k + 1]);
+      } else {
+        place(m.index[k]);
+        place(m.index[k + 1]);
+        place(m.index[k + 2]);
+      }
+    }
   }
 
   /** Ajoute un triangle ; la normale est calculée (ombrage plat). */
