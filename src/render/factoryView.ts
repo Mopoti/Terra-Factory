@@ -219,7 +219,11 @@ export class FactoryView {
           mb,
           m,
           entry,
-          hexToRgb(machineDef('conveyor').tierColors?.[m.tier - 1] ?? machineDef('conveyor').color),
+          hexToRgb(
+            m.broken
+              ? '#7a2e2a'
+              : (machineDef('conveyor').tierColors?.[m.tier - 1] ?? machineDef('conveyor').color),
+          ),
           this.factory,
         );
       } else {

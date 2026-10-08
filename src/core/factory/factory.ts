@@ -99,7 +99,7 @@ export interface Machine {
   filters: ItemFilter[];
   /** Pression (bar) du fluide dans cette machine (calculée à chaque pas, non enregistrée). */
   pressure: number;
-  /** Tuyau rompu (pression au-dessus de son maximum) : il fuit et ne laisse rien passer jusqu'à réparation. */
+  /** Tuyau rompu (pression trop forte) ou tapis / tuyau abîmé par l'acide : il ne laisse rien passer jusqu'à réparation. */
   broken: boolean;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
@@ -543,7 +543,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     }
     if (oldPacks && isSciencePack(oldPacks.item) && machine.slots.length === 0)
       machine.slots.push({ ...oldPacks, count: Math.min(oldPacks.count, stackLimit(machine)) });
-    machine.broken = m.broken === true && machine.type === 'pipe';
+    machine.broken = m.broken === true && (machine.type === 'pipe' || machine.type === 'conveyor');
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -1079,7 +1079,7 @@ export class Factory {
         return 'full';
       return this.hasIngredients(m, need) ? 'running' : 'idle';
     }
-    if (m.type === 'pipe' && m.broken) return 'broken';
+    if ((m.type === 'pipe' || m.type === 'conveyor') && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
     if (m.type === 'refinery') {
       if (m.fluid.oil < 0.5 && m.fluid.polymer < 0.5) return 'idle';
@@ -1469,6 +1469,7 @@ export class Factory {
     if (target.type === 'splitter' || target.type === 'sorter') return !target.stock;
     if (target.type === 'merger') return !target.stock && from.type !== 'conveyor';
     if (target.type === 'conveyor') {
+      if (target.broken) return false;
       // Une sortie de tunnel ne reçoit que de son entrée.
       if (target.lift === 5) return false;
       // Un tapis qui nous fait face ne nous reçoit pas (face à face).
@@ -2010,6 +2011,7 @@ export class Factory {
   }
 
   private tickBelt(m: Machine, dt: number): void {
+    if (m.broken) return;
     // Une pente à 45° est plus longue qu'une tuile plate (√2) : on y avance moins vite.
     const slope = liftStart(m) !== liftEnd(m) ? Math.SQRT1_2 : 1;
     const speed = beltSpeed(m.tier) * slope;

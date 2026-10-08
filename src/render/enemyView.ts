@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import type { Enemy } from '../core/game/threat';
+import { kindOf, type Enemy } from '../core/game/threat';
 
 /** Affichage des ennemis : des « punaises » sombres à pattes, une forme simple par ennemi (réutilisée). */
 export class EnemyView {
   private readonly root = new THREE.Group();
   private readonly pool: THREE.Group[] = [];
   private readonly bodyMat = new THREE.MeshStandardMaterial({ color: 0x7a2d3a });
+  private readonly guardMat = new THREE.MeshStandardMaterial({ color: 0x3f2a2a });
+  private readonly spitterMat = new THREE.MeshStandardMaterial({ color: 0x5f9a3a });
   private readonly legMat = new THREE.MeshStandardMaterial({ color: 0x3b1820 });
   private readonly eyeMat = new THREE.MeshBasicMaterial({ color: 0xffd35a });
 
@@ -50,16 +52,23 @@ export class EnemyView {
       g.visible = !!e;
       if (!e) return;
       const aim = target(e);
+      const kind = kindOf(e);
+      const body = g.children[0] as THREE.Mesh;
+      body.material =
+        kind === 'guard' ? this.guardMat : kind === 'spitter' ? this.spitterMat : this.bodyMat;
+      g.scale.setScalar(kind === 'guard' ? 1.6 : kind === 'spitter' ? 1.2 : 1);
       g.position.set(e.x, 0, e.z);
       if (aim) g.rotation.y = Math.atan2(aim.x - e.x, aim.z - e.z);
       // Petit sautillement.
-      g.position.y = Math.abs(Math.sin(time * 9 + e.id)) * 0.05;
+      g.position.y = kind === 'spitter' ? 0 : Math.abs(Math.sin(time * 9 + e.id)) * 0.05;
     });
   }
 
   dispose(): void {
     this.root.removeFromParent();
-    this.bodyMat.dispose();
+    this.legMat.dispose();
+    this.guardMat.dispose();
+    this.spitterMat.dispose();
     this.legMat.dispose();
     this.eyeMat.dispose();
     for (const g of this.pool) g.traverse((o) => o instanceof THREE.Mesh && o.geometry.dispose());

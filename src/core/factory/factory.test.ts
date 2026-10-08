@@ -1870,3 +1870,20 @@ describe('plaque d’acier et paquet T2', () => {
     expect(itemById('science_pack_2').recipe).toEqual({ steel_plate: 1, machine_pipe_2: 1 });
   });
 });
+
+describe('tapis abîmé par l’acide', () => {
+  it('un tapis abîmé ne transporte plus et se remplace par un neuf du même palier', () => {
+    const a = emptyMachine(1, 'conveyor', 0, 0, 1);
+    const b = emptyMachine(2, 'conveyor', 2, 0, 1);
+    a.belt.push({ item: 'iron_ingot', pos: 0.5 });
+    a.broken = true;
+    const f = new Factory([a, b], makeWorld().world);
+    run(f, 3);
+    expect(b.belt).toHaveLength(0);
+    expect(a.belt[0].pos).toBe(0.5);
+    expect(f.status(a)).toBe('broken');
+    expect(f.upgradeOf('conveyor', 0, 0, 0, 1)?.id).toBe(1);
+    a.broken = false;
+    expect(f.upgradeOf('conveyor', 0, 0, 0, 1)).toBeNull();
+  });
+});

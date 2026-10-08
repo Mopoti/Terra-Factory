@@ -766,6 +766,7 @@
   "tech.washing_2": "Metallurgy: washing T2",
   "factory.status.wrongPack": "These packs are not used by the current study",
   "tech.science.pack": "{pack}: {have} / {need}",
+  "threat.acid": "A spitter damaged a belt or a pipe: place a new one of the same tier on top to repair it.",
   "tech.steam": "Steam",
   "factory.status.noSteam": "Steam pressure too low",
   "factory.status.noWater": "No water",

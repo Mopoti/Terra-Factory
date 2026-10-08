@@ -766,6 +766,7 @@
   "tech.washing_2": "Métallurgie : lavage T2",
   "factory.status.wrongPack": "Ces paquets ne servent pas à l'étude en cours",
   "tech.science.pack": "{pack} : {have} / {need}",
+  "threat.acid": "Un cracheur a abîmé un tapis ou un tuyau : pose un élément neuf du même palier par-dessus pour le réparer.",
   "tech.steam": "Vapeur",
   "factory.status.noSteam": "Pression de vapeur insuffisante",
   "factory.status.noWater": "Pas d'eau",

@@ -7,6 +7,9 @@
 /** Côté d'une cellule de pollution (m) : 4 × 4 chunks. */
 export const POLLUTION_CELL_M = 32;
 
+/** Variantes : éclaireur (léger, rapide), gardien (lourd, lent, protège le nid), cracheur (statique, acide à distance). */
+export type EnemyKind = 'scout' | 'guard' | 'spitter';
+
 export interface Enemy {
   id: number;
   x: number;
@@ -18,7 +21,9 @@ export interface Enemy {
   idle: number;
   /** Cible suivie (identifiant), ou null. */
   target: string | null;
-  /** Gardien d'un nid : reste près de chez lui et ne s'en prend qu'au joueur qui s'approche. */
+  /** Variante (absente dans une ancienne sauvegarde : gardien s'il a un nid, sinon éclaireur). */
+  kind?: EnemyKind;
+  /** Gardien ou cracheur : reste près de son nid. */
   home?: { x: number; z: number };
 }
 
@@ -46,7 +51,18 @@ export interface ThreatOptions {
 export interface Damage {
   target: string;
   amount: number;
+  /** Acide de cracheur : abîme un tapis ou un tuyau (au lieu de le détruire). */
+  acid?: boolean;
 }
+
+export const kindOf = (e: Enemy): EnemyKind => e.kind ?? (e.home ? 'guard' : 'scout');
+
+/** Points de vie et vitesse (m/s) de chaque variante. */
+export const ENEMY_STATS: Record<EnemyKind, { hp: number; speed: number }> = {
+  scout: { hp: 25, speed: 4.5 },
+  guard: { hp: 80, speed: 2 },
+  spitter: { hp: 40, speed: 0 },
+};
 
 // Réglages (secondes, mètres, points de pollution).
 const ABSORB_BASE = 0.05;
@@ -58,9 +74,15 @@ const NEST_ABSORB_PER_S = 3;
 const SPAWN_COST = 12;
 const SPAWN_COST_AGGRESSIVE = 8;
 const MAX_ENEMIES = 25;
-export const ENEMY_HP = 25;
-const ENEMY_SPEED = 3.2;
-const ENEMY_SPEED_AGGRESSIVE = 4;
+/** Part des ennemis nés de la pollution qui sont des cracheurs. */
+const SPITTER_SHARE = 0.2;
+const AGGRESSIVE_SPEED_FACTOR = 1.2;
+/** Cracheur : portée de l'acide (m) et délai entre deux jets (s). */
+const ACID_RANGE_M = 20;
+const ACID_EVERY_S = 4;
+/** Gardien : zone qu'il défend autour du nid (m) et dégâts par seconde sur une machine. */
+const GUARD_ZONE_M = 90;
+const GUARD_MACHINE_DPS = 10;
 const SEE_MACHINE_M = 160;
 const SEE_PLAYER_M = 24;
 const SEE_PLAYER_AGGRESSIVE_M = 45;
@@ -73,7 +95,7 @@ const GROUND_ABSORB = 0.01;
 const GUARDS_PER_NEST = 3;
 const GUARD_WAKE_M = 90;
 const GUARD_SEE_M = 30;
-const GUARD_LEASH_M = 90;
+const GUARD_LEASH_M = GUARD_ZONE_M;
 const GUARD_RESPAWN_S = 40;
 
 export const cellOf = (m: number): number => Math.floor(m / POLLUTION_CELL_M);
@@ -188,14 +210,14 @@ export class Threat {
   }
 
   /** Avance de `dt` secondes ; renvoie les dégâts infligés par les ennemis. */
-  update(dt: number, targets: ThreatTarget[]): Damage[] {
+  update(dt: number, targets: ThreatTarget[], acidTargets: ThreatTarget[] = []): Damage[] {
     this.clock += dt;
     this.spreadClock += dt;
     while (this.clock >= 1) {
       this.clock -= 1;
       this.secondStep();
     }
-    return this.moveEnemies(dt, targets);
+    return this.moveEnemies(dt, targets, acidTargets);
   }
 
   /** Une seconde de pollution : absorption naturelle, nids, étalement. */
@@ -217,7 +239,7 @@ export class Threat {
             const c = (this.charge.get(nk) ?? 0) + take;
             if (c >= cost && this.enemies.length < MAX_ENEMIES) {
               this.charge.set(nk, c - cost);
-              this.spawn(nest.x, nest.z);
+              this.spawn(nest.x, nest.z, this.random() < SPITTER_SHARE ? 'spitter' : 'scout');
             } else this.charge.set(nk, c);
           }
         }
@@ -263,7 +285,7 @@ export class Threat {
             const c = (this.charge.get(nk) ?? 0) + take;
             if (c >= cost && this.enemies.length < MAX_ENEMIES) {
               this.charge.set(nk, c - cost);
-              this.spawn(nest.x, nest.z);
+              this.spawn(nest.x, nest.z, this.random() < SPITTER_SHARE ? 'spitter' : 'scout');
             } else this.charge.set(nk, c);
           }
         }
@@ -279,7 +301,10 @@ export class Threat {
     for (const nest of this.world.nestsNear(playerX, playerZ, GUARD_WAKE_M)) {
       const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
       const mine = this.enemies.filter(
-        (e) => e.home && `${Math.round(e.home.x)},${Math.round(e.home.z)}` === nk,
+        (e) =>
+          kindOf(e) === 'guard' &&
+          e.home &&
+          `${Math.round(e.home.x)},${Math.round(e.home.z)}` === nk,
       );
       if (mine.length >= GUARDS_PER_NEST) {
         this.guardTimer.set(nk, GUARD_RESPAWN_S);
@@ -288,41 +313,75 @@ export class Threat {
       const wait = this.guardTimer.get(nk);
       if (wait === undefined) {
         // Première visite : tous les gardiens sont là.
-        for (let i = mine.length; i < GUARDS_PER_NEST; i++) this.spawn(nest.x, nest.z, true);
+        for (let i = mine.length; i < GUARDS_PER_NEST; i++) this.spawn(nest.x, nest.z, 'guard');
         this.guardTimer.set(nk, GUARD_RESPAWN_S);
       } else if (wait - dt <= 0) {
-        this.spawn(nest.x, nest.z, true);
+        this.spawn(nest.x, nest.z, 'guard');
         this.guardTimer.set(nk, GUARD_RESPAWN_S);
       } else this.guardTimer.set(nk, wait - dt);
     }
   }
 
-  private spawn(x: number, z: number, guard = false): void {
+  private spawn(x: number, z: number, kind: EnemyKind = 'scout'): void {
     this.enemies.push({
       id: this.nextId++,
       x: x + (this.random() - 0.5) * 2,
       z: z + (this.random() - 0.5) * 2,
-      hp: ENEMY_HP,
+      hp: ENEMY_STATS[kind].hp,
+      kind,
       cooldown: 0,
       idle: 0,
       target: null,
-      ...(guard ? { home: { x, z } } : {}),
+      ...(kind !== 'scout' ? { home: { x, z } } : {}),
     });
   }
 
-  private moveEnemies(dt: number, targets: ThreatTarget[]): Damage[] {
+  private moveEnemies(dt: number, targets: ThreatTarget[], acidTargets: ThreatTarget[]): Damage[] {
     const damage: Damage[] = [];
-    const speed = this.options.aggressive ? ENEMY_SPEED_AGGRESSIVE : ENEMY_SPEED;
+    const boost = this.options.aggressive ? AGGRESSIVE_SPEED_FACTOR : 1;
     const seePlayer = this.options.aggressive ? SEE_PLAYER_AGGRESSIVE_M : SEE_PLAYER_M;
     for (const e of [...this.enemies]) {
       e.cooldown = Math.max(0, e.cooldown - dt);
+      const kind = kindOf(e);
+      const speed = ENEMY_STATS[kind].speed * boost;
+      if (kind === 'spitter') {
+        // Statique : crache sur le tapis ou le tuyau le plus proche à portée.
+        let near: ThreatTarget | null = null;
+        let nearD = ACID_RANGE_M;
+        for (const t of acidTargets) {
+          const d = Math.hypot(t.x - e.x, t.z - e.z);
+          if (d <= nearD) {
+            near = t;
+            nearD = d;
+          }
+        }
+        e.target = near ? near.id : null;
+        if (near && e.cooldown <= 0) {
+          damage.push({ target: near.id, amount: 1, acid: true });
+          e.cooldown = ACID_EVERY_S;
+        }
+        continue;
+      }
       if (e.home) {
         const player = targets.find((t) => t.id === 'player');
         const dHome = Math.hypot(e.x - e.home.x, e.z - e.home.z);
         const dPlayer = player ? Math.hypot(player.x - e.x, player.z - e.z) : Infinity;
         const chase = player && dPlayer <= GUARD_SEE_M && dHome <= GUARD_LEASH_M;
-        const goal = chase ? player : { id: 'home', x: e.home.x, z: e.home.z };
-        e.target = chase ? 'player' : null;
+        // Sans joueur à portée, le gardien attaque la machine polluante la plus proche dans sa zone.
+        let raid: ThreatTarget | null = null;
+        if (!chase) {
+          let raidD = GUARD_ZONE_M;
+          for (const t of targets) {
+            if (t.id === 'player') continue;
+            const d = Math.hypot(t.x - e.home.x, t.z - e.home.z);
+            if (d <= raidD) {
+              raid = t;
+              raidD = d;
+            }
+          }
+        }
+        const goal = chase ? player : (raid ?? { id: 'home', x: e.home.x, z: e.home.z });
+        e.target = chase ? 'player' : raid ? raid.id : null;
         const dx = goal.x - e.x;
         const dz = goal.z - e.z;
         const d = Math.hypot(dx, dz);
@@ -331,7 +390,9 @@ export class Threat {
             damage.push({ target: 'player', amount: PLAYER_HIT });
             e.cooldown = PLAYER_HIT_EVERY_S;
           }
-        } else if (d > (chase ? REACH_M : 1.5)) {
+        } else if (raid && d <= REACH_M) {
+          damage.push({ target: raid.id, amount: GUARD_MACHINE_DPS * dt });
+        } else if (d > (chase || raid ? REACH_M : 1.5)) {
           const step = Math.min(d, speed * dt);
           e.x += (dx / d) * step;
           e.z += (dz / d) * step;

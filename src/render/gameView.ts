@@ -100,7 +100,7 @@ import {
   type FactoryWorld,
   type Machine,
 } from '../core/factory/factory';
-import { pipeMaxBar } from '../core/factory/fluids';
+import { emptyFluid, pipeMaxBar } from '../core/factory/fluids';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -2323,6 +2323,8 @@ export function startGameView(
   let targetClock = 0;
   let threatTargets: ThreatTarget[] = [];
   const machineHealth = new Map<number, number>();
+  let acidTargets: ThreatTarget[] = [];
+  let lastAcidMessage = -1e9;
   const hurtOverlay = document.createElement('div');
   hurtOverlay.className = 'hurt-overlay';
   container.appendChild(hurtOverlay);
@@ -2355,10 +2357,27 @@ export function startGameView(
       threatTargets = factory.machines
         .filter((m) => (machineDef(m.type).pollution ?? 0) > 0)
         .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
+      acidTargets = factory.machines
+        .filter((m) => (m.type === 'conveyor' || m.type === 'pipe') && !m.broken)
+        .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
     }
     const targets: ThreatTarget[] = [...threatTargets, { id: 'player', x: playerX, z: playerZ }];
-    for (const hit of threat.update(dt, targets)) {
-      if (hit.target === 'player') {
+    for (const hit of threat.update(dt, targets, acidTargets)) {
+      if (hit.acid) {
+        // Acide de cracheur : le tapis ou le tuyau est abîmé (à remplacer par un élément neuf).
+        const id = Number(hit.target.slice(8));
+        const m = factory.machines.find((x) => x.id === id);
+        if (m && !m.broken) {
+          m.broken = true;
+          m.fluid = emptyFluid();
+          factoryView.rebuild();
+          playSfx('rockBreak');
+          if (performance.now() - lastAcidMessage > 8000) {
+            lastAcidMessage = performance.now();
+            options.onMessage?.(t('threat.acid'));
+          }
+        }
+      } else if (hit.target === 'player') {
         playerHealth -= hit.amount;
         sinceHurt = 0;
         playSfx('deny');

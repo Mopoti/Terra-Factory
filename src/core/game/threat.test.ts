@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Threat, cellOf, type ThreatWorld } from './threat';
+import { ENEMY_STATS, Threat, cellOf, kindOf, type Enemy, type ThreatWorld } from './threat';
 
 /** Un nid en (100, 0) m ; pas d'arbres. */
 const world: ThreatWorld = {
@@ -121,5 +121,62 @@ describe('pollution du sol et gardiens', () => {
     expect(t.enemies).toHaveLength(2);
     for (let i = 0; i < 125; i++) t.keepGuards(60, 0, 1);
     expect(t.enemies).toHaveLength(3);
+  });
+});
+
+describe('variantes d’ennemis (point 8)', () => {
+  const enemy = (kind: Enemy['kind'], x: number, z: number): Enemy => ({
+    id: 1,
+    x,
+    z,
+    hp: ENEMY_STATS[kind ?? 'scout'].hp,
+    kind,
+    cooldown: 0,
+    idle: 0,
+    target: null,
+    ...(kind && kind !== 'scout' ? { home: { x, z } } : {}),
+  });
+
+  it('éclaireur 25 PV / 4,5 m/s, gardien 80 PV / 2 m/s, cracheur 40 PV statique', () => {
+    expect(ENEMY_STATS.scout).toEqual({ hp: 25, speed: 4.5 });
+    expect(ENEMY_STATS.guard).toEqual({ hp: 80, speed: 2 });
+    expect(ENEMY_STATS.spitter).toEqual({ hp: 40, speed: 0 });
+    expect(kindOf({ ...enemy(undefined, 0, 0), home: { x: 0, z: 0 } })).toBe('guard');
+    expect(kindOf(enemy(undefined, 0, 0))).toBe('scout');
+  });
+
+  it('un nid garde 3 gardiens de 80 PV', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    t.keepGuards(60, 0, 1);
+    expect(t.enemies.map((e) => [kindOf(e), e.hp])).toEqual([
+      ['guard', 80],
+      ['guard', 80],
+      ['guard', 80],
+    ]);
+  });
+
+  it('un cracheur ne bouge pas et crache sur un tapis à portée toutes les 4 s', () => {
+    const t = new Threat({}, {}, world, { aggressive: false }, [enemy('spitter', 100, 0)]);
+    const belt = { id: 'machine:7', x: 110, z: 0 };
+    const far = { id: 'machine:8', x: 200, z: 0 };
+    const hits: string[] = [];
+    for (let i = 0; i < 20 * 9; i++)
+      for (const d of t.update(0.05, [], [belt, far])) if (d.acid) hits.push(d.target);
+    expect(hits).toEqual(['machine:7', 'machine:7', 'machine:7']);
+    expect([t.enemies[0].x, t.enemies[0].z]).toEqual([100, 0]);
+  });
+
+  it('un gardien attaque une machine polluante dans sa zone de 90 m, pas au-delà', () => {
+    const t = new Threat({}, {}, world, { aggressive: false }, [enemy('guard', 100, 0)]);
+    const near = { id: 'machine:1', x: 130, z: 0 };
+    let damage = 0;
+    for (let i = 0; i < 20 * 30; i++)
+      for (const d of t.update(0.05, [near])) if (d.target === near.id) damage += d.amount;
+    expect(damage).toBeGreaterThan(0);
+    const t2 = new Threat({}, {}, world, { aggressive: false }, [enemy('guard', 100, 0)]);
+    let far = 0;
+    for (let i = 0; i < 20 * 30; i++)
+      for (const d of t2.update(0.05, [{ id: 'machine:2', x: 300, z: 0 }])) far += d.amount;
+    expect(far).toBe(0);
   });
 });
