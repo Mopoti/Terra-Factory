@@ -14,6 +14,7 @@ import {
   type FactoryWorld,
   type Machine,
   dims,
+  tunnelRange,
 } from './factory';
 
 /** Un petit monde : des cases de minerai de fer sous (0..2, 0..2), 5 minerais chacune. */
@@ -1429,5 +1430,12 @@ describe('point 5b : bras filtrant et trieur', () => {
     expect(bad[0].filters[0]).toEqual({ mode: 'deny', items: [] });
     expect(bad[0].filters[1]).toEqual({ mode: 'deny', items: ['coal'] });
     expect(emptyMachine(1, 'conveyor', 0, 0, 0).filters).toHaveLength(0);
+  });
+});
+
+describe('portée des tunnels', () => {
+  it('4 / 8 / 16 tuiles selon le niveau du tapis, 4 pour les tuyaux', () => {
+    expect([1, 2, 3].map((t) => tunnelRange('conveyor', t))).toEqual([4, 8, 16]);
+    expect(tunnelRange('pipe', 3)).toBe(4);
   });
 });

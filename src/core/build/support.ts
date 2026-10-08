@@ -179,5 +179,32 @@ export function pillarsFor(
   return out;
 }
 
+/**
+ * Piliers à ajouter sous un élément à la face `face` (blocs de 50 cm depuis le sol) dans la case (gx, gz) : un tapis
+ * surélevé, par exemple. Rien si un support (pilier ou mur qui touche le sol) est à moins de 2,5 m.
+ */
+export function pillarsForFace(
+  pieces: Pieces,
+  face: number,
+  gx: number,
+  gz: number,
+  material: Material,
+): Record<string, PieceKind> {
+  if (face <= 0) return {};
+  const map = new SupportMap(pieces);
+  if (map.supportNear(face, gx, gz)) return {};
+  const pillar = kindFor('pillar', material);
+  const out: Record<string, PieceKind> = {};
+  let top = face;
+  for (let guard = 0; top > 0 && guard < 12; guard++) {
+    const key = pillarKey(top, gx, gz);
+    if (!pieces[key]) out[key] = pillar;
+    const bottom = (Math.ceil(top / L) - 1) * L;
+    if (bottom === 0 || map.slabHeld(bottom, gx, gz)) break;
+    top = bottom;
+  }
+  return out;
+}
+
 export const isPillarKind = (kind: PieceKind | undefined): boolean =>
   !!kind && pieceDef(kind).type === 'pillar';

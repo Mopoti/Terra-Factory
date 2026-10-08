@@ -472,6 +472,17 @@ describe('machines et tapis dans la partie', () => {
     expect(s.inventory.iron_ingot).toBe(4);
     expect(m.stock).toBeNull();
   });
+  it('un tapis surélevé reçoit un pilier automatique ; au sol, rien', () => {
+    const s = new GameState({ inventory: { machine_conveyor: 3 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 0, none, 0)).toBe('ok');
+    expect(Object.keys(s.changes.pieces)).toHaveLength(0);
+    expect(s.placeMachine(f, 'conveyor', 5, 5, 0, none, 2)).toBe('ok');
+    expect(Object.keys(s.changes.pieces).length).toBeGreaterThan(0);
+    const n = Object.keys(s.changes.pieces).length;
+    expect(s.placeMachine(f, 'conveyor', 7, 5, 0, none, 2)).toBe('ok'); // déjà soutenu à moins de 2,5 m
+    expect(Object.keys(s.changes.pieces)).toHaveLength(n);
+  });
   it('les machines sont enregistrées avec la partie', () => {
     const s = new GameState({ inventory: { machine_drill: 1 } });
     const f = new Factory(s.changes.machines, noWorld);

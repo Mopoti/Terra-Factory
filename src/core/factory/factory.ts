@@ -115,8 +115,15 @@ export const LIFTS: ReadonlyArray<{ from: number; to: number; layers: readonly n
 ];
 /** Forme qui prolonge celle-ci (ce qu'on pose à sa suite). */
 export const LIFT_NEXT = [0, 2, 2, 0, 0, 0, 7, 7, 2] as const;
-/** Longueur maximale d'un tunnel (en tuiles entre l'entrée et la sortie). */
-export const TUNNEL_MAX_TILES = 8;
+/** Portée maximale d'un tunnel de tapis (en tuiles de 1 m entre l'entrée et la sortie), selon le palier T1, T2, T3. */
+export const TUNNEL_RANGE_TILES = [4, 8, 16] as const;
+/** Portée d'un tunnel de tuyau (en tuiles) : tuyau de cuivre (T1) ; les autres tuyaux viendront avec la pression (point 6). */
+export const PIPE_TUNNEL_TILES = 4;
+/** Plus longue portée possible (pour borner les objets en transit). */
+export const TUNNEL_MAX_TILES = 16;
+/** Portée de tunnel d'une entrée de tapis (selon son palier) ou de tuyau. */
+export const tunnelRange = (type: string, tier: number): number =>
+  type === 'pipe' ? PIPE_TUNNEL_TILES : (TUNNEL_RANGE_TILES[tier - 1] ?? TUNNEL_RANGE_TILES[0]);
 export const LIFT_COUNT = LIFTS.length;
 /** Hauteur d'un niveau (m). */
 /** Hauteur (m) de chaque niveau, en multiples de 50 cm et de même pas (rampes toutes identiques, à 45°) : sol, 1 m, 2 m. */
@@ -646,7 +653,7 @@ export class Factory {
     for (const m of this.machines) {
       if ((m.type !== 'conveyor' && m.type !== 'pipe') || m.lift !== 4) continue;
       const [dx, dz] = RISE_DIR[m.rot];
-      for (let k = 1; k <= TUNNEL_MAX_TILES; k++) {
+      for (let k = 1; k <= tunnelRange(m.type, m.tier); k++) {
         const out = anchors.get(`${m.type}:${m.gx + dx * 2 * k},${m.gz + dz * 2 * k}`);
         if (out && out.rot === m.rot) {
           this.tunnelExit.set(m.id, out);

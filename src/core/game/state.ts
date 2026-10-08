@@ -4,6 +4,8 @@ import {
   chestRoom,
   emptyMachine,
   ingredientCap,
+  LIFTS,
+  levelY,
   recipeOf,
   type Cell,
   type Factory,
@@ -15,7 +17,7 @@ import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/tec
 import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
-import { pillarsFor } from '../build/support';
+import { pillarsFor, pillarsForFace } from '../build/support';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import {
@@ -808,6 +810,28 @@ export class GameState {
     return { x: last.x, z: last.z };
   }
 
+  /**
+   * Un tapis surélevé (niveau 1 ou 2, y compris les rampes qui montent du niveau 1) doit avoir un support à moins de
+   * 2,5 m : sinon un pilier de soutènement est posé sous lui, automatiquement et sans coût (comme pour la construction).
+   */
+  private supportBelt(type: MachineType, gx: number, gz: number, lift: number): void {
+    if (type !== 'conveyor') return;
+    const shape = LIFTS[lift];
+    const low = shape ? Math.min(shape.from, shape.to) : 0;
+    if (low < 1) return;
+    const added = pillarsForFace(
+      this.changes.pieces,
+      Math.round(levelY(low) / CELL_SIZE_M),
+      gx,
+      gz,
+      'stone',
+    );
+    if (Object.keys(added).length === 0) return;
+    Object.assign(this.changes.pieces, added);
+    this.roomCache = null;
+    this.emit({ type: 'build' });
+  }
+
   /** Filtre d'un bras filtrant ou d'un trieur : passe de liste blanche à liste noire (ou l'inverse). */
   setFilterMode(m: Machine, index: number, mode: 'allow' | 'deny'): boolean {
     const f = m.filters[index];
@@ -933,6 +957,7 @@ export class GameState {
     for (const belt of factory.replacedBelts(type, gx, gz, rot, lift))
       this.removeMachine(factory, belt.id, at);
     factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier));
+    this.supportBelt(type, gx, gz, lift);
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return 'ok';

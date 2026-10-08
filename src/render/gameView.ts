@@ -88,7 +88,7 @@ import {
   LIFTS,
   LIFT_NEXT,
   liftEnd,
-  TUNNEL_MAX_TILES,
+  tunnelRange,
   POLE_HIT_M,
   centerOf,
   dims,
@@ -433,7 +433,9 @@ export function startGameView(
           ? t('build.rotationAuto')
           : t('build.rotation', { deg: String(buildRot * 90) });
       const lift =
-        def.id === 'conveyor' ? ` · ${t(`factory.lift.${hudLift}` as TranslationKey)}` : '';
+        def.id === 'conveyor' || def.id === 'pipe'
+          ? ` · ${t(`factory.lift.${hudLift}` as TranslationKey)}`
+          : '';
       const floor =
         !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL
           ? ` · ${t('factory.upperFloor')}`
@@ -991,7 +993,8 @@ export function startGameView(
     const cAir = aimLevel >= 1 ? cellOnPlane(rayOrigin, rayDir, levelY(aimLevel)) : null;
     const snap = rampSnap(cAir ?? c);
     // Le patron suit l'inclinaison choisie, au niveau du tapis visé (sol si rien n'est visé).
-    baseLift = def.id === 'pipe' ? 0 : tiltLift(snap?.level ?? 0, buildTilt);
+    // Un tuyau n'a pas de rampes : seul PageDown (entrée de tunnel) change sa forme.
+    baseLift = def.id === 'pipe' ? (buildTilt < 0 ? 4 : 0) : tiltLift(snap?.level ?? 0, buildTilt);
     if (baseLift !== hudLift) {
       hudLift = baseLift;
       renderBuildHud();
@@ -1026,12 +1029,40 @@ export function startGameView(
     const path = machinePath.length > 0 ? machinePath : [snap?.cell ?? tileAround(aim)];
     for (const k of [...liftOverride.keys()]) if (k >= path.length) liftOverride.delete(k);
     const lifts: number[] = [];
+    const range = tunnelRange(def.id, tier);
+    // Tunnel « à patron » : on tient une entrée de tunnel (PageDown) et on trace en avançant : une entrée, des
+    // tuiles sous terre, une sortie à portée maximale, une nouvelle entrée juste après, etc. (jusqu'à la fin du tracé).
+    const firstLift = machinePath.length > 0 ? dragLift : baseLift;
+    const autoTunnel = firstLift === 4 && liftOverride.size === 0 && path.length > 1;
     path.forEach((_, i) => {
-      lifts.push(
-        liftOverride.get(i) ??
-          (i === 0 ? (machinePath.length > 0 ? dragLift : baseLift) : nextLift(lifts[i - 1])),
-      );
+      if (autoTunnel && i > 0) {
+        const k = i % (range + 1);
+        const isLast = i === path.length - 1;
+        lifts.push(k === 0 ? (isLast ? 0 : 4) : k === range || isLast ? 5 : HIDDEN);
+        return;
+      }
+      lifts.push(liftOverride.get(i) ?? (i === 0 ? firstLift : nextLift(lifts[i - 1])));
     });
+    // Aperçu (patron seul) : où tomberait la sortie à portée maximale devant l'entrée.
+    const previewExit: { gx: number; gz: number; ok: boolean } | null =
+      machinePath.length === 0 && baseLift === 4
+        ? (() => {
+            const [pdx, pdz] = RISE_DIR[snap?.rot ?? baseRot];
+            const cell = { gx: path[0].gx + pdx * 2 * range, gz: path[0].gz + pdz * 2 * range };
+            return {
+              ...cell,
+              ok: factory.canPlace(
+                def.id,
+                cell.gx,
+                cell.gz,
+                snap?.rot ?? baseRot,
+                machineBlocked,
+                5,
+                tier,
+              ),
+            };
+          })()
+        : null;
     dragLifts = lifts;
     let left = stock;
     const rotAt = (i: number): number =>
@@ -1043,6 +1074,8 @@ export function startGameView(
     // Tunnel : l'entrée et la sortie doivent être alignées, dans le même sens, et pas trop éloignées.
     const tunnelOk = (i: number): boolean => {
       if (lifts[i] !== 4 && lifts[i] !== 5) return true;
+      // Patron seul : l'entrée est valable si la sortie à portée maximale peut se poser.
+      if (previewExit && lifts[i] === 4 && path.length === 1) return previewExit.ok;
       if (lifts[i] === 4) {
         const out = lifts.findIndex((l, j) => j > i && l === 5);
         return out >= 0 && tunnelOk(out);
@@ -1054,7 +1087,7 @@ export function startGameView(
       return (
         rotAt(inn) === rotAt(i) &&
         (a.gx === b.gx || a.gz === b.gz) &&
-        Math.max(Math.abs(a.gx - b.gx), Math.abs(a.gz - b.gz)) / 2 <= TUNNEL_MAX_TILES
+        Math.max(Math.abs(a.gx - b.gx), Math.abs(a.gz - b.gz)) / 2 <= range
       );
     };
     const all = path.map((cell, i) => {
@@ -1070,7 +1103,21 @@ export function startGameView(
       return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok, lift };
     });
     const ghosts = all.filter((g) => g.lift !== HIDDEN);
-    factoryView.showGhost(ghosts);
+    // La sortie du patron n'est qu'un aperçu : elle n'est pas posée avec l'entrée.
+    const shown = previewExit
+      ? [
+          ...ghosts,
+          {
+            type: def.id,
+            gx: previewExit.gx,
+            gz: previewExit.gz,
+            rot: snap?.rot ?? baseRot,
+            ok: previewExit.ok,
+            lift: 5,
+          },
+        ]
+      : ghosts;
+    factoryView.showGhost(shown);
     if (!down && machinePath.length > 0) {
       let placed = 0;
       for (const g of ghosts) {
@@ -2617,9 +2664,11 @@ export function startGameView(
                 else if (before === 0) liftOverride.set(i, 4);
                 else if (before === 1) liftOverride.set(i, 3);
                 else if (before === 2) liftOverride.set(i, 8);
-              } else if (selectedMachine()?.id === 'conveyor') {
-                // Patron : PageUp l'incline vers le haut, PageDown le remet à plat puis l'incline vers le bas.
-                buildTilt = Math.max(-1, Math.min(1, buildTilt + (up ? 1 : -1)));
+              } else {
+                // Patron : PageUp l'incline vers le haut, PageDown le remet à plat puis l'incline vers le bas
+                // (un tuyau n'a pas de rampe : seulement à plat ou entrée de tunnel).
+                const maxTilt = selectedMachine()?.id === 'pipe' ? 0 : 1;
+                buildTilt = Math.max(-1, Math.min(maxTilt, buildTilt + (up ? 1 : -1)));
                 renderBuildHud();
               }
               renderBuildHud();

@@ -216,3 +216,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Bras filtrant T3** (`arm_filter`, 2×2, électrique 30 kW, cycle **0,3 s**, 1 filtre ; 4 lingots d'acier + 4 engrenages + 8 fils de cuivre) : il ne prend que les objets autorisés, même derrière un objet refusé ; diagnostic « rien à prendre » quand le filtre refuse tout. Débloqué par **Logistique T3** (avec le tapis T3).
 - **Trieur T3** (`sorter`, 2×2, électrique 15 kW, **3 filtres : devant, gauche, droite** ; 3 lingots d'acier + 2 engrenages + 6 fils de cuivre) : comme le séparateur (1 entrée derrière, 3 sorties) mais chaque objet va vers la sortie dont le filtre l'accepte, à tour de rôle entre les sorties qui l'acceptent ; sans courant il n'aiguille rien (« Pas de courant ») ; un objet qu'aucune sortie n'accepte reste bloqué. Débloqué par **Tri T3** (120 paquets de science, après Logistique T3).
 - **À faire** : filtrer sur d'autres critères (catégorie, « tout sauf »), copier-coller d'un filtre, voyants lumineux montrant les sorties actives.
+
+### 5.4 Tunnels à patron et piliers (5c)
+
+- **Portée du tunnel selon le tapis** : T1 4 tuiles, T2 8, T3 16 ; tuyaux 4 tuiles (`tunnelRange(type, tier)`).
+- **Patron** : PageDown sans tracer = entrée de tunnel avec la sortie fantôme à portée max devant ; en traçant, les tunnels s'enchaînent par paires (entrée, sortie, entrée…). Les tuyaux ne sont que « à plat » ou « entrée de tunnel ».
+- **Piliers de tapis** : un tapis surélevé (niveau 1 ou 2, rampes depuis le niveau 1 comprises) reçoit automatiquement et gratuitement un pilier de pierre s'il n'y a aucun support à moins de 2,5 m (`pillarsForFace`).
+- **À faire** : piliers pour les machines surélevées.
