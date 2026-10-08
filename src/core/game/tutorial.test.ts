@@ -44,7 +44,7 @@ describe('tutoriel', () => {
       t.update(ctx());
     }
     expect(t.current()?.id).toBe('wood');
-    expect(t.update(ctx({ inventory: { wood: 3, stone: 3 } }))?.id).toBe('stone');
+    expect(t.update(ctx({ inventory: { wood: 6, stone: 4 } }))?.id).toBe('stone');
     expect(t.current()?.id).toBe('tool');
     t.update(ctx({ hasTool: true }));
     t.update(ctx({ machines: [{ type: 'furnace', fuelCount: 0, slots: [], stockItem: null }] }));
@@ -97,6 +97,6 @@ describe('tutoriel', () => {
     }
     expect(t.current()?.id).toBe('wood');
     t.update(ctx({ inventory: { wood: 2 } }));
-    expect(t.progress()).toEqual({ have: 2, total: 3 });
+    expect(t.progress()).toEqual({ have: 2, total: 6 });
   });
 });

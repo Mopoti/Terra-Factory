@@ -1,4 +1,4 @@
-import { itemById } from '../core/data/items';
+import { ITEMS, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
@@ -2539,7 +2539,10 @@ export function startGameView(
     tutorialClock = 0;
     const finished = tutorial.update({
       inventory: options.state.inventory,
-      hasTool: options.state.harvestTool() !== null,
+      // L'outil compte dès qu'il est fabriqué (dans le sac), pas seulement une fois rangé dans la case d'outils.
+      hasTool:
+        options.state.harvestTool() !== null ||
+        ITEMS.some((i) => i.tool !== null && (options.state.inventory[i.id] ?? 0) > 0),
       machines: factory.machines.map((m) => ({
         type: m.type,
         fuelCount: m.fuel?.count ?? 0,

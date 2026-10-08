@@ -453,3 +453,8 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Objets non débloqués cachés** : le panneau de fabrication du sac ne montre que ce qui est déjà débloqué (technologie recherchée ou découverte faite). Un onglet sans objet visible disparaît.
 - **10 onglets par usage** (champ `category` de `items.json`, 5 à 12 objets chacun, testé) : Extraction (foreuses, pompes), Fonderie (fours, estampeuse, concasseur, Bessemer, bétonnière, lavage), Usinage (assembleur, constructeur, presse, raffinerie, centrifugeuse), Logistique (tapis, séparateur, bras, trieur, coffres), Fluides (tuyau, surpresseur, tour de refroidissement, barils, évaporation, vitrification), Énergie (manivelle, poteau, générateurs, accumulateur, réacteurs, balise), Science (laboratoire, paquets, puce, câble isolé), Constructions, Équipements (vêtements, sac, boussole, duvet, lit), Outils et défense (outils, pistolet, chargeur, tourelle, buggy).
 - Le paquet de science T1 est débloqué avec la technologie **Laboratoire** et le baril vide avec **Barils T3** (ils étaient fabricables dès le départ).
+
+## Tutoriel : corrections (Tour 132)
+
+- **Quantités alignées sur l'outil en pierre** (6 bois + 4 pierres) : l'étape « Récolte » demande **6 bois** puis **4 pierres**, pour que l'étape suivante (fabriquer l'outil) soit possible tout de suite.
+- **Étape « outil » qui ne se terminait pas** : elle exigeait que l'outil soit rangé dans la case d'outils. Elle est maintenant validée dès que l'outil est **fabriqué** (dans le sac ou en case d'outils). Vérifié dans le navigateur : après la fabrication, le tutoriel passe à « Fabrique un four ».

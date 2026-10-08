@@ -55,8 +55,9 @@ export const STEP_NEEDS: Readonly<Record<string, readonly string[]>> = {
 
 /** Étapes de récolte : combien d'unités à ramasser. */
 export const STEP_COUNTS: Readonly<Record<string, { item: string; count: number }>> = {
-  wood: { item: 'wood', count: 3 },
-  stone: { item: 'stone', count: 3 },
+  // Les quantités de l'outil en pierre (6 bois + 4 pierres) : l'étape suivante peut se faire tout de suite.
+  wood: { item: 'wood', count: 6 },
+  stone: { item: 'stone', count: 4 },
 };
 
 /** Avancement d'une étape : gestes faits sur gestes demandés (1 sur 1 pour les étapes simples). */
