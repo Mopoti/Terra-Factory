@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_PAD } from '../settings/schema';
 import { readPad, withDeadzone, type PadState } from './gamepad';
 
 const pad = (buttons: number[] = [], axes: number[] = [0, 0, 0, 0]): PadState => ({
@@ -39,5 +40,11 @@ describe('manette', () => {
     expect([...f.edges].sort()).toEqual(['accept', 'down']);
     const stick = readPad(pad([], [0, 0.9, 0, 0]), pad(), true);
     expect(stick.edges.has('down')).toBe(true);
+  });
+
+  it('les boutons se remappent (−1 = aucun)', () => {
+    const map = { ...DEFAULT_PAD, jump: 5, use: -1 };
+    const f = readPad(pad([5, 2, 0]), null, false, 0.2, map);
+    expect([...f.held]).toEqual(['jump']);
   });
 });

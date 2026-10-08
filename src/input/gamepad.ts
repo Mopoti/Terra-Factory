@@ -1,3 +1,4 @@
+import { DEFAULT_PAD, type PadMap } from '../settings/schema';
 import { getSettings } from '../settings/store';
 import type { Input } from './input';
 import type { ActionId } from '../settings/controls';
@@ -21,22 +22,6 @@ export interface PadState {
 export const STICK_DEADZONE = 0.2;
 const MOVE_THRESHOLD = 0.4;
 
-/** Boutons (disposition standard) → actions maintenues. */
-const BUTTON_ACTIONS: Partial<Record<number, ActionId>> = {
-  0: 'jump', // A
-  2: 'use', // X
-  1: 'crouch', // B
-  3: 'cycleView', // Y
-  7: 'interact', // gâchette droite : clic gauche
-  6: 'secondary', // gâchette gauche : clic droit (démolir)
-  10: 'sprint', // clic du stick gauche
-  11: 'rotate', // clic du stick droit : tourner la pièce
-  8: 'map', // Retour
-  13: 'inventory', // croix bas
-  12: 'techTree', // croix haut
-  14: 'levelDown', // croix gauche
-  15: 'levelUp', // croix droite
-};
 const EDGES: Partial<Record<number, PadEdge>> = { 9: 'pause', 4: 'hotbarPrev', 5: 'hotbarNext' };
 /** Dans les menus : croix et boutons A / B. */
 const UI_EDGES: Partial<Record<number, PadEdge>> = {
@@ -63,14 +48,15 @@ export function readPad(
   previous: PadState | null,
   ui: boolean,
   deadzone = STICK_DEADZONE,
+  map: PadMap = DEFAULT_PAD,
 ): PadFrame {
   const held = new Set<ActionId>();
   const edges = new Set<PadEdge>();
   const down = (i: number): boolean => state.buttons[i] === true;
   const was = (i: number): boolean => previous?.buttons[i] === true;
   if (!ui) {
-    for (const [i, action] of Object.entries(BUTTON_ACTIONS))
-      if (down(Number(i))) held.add(action!);
+    for (const [action, button] of Object.entries(map))
+      if (button >= 0 && down(button)) held.add(action as ActionId);
     const x = state.axes[0] ?? 0;
     const y = state.axes[1] ?? 0;
     if (y < -MOVE_THRESHOLD) held.add('forward');
@@ -123,6 +109,34 @@ export function moveFocus(step: 1 | -1, root: ParentNode = document): void {
   items[next].focus({ preventScroll: false });
 }
 
+/** Navigation dans l'interface : croix / stick = focus, A = valider, B et Start = Échap. */
+function applyMenuEdge(edge: PadEdge): void {
+  if (edge === 'pause' || edge === 'back')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' }));
+  else if (edge === 'up') moveFocus(-1);
+  else if (edge === 'down') moveFocus(1);
+  else if (edge === 'accept') (document.activeElement as HTMLElement | null)?.click?.();
+}
+
+/** Manette dans les menus (principal, création, chargement…) : même navigation que dans les fenêtres du jeu. */
+export function mountMenuPad(): () => void {
+  let raf = 0;
+  const previous = new Map<number, PadState>();
+  const tick = (): void => {
+    raf = requestAnimationFrame(tick);
+    for (const pad of (navigator.getGamepads?.() ?? []).filter(
+      (p): p is Gamepad => !!p && p.connected,
+    )) {
+      const state: PadState = { buttons: pad.buttons.map((b) => b.pressed), axes: [...pad.axes] };
+      const frame = readPad(state, previous.get(pad.index) ?? null, true);
+      previous.set(pad.index, state);
+      for (const edge of frame.edges) applyMenuEdge(edge);
+    }
+  };
+  raf = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(raf);
+}
+
 /** Branche les manettes branchées : agit sur `Input` (actions virtuelles) et renvoie `dispose`. */
 export function mountGamepad(options: GamepadOptions): { dispose(): void; active(): boolean } {
   const { input } = options;
@@ -158,15 +172,9 @@ export function mountGamepad(options: GamepadOptions): { dispose(): void; active
       if (frame.look.x !== 0 || frame.look.y !== 0)
         options.onLook(frame.look.x * speed * dt, frame.look.y * speed * dt);
       for (const edge of frame.edges) {
-        if (edge === 'pause')
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' }));
-        else if (edge === 'back')
-          window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' }));
-        else if (edge === 'hotbarPrev' && !ui) options.onHotbarStep(-1);
+        if (edge === 'hotbarPrev' && !ui) options.onHotbarStep(-1);
         else if (edge === 'hotbarNext' && !ui) options.onHotbarStep(1);
-        else if (edge === 'up') moveFocus(-1);
-        else if (edge === 'down') moveFocus(1);
-        else if (edge === 'accept') (document.activeElement as HTMLElement | null)?.click?.();
+        else applyMenuEdge(edge);
       }
     }
     for (const a of applied) if (!wanted.has(a)) input.setVirtual(a, false);

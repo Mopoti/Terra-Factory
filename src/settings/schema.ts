@@ -10,6 +10,24 @@ export type CrosshairStyle = 'cross' | 'dot' | 'circle' | 'none';
 export type CrosshairColor = 'white' | 'orange' | 'green' | 'red' | 'cyan';
 export type TopRotation = 'free' | 'step' | 'locked';
 
+/** Actions de la manette réglables et leur bouton par défaut (A=0, B=1, X=2, Y=3, LB/RB=4/5, LT/RT=6/7, Retour=8, L3/R3=10/11, croix=12–15). */
+export const DEFAULT_PAD = {
+  jump: 0,
+  use: 2,
+  crouch: 1,
+  cycleView: 3,
+  interact: 7,
+  secondary: 6,
+  sprint: 10,
+  rotate: 11,
+  map: 8,
+  inventory: 13,
+  techTree: 12,
+  levelDown: 14,
+  levelUp: 15,
+} as const;
+export type PadMap = { [K in keyof typeof DEFAULT_PAD]: number };
+
 export interface Settings {
   display: {
     gamma: number;
@@ -94,6 +112,8 @@ export interface Settings {
     /** Vitesse du regard à la manette (%) et zone morte des sticks (%). */
     padSensitivity: number;
     padDeadzone: number;
+    /** Bouton de la manette de chaque action (numéro de la disposition standard ; −1 = aucun). */
+    pad: PadMap;
   };
 }
 
@@ -178,6 +198,7 @@ export function defaultSettings(preset: KeyboardPreset): Settings {
       touchLeftHanded: false,
       padSensitivity: 100,
       padDeadzone: 20,
+      pad: { ...DEFAULT_PAD },
     },
   };
 }

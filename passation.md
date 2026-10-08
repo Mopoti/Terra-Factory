@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 128** : mot de passe de partie en empreinte salée ; manette : remappage des boutons (Paramètres → Jeu) et navigation dans les menus d'avant-partie. Reste (hors équilibrage) : icônes de manette dans les textes, essai à 5 joueurs réels, Steam.
 - **Tour 127** : expansion des colonies (option déjà là : nid qui absorbe 600 de pollution fonde un nid à 25–45 m, refus près du départ/eau/base, plafond 60, enregistré) ; carte des points remise à jour (4b déjà fait). Reste : mot de passe haché, remappage manette + menu principal à la manette, puis équilibrage.
 - **Tour 126** : équilibrage : état des lieux chiffré dans `docs/equilibrage.md` (coûts par tier, paquets, temps de laboratoire), propositions A–D en attente de validation du PO ; aucune valeur changée.
 - **Tour 125** : réglages tactiles (taille, gaucher) et manette (vitesse, zone morte), appui long = démolir, pincement = zoom, fenêtres plein écran sur petit écran, correctif des appuis brefs. Reste : équilibrage (besoin du PO pour les prix et coûts), mot de passe haché, remappage manette.

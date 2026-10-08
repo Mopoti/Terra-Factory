@@ -21,6 +21,7 @@ import { mountTech, type TechWindow } from './ui/techView';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
+import { mountMenuPad } from './input/gamepad';
 import { PeerNetwork } from './net/peerNetwork';
 import { HostSession } from './core/net/host';
 import { GuestClient, RefusedError } from './core/net/guest';
@@ -89,6 +90,8 @@ const resetMenu = mountMenu(uiEl, {
   onJoin: startGuest,
 });
 let stopBackground: () => void = () => undefined;
+/** Manette dans les menus : active tant qu'aucune partie n'est ouverte. */
+let stopMenuPad: () => void = () => undefined;
 let session: Session | null = null;
 /** Partie ouverte aux invités (multijoueur) : fermée quand on quitte la partie. */
 let host: HostSession | null = null;
@@ -125,6 +128,8 @@ function saveAuto(s: Session): void {
 }
 
 function showMenu(): void {
+  stopMenuPad();
+  stopMenuPad = mountMenuPad();
   hudEl.replaceChildren();
   bgEl.hidden = false;
   uiEl.hidden = false;
@@ -199,6 +204,7 @@ function startGame(
   guestState?: GameState,
 ): void {
   stopBackground();
+  stopMenuPad();
   bgEl.hidden = true;
   uiEl.hidden = true;
 

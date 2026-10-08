@@ -424,3 +424,9 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - Le monde refuse la fondation : à moins de **250 m du départ** (comme les nids d'origine), sur l'eau, à moins de 10 m d'un autre nid, à moins de **15 m d'une machine ou du joueur**, ou au-delà de **60 nids créés**. Après un refus, le nid réessaie plus tôt (70 % du coût).
 - Les nids créés sont enregistrés dans la partie (`changes.nests`, ancienne sauvegarde sans le champ = aucun), s'affichent comme les autres nids, se détruisent de la même façon (150 PV) et sont envoyés aux invités avec l'état du monde.
 - Équilibrage à affiner en jouant (coût 600, distance, plafond 60).
+
+## Manette : remappage et menus (Tour 128)
+
+- **Remappage** : Paramètres → Jeu → « Manette : … » (13 actions : saut, utiliser, s'accroupir, changer de vue, agir, démolir, courir, tourner, carte, sac, technologies, étage −/+). Chaque action choisit un bouton de la disposition standard (A, B, X, Y, LB, RB, LT, RT, Retour, L3, R3, croix) ou « Aucun » ; Start reste la pause, les épaules servent encore à parcourir la barre d'objets. Par défaut : voir `DEFAULT_PAD`.
+- **Menus** : la manette navigue aussi dans les menus avant la partie (principal, création, chargement, paramètres, rejoindre…) : croix ou stick = focus, A = valider, B / Start = retour. Vérifié avec une fausse manette.
+- **Pas fait (cosmétique)** : icônes de boutons de manette dans les textes d'aide et le tutoriel (ils parlent encore de touches de clavier ou d'appuis tactiles).

@@ -168,6 +168,29 @@ export const VIEW_SECTIONS: Section[] = [
   },
 ];
 
+/** Boutons de la manette proposés (Start reste réservé à la pause). */
+const PAD_BUTTONS: SelectOption[] = [
+  { value: -1, label: 'opt.padNone' },
+  ...['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Retour', '', 'L3', 'R3', '↑', '↓', '←', '→']
+    .map((raw, i) => ({ value: i, raw }))
+    .filter((o) => o.value !== 9),
+];
+const PAD_ACTIONS = [
+  'jump',
+  'use',
+  'crouch',
+  'cycleView',
+  'interact',
+  'secondary',
+  'sprint',
+  'rotate',
+  'map',
+  'inventory',
+  'techTree',
+  'levelDown',
+  'levelUp',
+] as const;
+
 export const GAME_SECTION: Section = {
   id: 'game',
   rows: [
@@ -185,6 +208,7 @@ export const GAME_SECTION: Section = {
     toggle('game.touchLeftHanded'),
     range('game.padSensitivity', 20, 200, 10, '%'),
     range('game.padDeadzone', 5, 40, 5, '%'),
+    ...PAD_ACTIONS.map((a) => select(`game.pad.${a}`, PAD_BUTTONS)),
   ],
 };
 
