@@ -46,19 +46,60 @@ export interface GameOptions {
   mode: GameMode;
   /** Tutoriel pas à pas (en haut à droite) : oui par défaut dans une nouvelle partie. */
   tutorial: boolean;
+  multiplayer: MultiplayerOptions;
   /** Jour, nuit et saisons (réglages indépendants). */
   time: TimeSettings;
 }
+
+/** Réglages multijoueur d'une partie (le réseau lui-même viendra aux étapes M2 et M3, voir docs/multijoueur.md). */
+export interface MultiplayerOptions {
+  enabled: boolean;
+  /** Privée : seuls les joueurs invités par l'hôte ; publique : une adresse, avec un mot de passe optionnel. */
+  visibility: 'private' | 'public';
+  /** Mot de passe d'une partie publique (vide = aucun). */
+  password: string;
+  /** Ce que les joueurs partagent (tout partagé par défaut) : technologies, crédits du comptoir, sac. */
+  share: { research: boolean; credits: boolean; inventory: boolean };
+}
+export const MAX_PLAYERS = 5;
+
+export const DEFAULT_MULTIPLAYER: MultiplayerOptions = {
+  enabled: false,
+  visibility: 'private',
+  password: '',
+  share: { research: true, credits: true, inventory: true },
+};
 
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
   enemies: { aggressive: false, expand: true },
   realism: 'balanced',
   mode: 'survival',
   tutorial: true,
+  multiplayer: DEFAULT_MULTIPLAYER,
   time: DEFAULT_TIME,
 };
 
 /** `tutorialDefault` : valeur si le tutoriel n'est pas précisé (non pour une ancienne partie, oui pour une nouvelle). */
+export function normalizeMultiplayer(raw: unknown): MultiplayerOptions {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const s = (typeof o.share === 'object' && o.share !== null ? o.share : {}) as Record<
+    string,
+    unknown
+  >;
+  const d = DEFAULT_MULTIPLAYER;
+  const flag = (v: unknown, def: boolean): boolean => (typeof v === 'boolean' ? v : def);
+  return {
+    enabled: flag(o.enabled, d.enabled),
+    visibility: o.visibility === 'public' ? 'public' : 'private',
+    password: typeof o.password === 'string' ? o.password.slice(0, 40) : '',
+    share: {
+      research: flag(s.research, d.share.research),
+      credits: flag(s.credits, d.share.credits),
+      inventory: flag(s.inventory, d.share.inventory),
+    },
+  };
+}
+
 export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOptions {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   const e = (typeof o.enemies === 'object' && o.enemies !== null ? o.enemies : {}) as Record<
@@ -73,6 +114,7 @@ export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOpt
     },
     realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
     mode: GAME_MODES.find((m) => m === o.mode) ?? d.mode,
+    multiplayer: normalizeMultiplayer(o.multiplayer),
     // Une ancienne partie n'a pas de tutoriel.
     tutorial: typeof o.tutorial === 'boolean' ? o.tutorial : tutorialDefault,
     time: normalizeTime(o.time),

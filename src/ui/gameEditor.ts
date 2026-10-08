@@ -4,6 +4,7 @@ import {
   GAME_MODES,
   REALISM_LEVELS,
   type GameMode,
+  MAX_PLAYERS,
   type GameOptions,
   type GameSummary,
   type Realism,
@@ -272,6 +273,61 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
       (v) => (options.tutorial = v),
     ),
   );
+
+  // --- Multijoueur (réglages seulement : le réseau viendra ensuite, voir docs/multijoueur.md) ---------
+  form.append(
+    el('h3', undefined, t('editor.mp.title')),
+    el('small', 'help', t('editor.mp.help', { n: String(MAX_PLAYERS) })),
+  );
+  const mp = options.multiplayer;
+  const mpBox = el('div', 'mp-box');
+  const syncMp = (): void => {
+    mpBox.hidden = !mp.enabled;
+  };
+  form.append(
+    checkbox(t('editor.mp.enable'), t('editor.mp.enable.help'), mp.enabled, (v) => {
+      mp.enabled = v;
+      syncMp();
+    }),
+    mpBox,
+  );
+  const visRow = el('div', 'row');
+  visRow.append(el('span', 'row-label', t('editor.mp.visibility')));
+  const visControl = el('div', 'row-control');
+  const vis = el('select');
+  vis.setAttribute('aria-label', t('editor.mp.visibility'));
+  for (const v of ['private', 'public'] as const) {
+    const option = el('option', undefined, t(`editor.mp.visibility.${v}` as TranslationKey));
+    option.value = v;
+    vis.append(option);
+  }
+  vis.value = mp.visibility;
+  const pass = el('input');
+  pass.type = 'text';
+  pass.maxLength = 40;
+  pass.placeholder = t('editor.mp.password');
+  pass.setAttribute('aria-label', t('editor.mp.password'));
+  pass.value = mp.password;
+  pass.hidden = mp.visibility !== 'public';
+  vis.addEventListener('change', () => {
+    mp.visibility = vis.value as 'private' | 'public';
+    pass.hidden = mp.visibility !== 'public';
+  });
+  pass.addEventListener('input', () => (mp.password = pass.value));
+  visControl.append(vis, pass);
+  visRow.append(visControl);
+  const visHelp = el('small', 'help', t('editor.mp.visibility.help'));
+  mpBox.append(visRow, visHelp, el('h4', undefined, t('editor.mp.share')));
+  for (const key of ['research', 'credits', 'inventory'] as const) {
+    const row = checkbox(
+      t(`editor.mp.share.${key}` as TranslationKey),
+      '',
+      mp.share[key],
+      (v) => (mp.share[key] = v),
+    );
+    mpBox.append(row);
+  }
+  syncMp();
 
   // --- Temps : jour, nuit, saisons (trois réglages indépendants) ------------------------------------
   form.append(

@@ -7,6 +7,8 @@ import { emptyChanges } from '../game/worldChanges';
 import { defaultWorldParams } from '../world/worldgen';
 import {
   DEFAULT_GAME_OPTIONS,
+  DEFAULT_MULTIPLAYER,
+  normalizeMultiplayer,
   DEFAULT_PLAYER_STATE,
   lastSavedAt,
   latestGame,
@@ -173,6 +175,7 @@ describe('options et réglages de la partie', () => {
         realism: 'realistic',
         mode: 'survival',
         tutorial: false,
+        multiplayer: DEFAULT_MULTIPLAYER,
         time: DEFAULT_TIME,
       },
     });
@@ -184,6 +187,7 @@ describe('options et réglages de la partie', () => {
       realism: 'realistic',
       mode: 'survival',
       tutorial: false,
+      multiplayer: DEFAULT_MULTIPLAYER,
       time: DEFAULT_TIME,
     });
   });
@@ -195,6 +199,7 @@ describe('options et réglages de la partie', () => {
       realism: 'balanced',
       mode: 'survival',
       tutorial: true,
+      multiplayer: DEFAULT_MULTIPLAYER,
       time: DEFAULT_TIME,
     });
   });
@@ -281,5 +286,30 @@ describe('lecture des anciens formats', () => {
     });
     expect(g.saves).toHaveLength(1);
     expect(g.saves[0].player.x).toBe(0);
+  });
+});
+
+describe('réglages multijoueur', () => {
+  it('par défaut : désactivé, privé, tout partagé', () => {
+    expect(DEFAULT_MULTIPLAYER).toEqual({
+      enabled: false,
+      visibility: 'private',
+      password: '',
+      share: { research: true, credits: true, inventory: true },
+    });
+    expect(normalizeMultiplayer(undefined)).toEqual(DEFAULT_MULTIPLAYER);
+  });
+  it('lit des réglages enregistrés et ignore le reste', () => {
+    const mp = normalizeMultiplayer({
+      enabled: true,
+      visibility: 'public',
+      password: 'x'.repeat(100),
+      share: { research: false, credits: 'oui' },
+    });
+    expect(mp.enabled).toBe(true);
+    expect(mp.visibility).toBe('public');
+    expect(mp.password).toHaveLength(40);
+    expect(mp.share).toEqual({ research: false, credits: true, inventory: true });
+    expect(normalizeMultiplayer({ visibility: 'secret' }).visibility).toBe('private');
   });
 });

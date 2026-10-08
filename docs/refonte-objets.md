@@ -391,3 +391,7 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Commandes à l'écran** : **joystick** à gauche (marche, 4 directions), **glissement du doigt** sur la moitié droite pour la caméra, **appui bref** sur le monde = clic (poser une machine, viser), boutons **Saut, Agir (maintenir), Utiliser, Accroupi (bascule), Courir (bascule), Vue, Sac, Carte, Tech** et **☰ Menu** (pause). Les boutons passent par des **actions virtuelles** (`Input.setVirtual`) : tout le jeu les lit comme des touches, donc les commandes configurées restent valables.
 - **Tutoriel** : en mode tactile il parle du joystick et des boutons au lieu des touches.
 - **Pas encore** : réglage dans les paramètres (taille, position, gauchers), appui long = clic droit (démolir), pincement pour le zoom, interface des fenêtres adaptée aux petits écrans, manette (12b).
+
+## 13. Multijoueur (Tour 116)
+
+Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs max, code d'invitation, partie privée ou publique avec mot de passe facultatif, partage configurable et tout partagé par défaut) et feuille de route M0 → M3. **M0 codé** : section « Multijoueur » de l'éditeur de partie, réglages enregistrés (`options.multiplayer`), sans effet pour l'instant.

@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { SaveLibrary } from './library';
-import { DEFAULT_PLAYER_STATE } from './saveIndex';
+import { DEFAULT_MULTIPLAYER, DEFAULT_PLAYER_STATE } from './saveIndex';
 import { IndexedDbStorage, LocalStorageStorage, MemoryStorage, LEGACY_KEY } from './storage';
 
 const player = { ...DEFAULT_PLAYER_STATE, x: 3 };
@@ -157,6 +157,7 @@ describe('gérer les sauvegardes', () => {
         realism: 'realistic',
         mode: 'survival',
         tutorial: false,
+        multiplayer: DEFAULT_MULTIPLAYER,
         time: DEFAULT_TIME,
       },
     });
