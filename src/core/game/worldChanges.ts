@@ -307,6 +307,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
         cooldown: isNum(e.cooldown) ? Math.max(0, e.cooldown) : 0,
         idle: isNum(e.idle) ? Math.max(0, e.idle) : 0,
         target: typeof e.target === 'string' ? e.target : null,
+        ...(e.mutant === true ? { mutant: true } : {}),
         ...(e.kind === 'scout' || e.kind === 'guard' || e.kind === 'spitter'
           ? { kind: e.kind }
           : {}),

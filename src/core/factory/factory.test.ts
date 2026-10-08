@@ -1954,3 +1954,32 @@ describe('fission (11a)', () => {
     expect(c.extra).toEqual({ item: 'uranium_depleted', count: 3 });
   });
 });
+
+describe('déchets (11b)', () => {
+  it('la tour d’évaporation vide l’eau contaminée (20 L/s) et signale la vapeur toxique', () => {
+    const t = emptyMachine(1, 'evaporation_tower', 0, 0, 0);
+    t.fluid.dirty = 100;
+    const f = new Factory([t], makeWorld().world);
+    expect(f.evaporating(t)).toBe(true);
+    expect(f.status(t)).toBe('running');
+    run(f, 3);
+    expect(t.fluid.dirty).toBeCloseTo(40);
+    run(f, 4);
+    expect(t.fluid.dirty).toBe(0);
+    expect(f.evaporating(t)).toBe(false);
+  });
+
+  it('la vitrification : 100 L d’eau contaminée + 4 pierres + 2 isolants → 1 cylindre de verre', () => {
+    const v = emptyMachine(1, 'vitrifier', 8, 0, 0);
+    v.recipe = 'vitrify';
+    v.slots.push({ item: 'stone', count: 4 }, { item: 'plastic_insulator', count: 2 });
+    v.fluid.dirty = 150;
+    v.pressure = 0;
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), v], makeWorld().world);
+    run(f, 9);
+    expect(v.stock).toEqual({ item: 'contaminated_glass', count: 1 });
+    expect(v.fluid.dirty).toBeCloseTo(50);
+  });
+});

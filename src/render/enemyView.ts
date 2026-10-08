@@ -56,7 +56,9 @@ export class EnemyView {
       const body = g.children[0] as THREE.Mesh;
       body.material =
         kind === 'guard' ? this.guardMat : kind === 'spitter' ? this.spitterMat : this.bodyMat;
-      g.scale.setScalar(kind === 'guard' ? 1.6 : kind === 'spitter' ? 1.2 : 1);
+      g.scale.setScalar(
+        (kind === 'guard' ? 1.6 : kind === 'spitter' ? 1.2 : 1) * (e.mutant ? 1.4 : 1),
+      );
       g.position.set(e.x, 0, e.z);
       if (aim) g.rotation.y = Math.atan2(aim.x - e.x, aim.z - e.z);
       // Petit sautillement.

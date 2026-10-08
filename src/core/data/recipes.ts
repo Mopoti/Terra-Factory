@@ -12,6 +12,7 @@ export type SmithType =
   | 'furnace_electric'
   | 'plastic_press'
   | 'centrifuge'
+  | 'vitrifier'
   | 'heavy_press'
   | 'washer';
 
@@ -25,7 +26,11 @@ export interface Recipe {
   /** Durée d'un cycle (s). */
   seconds: number;
   /** Fluide de la recette : `amount` > 0 est puisé dans la machine, < 0 y est versé (remplisseuse de barils). */
-  fluid?: { kind: 'water' | 'steam' | 'hot' | 'oil' | 'polymer'; amount: number; minBar?: number };
+  fluid?: {
+    kind: 'water' | 'steam' | 'hot' | 'oil' | 'polymer' | 'dirty';
+    amount: number;
+    minBar?: number;
+  };
   /** Moule exigé (estampeuse). */
   mould?: string;
 }

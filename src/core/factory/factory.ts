@@ -378,6 +378,7 @@ export function ports(
     case 'builder':
     case 'furnace_electric':
     case 'centrifuge':
+    case 'vitrifier':
     case 'fission_reactor':
     case 'plastic_press':
     case 'heavy_press':
@@ -612,6 +613,8 @@ const MACHINE_TYPES: MachineType[] = [
   'refinery',
   'centrifuge',
   'fission_reactor',
+  'evaporation_tower',
+  'vitrifier',
   'plastic_press',
   'boiler',
   'turbine',
@@ -1090,6 +1093,7 @@ export class Factory {
     }
     if ((m.type === 'pipe' || m.type === 'conveyor') && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
+    if (m.type === 'evaporation_tower') return m.fluid.dirty > 0.5 ? 'running' : 'idle';
     if (m.type === 'fission_reactor') {
       if (m.broken) return 'broken';
       if (m.progress > 0) return m.fuelLeft > 0 ? 'overheat' : 'running';
@@ -1198,6 +1202,7 @@ export class Factory {
       else if (m.type === 'pumpjack') this.tickPumpjack(m, dt);
       else if (m.type === 'refinery') this.tickRefinery(m, dt);
       else if (m.type === 'fission_reactor') this.tickReactor(m, dt);
+      else if (m.type === 'evaporation_tower') this.tickEvaporator(m, dt);
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
@@ -1738,6 +1743,17 @@ export class Factory {
       m.progress = 0;
       m.fuelLeft = 0;
     }
+  }
+
+  /** Tour d'évaporation : l'eau contaminée part en vapeur violette toxique (sans énergie). */
+  private tickEvaporator(m: Machine, dt: number): void {
+    const def = machineDef('evaporation_tower');
+    m.fluid.dirty = Math.max(0, m.fluid.dirty - (def.coolRate ?? 20) * dt);
+  }
+
+  /** La tour d'évaporation rejette-t-elle de la vapeur toxique en ce moment ? */
+  evaporating(m: Machine): boolean {
+    return m.type === 'evaporation_tower' && m.fluid.dirty > 0.5;
   }
 
   /** Première case de pétrole sous le chevalet. */

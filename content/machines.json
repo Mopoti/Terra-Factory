@@ -480,6 +480,31 @@
       "height": 2.5
     },
     {
+      "id": "evaporation_tower",
+      "w": 3,
+      "d": 3,
+      "item": "machine_evaporation_tower",
+      "color": "#8a7aa6",
+      "fuel": false,
+      "fluidCap": 200,
+      "coolRate": 20,
+      "pollution": 6,
+      "pollutionKind": "air",
+      "height": 2.0
+    },
+    {
+      "id": "vitrifier",
+      "w": 3,
+      "d": 3,
+      "item": "machine_vitrifier",
+      "color": "#6f5a8a",
+      "fuel": false,
+      "consumesKw": 100,
+      "stockMax": 50,
+      "fluidCap": 200,
+      "height": 1.2
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,

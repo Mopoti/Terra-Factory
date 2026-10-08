@@ -2400,6 +2400,12 @@ export function startGameView(
         }
       }
     }
+    if (pollutionClock < dt) {
+      // Une fois par seconde : les tours d'évaporation en marche font muter les nids voisins.
+      threat.toxicSources = factory.machines
+        .filter((m) => factory.evaporating(m))
+        .map((m) => machineCenter(m));
+    }
     targetClock += dt;
     if (targetClock >= 0.5) {
       targetClock = 0;

@@ -23,6 +23,8 @@ export interface Enemy {
   target: string | null;
   /** Variante (absente dans une ancienne sauvegarde : gardien s'il a un nid, sinon éclaireur). */
   kind?: EnemyKind;
+  /** Mutant : né près d'une tour d'évaporation, plus gros et plus résistant. */
+  mutant?: boolean;
   /** Gardien ou cracheur : reste près de son nid. */
   home?: { x: number; z: number };
 }
@@ -74,6 +76,9 @@ const NEST_ABSORB_PER_S = 3;
 const SPAWN_COST = 12;
 const SPAWN_COST_AGGRESSIVE = 8;
 const MAX_ENEMIES = 25;
+/** Les nids à moins de cette distance (m) d'une vapeur toxique mutent ; points de vie des mutants ×. */
+export const TOXIC_RANGE_M = 90;
+export const MUTANT_HP_FACTOR = 2;
 /** Part des ennemis nés de la pollution qui sont des cracheurs. */
 const SPITTER_SHARE = 0.2;
 const AGGRESSIVE_SPEED_FACTOR = 1.2;
@@ -123,6 +128,9 @@ export class Threat {
     this.enemies = saved;
     this.nextId = saved.reduce((m, e) => Math.max(m, e.id), 0) + 1;
   }
+
+  /** Tours d'évaporation en marche (positions en mètres) : les nids proches donnent des mutants. */
+  toxicSources: { x: number; z: number }[] = [];
 
   /** Secondes avant que le nid (clé) refasse un gardien. */
   private readonly guardTimer = new Map<string, number>();
@@ -323,12 +331,14 @@ export class Threat {
   }
 
   private spawn(x: number, z: number, kind: EnemyKind = 'scout'): void {
+    const mutant = this.toxicSources.some((s) => Math.hypot(s.x - x, s.z - z) <= TOXIC_RANGE_M);
     this.enemies.push({
       id: this.nextId++,
       x: x + (this.random() - 0.5) * 2,
       z: z + (this.random() - 0.5) * 2,
-      hp: ENEMY_STATS[kind].hp,
+      hp: ENEMY_STATS[kind].hp * (mutant ? MUTANT_HP_FACTOR : 1),
       kind,
+      ...(mutant ? { mutant: true } : {}),
       cooldown: 0,
       idle: 0,
       target: null,

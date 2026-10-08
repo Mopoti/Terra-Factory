@@ -186,6 +186,20 @@
       ]
     },
     {
+      "id": "waste_4",
+      "cost": {
+        "science_pack_3": 250
+      },
+      "requires": [
+        "reactor_4"
+      ],
+      "unlocks": [
+        "machine_evaporation_tower",
+        "machine_vitrifier",
+        "contaminated_glass"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

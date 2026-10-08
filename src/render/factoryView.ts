@@ -690,6 +690,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   pumpjack: 1.5,
   refinery: 2.0,
   centrifuge: 1.0,
+  evaporation_tower: 2.0,
+  vitrifier: 1.2,
   fission_reactor: 2.5,
   plastic_press: 1.0,
   furnace_electric: 1.2,
@@ -1000,6 +1002,31 @@ function addMachineBody(
     mb.box(x, 0.25, z, sx - 0.2, 0.6, sz - 0.2, color, true);
     mb.box(x, 0.85, z, sx - 0.45, 0.5, sz - 0.45, shade(color, 1.1), true);
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
+    return;
+  }
+  if (type === 'evaporation_tower') {
+    // Tour d'évaporation : socle, fût large, bassin ouvert violet en haut.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.7), true);
+    mb.box(x, 0.3, z, sx - 0.4, 1.2, sz - 0.4, color, true);
+    mb.box(x, 1.5, z, sx - 0.2, 0.2, sz - 0.2, shade(color, 1.2), true);
+    mb.box(x, 1.7, z, sx - 0.7, 0.05, sz - 0.7, hexToRgb('#b58be0'), true);
+    return;
+  }
+  if (type === 'vitrifier') {
+    // Station de vitrification : caisson blindé avec cheminée de coulée et sortie.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.2, 0.7, sz - 0.2, color, true);
+    mb.box(x, 0.95, z, 0.4, 0.25, 0.4, hexToRgb('#b58be0'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
     return;
   }
   if (type === 'centrifuge') {

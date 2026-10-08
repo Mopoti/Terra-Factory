@@ -939,6 +939,35 @@
       }
     },
     {
+      "id": "contaminated_glass",
+      "weightKg": 40,
+      "volumeL": 20,
+      "color": "#9b6fd0"
+    },
+    {
+      "id": "machine_evaporation_tower",
+      "weightKg": 60,
+      "volumeL": 90,
+      "color": "#8a7aa6",
+      "recipe": {
+        "steel_plate": 12,
+        "concrete_block": 20,
+        "iron_gear": 6
+      }
+    },
+    {
+      "id": "machine_vitrifier",
+      "weightKg": 90,
+      "volumeL": 100,
+      "color": "#6f5a8a",
+      "recipe": {
+        "steel_plate": 16,
+        "concrete_block": 20,
+        "cable_insulated": 8,
+        "silicon_chip": 4
+      }
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

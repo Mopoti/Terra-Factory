@@ -180,3 +180,16 @@ describe('variantes d’ennemis (point 8)', () => {
     expect(far).toBe(0);
   });
 });
+
+describe('mutants (vapeur toxique)', () => {
+  it('un nid proche d’une tour d’évaporation donne des ennemis mutants (PV ×2)', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    t.toxicSources = [{ x: 150, z: 0 }];
+    t.keepGuards(60, 0, 1);
+    expect(t.enemies.every((e) => e.mutant && e.hp === ENEMY_STATS.guard.hp * 2)).toBe(true);
+    const calm = new Threat({}, {}, world, { aggressive: false });
+    calm.toxicSources = [{ x: 600, z: 0 }];
+    calm.keepGuards(60, 0, 1);
+    expect(calm.enemies.some((e) => e.mutant)).toBe(false);
+  });
+});

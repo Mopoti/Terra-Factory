@@ -414,6 +414,22 @@
       "seconds": 6
     },
     {
+      "id": "vitrify",
+      "machine": "vitrifier",
+      "in": {
+        "stone": 4,
+        "plastic_insulator": 2
+      },
+      "out": {
+        "contaminated_glass": 1
+      },
+      "fluid": {
+        "kind": "dirty",
+        "amount": 100
+      },
+      "seconds": 8
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {

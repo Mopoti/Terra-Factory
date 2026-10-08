@@ -38,6 +38,8 @@ export type MachineType =
   | 'refinery'
   | 'centrifuge'
   | 'fission_reactor'
+  | 'evaporation_tower'
+  | 'vitrifier'
   | 'plastic_press'
   | 'boiler'
   | 'turbine';
@@ -125,6 +127,7 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'furnace_electric' ||
   type === 'plastic_press' ||
   type === 'centrifuge' ||
+  type === 'vitrifier' ||
   type === 'heavy_press' ||
   type === 'washer';
 
@@ -161,6 +164,8 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'pumpjack' ||
   type === 'refinery' ||
   type === 'fission_reactor' ||
+  type === 'evaporation_tower' ||
+  type === 'vitrifier' ||
   type === 'plastic_press' ||
   type === 'boiler' ||
   type === 'turbine' ||
@@ -185,6 +190,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'pump' ||
     type === 'pumpjack' ||
     type === 'refinery' ||
+    type === 'evaporation_tower' ||
     type === 'booster' ||
     type === 'cooling_tower' ||
     type === 'turbine'
