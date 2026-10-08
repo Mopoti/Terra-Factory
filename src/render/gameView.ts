@@ -69,9 +69,6 @@ import {
   isSmith,
   isLab,
   isTurret,
-  TURRET_DAMAGE,
-  TURRET_EVERY_S,
-  TURRET_RANGE_M,
   isRouter,
   machineDef,
   machineForItem,
@@ -100,8 +97,9 @@ import {
   type FactoryWorld,
   type Machine,
 } from '../core/factory/factory';
-import { emptyFluid, pipeMaxBar } from '../core/factory/fluids';
+import { pipeMaxBar } from '../core/factory/fluids';
 import { Tutorial } from '../core/game/tutorial';
+import { WorldSimulation, type SimEvent } from '../core/game/simulation';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
@@ -114,7 +112,7 @@ import { Interaction } from './interaction';
 import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
 import type { Vehicle } from '../core/game/worldChanges';
-import { POLLUTION_CELL_M, Threat, type ThreatTarget, type ThreatWorld } from '../core/game/threat';
+import { POLLUTION_CELL_M, Threat, type ThreatWorld } from '../core/game/threat';
 
 const PIXEL_RATIO_CAP = { low: 1, medium: 1.5, high: 3 } as const;
 const SKY = 0x8fb8d8;
@@ -384,9 +382,6 @@ export function startGameView(
   };
   const factory = new Factory(options.state.changes.machines, factoryWorld);
   const factoryView = new FactoryView(scene, factory);
-  let simAcc = 0;
-  /** Tuyaux déjà signalés comme rompus (pour ne prévenir qu'une fois). */
-  const brokenSeen = new Set(factory.machines.filter((m) => m.broken).map((m) => m.id));
   let itemsTimer = 0;
   let chunkTimer = 0;
   let panelTimer = 0;
@@ -1846,8 +1841,7 @@ export function startGameView(
   const NIGHT_SKY = 0x0a1224;
   const timeCfg = game.options.time;
   let lastSkyMix = -1;
-  function updateSeason(dt: number): void {
-    options.state.changes.time += dt;
+  function updateSeason(): void {
     const time = options.state.changes.time;
     const climate = climateAt(time, timeCfg);
     const day = dayLight(time, timeCfg);
@@ -2308,13 +2302,12 @@ export function startGameView(
     },
     options.state.changes.enemies,
   );
+  const sim = new WorldSimulation(options.state, factory, threat);
   const enemyView = new EnemyView(scene);
   const MAX_HEALTH = 100;
-  const MACHINE_HEALTH = 120;
   let playerHealth = MAX_HEALTH;
   let sinceHurt = 99;
   let attackCooldown = 0;
-  let pollutionClock = 0;
   let tracerLife = 0;
   const tracer = new THREE.Line(
     new THREE.BufferGeometry(),
@@ -2361,10 +2354,6 @@ export function startGameView(
       mags: String(options.state.inventory.magazine ?? 0),
     });
   }
-  let targetClock = 0;
-  let threatTargets: ThreatTarget[] = [];
-  const machineHealth = new Map<number, number>();
-  let acidTargets: ThreatTarget[] = [];
   let lastAcidMessage = -1e9;
   const hurtOverlay = document.createElement('div');
   hurtOverlay.className = 'hurt-overlay';
@@ -2435,91 +2424,44 @@ export function startGameView(
     const { w, d } = dims(m.type, m.rot);
     return { x: (m.gx + w / 2) * CELL_SIZE_M, z: (m.gz + d / 2) * CELL_SIZE_M };
   };
-  function updateThreat(dt: number): void {
-    // Les machines qui travaillent polluent (une fois par seconde).
-    pollutionClock += dt;
-    if (pollutionClock >= 1) {
-      pollutionClock -= 1;
-      for (const m of factory.machines) {
-        const rate = factory.pollutionRate(m);
-        if (rate > 0) {
-          const c = machineCenter(m);
-          threat.emit(c.x, c.z, rate, machineDef(m.type).pollutionKind ?? 'air');
-        }
-        // L'extraction d'uraninite pollue le sol de radioactivité.
-        if (m.stock?.item === 'uraninite' && factory.status(m) === 'running') {
-          const c = machineCenter(m);
-          threat.emit(c.x, c.z, 2, 'ground');
-        }
-      }
-    }
-    if (pollutionClock < dt) {
-      // Une fois par seconde : les tours d'évaporation en marche font muter les nids voisins.
-      threat.toxicSources = factory.machines
-        .filter((m) => factory.evaporating(m))
-        .map((m) => machineCenter(m));
-    }
-    targetClock += dt;
-    if (targetClock >= 0.5) {
-      targetClock = 0;
-      threatTargets = factory.machines
-        .filter((m) => (machineDef(m.type).pollution ?? 0) > 0)
-        .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
-      acidTargets = factory.machines
-        .filter((m) => (m.type === 'conveyor' || m.type === 'pipe') && !m.broken)
-        .map((m) => ({ id: `machine:${m.id}`, ...machineCenter(m) }));
-    }
-    // Mode Créatif : les ennemis ignorent le joueur.
-    const targets: ThreatTarget[] = options.state.creative
-      ? [...threatTargets]
-      : [...threatTargets, { id: 'player', x: playerX, z: playerZ }];
-    for (const hit of threat.update(dt, targets, acidTargets)) {
-      if (hit.acid) {
-        // Acide de cracheur : le tapis ou le tuyau est abîmé (à remplacer par un élément neuf).
-        const id = Number(hit.target.slice(8));
-        const m = factory.machines.find((x) => x.id === id);
-        if (m && !m.broken) {
-          m.broken = true;
-          m.fluid = emptyFluid();
-          factoryView.rebuild();
-          playSfx('rockBreak');
-          if (performance.now() - lastAcidMessage > 8000) {
-            lastAcidMessage = performance.now();
-            options.onMessage?.(t('threat.acid'));
-          }
-        }
-      } else if (hit.target === 'player') {
-        playerHealth -= hit.amount;
+  /** Ce que le monde signale au joueur : sons, messages, dégâts reçus. */
+  function onSimEvent(e: SimEvent): void {
+    switch (e.type) {
+      case 'playerHit':
+        playerHealth -= e.amount;
         sinceHurt = 0;
         playSfx('deny');
-      } else {
-        const id = Number(hit.target.slice(8));
-        const left = (machineHealth.get(id) ?? MACHINE_HEALTH) - hit.amount;
-        if (left <= 0) {
-          machineHealth.delete(id);
-          if (options.state.destroyMachine(factory, id)) {
-            playSfx('rockBreak');
-            options.onMessage?.(t('threat.machineLost'));
-          }
-        } else machineHealth.set(id, left);
-      }
+        break;
+      case 'machineLost':
+        playSfx('rockBreak');
+        options.onMessage?.(t('threat.machineLost'));
+        break;
+      case 'machineAcid':
+        factoryView.rebuild();
+        playSfx('rockBreak');
+        if (performance.now() - lastAcidMessage > 8000) {
+          lastAcidMessage = performance.now();
+          options.onMessage?.(t('threat.acid'));
+        }
+        break;
+      case 'pipeBurst':
+        playSfx('pipeBurst');
+        options.onMessage?.(t('factory.pipeBurst'));
+        break;
+      case 'turretShot':
+        playSfx(e.kill ? 'rockBreak' : 'shot');
+        break;
+      case 'produced':
+        if (e.item === 'iron_ingot') tutorial.signal('iron');
+        break;
+      case 'autoStudy':
+        options.onMessage?.(t('tech.autoStudy', { tech: t(`tech.${e.tech}` as TranslationKey) }));
+        break;
     }
-    // Les nids proches gardent leurs gardiens.
-    if (!options.state.creative) threat.keepGuards(playerX, playerZ, dt);
-    // Tourelles automatiques : elles tirent sur l'ennemi le plus proche à portée tant qu'elles ont des balles.
-    if (threat.enemies.length > 0) {
-      for (const m of factory.machines) {
-        if (!isTurret(m.type)) continue;
-        m.progress = Math.max(0, m.progress - dt);
-        if (m.progress > 0 || !factory.turretReady(m)) continue;
-        const c = centerOf(m);
-        const result = threat.hit(c.x, c.z, TURRET_RANGE_M, TURRET_DAMAGE);
-        if (!result) continue;
-        factory.turretTake(m);
-        m.progress = TURRET_EVERY_S;
-        playSfx(result === 'kill' ? 'rockBreak' : 'shot');
-      }
-    }
+  }
+
+  /** Combat du joueur (pistolet, corps à corps), santé et mort : ce qui ne concerne que LUI. */
+  function updateThreat(dt: number): void {
     // Le joueur combat : au pistolet (clic gauche pour tirer, R pour recharger) ou, sinon, au corps à corps.
     attackCooldown = Math.max(0, attackCooldown - dt);
     tracerLife = Math.max(0, tracerLife - dt);
@@ -2862,7 +2804,7 @@ export function startGameView(
         if (repeating('zoomIn', dt)) rig.zoom(1, views);
         if (repeating('zoomOut', dt)) rig.zoom(-1, views);
       }
-      updateSeason(dt);
+      updateSeason();
       const useKey = pressed('use');
       vehicleTick(dt, useKey);
       bodyTick(useKey);
@@ -2910,39 +2852,9 @@ export function startGameView(
     // plafond de la pièce où l'on se trouve est masqué.
     buildingView.setVisibility(99, inRoom && !building ? inRoom.level : null);
     if (building && !paused && !uiOpen) updateBuild(dt);
-    // Usine : 20 pas de simulation par seconde, affichage des objets sur les tapis 10 fois par seconde.
+    // Monde : simulation à pas fixe (20 par seconde), la même que celle d'un hôte multijoueur.
     if (!paused) {
-      simAcc = Math.min(simAcc + dt, 0.5);
-      // Un laboratoire qui a des paquets mais pas d'étude choisie lance la première technologie disponible.
-      if (
-        !options.state.changes.researching &&
-        factory.machines.some((m) => m.type === 'lab' && factory.hasPacks(m))
-      ) {
-        const id = options.state.autoStudy();
-        if (id)
-          options.onMessage?.(t('tech.autoStudy', { tech: t(`tech.${id}` as TranslationKey) }));
-      }
-      while (simAcc >= 0.05) {
-        factory.tradeOpen = options.state.changes.beacon;
-        factory.labDemand = options.state.studyRemaining();
-        factory.labNeeds = options.state.studyNeeds();
-        factory.tick(0.05);
-        options.state.addStudy(factory.takeLabPacks());
-        for (const [item, n] of factory.takeSold()) options.state.creditSale(item, n);
-        for (const [item, n] of factory.takeProduced()) {
-          options.state.countProduced(item, n);
-          if (item === 'iron_ingot') tutorial.signal('iron');
-        }
-        simAcc -= 0.05;
-      }
-      for (const m of factory.machines) {
-        if (!m.broken) brokenSeen.delete(m.id);
-        else if (!brokenSeen.has(m.id)) {
-          brokenSeen.add(m.id);
-          playSfx('pipeBurst');
-          options.onMessage?.(t('factory.pipeBurst'));
-        }
-      }
+      for (const e of sim.advance(dt, [{ id: 'player', x: playerX, z: playerZ }])) onSimEvent(e);
     }
     if (!paused) updateThreat(dt);
     factoryView.updateSmoke(now / 1000);
