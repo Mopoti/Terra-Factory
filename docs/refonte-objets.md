@@ -376,3 +376,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Tout se vend et s'achète** (choix du PO) : tous les objets et toutes les ressources, machines comprises. **Valeur** déduite de la fabrication (ingrédients ÷ quantité produite, avec une marge ; matières brutes à un prix de base, ex. bois 1, charbon 2, minerai 2, bauxite 4, uraninite 25, déchet nucléaire 30). **On vend à la moitié de la valeur et on achète à une fois et demie** : jamais de gain à acheter puis revendre.
 - **Vente** : depuis la fenêtre (×1, ×10, tout, pour chaque pile du sac) ou **automatique** — tout tapis ou bras qui arrive au relais vend son contenu (les 4 côtés acceptent). **Achat** : catalogue de tous les objets avec recherche, ×1 / ×10 / ×100, limité par les crédits et la place du sac.
 - Prix et marges à rééquilibrer en jouant ; le plafonnement de ce qu'on peut acheter (pour éviter de tout acheter dès le début) n'est pas fait.
+
+## 12. Fabrication à la main et multiplateforme
+
+### 12.1 Temps de fabrication à la main (Tour 114)
+
+- **Durée (choix du PO)** : **0,5 s par ingrédient**, **divisée par la vitesse de l'outil** (outil en pierre ×2…) ; sans outil ×1 ; minimum 0,25 s ; **instantanée en Créatif**. Ex. outil en pierre (6 bois + 4 pierre) = 5 s à mains nues.
+- **File d'attente avec barre de progression** (choix du PO) : clic gauche / droit sur un objet = 1 / 5 fabrications mises en file ; elles se font l'une après l'autre **en continuant à jouer** ; les ingrédients sont pris au **démarrage** de chaque fabrication et l'objet arrive à la fin (attend de la place si le sac est plein). Barre dans la fenêtre du sac (avec ✕ pour annuler : la fabrication en cours rend ses ingrédients) et petite barre au-dessus de la barre d'objets. La file n'est pas enregistrée.

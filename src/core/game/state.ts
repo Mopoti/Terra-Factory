@@ -89,6 +89,20 @@ export const FUSION_REPAIR: Record<string, number> = {
 /** Cases du sac en mode Créatif (le poids et le volume n'ont plus de limite). */
 export const CREATIVE_SLOTS = 120;
 
+/** Une fabrication à la main en file d'attente. */
+export interface CraftJob {
+  item: string;
+  /** Fabrications qui restent (celle en cours comprise). */
+  left: number;
+  /** La fabrication en cours a déjà consommé ses ingrédients. */
+  running: boolean;
+  elapsed: number;
+  duration: number;
+}
+
+/** Secondes de fabrication à la main par ingrédient, à vitesse d'outil ×1. */
+export const CRAFT_SECONDS_PER_INGREDIENT = 0.5;
+
 export class GameState {
   inventory: Inventory;
   changes: WorldChanges;
@@ -714,6 +728,126 @@ export class GameState {
       this.changes.researching = null;
     }
     this.emit({ type: 'inventory' });
+  }
+
+  /** Fabrications à la main en attente (non enregistrées : on les relance après un chargement). */
+  craftQueue: CraftJob[] = [];
+
+  /** Durée (s) d'une fabrication à la main : 0,5 s par ingrédient, divisée par la vitesse de l'outil ; instantanée en Créatif. */
+  craftSeconds(item: string): number {
+    const recipe = itemById(item).recipe;
+    if (!recipe || this.creative) return 0;
+    const count = Object.values(recipe).reduce((a, b) => a + b, 0);
+    return Math.max(
+      0.25,
+      (count * CRAFT_SECONDS_PER_INGREDIENT) / (this.harvestTool()?.speed ?? 1),
+    );
+  }
+
+  /**
+   * Met `times` fabrications en file d'attente (elles se font l'une après l'autre en continuant à jouer).
+   * Refuse si l'objet est verrouillé ou si la première ne peut pas démarrer.
+   */
+  queueCraft(item: string, times: number): 'ok' | 'locked' | 'resources' | 'bag' {
+    const recipe = itemById(item).recipe;
+    if (!recipe) return 'resources';
+    if (!this.isUnlocked(item)) return 'locked';
+    if (
+      !this.creative &&
+      !Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)
+    )
+      return 'resources';
+    if (this.canStartCraft(item) === 'bag') return 'bag';
+    const last = this.craftQueue[this.craftQueue.length - 1];
+    if (last && last.item === item) last.left += times;
+    else this.craftQueue.push({ item, left: times, running: false, elapsed: 0, duration: 0 });
+    this.tickCraft(0);
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  private canStartCraft(item: string): 'ok' | 'resources' | 'bag' {
+    const recipe = itemById(item).recipe ?? {};
+    if (
+      !this.creative &&
+      !Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)
+    )
+      return 'resources';
+    let after = this.inventory;
+    if (!this.creative)
+      for (const [id, n] of Object.entries(recipe)) after = remove(after, id, n).inventory;
+    return maxAddable(after, item, this.limits) < itemById(item).yield ? 'bag' : 'ok';
+  }
+
+  /** Fait avancer la fabrication en cours ; une fabrication terminée donne ses objets. */
+  tickCraft(dt: number): void {
+    let budget = dt;
+    for (let guard = 0; guard < 1000; guard++) {
+      const job = this.craftQueue[0];
+      if (!job) return;
+      if (!job.running) {
+        // Démarrage : les ingrédients sont pris dans le sac.
+        const recipe = itemById(job.item).recipe ?? {};
+        if (this.canStartCraft(job.item) !== 'ok') {
+          if (this.canStartCraft(job.item) === 'resources') this.craftQueue.shift();
+          return; // sac plein : on attend de la place
+        }
+        if (!this.creative)
+          for (const [id, n] of Object.entries(recipe))
+            this.inventory = remove(this.inventory, id, n).inventory;
+        job.running = true;
+        job.elapsed = 0;
+        job.duration = this.craftSeconds(job.item);
+        this.emit({ type: 'inventory' });
+      }
+      const step = Math.min(budget, job.duration - job.elapsed);
+      job.elapsed += step;
+      budget -= step;
+      if (job.elapsed < job.duration - 1e-9) return;
+      this.finishCraft(job.item);
+      job.running = false;
+      job.left--;
+      if (job.left <= 0) this.craftQueue.shift();
+    }
+  }
+
+  /** Donne le résultat d'une fabrication à la main terminée. */
+  private finishCraft(item: string): void {
+    const per = itemById(item).yield;
+    this.inventory = add(this.inventory, item, per);
+    this.changes.produced[item] = (this.changes.produced[item] ?? 0) + per;
+    this.checkDiscoveries('produce');
+    if (item.startsWith('piece_') && !this.changes.hotbar.includes(item)) {
+      const free = this.changes.hotbar.indexOf(null);
+      if (free >= 0) {
+        this.changes.hotbar[free] = item;
+        this.emit({ type: 'hotbar' });
+      }
+    }
+    this.emit({ type: 'inventory' });
+  }
+
+  /** Annule la fabrication n° `index` de la file : la fabrication en cours rend ses ingrédients. */
+  cancelCraft(index: number): void {
+    const job = this.craftQueue[index];
+    if (!job) return;
+    if (job.running && !this.creative) {
+      for (const [id, n] of Object.entries(itemById(job.item).recipe ?? {}))
+        this.inventory = add(this.inventory, id, n);
+    }
+    this.craftQueue.splice(index, 1);
+    this.emit({ type: 'inventory' });
+  }
+
+  /** Progression de la fabrication en cours (0 à 1) et nombre de fabrications en attente. */
+  craftProgress(): { item: string; fraction: number; queued: number } | null {
+    const job = this.craftQueue[0];
+    if (!job) return null;
+    return {
+      item: job.item,
+      fraction: job.duration > 0 ? Math.min(1, job.elapsed / job.duration) : 0,
+      queued: this.craftQueue.reduce((a, j) => a + j.left, 0),
+    };
   }
 
   craft(

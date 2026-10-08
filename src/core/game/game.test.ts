@@ -1036,3 +1036,44 @@ describe('réparation du réacteur', () => {
     expect(s.repairReactor(m)).toBe('notBroken');
   });
 });
+
+describe('fabrication à la main : temps et file d’attente', () => {
+  // Outil en pierre : 6 bois + 4 pierre = 10 ingrédients → 5 s à mains nues.
+  const bag = { wood: 20, stone: 20 };
+
+  it('0,5 s par ingrédient, divisé par la vitesse de l’outil', () => {
+    const s = new GameState({ inventory: { ...bag } });
+    expect(s.craftSeconds('tool_stone')).toBe(5);
+    s.creative = true;
+    expect(s.craftSeconds('tool_stone')).toBe(0);
+  });
+
+  it('les ingrédients sont pris au démarrage, l’objet arrive à la fin, on peut annuler', () => {
+    const s = new GameState({ inventory: { ...bag } });
+    expect(s.queueCraft('tool_stone', 3)).toBe('ok');
+    expect(s.inventory.wood).toBe(14); // la première a démarré
+    s.tickCraft(2.5);
+    expect(s.inventory.tool_stone ?? 0).toBe(0);
+    expect(s.craftProgress()?.fraction).toBeCloseTo(0.5);
+    s.tickCraft(2.6); // fin de la première, début de la deuxième
+    expect(s.inventory.tool_stone).toBe(1);
+    expect(s.inventory.wood).toBe(8);
+    s.cancelCraft(0); // la deuxième rend ses ingrédients, la troisième est annulée
+    expect(s.inventory.wood).toBe(14);
+    expect(s.craftQueue).toHaveLength(0);
+  });
+
+  it('refuse sans ingrédients ou si l’objet est verrouillé', () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.queueCraft('tool_stone', 1)).toBe('resources');
+    const t = new GameState({ inventory: { iron_ingot: 50, wood: 50 } });
+    expect(t.queueCraft('machine_splitter', 1)).toBe('locked');
+  });
+
+  it('en Créatif la fabrication est immédiate et gratuite', () => {
+    const s = new GameState({ inventory: {} });
+    s.creative = true;
+    expect(s.queueCraft('tool_stone', 2)).toBe('ok');
+    expect(s.inventory.tool_stone).toBe(2);
+  });
+});

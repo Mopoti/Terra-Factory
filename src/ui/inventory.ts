@@ -241,24 +241,60 @@ export function mountInventory(
   }
 
   function craft(item: string, times: number): void {
-    const { made, stopped } = state.craft(item, times);
-    if (made === 0) {
+    const result = state.queueCraft(item, times);
+    if (result !== 'ok') {
       playSfx('deny');
       message =
-        stopped === 'bag'
+        result === 'bag'
           ? t('inv.craftBagFull')
-          : stopped === 'locked'
+          : result === 'locked'
             ? lockedReason(item)
             : t('inv.noResources');
-    } else if (made < times) {
-      playSfx('craft');
-      message = t('inv.craftedPartial', { n: String(made), item: itemName(item) });
     } else {
       playSfx('craft');
-      message = t('inv.crafted', { n: String(made), item: itemName(item) });
+      message = t('inv.queued', {
+        n: String(times),
+        item: itemName(item),
+        s: state.craftSeconds(item).toFixed(1),
+      });
     }
     render();
   }
+
+  /** File d'attente de fabrication : barre de progression et boutons d'annulation. */
+  let liveBar: HTMLElement | null = null;
+  function queueBox(): HTMLElement | null {
+    liveBar = null;
+    if (state.craftQueue.length === 0) return null;
+    const box = el('div', 'craft-queue');
+    state.craftQueue.forEach((job, i) => {
+      const row = el('div', 'craft-job');
+      row.append(el('span', undefined, `${itemName(job.item)} ×${job.left}`));
+      if (i === 0) {
+        const bar = el('div', 'craft-bar');
+        const fill = el('div');
+        bar.append(fill);
+        liveBar = fill;
+        row.append(bar);
+      }
+      const cancel = el('button', undefined, '✕');
+      cancel.type = 'button';
+      cancel.title = t('inv.cancelCraft');
+      cancel.addEventListener('click', () => {
+        state.cancelCraft(i);
+        render();
+      });
+      row.append(cancel);
+      box.append(row);
+    });
+    return box;
+  }
+  const craftTimer = window.setInterval(() => {
+    if (!isOpenNow) return;
+    if (state.craftQueue.length === 0 && liveBar === null) return;
+    if (!liveBar || state.craftQueue.length > 0 !== (liveBar !== null)) return render();
+    liveBar.style.width = `${Math.round((state.craftProgress()?.fraction ?? 0) * 100)}%`;
+  }, 200);
 
   function render(): void {
     const used = totals(state.inventory);
@@ -429,6 +465,8 @@ export function mountInventory(
     }
     craftBox.append(catalog, el('small', 'help', t('inv.craftHint')));
     craftBox.append(el('div', 'inv-message', message));
+    const queue = queueBox();
+    if (queue) craftBox.append(queue);
 
     layout.append(equipmentColumn(), bag, craftBox);
     panel.append(layout);
@@ -495,6 +533,7 @@ export function mountInventory(
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('mousemove', onMove);
       unsubscribeLocale();
+      window.clearInterval(craftTimer);
       root.hidden = true;
       root.replaceChildren();
     },

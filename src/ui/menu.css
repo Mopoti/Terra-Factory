@@ -1700,3 +1700,55 @@
   opacity: 0.4;
   cursor: default;
 }
+
+.craft-queue {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+.craft-job {
+  display: grid;
+  grid-template-columns: 1fr 90px auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.craft-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #26313b;
+  overflow: hidden;
+}
+.craft-bar > div {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+}
+.craft-job button {
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  background: #1f2832;
+  border: 1px solid #33414f;
+  border-radius: 6px;
+  padding: 1px 7px;
+}
+
+.craft-hud {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: grid;
+  grid-template-columns: auto 120px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  border: 1px solid #2c3640;
+  border-radius: 6px;
+  background: #101419cc;
+  font-size: 13px;
+  pointer-events: none;
+}

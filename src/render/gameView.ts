@@ -2371,6 +2371,21 @@ export function startGameView(
       closeFinale = null;
     });
   }
+  // Fabrication à la main en cours : petite barre au-dessus de la barre d'objets.
+  const craftHud = document.createElement('div');
+  craftHud.className = 'craft-hud';
+  craftHud.hidden = true;
+  craftHud.innerHTML = '<span></span><div class="craft-bar"><div></div></div>';
+  container.appendChild(craftHud);
+  const craftHudText = craftHud.querySelector('span') as HTMLElement;
+  const craftHudFill = craftHud.querySelector('.craft-bar > div') as HTMLElement;
+  function updateCraftHud(): void {
+    const p = options.state.craftProgress();
+    craftHud.hidden = !p;
+    if (!p) return;
+    craftHudText.textContent = `${t(`item.${p.item}` as TranslationKey)} (${p.queued})`;
+    craftHudFill.style.width = `${Math.round(p.fraction * 100)}%`;
+  }
   let tutorialClock = 0;
   function updateTutorial(dt: number): void {
     if (!tutorial.current()) return;
@@ -2743,6 +2758,8 @@ export function startGameView(
     if (pressed('techTree')) options.onToggleTech?.();
     updateTutorial(dt);
     checkFinale();
+    if (!paused) options.state.tickCraft(dt);
+    updateCraftHud();
 
     let motion = { speed: 0, strafe: 0 };
     if (!paused) {
@@ -3052,6 +3069,7 @@ export function startGameView(
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       tutorialPanel.dispose();
+      craftHud.remove();
       closeFinale?.();
       window.removeEventListener('blur', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
