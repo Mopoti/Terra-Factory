@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 126** : équilibrage : état des lieux chiffré dans `docs/equilibrage.md` (coûts par tier, paquets, temps de laboratoire), propositions A–D en attente de validation du PO ; aucune valeur changée.
 - **Tour 125** : réglages tactiles (taille, gaucher) et manette (vitesse, zone morte), appui long = démolir, pincement = zoom, fenêtres plein écran sur petit écran, correctif des appuis brefs. Reste : équilibrage (besoin du PO pour les prix et coûts), mot de passe haché, remappage manette.
 - **Tour 124** : combat de l'invité (tir et corps à corps rejoués chez l'hôte avec contrôles), mort et réapparition rejouées. Reste : équilibrage, réglages tactiles/manette, fenêtres petits écrans, mot de passe haché.
 - **Tour 123** : paquet T4 dans les coûts multi-paquets : Fusion (200 T4 + 100 T3) et Balise (300 T4 + 150 T3), test dédié. Reste : équilibrage, réglages tactiles/manette, fenêtres petits écrans, combat de l'invité.

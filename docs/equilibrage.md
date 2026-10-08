@@ -1,20 +1,68 @@
-# Équilibrage (premier passage, à tester en jeu)
+# Équilibrage — état des lieux (Tour 126)
 
-Où régler : `content/*.json` (vitesses, coûts, carburant, pollution), `src/core/game/threat.ts` (constantes en tête de fichier : ennemis, pollution), `src/core/game/seasons.ts` (saisons), `src/render/interaction.ts` (`BARE_HANDS_FACTOR`), `src/core/data/machines.ts` (tourelle).
+Mesures faites par calcul sur les données du jeu (valeur d'un objet = celle du comptoir spatial, `itemValue`, déduite des recettes ; temps de laboratoire = 6 s par paquet et par laboratoire). **Aucune valeur n'a été changée** : les choix sont à valider.
 
-## Principes retenus
+## Paquets de science (valeur en crédits)
 
-- **Départ** : à mains nues tout est lent (×3) ; l'outil en pierre (bois + pierre) double la vitesse, l'outil en fer (lingots + bois) la triple et demi et donne 2 unités par coup. Les coûts ont été **doublés** au Tour 66 pour que ces outils aient un sens.
-- **Foreuse** : 0,5 minerai/s (brûleur, `mineSeconds` 2) et 0,75/s (électrique, 1,33) — avant : 1 et 1,5. Un four (1 lingot / 3 s) suffit pour environ 1,5 foreuse brûleur.
-- **Carburant** : 1 charbon = 100 s de machine, 1 bois = 20 s. Un buggy consomme 1 charbon pour ~50 s de route (≈ 585 m à 11,7 m/s).
-- **Électricité** : générateur 300 kW (brûle 1 s de combustible par seconde à pleine charge), turbine 200 kW à pleine pression (consomme 20 vapeur/s ; chaudière 60 vapeur/s : 1 chaudière ≈ 3 turbines).
-- **Pollution** : foreuse 0,6/s, four 0,5/s, générateur 1/s, chaudière 2/s ; assembleur 0,2, laboratoire 0,1, foreuse électrique 0,3 (sol). Les arbres absorbent, **moins en automne (×0,7) et en hiver (×0,35)**, plus en été (×1,2) : en hiver la pollution s'attarde et les nids réagissent plus.
-- **Ennemis** : 25 PV ; pistolet 10 dégâts (3 balles), tourelle 9 dégâts toutes les 0,6 s (portée 22 m, ~15 dégâts/s) ; un ennemi fait 6 dégâts/s à une machine (120 PV) et 10 au joueur toutes les 1,2 s (100 PV). Un chargeur = 12 balles (2 × 2 lingots de fer = 4). Les tourelles consomment des chargeurs (fabriqués ou amenés par tapis / bras).
-- **Tourelle** : 16 lingots de fer + 6 de cuivre, technologie « Défense » (30 fer, 10 cuivre, après la logistique).
+| Paquet | Recette | Valeur |
+|---|---|---|
+| T1 | engrenage + fil de cuivre | 15,8 |
+| T2 | plaque d'acier + tuyau de laiton | 20,0 |
+| T3 | puce + câble isolé | 17,9 |
+| T4 | puce + plaque d'acier + uranium appauvri | 33,6 |
 
-## À régler avec le PO après tests
+## Technologies
 
-- Rythme d'apparition des ennemis (`SPAWN_COST` 20, 12 en agressif), nombre maximal (25), vitesse (3,2 m/s).
-- Durée d'une saison (360 s) ; est-ce que l'hiver doit aussi augmenter la consommation de combustible ?
-- Coûts des véhicules, des tourelles et des machines à l'étage ; vitesse du buggy.
-- Les valeurs de ce document sont celles du code au moment de l'écriture : le code fait foi.
+| Technologie | Paquets | Valeur des paquets | Valeur des objets | 1 labo | 4 labos |
+|---|---|---|---|---|---|
+| logistics | 0 | 0 | 78 | 0 min | 0.0 min |
+| handling | 0 | 0 | 78 | 0 min | 0.0 min |
+| metallurgy | 0 | 0 | 88 | 0 min | 0.0 min |
+| metallurgy_2 | 30 | 474 | 0 | 3 min | 0.8 min |
+| construction_2 | 30 | 474 | 0 | 3 min | 0.8 min |
+| manufacturing_2 | 40 | 632 | 0 | 4 min | 1.0 min |
+| fluids_2 | 40 | 632 | 0 | 4 min | 1.0 min |
+| washing_2 | 40 | 632 | 0 | 4 min | 1.0 min |
+| heavy_press_3 | 100 | 2001 | 0 | 10 min | 2.5 min |
+| silicon_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
+| oil_3 | 140 | 2802 | 0 | 14 min | 3.5 min |
+| plastic_3 | 160 | 3202 | 0 | 16 min | 4.0 min |
+| fission_4 | 200 | 3581 | 0 | 20 min | 5.0 min |
+| reactor_4 | 300 | 5372 | 0 | 30 min | 7.5 min |
+| waste_4 | 250 | 4477 | 0 | 25 min | 6.3 min |
+| storage_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
+| fusion_5 | 300 | 8512 | 0 | 30 min | 7.5 min |
+| beacon_5 | 450 | 12768 | 0 | 45 min | 11.3 min |
+| logistics_2 | 40 | 632 | 0 | 4 min | 1.0 min |
+| logistics_3 | 100 | 2001 | 0 | 10 min | 2.5 min |
+| sorting_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
+| extraction_3 | 60 | 1201 | 0 | 6 min | 1.5 min |
+| textile | 0 | 0 | 20 | 0 min | 0.0 min |
+| clothing | 0 | 0 | 20 | 0 min | 0.0 min |
+| handwear | 0 | 0 | 20 | 0 min | 0.0 min |
+| bedding | 0 | 0 | 20 | 0 min | 0.0 min |
+| electricity | 0 | 0 | 85 | 0 min | 0.0 min |
+| power_generation | 0 | 0 | 85 | 0 min | 0.0 min |
+| laboratory | 0 | 0 | 65 | 0 min | 0.0 min |
+| automation | 20 | 316 | 0 | 2 min | 0.5 min |
+| steam | 0 | 0 | 84 | 0 min | 0.0 min |
+| steam_power | 0 | 0 | 82 | 0 min | 0.0 min |
+| barrels_3 | 80 | 1601 | 0 | 8 min | 2.0 min |
+| navigation | 0 | 0 | 52 | 0 min | 0.0 min |
+| defense | 0 | 0 | 143 | 0 min | 0.0 min |
+
+## Ce que ça montre
+
+1. **Courbe de coût cohérente** : environ ×4 à chaque tier (T1 : ~20–140 crédits d'objets ; T2 : 470–630 ; T3 : 1 600–3 200 ; T4 : 3 600–5 400 ; T5 : 8 500–12 800). Le temps de laboratoire reste raisonnable (45 min au pire avec un seul laboratoire, 11 min avec 4).
+2. **Écart brutal entre T1 et T2** : toute la filière T1 (objets) vaut ~80 crédits par technologie, alors que la première technologie à paquets (Métallurgie T2, 30 paquets) en vaut 474 : le paquet T1 (15,8) coûte presque autant qu'une technologie T1 entière.
+3. **Paquets non monotones** : le paquet T3 (17,9) vaut moins que le T2 (20,0) alors que les technologies T3 coûtent 4 fois plus de crédits ; le T4 (33,6) est le seul à se démarquer.
+4. **Fin de partie** : Fusion + Balise = ~21 000 crédits de paquets, soit 3 fois tout le reste du T4.
+
+## Propositions (à valider)
+
+- **A. Adoucir le palier T1 → T2** : ramener Métallurgie T2, Construction T2 à 20 paquets et les autres techs T2 à 30.
+- **B. Lisser les paquets** : donner au paquet T3 une recette plus riche (par exemple + 1 plaque d'acier) pour qu'il vaille ~35 crédits, et au T4 ~60 en doublant l'uranium appauvri ; les coûts en nombre de paquets des techs T3/T4 baissent alors d'un tiers pour garder le même total.
+- **C. Fin de partie** : Fusion 150 T4 + 75 T3 ; Balise 200 T4 + 100 T3.
+- **D. Prix du comptoir** : inchangés (vente 50 %, achat 150 % de la valeur) ; seule la valeur des paquets monte avec B.
+
+Autres réglages (portées, rendements, vitesses de foreuse, taux de pollution) : pas d'anomalie visible sans partie jouée ; à retoucher après des essais en conditions réelles.
