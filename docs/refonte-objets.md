@@ -404,3 +404,9 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Visée** : sans curseur, la manette vise le centre de l'écran (en vue de dessus et à la 3e personne aussi).
 - Vérifié dans un navigateur avec une fausse manette (Start ouvre la pause, la croix déplace le focus) ; 5 tests.
 - **Pas encore** : réglages de la manette (sensibilité, zone morte, remappage des boutons), menu principal et écran de création navigables à la manette, icônes de boutons dans les textes, vibrations.
+
+## Paquet T4 dans les coûts multi-paquets (Tour 123)
+
+- Le paquet T4 (`science_pack_4`, débloqué par Réacteur T4) existait déjà ; il sert maintenant à **mélanger les types de paquets** dans les technologies de fin de partie : **Fusion** = 200 paquets T4 + 100 paquets T3 ; **Balise hyperfréquence** = 300 paquets T4 + 150 paquets T3. Les autres technologies gardent le paquet du tier précédent.
+- Mécanique déjà en place, testée pour ce cas : le laboratoire (4 emplacements, donc 4 types de paquets à la fois) ne consomme que les types réclamés par l'étude ; un paquet d'un autre type (T2) est refusé ; l'étude n'est finie que quand **tous** les types sont complets, et la progression est enregistrée par type.
+- Quantités à rééquilibrer en jouant.

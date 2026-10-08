@@ -225,7 +225,8 @@
     {
       "id": "fusion_5",
       "cost": {
-        "science_pack_4": 200
+        "science_pack_4": 200,
+        "science_pack_3": 100
       },
       "requires": [
         "waste_4",
@@ -238,7 +239,8 @@
     {
       "id": "beacon_5",
       "cost": {
-        "science_pack_4": 300
+        "science_pack_4": 300,
+        "science_pack_3": 150
       },
       "requires": [
         "fusion_5"

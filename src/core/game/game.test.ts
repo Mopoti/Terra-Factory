@@ -1021,6 +1021,20 @@ describe('mode Créatif', () => {
   });
 });
 
+describe('technologies à plusieurs types de paquets', () => {
+  it('Fusion réclame des paquets T4 ET T3 : l’étude n’est finie que quand les deux sont complets', () => {
+    const s = new GameState({ inventory: {} });
+    s.changes.unlocked.push('waste_4', 'storage_3');
+    expect(s.study('fusion_5')).toBe('ok');
+    expect(s.studyNeeds()).toEqual({ science_pack_4: 200, science_pack_3: 100 });
+    s.addStudy({ science_pack_4: 200, science_pack_2: 50 }); // un paquet T2 ne sert à rien ici
+    expect(s.studyNeeds()).toEqual({ science_pack_3: 100 });
+    expect(s.isUnlocked('machine_fusion_reactor')).toBe(false);
+    s.addStudy({ science_pack_3: 100 });
+    expect(s.isUnlocked('machine_fusion_reactor')).toBe(true);
+  });
+});
+
 describe('réparation du réacteur', () => {
   it('exige 30 plaques d’acier, 10 câbles isolés et 5 puces', () => {
     const m = emptyMachine(1, 'fission_reactor', 0, 0, 0);
