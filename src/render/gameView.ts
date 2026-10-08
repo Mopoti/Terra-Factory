@@ -100,6 +100,7 @@ import {
   type FactoryWorld,
   type Machine,
 } from '../core/factory/factory';
+import { pipeMaxBar } from '../core/factory/fluids';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -1230,6 +1231,16 @@ export function startGameView(
         rows.push(`<div>${t('factory.fluid.water', { v: fmt(m.fluid.water) })}</div>`);
       if (m.type !== 'pump')
         rows.push(`<div>${t('factory.fluid.steam', { v: fmt(m.fluid.steam) })}</div>`);
+      if (m.broken) rows.push(`<div class="warn">${t('factory.fluid.broken')}</div>`);
+      else if (m.pressure > 0) {
+        rows.push(
+          m.type === 'pipe'
+            ? `<div>${t('factory.fluid.bars', { v: m.pressure.toFixed(1), max: String(pipeMaxBar(m)) })}</div>`
+            : `<div>${t('factory.fluid.bars.free', { v: m.pressure.toFixed(1) })}</div>`,
+        );
+      } else if (m.fluid.water + m.fluid.steam > 0.5 && m.type !== 'turbine') {
+        rows.push(`<div class="sub">${t('factory.fluid.noPressure')}</div>`);
+      }
       if (m.type === 'turbine') {
         rows.push(
           `<div>${t('factory.fluid.pressure', { v: String(Math.round((m.fluid.steam / cap) * 100)) })}</div>`,

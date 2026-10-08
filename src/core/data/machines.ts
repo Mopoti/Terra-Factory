@@ -10,6 +10,7 @@ export type MachineType =
   | 'bessemer'
   | 'mixer'
   | 'barreler'
+  | 'booster'
   | 'builder'
   | 'heavy_press'
   | 'washer'
@@ -65,6 +66,13 @@ export interface MachineDef {
   pollutionKind?: 'air' | 'ground';
   /** Fluides : capacité de la machine (unités). */
   fluidCap?: number;
+  /** Pression de départ (bar) d'une pompe (eau) ou d'une chaudière (vapeur). */
+  startBar?: number;
+  /** Surpresseur : pression ajoutée (bar) à sa sortie. */
+  boostBar?: number;
+  /** Tuyaux : pression maximale (bar) et perte de charge (bar par tuile) à chaque palier. */
+  tierMaxBar?: number[];
+  tierFrictionBar?: number[];
   /** Pompe : eau pompée (unités/s) à pleine puissance. */
   pumpRate?: number;
   /** Chaudière : eau transformée en vapeur (unités/s) à pleine chauffe. */
@@ -138,7 +146,8 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'boiler' ||
   type === 'turbine' ||
   type === 'barreler' ||
-  type === 'washer';
+  type === 'washer' ||
+  type === 'booster';
 
 /** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
 export const isLinear = (type: MachineType): boolean => type === 'conveyor' || type === 'pipe';
@@ -152,6 +161,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'pole' ||
     type === 'pipe' ||
     type === 'pump' ||
+    type === 'booster' ||
     type === 'turbine'
   );
 

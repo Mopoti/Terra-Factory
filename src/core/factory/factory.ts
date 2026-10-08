@@ -31,7 +31,9 @@ import {
   emptyFluid,
   fluidLevel,
   fluidLinks,
+  pipeMaxBar,
   stepFluids,
+  stepPressure,
   type FluidKind,
   type FluidLink,
 } from './fluids';
@@ -93,6 +95,10 @@ export interface Machine {
   tier: number;
   /** Bras filtrant (1 filtre) et trieur (3 : devant, gauche, droite) : liste blanche ou noire d'objets. */
   filters: ItemFilter[];
+  /** Pression (bar) du fluide dans cette machine (calculée à chaque pas, non enregistrée). */
+  pressure: number;
+  /** Tuyau rompu (pression au-dessus de son maximum) : il fuit et ne laisse rien passer jusqu'à réparation. */
+  broken: boolean;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
 }
@@ -209,7 +215,8 @@ export type MachineStatus =
   | 'blocked'
   | 'noPower'
   | 'noSteam'
-  | 'noWater';
+  | 'noWater'
+  | 'broken';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -240,6 +247,9 @@ export interface Cell {
 
 /** Écart minimal entre deux objets sur un tapis (en longueurs de tuile de tapis). */
 const GAP = 0.17;
+
+/** Intervalle (s) entre deux calculs de pression. */
+const PRESSURE_EVERY_S = 0.25;
 
 /** Part du débit de la pompe quand le réseau ne lui donne pas de courant. */
 export const PUMP_BACKUP = 0.2;
@@ -412,6 +422,8 @@ export function emptyMachine(
     tier:
       type === 'conveyor' || type === 'pipe' ? Math.min(3, Math.max(1, Math.floor(tier) || 1)) : 1,
     fluid: emptyFluid(),
+    pressure: 0,
+    broken: false,
     lift:
       type === 'conveyor'
         ? Number.isInteger(lift) && lift > 0 && lift < LIFT_COUNT
@@ -513,6 +525,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
     if (typeof m.recipe === 'string' && isSmith(machine.type)) {
       if (recipeById(m.recipe)?.machine === machine.type) machine.recipe = m.recipe;
     }
+    machine.broken = m.broken === true && machine.type === 'pipe';
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -542,6 +555,7 @@ const MACHINE_TYPES: MachineType[] = [
   'bessemer',
   'mixer',
   'barreler',
+  'booster',
   'builder',
   'heavy_press',
   'washer',
@@ -911,7 +925,12 @@ export class Factory {
     if (type !== 'conveyor' && type !== 'pipe') return null;
     return (
       this.machines.find(
-        (m) => m.type === type && m.gx === gx && m.gz === gz && m.lift === lift && m.tier < tier,
+        (m) =>
+          m.type === type &&
+          m.gx === gx &&
+          m.gz === gz &&
+          m.lift === lift &&
+          (m.tier < tier || (m.broken && m.tier === tier)),
       ) ?? null
     );
   }
@@ -1033,6 +1052,7 @@ export class Factory {
         return 'full';
       return this.hasIngredients(m, need) ? 'running' : 'idle';
     }
+    if (m.type === 'pipe' && m.broken) return 'broken';
     if (m.type === 'pipe') return m.fluid.water + m.fluid.steam > 0.5 ? 'running' : 'idle';
     if (m.type === 'pump') {
       if (!this.pumpsOk.has(m.id)) return 'noWater';
@@ -1101,6 +1121,12 @@ export class Factory {
   // --- Simulation ----------------------------------------------------------------------------------
 
   tick(dt: number): void {
+    this.pressureClock += dt;
+    if (this.pressureClock >= PRESSURE_EVERY_S) {
+      this.pressureClock = 0;
+      this.updatePressure();
+    }
+    for (const m of this.machines) if (m.broken) m.fluid = emptyFluid();
     stepFluids(this.links, dt);
     stepFluids(this.tunnelLinks, dt);
     this.updateGrids(dt);
@@ -1178,6 +1204,30 @@ export class Factory {
     g.blackout = false;
     g.overloadS = 0;
     return 'ok';
+  }
+
+  private pressureClock = Infinity;
+
+  /** Recalcule la pression de chaque réseau de fluides et rompt les tuyaux qui dépassent leur maximum. */
+  private updatePressure(): void {
+    const fluids = this.machines.filter((m) => isFluid(m.type));
+    if (fluids.length === 0) return;
+    const all = [...this.links, ...this.tunnelLinks];
+    stepPressure(
+      fluids,
+      all,
+      {
+        pumpOn: (m) => this.pumpsOk.has(m.id),
+        powered: (m) => this.powerFactor(m) > 0,
+      },
+      (l) =>
+        this.tunnelLinks.includes(l)
+          ? Math.max(1, Math.abs(l.b.gx - l.a.gx) + Math.abs(l.b.gz - l.a.gz)) / 2
+          : 1,
+    );
+    for (const m of fluids) {
+      if (m.type === 'pipe' && !m.broken && m.pressure > pipeMaxBar(m) + 1e-6) m.broken = true;
+    }
   }
 
   private updateGrids(dt: number): void {

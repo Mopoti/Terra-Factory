@@ -222,7 +222,12 @@ export class FactoryView {
         );
       } else {
         const start = mb.positions.length;
-        const tint = m.type === 'pipe' ? machineDef('pipe').tierColors?.[m.tier - 1] : undefined;
+        const tint =
+          m.type === 'pipe'
+            ? m.broken
+              ? '#7a2e2a'
+              : machineDef('pipe').tierColors?.[m.tier - 1]
+            : undefined;
         addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift, tint);
         growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
@@ -636,6 +641,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   bessemer: 1.5,
   mixer: 1.0,
   barreler: 1.0,
+  booster: 1.0,
   builder: 1.0,
   heavy_press: 1.2,
   washer: 1.0,
@@ -934,6 +940,13 @@ function addMachineBody(
     mb.box(x, 0.2, z, 0.2, 0.6, 0.2, color, true);
     mb.box(x, 0.7, z, 0.6, 0.08, 0.1, hexToRgb('#3d3a38'), true);
     mb.box(x + 0.28, 0.5, z, 0.08, 0.28, 0.08, hexToRgb('#3d3a38'), true);
+    return;
+  }
+  if (type === 'booster') {
+    // Surpresseur : corps cylindrique (boîte) entre deux brides, moteur au-dessus.
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x, 0.2, z, sx - 0.2, 0.5, sz - 0.2, color, true);
+    mb.box(x, 0.7, z, 0.3, 0.2, 0.3, hexToRgb('#2f3a45'), true);
     return;
   }
   if (type === 'builder') {

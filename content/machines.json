@@ -288,6 +288,16 @@
         "machine_pipe_2",
         "machine_pipe_3"
       ],
+      "tierMaxBar": [
+        5,
+        20,
+        50
+      ],
+      "tierFrictionBar": [
+        0.1,
+        0.05,
+        0.02
+      ],
       "tierColors": [
         "#c97a3a",
         "#d9b44a",
@@ -308,6 +318,7 @@
       "consumesKw": 20,
       "fluidCap": 100,
       "pumpRate": 100,
+      "startBar": 3,
       "height": 1.0
     },
     {
@@ -357,12 +368,25 @@
       "height": 1.0
     },
     {
+      "id": "booster",
+      "w": 2,
+      "d": 2,
+      "item": "machine_booster",
+      "color": "#6a7f95",
+      "fuel": false,
+      "consumesKw": 30,
+      "fluidCap": 50,
+      "boostBar": 2,
+      "height": 1.0
+    },
+    {
       "id": "boiler",
       "w": 3,
       "d": 3,
       "item": "machine_boiler",
       "color": "#8a5a44",
       "fuel": true,
+      "startBar": 8,
       "burnKw": 700,
       "stockMax": 20,
       "fluidCap": 200,

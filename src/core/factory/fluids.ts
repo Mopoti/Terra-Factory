@@ -38,6 +38,12 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
         { side: (rot + 3) % 4, mode: 'both', fluid: 'water' },
         { side: rot % 4, mode: 'out', fluid: 'steam' },
       ];
+    case 'booster':
+      // Surpresseur en ligne : le fluide entre derrière, ressort devant avec plus de pression.
+      return [
+        { side: back, mode: 'in', fluid: 'any' },
+        { side: rot % 4, mode: 'out', fluid: 'any' },
+      ];
     case 'washer':
     case 'barreler':
       // Remplisseuse / videuse de barils : l'eau entre ou sort par les côtés (objets : entrée derrière, sortie devant).
@@ -91,7 +97,7 @@ export function fluidLinks(
 const capOf = (m: Machine): number => machineDef(m.type).fluidCap ?? 100;
 
 /** Un tuyau ne porte qu'un fluide à la fois ; les autres machines ont une réserve par fluide. */
-function canHold(m: Machine, port: FluidPort, kind: FluidKind): boolean {
+export function canHold(m: Machine, port: FluidPort, kind: FluidKind): boolean {
   if (port.fluid !== 'any' && port.fluid !== kind) return false;
   if (m.type !== 'pipe') return true;
   const other: FluidKind = kind === 'water' ? 'steam' : 'water';
@@ -107,6 +113,7 @@ export function stepFluids(links: FluidLink[], dt: number): void {
         [link.b, link.pb, link.a, link.pa],
       ] as const) {
         if (pf.mode === 'in' || pt.mode === 'out') continue;
+        if (from.broken || to.broken || from.pressure <= 0 || to.pressure <= 0) continue;
         if (!canHold(from, pf, kind) || !canHold(to, pt, kind)) continue;
         const levelFrom = from.fluid[kind] / capOf(from);
         const levelTo = to.fluid[kind] / capOf(to);
@@ -128,3 +135,82 @@ export function stepFluids(links: FluidLink[], dt: number): void {
 
 /** Niveau de remplissage (0 à 1) d'un fluide dans une machine. */
 export const fluidLevel = (m: Machine, kind: FluidKind): number => m.fluid[kind] / capOf(m);
+
+/** Pression maximale (bar) qu'un tuyau supporte, selon son palier. */
+export const pipeMaxBar = (m: Machine): number =>
+  machineDef('pipe').tierMaxBar?.[m.tier - 1] ?? machineDef('pipe').tierMaxBar?.[0] ?? 5;
+
+/** Perte de charge (bar par tuile) d'un tuyau, selon son palier ; les autres machines n'en ont pas. */
+const frictionOf = (m: Machine): number =>
+  m.type === 'pipe'
+    ? (machineDef('pipe').tierFrictionBar?.[m.tier - 1] ??
+      machineDef('pipe').tierFrictionBar?.[0] ??
+      0.1)
+    : 0;
+
+/** Ce que le réseau sait de l'état des sources de pression. */
+export interface PressureSources {
+  /** La pompe a-t-elle de l'eau à pomper ? */
+  pumpOn(m: Machine): boolean;
+  /** Le surpresseur a-t-il du courant ? */
+  powered(m: Machine): boolean;
+}
+
+/**
+ * Pression (bar) de chaque machine à fluide : les pompes (eau) et les chaudières (vapeur) donnent leur pression de
+ * départ, qui diminue de la perte de charge de chaque tuile traversée ; un surpresseur alimenté ajoute de la pression à
+ * sa sortie. Un tuyau rompu coupe le passage. À 0 bar le fluide s'immobilise.
+ * `extra` : liaisons supplémentaires (tunnels) avec leur longueur en tuiles.
+ */
+export function stepPressure(
+  machines: Machine[],
+  links: FluidLink[],
+  src: PressureSources,
+  tunnelLen: (l: FluidLink) => number = () => 1,
+): void {
+  for (const m of machines) m.pressure = 0;
+  for (const kind of FLUID_KINDS) {
+    const edges = new Map<Machine, { to: Machine; cost: number; gain: number }[]>();
+    for (const link of links) {
+      const len = tunnelLen(link);
+      for (const [from, pf, to, pt] of [
+        [link.a, link.pa, link.b, link.pb],
+        [link.b, link.pb, link.a, link.pa],
+      ] as const) {
+        if (pf.mode === 'in' || pt.mode === 'out' || from.broken || to.broken) continue;
+        if (!canHold(from, pf, kind) || !canHold(to, pt, kind)) continue;
+        const gain =
+          from.type === 'booster' && pf.mode === 'out' && src.powered(from)
+            ? (machineDef('booster').boostBar ?? 0)
+            : 0;
+        let list = edges.get(from);
+        if (!list) edges.set(from, (list = []));
+        list.push({ to, cost: frictionOf(to) * len, gain });
+      }
+    }
+    const level = new Map<Machine, number>();
+    const queue: Machine[] = [];
+    for (const m of machines) {
+      const bar = machineDef(m.type).startBar ?? 0;
+      const on =
+        (kind === 'water' && m.type === 'pump' && src.pumpOn(m)) ||
+        (kind === 'steam' && m.type === 'boiler' && m.fluid.steam > 0.5);
+      if (on && bar > 0) {
+        level.set(m, bar);
+        queue.push(m);
+      }
+    }
+    for (let guard = 0; queue.length > 0 && guard < 200000; guard++) {
+      const from = queue.shift() as Machine;
+      const p = level.get(from) ?? 0;
+      for (const e of edges.get(from) ?? []) {
+        const next = p - e.cost + e.gain;
+        if (next > 0 && next > (level.get(e.to) ?? 0) + 1e-9) {
+          level.set(e.to, next);
+          queue.push(e.to);
+        }
+      }
+    }
+    for (const [m, p] of level) m.pressure = Math.max(m.pressure, p);
+  }
+}

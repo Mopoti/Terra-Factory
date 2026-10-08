@@ -248,3 +248,11 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - Demande entre 100 et 110 % de la production : les machines **ralentissent** (comme avant). Demande **au-delà de 110 % pendant 2 s**, ou **surcharge de plus de 10 s** : **blackout** du réseau (poteaux reliés) : plus aucune machine ne tourne (« Pas de courant »), les générateurs ne brûlent plus.
 - **Manivelle de réamorçage** (`crank`, 2×2, 4 plaques de fer + 2 engrenages ; débloquée par Électricité) : posée près d'un poteau, sa fenêtre a un bouton « Actionner la manivelle ». Le réseau repart seulement si la production couvre la demande ; sinon « Demande trop forte » : couper des machines (les retirer) ou ajouter des générateurs.
 - Le poteau affiche « BLACKOUT » ou « Surcharge depuis N s ». Le blackout n'est pas sauvegardé (un rechargement rallume le réseau).
+
+### 6.2 Point 6b : pression, friction, rupture, surpresseur (Tour 98)
+
+- **Pression de départ** : pompe **3 bar** (eau), chaudière **8 bar** (vapeur, tant qu'elle en contient). Elle baisse de la **perte de charge** de chaque tuile de tuyau traversée ; à **0 bar** le fluide s'immobilise (les tuyaux trop loin de la source ne se remplissent plus). Calcul toutes les 0,25 s.
+- **Paliers de tuyaux** : cuivre T1 **5 bar max**, −0,1 bar/tuile ; laiton T2 **20 bar**, −0,05 ; acier T3 **50 bar**, −0,02. Un tunnel de tuyau compte autant de tuiles que sa longueur.
+- **Rupture** : un tuyau qui dépasse son maximum se **rompt** (rouge sombre, état « Rompu ») : il se vide, ne laisse rien passer et coupe la pression en aval. **Réparation** : poser un tuyau neuf du même palier (ou supérieur) par-dessus ; le tuyau rompu est jeté, pas rendu. Conséquence : la **vapeur (8 bar) exige du laiton** dès la sortie de la chaudière (chaudière collée à la turbine : aucun tuyau, aucun problème).
+- **Surpresseur T2** (`booster`, 2×2, 30 kW, 6 plaques de fer + 4 engrenages + 6 fils + 4 lingots de cuivre ; technologie Fabrication T2) : le fluide entre derrière et sort devant avec **+2 bar** ; sans courant il laisse passer sans rien ajouter. Attention : la pression ajoutée peut rompre des tuyaux de cuivre trop proches de leur maximum.
+- Non fait : la rupture d'un tuyau n'émet ni son ni particules ; la pression ne module pas le débit (seul le seuil 0 bar compte) ; fuite de l'eau sans effet sur le sol.

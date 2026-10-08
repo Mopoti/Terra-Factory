@@ -658,7 +658,7 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
     const p2 = emptyMachine(22, 'pipe', 10, 3, 0);
     const boiler = emptyMachine(23, 'boiler', 9, 5, 1);
     if (boilerCoal > 0) boiler.fuel = { item: 'coal', count: boilerCoal };
-    const p3 = emptyMachine(24, 'pipe', 12, 5, 0);
+    const p3 = emptyMachine(24, 'pipe', 12, 5, 0, 0, 2);
     const list = [gen, ...poles, pump, p1, p2, boiler, p3];
     const ms: Record<string, Machine> = { pump, boiler, p3 };
     for (let i = 0; i < turbines; i++) {
@@ -704,9 +704,11 @@ describe('vapeur : pompe, tuyaux, chaudière, turbine', () => {
   it('l’eau traverse une chaudière et alimente la suivante ; le charbon n’entre que par l’arrière', () => {
     const pipe = emptyMachine(1, 'pipe', 11, 3, 0);
     pipe.fluid.water = 100;
+    const pump = emptyMachine(4, 'pump', 11, -1, 0);
+    const lead = emptyMachine(5, 'pipe', 11, 1, 0);
     const b1 = emptyMachine(2, 'boiler', 9, 5, 1);
     const b2 = emptyMachine(3, 'boiler', 9, 8, 1); // côté +z de la première
-    const f = new Factory([pipe, b1, b2], world());
+    const f = new Factory([pump, lead, pipe, b1, b2], world());
     run(f, 20);
     expect(b1.fluid.water).toBeGreaterThan(20);
     expect(b2.fluid.water).toBeGreaterThan(20);
@@ -765,8 +767,10 @@ describe('raccords décalés et poteau fin', () => {
     const world = { ...makeWorld().world, waterAt: (_gx: number, gz: number) => gz < 0 };
     const pipe = emptyMachine(1, 'pipe', 11, 3, 0); // touche seulement la case (11,4) du côté arrière
     pipe.fluid.water = 100;
+    const pump = emptyMachine(3, 'pump', 11, -1, 0);
+    const lead = emptyMachine(4, 'pipe', 11, 1, 0);
     const boiler = emptyMachine(2, 'boiler', 9, 5, 1);
-    const f = new Factory([pipe, boiler], world);
+    const f = new Factory([pump, lead, pipe, boiler], world);
     run(f, 3);
     expect(boiler.fluid.water).toBeGreaterThan(20);
   });
@@ -1521,5 +1525,85 @@ describe('portée des tunnels', () => {
   it('4 / 8 / 16 tuiles selon le niveau du tapis, 4 pour les tuyaux', () => {
     expect([1, 2, 3].map((t) => tunnelRange('conveyor', t))).toEqual([4, 8, 16]);
     expect(tunnelRange('pipe', 3)).toBe(4);
+  });
+});
+
+describe('pression (Bars) : friction, rupture, surpresseur', () => {
+  const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: (_gx, gz) => gz < 0 });
+  /** Pompe (3 bar) puis `n` tuyaux alignés le long de +z, de palier `tier`. */
+  const line = (n: number, tier = 1, booster = -1): { f: Factory; pipes: Machine[] } => {
+    const list: Machine[] = [emptyMachine(1, 'pump', 10, -1, 0)];
+    const pipes: Machine[] = [];
+    let z = 1;
+    for (let i = 0; i < n; i++) {
+      if (i === booster) {
+        list.push(emptyMachine(100, 'booster', 10, z, 0));
+      } else {
+        const p = emptyMachine(2 + i, 'pipe', 10, z, 0, 0, tier);
+        pipes.push(p);
+        list.push(p);
+      }
+      z += 2;
+    }
+    const gen = emptyMachine(90, 'generator', 14, 5, 0);
+    gen.fuel = { item: 'coal', count: 10 };
+    list.push(gen, emptyMachine(91, 'pole', 12, 4, 0));
+    return { f: new Factory(list, world()), pipes };
+  };
+
+  it('la pression part de la pompe (3 bar) et baisse de 0,1 bar par tuyau de cuivre', () => {
+    const { f, pipes } = line(10);
+    run(f, 3);
+    expect(pipes[0].pressure).toBeCloseTo(2.9);
+    expect(pipes[9].pressure).toBeCloseTo(2.0);
+    expect(pipes.every((p) => !p.broken)).toBe(true);
+  });
+
+  it('à 0 bar le fluide s’immobilise : trop loin de la pompe, rien n’arrive', () => {
+    const { f, pipes } = line(40);
+    run(f, 40);
+    expect(pipes[35].pressure).toBe(0);
+    expect(pipes[35].fluid.water).toBeLessThan(0.5);
+    expect(pipes[10].fluid.water).toBeGreaterThan(5);
+  });
+
+  it('le laiton perd moins de pression que le cuivre', () => {
+    const { f, pipes } = line(10, 2);
+    run(f, 3);
+    expect(pipes[9].pressure).toBeCloseTo(3 - 0.05 * 10);
+  });
+
+  it('un surpresseur alimenté ajoute 2 bar à sa sortie', () => {
+    const { f, pipes } = line(6, 1, 2);
+    run(f, 3);
+    const before = pipes[1].pressure;
+    const after = pipes[2].pressure;
+    expect(after).toBeGreaterThan(before + 1.5);
+  });
+
+  it('un tuyau de cuivre qui reçoit de la vapeur à 8 bar se rompt, pas un tuyau de laiton', () => {
+    const copper = emptyMachine(2, 'pipe', 12, 5, 0);
+    const brass = emptyMachine(3, 'pipe', 12, 5, 0, 0, 2);
+    for (const [pipe, id] of [
+      [copper, 1],
+      [brass, 4],
+    ] as const) {
+      const boiler = emptyMachine(id, 'boiler', 9, 5, 1);
+      boiler.fluid.steam = 100;
+      boiler.fuel = { item: 'coal', count: 5 };
+      const f = new Factory([boiler, pipe], world());
+      run(f, 1);
+      expect(pipe.broken).toBe(pipe === copper);
+    }
+    expect(new Factory([copper], world()).status(copper)).toBe('broken');
+  });
+
+  it('un tuyau rompu est remplacé en posant un tuyau neuf du même palier par-dessus', () => {
+    const pipe = emptyMachine(1, 'pipe', 4, 4, 0);
+    pipe.broken = true;
+    const f = new Factory([pipe], world());
+    expect(f.upgradeOf('pipe', 4, 4, 0, 1)?.id).toBe(1);
+    pipe.broken = false;
+    expect(f.upgradeOf('pipe', 4, 4, 0, 1)).toBeNull();
   });
 });

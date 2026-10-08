@@ -722,6 +722,18 @@
       "color": "#d1c060"
     },
     {
+      "id": "machine_booster",
+      "weightKg": 15,
+      "volumeL": 20,
+      "color": "#6a7f95",
+      "recipe": {
+        "iron_plate": 6,
+        "iron_gear": 4,
+        "copper_wire": 6,
+        "copper_ingot": 4
+      }
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

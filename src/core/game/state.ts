@@ -941,13 +941,15 @@ export class GameState {
     const old = factory.upgradeOf(type, gx, gz, lift, tier);
     if (old) {
       factory.remove(old.id);
-      this.giveBack(itemOfTier(def, old.tier), 1, {
-        x: (gx + 0.5) * CELL_SIZE_M,
-        z: (gz + 0.5) * CELL_SIZE_M,
-      });
+      // Un tuyau rompu est jeté : le neuf posé par-dessus est la réparation.
+      if (!old.broken)
+        this.giveBack(itemOfTier(def, old.tier), 1, {
+          x: (gx + 0.5) * CELL_SIZE_M,
+          z: (gz + 0.5) * CELL_SIZE_M,
+        });
       const fresh = emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier);
       fresh.belt = old.belt;
-      fresh.fluid = old.fluid;
+      fresh.fluid = old.broken ? fresh.fluid : old.fluid;
       factory.add(fresh);
       this.emit({ type: 'factory' });
       this.emit({ type: 'inventory' });
