@@ -3061,6 +3061,7 @@ export function startGameView(
     } else if (!guest) remotePlayers.update([], HOST_ID, dt);
     if (!paused) updateThreat(dt);
     factoryView.updateSmoke(now / 1000);
+    factoryView.updateMovers(now / 1000);
     enemyView.update(
       threat.enemies,
       (e) => {

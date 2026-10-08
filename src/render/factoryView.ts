@@ -1,4 +1,4 @@
-import { beltModel, modelFor } from './models';
+import { animatedParts, beltModel, modelFor, type AnimKind } from './models';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
@@ -202,7 +202,7 @@ export class FactoryView {
     this.bodies.castShadow = true;
     this.items.castShadow = false;
     this.smoke.frustumCulled = false;
-    this.root.add(this.bodies, this.items, this.wires, this.smoke);
+    this.root.add(this.bodies, this.items, this.wires, this.smoke, this.movers);
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
@@ -212,6 +212,7 @@ export class FactoryView {
     this.factory.reindex();
     const mb = new MeshBuilder();
     this.entries.clear();
+    this.clearMovers();
     for (const m of this.factory.machines) {
       if (m.type === 'conveyor') {
         const entry = beltEntry(this.factory, m);
@@ -235,7 +236,19 @@ export class FactoryView {
               ? '#7a2e2a'
               : machineDef('pipe').tierColors?.[m.tier - 1]
             : undefined;
-        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift, tint);
+        const parts = animatedParts(m.type);
+        addMachineBody(
+          mb,
+          m.type,
+          m.gx,
+          m.gz,
+          m.rot,
+          this.factory.fluidSides(m),
+          m.lift,
+          tint,
+          !!parts,
+        );
+        if (parts) this.addMover(m, parts);
         if (!modelFor(m.type)) growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
@@ -269,6 +282,68 @@ export class FactoryView {
     this.wires.geometry = new THREE.BufferGeometry();
     this.wires.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     this.updateItems();
+  }
+
+  /** Parties mobiles des modèles articulés (piston, bras, tête de scanner) : un objet par machine. */
+  private readonly movers = new THREE.Group();
+  private moverList: { m: Machine; kind: AnimKind; mesh: THREE.Mesh; angle: number }[] = [];
+  private lastTime = 0;
+
+  private clearMovers(): void {
+    for (const a of this.moverList) {
+      this.movers.remove(a.mesh);
+      a.mesh.geometry.dispose();
+    }
+    this.moverList = [];
+  }
+
+  /** Crée l'objet mobile (partie haute) d'une machine articulée, posé à l'emplacement de la machine. */
+  private addMover(
+    m: Machine,
+    parts: { kind: AnimKind; high: import('./models').BakedModel },
+  ): void {
+    const def = machineDef(m.type);
+    const { w, d } = dims(m.type, m.rot);
+    const model = modelFor(m.type);
+    if (!model) return;
+    const odd = m.rot % 2 === 1;
+    const sizeX = odd ? model.size.z : model.size.x;
+    const sizeZ = odd ? model.size.x : model.size.z;
+    const sx = w * CELL_SIZE_M - 0.06;
+    const sz = d * CELL_SIZE_M - 0.06;
+    const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
+    const mb = new MeshBuilder();
+    mb.model(parts.high, 0, 0, 0, MODEL_TURNS[m.rot % 4], scale, hexToRgb(def.color), 0.12);
+    const mesh = new THREE.Mesh(geometryOf(mb), propsMaterial);
+    mesh.castShadow = true;
+    mesh.position.set((m.gx + w / 2) * CELL_SIZE_M, levelY(m.lift), (m.gz + d / 2) * CELL_SIZE_M);
+    this.movers.add(mesh);
+    this.moverList.push({ m, kind: parts.kind, mesh, angle: 0 });
+  }
+
+  /**
+   * Anime les modèles articulés (appelée à chaque image, `time` en secondes) : le piston s'abat en fin de cycle, le bras
+   * pivote tant qu'il travaille, la tête du scanner tourne.
+   */
+  updateMovers(time: number): void {
+    const dt = Math.min(0.1, Math.max(0, time - this.lastTime));
+    this.lastTime = time;
+    for (const a of this.moverList) {
+      const running = this.factory.status(a.m) === 'running';
+      if (a.kind === 'press') {
+        const f = this.factory.cycleFraction(a.m) ?? 0;
+        // Course du piston : il reste en haut, puis s'abat sur le dernier quart du cycle.
+        const stroke = f > 0.75 ? Math.sin(((f - 0.75) / 0.25) * Math.PI) : 0;
+        a.mesh.position.y = levelY(a.m.lift) - 0.14 * stroke;
+      } else if (a.kind === 'swing') {
+        const target = running ? Math.sin(time * 2.2 + a.m.id) * 0.9 : 0;
+        a.angle += (target - a.angle) * Math.min(1, dt * 6);
+        a.mesh.rotation.y = a.angle;
+      } else {
+        a.angle += running ? dt * 1.6 : 0;
+        a.mesh.rotation.y = a.angle;
+      }
+    }
   }
 
   /** Anime la fumée blanche des turbines en marche (appelée à chaque image, `time` en secondes). */
@@ -445,6 +520,7 @@ export class FactoryView {
 
   dispose(): void {
     this.scene.remove(this.root, this.ghost);
+    this.clearMovers();
     this.bodies.geometry.dispose();
     this.items.geometry.dispose();
     this.wires.geometry.dispose();
@@ -811,6 +887,7 @@ function addMachineBody(
   sides: number[] = [],
   lift = 0,
   tint?: string,
+  staticOnly = false,
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -827,7 +904,9 @@ function addMachineBody(
     const sizeX = odd ? model.size.z : model.size.x;
     const sizeZ = odd ? model.size.x : model.size.z;
     const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
-    mb.model(model, x, 0, z, MODEL_TURNS[rot % 4], scale, color, 0.12);
+    // Un modèle articulé n'a ici que sa partie basse : la partie haute est un objet mobile (voir `FactoryView.movers`).
+    const body = staticOnly ? (animatedParts(type)?.low ?? model) : model;
+    mb.model(body, x, 0, z, MODEL_TURNS[rot % 4], scale, color, 0.12);
     return;
   }
   if (isArm(type)) {

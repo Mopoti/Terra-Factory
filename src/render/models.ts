@@ -66,6 +66,9 @@ export const modelFor = (type: MachineType): BakedModel | null => {
   return name ? (baked.get(name) ?? null) : null;
 };
 
+/** Enregistre un modèle déjà préparé (tests, ou modèle fabriqué ailleurs). */
+export const registerModel = (name: string, model: BakedModel): void => void baked.set(name, model);
+
 /** Y a-t-il déjà au moins un modèle prêt ? */
 export const modelsReady = (): boolean => baked.size > 0;
 
@@ -174,4 +177,56 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
     ),
   ).then(() => undefined);
   return loading;
+}
+
+/** Articulation d'un modèle : la partie haute (au-dessus de `split`, en part de la hauteur) est animée à part. */
+export type AnimKind = 'press' | 'swing' | 'spin';
+export const MACHINE_ANIM: Partial<Record<MachineType, { kind: AnimKind; split: number }>> = {
+  stamper: { kind: 'press', split: 0.5 },
+  heavy_press: { kind: 'press', split: 0.5 },
+  plastic_press: { kind: 'press', split: 0.5 },
+  arm: { kind: 'swing', split: 0.2 },
+  arm_electric: { kind: 'swing', split: 0.2 },
+  arm_filter: { kind: 'swing', split: 0.2 },
+  lab: { kind: 'spin', split: 0.45 },
+};
+
+const splits = new Map<string, { low: BakedModel; high: BakedModel }>();
+
+/** Coupe un modèle en deux (mêmes sommets, deux listes de triangles) selon la hauteur de leur centre. */
+export function splitModel(
+  model: BakedModel,
+  split: number,
+): { low: BakedModel; high: BakedModel } {
+  const limit = model.min.y + model.size.y * split;
+  const low: number[] = [];
+  const high: number[] = [];
+  for (let k = 0; k < model.index.length; k += 3) {
+    const a = model.index[k];
+    const b = model.index[k + 1];
+    const c = model.index[k + 2];
+    const y =
+      (model.positions[a * 3 + 1] + model.positions[b * 3 + 1] + model.positions[c * 3 + 1]) / 3;
+    (y > limit ? high : low).push(a, b, c);
+  }
+  return {
+    low: { ...model, index: new Uint32Array(low) },
+    high: { ...model, index: new Uint32Array(high) },
+  };
+}
+
+/** Les deux parties d'un modèle articulé, ou null si la machine n'a pas d'animation ou si son modèle n'est pas prêt. */
+export function animatedParts(
+  type: MachineType,
+): { kind: AnimKind; low: BakedModel; high: BakedModel } | null {
+  const anim = MACHINE_ANIM[type];
+  const name = MACHINE_MODELS[type];
+  const model = modelFor(type);
+  if (!anim || !name || !model) return null;
+  let parts = splits.get(name + anim.split);
+  if (!parts) {
+    parts = splitModel(model, anim.split);
+    splits.set(name + anim.split, parts);
+  }
+  return { kind: anim.kind, ...parts };
 }
