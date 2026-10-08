@@ -258,7 +258,7 @@
       "color": "#6d7f95",
       "fuel": false,
       "consumesKw": 60,
-      "craftSeconds": 2,
+      "craftSeconds": 3,
       "stockMax": 100,
       "height": 1.0,
       "pollution": 0.2,

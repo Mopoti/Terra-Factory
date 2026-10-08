@@ -1966,7 +1966,7 @@ body.touch-mode .menu-corner {
   height: 100%;
   width: 0;
   background: var(--accent);
-  transition: width 0.5s linear;
+  transition: width 0.12s linear;
 }
 .craft-bar {
   position: relative;

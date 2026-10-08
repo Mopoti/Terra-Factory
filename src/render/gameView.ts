@@ -2865,8 +2865,13 @@ export function startGameView(
   let frames = 0;
   let fpsSince = 0;
   let debugSince = 0;
+  let clickStartedBuilding = false;
   renderer.setAnimationLoop((now) => {
     pressedThisFrame.clear();
+    // Un clic commencé pendant la pose n'ouvre ni ne récolte rien : si le dernier exemplaire vient d'être posé, la
+    // machine posée ne s'ouvre pas sous le même clic. Il faut relâcher puis recliquer.
+    if (!input.isActionActive('interact')) clickStartedBuilding = false;
+    else if (building) clickStartedBuilding = true;
     if (fpsLimit > 0 && now - lastFrame < 1000 / fpsLimit - 1) return;
     lastFrame = now;
     const realDt = Math.min(0.5, (now - last) / 1000);
@@ -3116,6 +3121,7 @@ export function startGameView(
         !paused &&
         !uiOpen &&
         !building &&
+        !clickStartedBuilding &&
         options.state.selectedItem() !== 'pistol' &&
         input.isActionActive('interact'),
       demolishing:

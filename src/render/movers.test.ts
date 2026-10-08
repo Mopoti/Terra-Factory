@@ -30,7 +30,7 @@ describe('modèles articulés', () => {
     expect(mover).toBeDefined();
     let low = 0;
     let lowest = 0;
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 70; i++) {
       factory.tick(0.05);
       view.updateMovers(i * 0.05);
       const f = factory.cycleFraction(m) ?? 0;

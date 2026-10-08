@@ -83,6 +83,7 @@ export function mountMachineWindow(
   let current: number | null = null;
   let timer = 0;
   /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
+  let barTimer = 0;
   let selected: string | null = null;
   /** Case du sac de la pile choisie (pour fusionner avec une autre pile du même objet). */
   let selectedSlot: number | null = null;
@@ -938,6 +939,11 @@ export function mountMachineWindow(
     timer = window.setInterval(() => {
       if (!dragging) refresh();
     }, 500);
+    // La barre du cycle se met à jour plus souvent (cycles de quelques secondes) pour aller jusqu'au bout et revenir à zéro.
+    barTimer = window.setInterval(() => {
+      const m = machine();
+      if (m) setCycleBar(live.cycle, factory.cycleFraction(m));
+    }, 100);
   }
 
   function close(): void {
@@ -949,6 +955,7 @@ export function mountMachineWindow(
     state.returnHand();
     updateHandCursor(state, selected);
     window.clearInterval(timer);
+    window.clearInterval(barTimer);
     root.hidden = true;
     root.replaceChildren();
     actions.onOpenChange(false);

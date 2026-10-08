@@ -1380,6 +1380,21 @@ export class Factory {
 
   /** Amorçage : 500 MW pendant 10 s, fournis par le réseau (accumulateurs). */
   static readonly FUSION_PRIME_KW = 500000;
+  /** Pause (s) entre deux cycles d'une machine de fabrication : la barre de progression revient à zéro. */
+  static readonly CYCLE_REST_S = 0.5;
+  private readonly rest = new Map<number, number>();
+
+  /** Machine en pause entre deux cycles : rien ne se fait, la barre est à zéro. */
+  private resting(m: Machine, dt: number): boolean {
+    const left = this.rest.get(m.id);
+    if (left === undefined) return false;
+    // Marge de 1 µs : 0,5 s = exactement 10 pas de 0,05 s malgré les arrondis.
+    if (left <= dt + 1e-6) this.rest.delete(m.id);
+    else this.rest.set(m.id, left - dt);
+    m.progress = 0;
+    return true;
+  }
+
   static readonly FUSION_PRIME_S = 10;
   /** Un déchet et un cylindre brûlent toutes les 30 s. */
   static readonly FUSION_CYCLE_S = 30;
@@ -1606,6 +1621,7 @@ export class Factory {
    * brise à zéro). Les machines à combustible brûlent ; les machines électriques ralentissent sans courant.
    */
   private tickSmith(m: Machine, dt: number): void {
+    if (this.resting(m, dt)) return;
     const def = machineDef(m.type);
     const r = recipeById(m.recipe);
     const product = productOf(m);
@@ -1631,7 +1647,8 @@ export class Factory {
       m.progress += dt;
     }
     if (m.progress < r.seconds) return;
-    m.progress -= r.seconds;
+    m.progress = 0;
+    this.rest.set(m.id, Factory.CYCLE_REST_S);
     for (const [item, n] of Object.entries(r.in)) {
       const stack = m.slots.find((x) => x.item === item);
       if (!stack) continue;
@@ -2056,6 +2073,7 @@ export class Factory {
 
   private tickAssembler(m: Machine, dt: number): void {
     this.pushOutput(m);
+    if (this.resting(m, dt)) return;
     const need = recipeOf(m);
     const speed = this.powerFactor(m);
     if (!need || !m.recipe || !this.canCraft(m) || speed <= 0) {
@@ -2065,7 +2083,8 @@ export class Factory {
     m.progress += dt * speed;
     const seconds = machineDef(m.type).craftSeconds ?? 2;
     if (m.progress < seconds) return;
-    m.progress -= seconds;
+    m.progress = 0;
+    this.rest.set(m.id, Factory.CYCLE_REST_S);
     for (const [item, n] of Object.entries(need)) {
       const stack = m.slots.find((x) => x.item === item);
       if (!stack) continue;

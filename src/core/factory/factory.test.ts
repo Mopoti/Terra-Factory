@@ -46,6 +46,8 @@ const run = (f: Factory, seconds: number): void => {
 
 /** Durée (s) d'une recette du fourneau : le délai se règle dans content/recipes.json, pas dans les tests. */
 const secs = (id: string): number => RECIPES.find((r) => r.id === id)?.seconds ?? 0;
+/** Un cycle complet d'une machine de fabrication : la recette puis la courte pause qui remet la barre à zéro. */
+const cycle = (id: string): number => secs(id) + Factory.CYCLE_REST_S;
 
 describe('emprise et sorties', () => {
   it('une foreuse fait 4 x 4 cases, la sortie est au milieu du côté choisi', () => {
@@ -567,7 +569,7 @@ describe('assembleur', () => {
     asm.slots.push({ item: 'iron_ingot', count: 6 });
     const out = emptyMachine(2, 'chest_wood', 11, 12, 0);
     const f = powered(asm, [out]);
-    run(f, 8);
+    run(f, (machineDef('assembler').craftSeconds ?? 2) * 3 + Factory.CYCLE_REST_S * 3 + 0.2);
     expect(out.slots[0]).toEqual({ item: 'machine_conveyor', count: 3 });
     expect(asm.slots).toHaveLength(0);
     expect(f.status(asm)).toBe('idle');
@@ -1118,16 +1120,18 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     expect(f.status(st)).toBe('noMould');
     expect(st.stock).toBeNull();
     st.input = { item: 'mould_plate', count: 2 };
-    run(f, 2.1);
+    run(f, secs('iron_plate') + 0.1);
     expect(st.stock).toEqual({ item: 'iron_plate', count: 1 });
     expect(st.wear).toBe(7);
     expect(st.input?.count).toBe(1); // un moule est engagé, un reste en réserve
     // 8 cycles au total avec le premier moule : à la fin du 8ᵉ il est brisé, le second est aussitôt engagé
-    run(f, 2 * 7 + 0.2);
+    run(f, cycle('iron_plate') * 7 + 0.6);
     expect(st.stock?.count).toBe(8);
-    expect(st.wear).toBe(MOULD_CYCLES);
+    expect(st.wear).toBe(0); // le premier moule est brisé ; la machine fait sa pause entre deux cycles
+    run(f, Factory.CYCLE_REST_S + 0.2);
+    expect(st.wear).toBe(MOULD_CYCLES); // le second moule est engagé au cycle suivant
     expect(st.input).toBeNull(); // plus de moule en réserve : le second est en place
-    run(f, 2);
+    run(f, secs('iron_plate'));
     expect(st.stock?.count).toBe(9);
     expect(st.wear).toBe(MOULD_CYCLES - 1);
   });
@@ -1139,7 +1143,7 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     st.input = { item: 'mould_plate', count: 1 };
     stock(st, 'copper_ingot', 4);
     const f = new Factory([st], makeWorld().world);
-    run(f, 4.2);
+    run(f, cycle('copper_plate') + secs('copper_plate') + 0.2);
     expect(st.stock).toEqual({ item: 'copper_plate', count: 2 });
     expect(f.takeProduced()).toEqual([['copper_plate', 2]]);
     expect(f.takeProduced()).toEqual([]);
@@ -1152,7 +1156,7 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
     st.input = { item: 'mould_wire', count: 1 };
     stock(st, 'copper_ingot', 4);
     const f = new Factory([st], makeWorld().world);
-    run(f, 1.6);
+    run(f, secs('copper_wire') + 0.1);
     expect(st.stock).toEqual({ item: 'copper_wire', count: 2 });
   });
 
@@ -1277,9 +1281,9 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     expect(mixer.recipe).toBe('concrete');
     mixer.slots.push({ item: 'crushed_stone', count: 2 }, { item: 'slag', count: 1 });
     const f = powered(mixer);
-    run(f, 2.2);
+    run(f, secs('concrete') + 0.2);
     expect(mixer.stock).toEqual({ item: 'concrete_block', count: 2 });
-    run(f, 2.2); // plus de scorie : s'arrête
+    run(f, cycle('concrete')); // plus de scorie : s'arrête
     expect(mixer.stock?.count).toBe(2);
     expect(f.status(mixer)).toBe('idle');
   });
@@ -1290,10 +1294,10 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     b.slots.push({ item: 'barrel_empty', count: 2 });
     b.fluid.water = 150;
     const f = powered(b);
-    run(f, 2.2);
+    run(f, secs('fill_water_barrel') + 0.2);
     expect(b.stock).toEqual({ item: 'barrel_water', count: 1 });
     expect(b.fluid.water).toBeCloseTo(50);
-    run(f, 2.2); // il ne reste que 50 L : pas assez pour un second baril
+    run(f, cycle('fill_water_barrel')); // il ne reste que 50 L : pas assez pour un second baril
     expect(b.stock?.count).toBe(1);
     expect(f.status(b)).toBe('noWater');
     const d = emptyMachine(2, 'barreler', 8, 4, 0);
@@ -1301,7 +1305,7 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     d.slots.push({ item: 'barrel_water', count: 1 });
     const g = powered(d);
     g.tick(0);
-    run(g, 2.2);
+    run(g, secs('drain_water_barrel') + 0.2);
     expect(d.stock).toEqual({ item: 'barrel_empty', count: 1 });
     expect(d.fluid.water).toBeCloseTo(100);
   });
@@ -1311,7 +1315,7 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     b.recipe = 'brass_pipe';
     b.slots.push({ item: 'copper_ingot', count: 1 }, { item: 'zinc_ingot', count: 1 });
     const f = powered(b);
-    run(f, 2.2);
+    run(f, secs('brass_pipe') + 0.2);
     expect(b.stock).toEqual({ item: 'machine_pipe_2', count: 2 });
     const p = emptyMachine(2, 'heavy_press', 8, 4, 0);
     p.recipe = 'steel_pipe';
@@ -1637,11 +1641,12 @@ describe('refroidissement (6c)', () => {
 
   it('l’eau froide sous pression donne +50 % de vitesse au constructeur et ressort chaude', () => {
     const slow = plant(false);
-    run(slow.f, 12);
+    const span = cycle('brass_pipe') * 6;
+    run(slow.f, span);
     const fast = plant(true);
-    run(fast.f, 12);
+    run(fast.f, span);
     const count = (m: Machine): number => m.stock?.count ?? 0;
-    expect(count(slow.b)).toBeGreaterThanOrEqual(10); // 2 s par cycle : 6 cycles = 12 tuyaux
+    expect(count(slow.b)).toBeGreaterThanOrEqual(10); // 6 cycles = 12 tuyaux
     expect(count(fast.b)).toBeGreaterThan(count(slow.b));
   });
 
@@ -1754,7 +1759,7 @@ describe('pétrole (7b)', () => {
     const gen = emptyMachine(90, 'generator', 0, 0, 0);
     gen.fuel = { item: 'coal', count: 20 };
     const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), b], makeWorld().world);
-    run(f, 2.5);
+    run(f, secs('fill_oil_barrel') + 0.2);
     expect(b.stock).toEqual({ item: 'barrel_oil', count: 1 });
     expect(b.fluid.oil).toBeCloseTo(20);
   });

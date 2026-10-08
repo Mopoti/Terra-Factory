@@ -90,6 +90,16 @@ function flatArrow(
   flatTri(mb, at(0.02, -0.14), at(0.2, 0), at(0.02, 0.14), y, color);
 }
 
+/** Mélange les couleurs des sommets ajoutés depuis `from` avec `tint` (part `amount`). */
+function tintFrom(mb: MeshBuilder, from: number, tint: Rgb, amount: number): void {
+  const c = mb.colors;
+  for (let i = from; i < c.length; i += 3) {
+    c[i] += (tint.r - c[i]) * amount;
+    c[i + 1] += (tint.g - c[i + 1]) * amount;
+    c[i + 2] += (tint.b - c[i + 2]) * amount;
+  }
+}
+
 const WATER_ARROW: Rgb = hexToRgb('#3fa9f5');
 const STEAM_ARROW: Rgb = hexToRgb('#f2f5f7');
 
@@ -167,10 +177,10 @@ export class FactoryView {
     new THREE.LineBasicMaterial({ color: 0x1b1b1f }),
   );
   private readonly ghost = new THREE.Mesh();
-  private readonly ghostMaterial = new THREE.MeshBasicMaterial({
+  private readonly ghostMaterial = new THREE.MeshStandardMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.75,
     depthWrite: false,
   });
   private entries = new Map<number, { ex: number; ez: number; curved: boolean }>();
@@ -486,18 +496,18 @@ export class FactoryView {
         const { w, d } = dims(g.type, g.rot);
         const x = (g.gx + w / 2) * CELL_SIZE_M;
         const z = (g.gz + d / 2) * CELL_SIZE_M;
-        if (g.type === 'conveyor') ghostBelt(mb, x, z, g.rot, g.lift ?? 0, color);
-        else
-          mb.box(
-            x,
-            0,
-            z,
-            w * CELL_SIZE_M + GROW_M - 0.04,
-            visualHeight(g.type),
-            d * CELL_SIZE_M + GROW_M - 0.04,
-            color,
-            true,
-          );
+        if (g.type === 'conveyor') {
+          // Tapis droit au sol : le vrai modèle ; pentes et surélevés : la forme simple.
+          const [dx, dz] = RISE_DIR[g.rot];
+          const straight = { ex: -dx, ez: -dz, curved: false };
+          const shape = { tier: 1, rot: g.rot, gx: g.gx, gz: g.gz, broken: false } as Machine;
+          if (!((g.lift ?? 0) === 0 && addBeltModel(mb, shape, straight, 0, color)))
+            ghostBelt(mb, x, z, g.rot, g.lift ?? 0, color);
+        } else {
+          // Le patron est l'objet lui-même (son modèle ou ses formes), teinté de vert ou de rouge.
+          addMachineBody(mb, g.type, g.gx, g.gz, g.rot, [], g.lift ?? 0);
+        }
+        tintFrom(mb, first, color, 0.45);
         // Flèches : sorties vers l'extérieur, entrées vers l'intérieur.
         const io = ports(g.type, g.gx, g.gz, g.rot);
         fluidArrows(mb, g.type, g.gx, g.gz, g.rot, (c) =>

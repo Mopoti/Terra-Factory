@@ -57,7 +57,7 @@
       "out": {
         "crushed_stone": 1
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "mould_plate",
@@ -101,7 +101,7 @@
       "out": {
         "steel_plate": 1
       },
-      "seconds": 2,
+      "seconds": 3,
       "mould": "mould_plate"
     },
     {
@@ -113,7 +113,7 @@
       "out": {
         "iron_plate": 1
       },
-      "seconds": 2,
+      "seconds": 3,
       "mould": "mould_plate"
     },
     {
@@ -125,7 +125,7 @@
       "out": {
         "copper_plate": 1
       },
-      "seconds": 2,
+      "seconds": 3,
       "mould": "mould_plate"
     },
     {
@@ -137,7 +137,7 @@
       "out": {
         "iron_gear": 1
       },
-      "seconds": 2,
+      "seconds": 3,
       "mould": "mould_gear"
     },
     {
@@ -149,7 +149,7 @@
       "out": {
         "copper_wire": 2
       },
-      "seconds": 1.5,
+      "seconds": 2.5,
       "mould": "mould_wire"
     },
     {
@@ -177,7 +177,7 @@
         "kind": "water",
         "amount": 100
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "fill_oil_barrel",
@@ -192,7 +192,7 @@
         "kind": "oil",
         "amount": 100
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "drain_oil_barrel",
@@ -207,7 +207,7 @@
         "kind": "oil",
         "amount": -100
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "drain_water_barrel",
@@ -222,7 +222,7 @@
         "kind": "water",
         "amount": -100
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "brass_pipe",
@@ -234,7 +234,7 @@
       "out": {
         "machine_pipe_2": 2
       },
-      "seconds": 2
+      "seconds": 3
     },
     {
       "id": "steel_pipe",
@@ -439,7 +439,7 @@
       "out": {
         "concrete_block": 2
       },
-      "seconds": 2
+      "seconds": 3
     }
   ]
 }
