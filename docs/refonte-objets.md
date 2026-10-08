@@ -487,3 +487,7 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Fabrication dans le sac** : la file de fabrication montre déjà sa barre ; elle affiche maintenant aussi le **temps restant** (« 3,2 s »). Le HUD en bas garde sa barre.
 - **Bogue corrigé : la touche « Utiliser » (F) n'ouvrait plus la fenêtre d'une machine** quand le jeu tournait : la touche était « consommée » par la lecture faite pour le buggy, avant l'ouverture de la fenêtre. Les touches sont maintenant lues une seule fois par image (même réponse partout).
 - **Menu pause** : en plus d'Échap, la touche **P** ouvre le menu (inactive quand on écrit dans un champ), et un bouton **☰ Menu** est toujours affiché en haut à gauche (hors mode tactile). Dans mes essais Échap fonctionne dans toutes les vues ; ces deux alternatives servent quand Échap est pris par le navigateur ou l'application qui affiche le jeu.
+
+## Modèles 3D du Factory Kit (Tour 138)
+
+Premiers vrais modèles dans le jeu : 24 modèles du Factory Kit de Kenney (CC0) sur 24 types de machines (fourneau, estampeuse, concasseur, assembleur, coffres, bras…). Détails, table machine → modèle et suite : `docs/modeles3d.md`.

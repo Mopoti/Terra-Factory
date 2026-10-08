@@ -24,6 +24,50 @@ export class MeshBuilder {
   readonly normals: number[] = [];
   readonly colors: number[] = [];
 
+  /**
+   * Ajoute un modèle 3D préparé (voir `models.ts`) : posé au sol centré sur (x, z), tourné de `turns` quarts de tour
+   * autour de la verticale, mis à l'échelle uniformément. `mix` mélange sa couleur avec `tint` (0 = couleur du modèle).
+   */
+  model(
+    m: {
+      positions: Float32Array;
+      normals: Float32Array;
+      colors: Float32Array;
+      index: Uint32Array;
+      min: { x: number; y: number; z: number };
+      size: { x: number; y: number; z: number };
+    },
+    x: number,
+    y: number,
+    z: number,
+    turns: number,
+    scale: number,
+    tint?: Rgb,
+    mix = 0,
+  ): void {
+    const a = (turns * Math.PI) / 2;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const cx = m.min.x + m.size.x / 2;
+    const cz = m.min.z + m.size.z / 2;
+    const place = (i: number): void => {
+      const px = (m.positions[i * 3] - cx) * scale;
+      const py = (m.positions[i * 3 + 1] - m.min.y) * scale;
+      const pz = (m.positions[i * 3 + 2] - cz) * scale;
+      this.positions.push(x + px * c + pz * s, y + py, z - px * s + pz * c);
+      const nx = m.normals[i * 3];
+      const nz = m.normals[i * 3 + 2];
+      this.normals.push(nx * c + nz * s, m.normals[i * 3 + 1], -nx * s + nz * c);
+      const r = m.colors[i * 3];
+      const g = m.colors[i * 3 + 1];
+      const b = m.colors[i * 3 + 2];
+      if (tint && mix > 0) {
+        this.colors.push(r + (tint.r - r) * mix, g + (tint.g - g) * mix, b + (tint.b - b) * mix);
+      } else this.colors.push(r, g, b);
+    };
+    for (let k = 0; k < m.index.length; k++) place(m.index[k]);
+  }
+
   /** Ajoute un triangle ; la normale est calculée (ombrage plat). */
   tri(a: Vec, b: Vec, c: Vec, color: Rgb): void {
     const ux = b[0] - a[0];

@@ -116,6 +116,7 @@ import { Interaction } from './interaction';
 import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
+import { loadModels } from './models';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -397,6 +398,11 @@ export function startGameView(
   };
   const factory = new Factory(options.state.changes.machines, factoryWorld);
   const factoryView = new FactoryView(scene, factory);
+  // Modèles 3D du kit : chargés en arrière-plan, les machines les prennent dès qu'ils sont prêts.
+  let viewAlive = true;
+  void loadModels().then(() => {
+    if (viewAlive) factoryView.rebuild();
+  });
   let itemsTimer = 0;
   let chunkTimer = 0;
   let panelTimer = 0;
@@ -3189,6 +3195,7 @@ export function startGameView(
       interaction.dispose();
       unsubscribeBuild();
       buildingView.dispose();
+      viewAlive = false;
       factoryView.dispose();
       machinePanel.remove();
       buildHud.remove();

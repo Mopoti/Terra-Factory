@@ -1,3 +1,4 @@
+import { modelFor } from './models';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
@@ -235,7 +236,7 @@ export class FactoryView {
               : machineDef('pipe').tierColors?.[m.tier - 1]
             : undefined;
         addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift, tint);
-        growBody(mb, start, m);
+        if (!modelFor(m.type)) growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
@@ -751,6 +752,9 @@ function growBody(mb: MeshBuilder, start: number, m: Machine): void {
   }
 }
 
+/** Quarts de tour à donner à un modèle du kit selon l'orientation de la machine. */
+const MODEL_TURNS = [0, 1, 2, 3] as const;
+
 function addMachineBody(
   mb: MeshBuilder,
   type: MachineType,
@@ -769,6 +773,16 @@ function addMachineBody(
   const sz = d * CELL_SIZE_M - 0.06;
   const color = hexToRgb(tint ?? def.color);
   const [fx, fz] = RISE_DIR[rot];
+  const model = modelFor(type);
+  if (model) {
+    // Modèle 3D du kit : ajusté à l'emprise et à la hauteur de la machine, face tournée vers la sortie.
+    const odd = rot % 2 === 1;
+    const sizeX = odd ? model.size.z : model.size.x;
+    const sizeZ = odd ? model.size.x : model.size.z;
+    const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
+    mb.model(model, x, 0, z, MODEL_TURNS[rot % 4], scale, color, 0.12);
+    return;
+  }
   if (isArm(type)) {
     // Bras : socle, mât, bras horizontal vers l'avant et pince .
     mb.box(x, 0, z, 0.4, 0.12, 0.4, color, true);
