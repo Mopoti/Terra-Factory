@@ -3,6 +3,7 @@ import raw from '../../../content/machines.json';
 export type MachineType =
   | 'drill'
   | 'drill_electric'
+  | 'drill_eco'
   | 'furnace'
   | 'stamper'
   | 'crusher'
@@ -71,11 +72,15 @@ export interface MachineDef {
   slots?: number;
   /** Tapis : cases par seconde et nombre d'objets portés par case. */
   cellsPerSecond?: number;
+  /** Tapis : un objet du sac par palier (T1, T2, T3), avec sa vitesse (cases/s) et sa couleur. */
+  tierItems?: string[];
+  tierSpeeds?: number[];
+  tierColors?: string[];
   capacity?: number;
 }
 
 export const isDrill = (type: MachineType): boolean =>
-  type === 'drill' || type === 'drill_electric';
+  type === 'drill' || type === 'drill_electric' || type === 'drill_eco';
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean =>
@@ -148,4 +153,19 @@ export function machineDef(type: MachineType): MachineDef {
 
 /** Quelle machine correspond à cet objet du sac, s'il en est une. */
 export const machineForItem = (item: string | null): MachineDef | null =>
-  MACHINES.find((m) => m.item === item) ?? null;
+  MACHINES.find((m) => m.item === item || (!!item && !!m.tierItems?.includes(item))) ?? null;
+
+/** Palier (1 à 3) d'un objet-machine : les tapis ont un objet par palier, les autres machines un seul. */
+export const tierOfItem = (item: string | null): number => {
+  const def = machineForItem(item);
+  const i = def?.tierItems?.indexOf(item ?? '') ?? -1;
+  return i >= 0 ? i + 1 : 1;
+};
+
+/** Objet du sac d'une machine à un palier donné. */
+export const itemOfTier = (def: MachineDef, tier: number): string =>
+  def.tierItems?.[tier - 1] ?? def.item;
+
+/** Vitesse d'un tapis (cases/s) au palier donné. */
+export const beltSpeed = (tier: number): number =>
+  machineDef('conveyor').tierSpeeds?.[tier - 1] ?? machineDef('conveyor').cellsPerSecond ?? 0.75;

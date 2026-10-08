@@ -12,7 +12,7 @@ import {
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { SCIENCE_PACK, TECHS, scienceCost, techById, techFor } from '../data/techs';
-import { isSmith, machineDef, type MachineType } from '../data/machines';
+import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { pillarsFor } from '../build/support';
@@ -878,16 +878,33 @@ export class GameState {
     rot: number,
     blocked: (c: Cell) => boolean,
     lift = 0,
+    tier = 1,
   ): 'ok' | 'missing' | 'blocked' {
     const def = machineDef(type);
-    if ((this.inventory[def.item] ?? 0) < 1) return 'missing';
-    if (!factory.canPlace(type, gx, gz, rot, blocked, lift)) return 'blocked';
-    this.inventory = remove(this.inventory, def.item, 1).inventory;
+    const item = itemOfTier(def, tier);
+    if ((this.inventory[item] ?? 0) < 1) return 'missing';
+    if (!factory.canPlace(type, gx, gz, rot, blocked, lift, tier)) return 'blocked';
+    this.inventory = remove(this.inventory, item, 1).inventory;
+    // Amélioration d'un tapis : l'ancien revient dans le sac, ses objets restent sur le nouveau.
+    const old = factory.upgradeOf(type, gx, gz, lift, tier);
+    if (old) {
+      factory.remove(old.id);
+      this.giveBack(itemOfTier(def, old.tier), 1, {
+        x: (gx + 0.5) * CELL_SIZE_M,
+        z: (gz + 0.5) * CELL_SIZE_M,
+      });
+      const fresh = emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier);
+      fresh.belt = old.belt;
+      factory.add(fresh);
+      this.emit({ type: 'factory' });
+      this.emit({ type: 'inventory' });
+      return 'ok';
+    }
     // Les tapis remplacés (séparateur / groupeur posé sur une ligne) reviennent dans le sac avec leur contenu.
     const at = { x: (gx + 0.5) * CELL_SIZE_M, z: (gz + 0.5) * CELL_SIZE_M };
     for (const belt of factory.replacedBelts(type, gx, gz, rot, lift))
       this.removeMachine(factory, belt.id, at);
-    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift));
+    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier));
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return 'ok';
@@ -984,7 +1001,7 @@ export class GameState {
   removeMachine(factory: Factory, id: number, at: { x: number; z: number }): boolean {
     const m = factory.remove(id);
     if (!m) return false;
-    this.giveBack(machineDef(m.type).item, 1, at);
+    this.giveBack(itemOfTier(machineDef(m.type), m.tier), 1, at);
     for (const stack of [m.fuel, m.input, m.stock, m.extra, ...m.slots])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);

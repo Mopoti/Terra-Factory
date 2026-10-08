@@ -213,7 +213,13 @@ export class FactoryView {
       if (m.type === 'conveyor') {
         const entry = beltEntry(this.factory, m);
         this.entries.set(m.id, entry);
-        addBelt(mb, m, entry, hexToRgb(machineDef('conveyor').color), this.factory);
+        addBelt(
+          mb,
+          m,
+          entry,
+          hexToRgb(machineDef('conveyor').tierColors?.[m.tier - 1] ?? machineDef('conveyor').color),
+          this.factory,
+        );
       } else {
         const start = mb.positions.length;
         addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift);

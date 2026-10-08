@@ -192,3 +192,20 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Bétonnière** (3×3, 30 kW, 8 plaques de fer + 4 engrenages + 10 pierre) : recette unique **1 pierre écrasée + 1 scorie → 2 blocs de béton** en 2 s. Débloquée par la technologie provisoire **Construction T2** (30 paquets de science, après Métallurgie T2), avec le bloc de béton.
 - **Boucle** : fonte (fourneau) → Bessemer → acier + scorie → bétonnière avec la pierre écrasée du concasseur.
 - **À faire** : utilisations du béton (poteaux T2, fondations, pièces de construction en béton), de l'acier (plaque d'acier, tuyau d'acier), laiton (3b-3 : constructeur T2), lavage (3b-3), tableau « type × tier ».
+
+## 5. Point 5 — logistique
+
+### 5.1 Décisions du PO (Tour 92)
+
+- **Foreuses** : chiffres du document : **T1 1/s** (combustible, 90 kW), **T2 4/s** (électrique, 90 kW), **T3 10/s** (« économe », 25 % d'électricité en moins que la T2, soit 67,5 kW).
+- **Montée de tier** : objets **distincts**, et on **pose le palier supérieur par-dessus** pour améliorer (le tapis plus lent est remplacé en gardant ses objets ; l'ancien revient dans le sac). On ne pose pas un tapis plus lent sur un plus rapide.
+- **Filtres** (bras T3, trieur) : **liste cochable des objets, liste blanche ou noire**, avec un filtre par sortie pour le trieur.
+- **Découpage** : **5a** foreuses + tapis par tier ; **5b** bras et trieur filtrants ; **5c** tunnels à patron + piliers (tapis surélevés et machines en hauteur) ; **5d** barils (avec les fluides, point 6).
+
+### 5.2 Réalisé (5a)
+
+- **Tapis** : un objet par palier (`machine_conveyor`, `_2`, `_3`), même machine avec un champ `tier` (sauvegardé) : vitesses **0,75 / 1,5 / 3,0 cases/s**, couleurs gris foncé / bleu / clair. Recettes provisoires : **T2** 1 lingot d'acier + 1 engrenage → 2 tapis (technologie **Logistique T2**, 40 paquets de science, après Logistique et Métallurgie T2) ; **T3** 2 lingots d'acier + 2 engrenages + 2 fils de cuivre → 2 tapis (**Logistique T3**, 100 paquets de science ; les rouleaux en polymère viendront avec le plastique, point 7).
+- **Foreuse T3 « économe »** (4×4, 12 lingots d'acier + 8 engrenages + 12 fils de cuivre ; technologie **Extraction T3**, 60 paquets de science ; l'aluminium viendra avec la bauxite).
+- **Cadences** (`mineSeconds`) : T1 1 s, T2 0,25 s, T3 0,1 s. Un tapis T1 (≈ 2 minerais/s) sature avant une foreuse T2 (4/s) : c'est voulu, il faut passer au T2.
+- Panneau d'infos et fenêtre : le nom et la vitesse suivent le palier ; le tapis qui emporte le joueur suit aussi son palier.
+- **À reprendre** : les coûts des paliers (provisoires), les paquets de science T2/T3, les limites de débit par tuile (6 objets).

@@ -309,6 +309,29 @@
       }
     },
     {
+      "id": "machine_conveyor_2",
+      "weightKg": 0.5,
+      "volumeL": 0.4,
+      "color": "#3f6f9a",
+      "recipe": {
+        "steel_ingot": 1,
+        "iron_gear": 1
+      },
+      "yield": 2
+    },
+    {
+      "id": "machine_conveyor_3",
+      "weightKg": 0.7,
+      "volumeL": 0.5,
+      "color": "#cfd6dc",
+      "recipe": {
+        "steel_ingot": 2,
+        "iron_gear": 2,
+        "copper_wire": 2
+      },
+      "yield": 2
+    },
+    {
       "id": "machine_chest_wood",
       "weightKg": 6,
       "volumeL": 20,
@@ -366,6 +389,17 @@
         "iron_ingot": 12,
         "copper_ingot": 8,
         "stone": 4
+      }
+    },
+    {
+      "id": "machine_drill_eco",
+      "weightKg": 14,
+      "volumeL": 22,
+      "color": "#d7dde2",
+      "recipe": {
+        "steel_ingot": 12,
+        "iron_gear": 8,
+        "copper_wire": 12
       }
     },
     {

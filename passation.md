@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 92** : point 5a : foreuses T1/T2/T3 (1/4/10 par seconde), tapis T1/T2/T3 (0,75/1,5/3 cases/s) avec amélioration par pose par-dessus ; `tier` des tapis. Reste : 5b filtres, 5c tunnels à patron + piliers, 5d barils. Voir `docs/refonte-objets.md` §5.
 - **Tour 91** : 3b-2 : convertisseur Bessemer (2 fonte -> 2 acier + 1 scorie, 90 kW) et bétonnière (pierre écrasée + scorie -> 2 béton), sous-produit de recette, machines électriques à recette. Voir `docs/refonte-objets.md` §3.6.
 - **Tour 90** : 3b-1 : tuyau en cuivre (1 plaque → 2 tuyaux, à la main), zinc (fourneau, tech Métallurgie T2), concasseur T1 (pierre → pierre écrasée), `yield` des recettes. Laiton après le constructeur (3b-3). Voir `docs/refonte-objets.md` §3.5.
 - **Tour 88-89** : tier 0 : mécanisme de **découvertes** ; la **roue à aubes** (10 kW près d'un étang, 3 pour un laboratoire) se débloque en **fabriquant 10 plaques de cuivre** (carte en tête de la fenêtre des technologies avec compteur) ; paquet de science T1 = engrenage + fil de cuivre ; pas de laboratoire à combustible. Voir `docs/refonte-objets.md` §3.4.

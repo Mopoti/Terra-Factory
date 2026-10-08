@@ -9,6 +9,7 @@ import {
   recipeProduct,
 } from '../data/recipes';
 import {
+  beltSpeed,
   hasOutput,
   isChest,
   isArm,
@@ -77,6 +78,8 @@ export interface Machine {
   wear: number;
   /** Fluides contenus (tuyau, pompe, chaudière, turbine). */
   fluid: Record<FluidKind, number>;
+  /** Tapis : palier (1 à 3) qui fixe la vitesse. */
+  tier: number;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
 }
@@ -319,6 +322,7 @@ export function ports(
     case 'mixer':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
+    case 'drill_eco':
       return { ins: [], outs: [out(rot)] };
     case 'generator':
       return { ins: [into(rot)], outs: [] };
@@ -346,6 +350,7 @@ export function emptyMachine(
   gz: number,
   rot: number,
   lift = 0,
+  tier = 1,
 ): Machine {
   return {
     id,
@@ -364,6 +369,7 @@ export function emptyMachine(
     // Une machine qui n'a qu'une recette (concasseur, Bessemer, bétonnière) la prend d'office.
     recipe: AUTO_RECIPE[type] ?? null,
     wear: 0,
+    tier: type === 'conveyor' ? Math.min(3, Math.max(1, Math.floor(tier) || 1)) : 1,
     fluid: emptyFluid(),
     lift:
       type === 'conveyor'
@@ -412,6 +418,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
       Math.floor(m.gz),
       Math.floor(m.rot),
       isNum(m.lift) ? m.lift : 0,
+      isNum(m.tier) ? m.tier : 1,
     );
     machine.fuelLeft = isNum(m.fuelLeft) && m.fuelLeft > 0 ? m.fuelLeft : 0;
     machine.fuel = normalizeStack(m.fuel);
@@ -476,6 +483,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
 const MACHINE_TYPES: MachineType[] = [
   'drill',
   'drill_electric',
+  'drill_eco',
   'furnace',
   'stamper',
   'crusher',
@@ -831,6 +839,17 @@ export class Factory {
     return !!high && high.type === 'conveyor' && high.lift === 8;
   }
 
+  /** Le tapis de palier inférieur que ce tapis remplacerait (même case, même forme), ou null. */
+  upgradeOf(type: MachineType, gx: number, gz: number, lift: number, tier: number): Machine | null {
+    if (type !== 'conveyor') return null;
+    return (
+      this.machines.find(
+        (m) =>
+          m.type === 'conveyor' && m.gx === gx && m.gz === gz && m.lift === lift && m.tier < tier,
+      ) ?? null
+    );
+  }
+
   /** La machine peut-elle se poser là (cases libres, sol praticable) ? */
   canPlace(
     type: MachineType,
@@ -839,7 +858,10 @@ export class Factory {
     rot: number,
     blocked: (c: Cell) => boolean,
     lift = 0,
+    tier = 1,
   ): boolean {
+    // Un tapis d'un palier supérieur se pose par-dessus un tapis plus lent, à la même place : il le remplace.
+    if (this.upgradeOf(type, gx, gz, lift, tier)) return true;
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
     if (type === 'waterwheel' && !this.waterAdjacent(type, gx, gz, rot)) return false;
     const cells = footprint(type, gx, gz, rot);
@@ -1660,7 +1682,7 @@ export class Factory {
   private tickBelt(m: Machine, dt: number): void {
     // Une pente à 45° est plus longue qu'une tuile plate (√2) : on y avance moins vite.
     const slope = liftStart(m) !== liftEnd(m) ? Math.SQRT1_2 : 1;
-    const speed = (machineDef('conveyor').cellsPerSecond ?? 0.75) * slope;
+    const speed = beltSpeed(m.tier) * slope;
     for (let i = 0; i < m.belt.length; i++) {
       const limit = i === 0 ? 1 : m.belt[i - 1].pos - GAP;
       m.belt[i].pos = Math.min(limit, m.belt[i].pos + speed * dt);

@@ -950,3 +950,24 @@ describe('tuyau de cuivre, recettes verrouillées', () => {
     expect(furnace.recipe).toBe('zinc');
   });
 });
+
+describe('amélioration d’un tapis (palier supérieur posé par-dessus)', () => {
+  const noWorld = { oreAt: () => null, mineOre: () => 0 };
+  const none = (): boolean => false;
+  it('remplace l’ancien tapis, qui revient dans le sac, en gardant les objets qui roulent dessus', () => {
+    const s = new GameState({ inventory: { machine_conveyor: 1, machine_conveyor_2: 1 } });
+    s.changes.unlocked.push('logistics_2');
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'conveyor', 4, 4, 0, none)).toBe('ok');
+    f.machines[0].belt.push({ item: 'iron_ore', pos: 0.4 });
+    expect(s.placeMachine(f, 'conveyor', 4, 4, 0, none, 0, 2)).toBe('ok');
+    expect(f.machines).toHaveLength(1);
+    expect(f.machines[0].tier).toBe(2);
+    expect(f.machines[0].belt).toEqual([{ item: 'iron_ore', pos: 0.4 }]);
+    expect(s.inventory.machine_conveyor).toBe(1); // l'ancien est revenu
+    expect(s.inventory.machine_conveyor_2 ?? 0).toBe(0);
+    // démolir rend l'objet du bon palier
+    s.removeMachine(f, f.machines[0].id, { x: 0, z: 0 });
+    expect(s.inventory.machine_conveyor_2).toBe(1);
+  });
+});

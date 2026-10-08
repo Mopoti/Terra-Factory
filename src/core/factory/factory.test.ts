@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { machineDef } from '../data/machines';
 import { MOULD_CYCLES } from '../data/recipes';
 import {
   Factory,
@@ -69,16 +70,16 @@ describe('foreuse', () => {
     expect(d.stock).toBeNull();
     expect(f.status(d)).toBe('noFuel');
   });
-  it('mine 1 minerai toutes les 2 secondes, brûle du combustible et épuise vraiment les cases', () => {
+  it('mine 1 minerai par seconde, brûle du combustible et épuise vraiment les cases', () => {
     const { world, left } = makeWorld();
     const d = emptyMachine(1, 'drill', 0, 0, 0);
     d.fuel = { item: 'coal', count: 1 }; // 100 s
     const f = new Factory([d], world);
     expect(f.oreUnder(d).total).toBe(45);
     run(f, 20);
-    expect(d.stock).toEqual({ item: 'iron_ore', count: 10 });
-    expect(f.oreUnder(d).total).toBe(35);
-    expect([...left.values()].reduce((a, b) => a + b, 0)).toBe(35);
+    expect(d.stock).toEqual({ item: 'iron_ore', count: 20 });
+    expect(f.oreUnder(d).total).toBe(25);
+    expect([...left.values()].reduce((a, b) => a + b, 0)).toBe(25);
     expect(d.fuel).toBeNull();
     expect(f.fuelSecondsLeft(d)).toBeCloseTo(80, 0);
   });
@@ -245,7 +246,7 @@ describe('électricité', () => {
   it('le générateur alimente la foreuse électrique, qui mine plus vite', () => {
     const { f, gen, drill } = setup();
     run(f, 12);
-    expect(drill.stock?.count).toBe(9); // 0,75 minerai / s pendant 12 s ~ 9, premier minerai au bout de 1,33 s
+    expect(drill.stock?.count).toBe(48); // 4 minerais / s pendant 12 s
     expect(f.status(drill)).toBe('running');
     const g = f.gridInfo(drill)!;
     expect(g.demandKw).toBe(90);
@@ -286,9 +287,9 @@ describe('électricité', () => {
     expect(g.demandKw).toBe(360);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBeCloseTo(300 / 360, 3);
-    // 20 s x 0,75 minerai/s x 5/6 de courant, soit 12 à 13 minerais chacune.
-    expect(drills[0].stock!.count).toBeGreaterThanOrEqual(12);
-    expect(drills[0].stock!.count).toBeLessThanOrEqual(13);
+    // 20 s x 4 minerais/s x 5/6 de courant, soit 66 à 67 minerais chacune.
+    expect(drills[0].stock!.count).toBeGreaterThanOrEqual(66);
+    expect(drills[0].stock!.count).toBeLessThanOrEqual(67);
     // À pleine charge le générateur brûle 1 s de combustible par seconde.
     expect(gen.fuelLeft).toBeLessThanOrEqual(100 - 9);
   });
@@ -1252,5 +1253,68 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     const back = normalizeMachines(JSON.parse(JSON.stringify([b])));
     expect(back[0].extra).toEqual({ item: 'slag', count: 7 });
     expect(back[0].recipe).toBe('steel');
+  });
+});
+
+describe('point 5a : tapis et foreuses par palier', () => {
+  const rich: FactoryWorld = {
+    oreAt: () => ({ id: 'iron_ore', item: 'iron_ore', amount: 99999 }),
+    mineOre: (_x, _z, n) => n,
+  };
+  const grid = (...ms: Machine[]): Factory => {
+    const gen = emptyMachine(90, 'generator', 8, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const pole = emptyMachine(91, 'pole', 4, 3, 0);
+    return new Factory([gen, pole, ...ms], rich);
+  };
+
+  it('cadences : T1 1/s (combustible), T2 4/s, T3 10/s (et 25 % d’électricité en moins)', () => {
+    const t1 = emptyMachine(1, 'drill', 0, 0, 0);
+    t1.fuel = { item: 'coal', count: 3 };
+    const t2 = emptyMachine(2, 'drill_electric', 0, 5, 0);
+    const t3 = emptyMachine(3, 'drill_eco', 5, 5, 0);
+    const f = grid(t1, t2, t3);
+    run(f, 10);
+    expect(t1.stock?.count).toBe(10);
+    expect(t2.stock?.count).toBe(40);
+    expect(t3.stock?.count).toBe(100);
+    expect(machineDef('drill_eco').consumesKw).toBe(
+      0.75 * (machineDef('drill_electric').consumesKw ?? 0),
+    );
+  });
+
+  it('un objet de tapis par palier ; la vitesse double puis redouble', () => {
+    expect(machineDef('conveyor').tierItems).toEqual([
+      'machine_conveyor',
+      'machine_conveyor_2',
+      'machine_conveyor_3',
+    ]);
+    const speeds = [1, 2, 3].map((tier) => {
+      const b = emptyMachine(tier, 'conveyor', 0, 0, 0, 0, tier);
+      b.belt.push({ item: 'stone', pos: 0 });
+      const lone = new Factory([b], makeWorld().world);
+      run(lone, 0.2);
+      return b.belt[0].pos / 0.2;
+    });
+    expect(speeds[0]).toBeCloseTo(0.75, 2);
+    expect(speeds[1]).toBeCloseTo(1.5, 2);
+    expect(speeds[2]).toBeCloseTo(3, 2);
+  });
+
+  it('un tapis plus rapide se pose par-dessus un plus lent (même case) mais pas l’inverse', () => {
+    const b1 = emptyMachine(1, 'conveyor', 4, 4, 0);
+    const f = new Factory([b1], makeWorld().world);
+    expect(f.canPlace('conveyor', 4, 4, 0, () => false, 0, 1)).toBe(false);
+    expect(f.canPlace('conveyor', 4, 4, 0, () => false, 0, 2)).toBe(true);
+    expect(f.upgradeOf('conveyor', 4, 4, 0, 3)).toBe(b1);
+    const b3 = emptyMachine(2, 'conveyor', 8, 8, 0, 0, 3);
+    const g = new Factory([b3], makeWorld().world);
+    expect(g.canPlace('conveyor', 8, 8, 0, () => false, 0, 2)).toBe(false);
+  });
+
+  it('le palier est enregistré avec la machine', () => {
+    const b = emptyMachine(1, 'conveyor', 0, 0, 0, 0, 3);
+    expect(normalizeMachines(JSON.parse(JSON.stringify([b])))[0].tier).toBe(3);
+    expect(normalizeMachines([{ ...JSON.parse(JSON.stringify(b)), tier: 9 }])[0].tier).toBe(3);
   });
 });

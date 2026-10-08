@@ -35,6 +35,30 @@
       "unlocks": ["machine_mixer", "concrete_block"]
     },
     {
+      "id": "logistics_2",
+      "cost": {
+        "science_pack": 40
+      },
+      "requires": ["logistics", "metallurgy_2"],
+      "unlocks": ["machine_conveyor_2"]
+    },
+    {
+      "id": "logistics_3",
+      "cost": {
+        "science_pack": 100
+      },
+      "requires": ["logistics_2"],
+      "unlocks": ["machine_conveyor_3"]
+    },
+    {
+      "id": "extraction_3",
+      "cost": {
+        "science_pack": 60
+      },
+      "requires": ["metallurgy_2", "electricity"],
+      "unlocks": ["machine_drill_eco"]
+    },
+    {
       "id": "textile",
       "cost": {
         "fiber": 30

@@ -75,6 +75,9 @@ import {
   isRouter,
   machineDef,
   machineForItem,
+  tierOfItem,
+  itemOfTier,
+  beltSpeed,
   visualHeight,
   type MachineDef,
 } from '../core/data/machines';
@@ -424,7 +427,7 @@ export function startGameView(
     if (buildingMachine) {
       const def = selectedMachine();
       if (!def) return;
-      const n = options.state.inventory[def.item] ?? 0;
+      const n = options.state.inventory[selItem(def)] ?? 0;
       const rot =
         buildRot === null
           ? t('build.rotationAuto')
@@ -435,7 +438,7 @@ export function startGameView(
         !isLinear(def.id) && def.id !== 'pump' && buildMachineLevel === UPPER_LEVEL
           ? ` · ${t('factory.upperFloor')}`
           : '';
-      buildHud.innerHTML = `<strong>${itemLabel(def.item)} · ${rot}${lift}${floor}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(
+      buildHud.innerHTML = `<strong>${itemLabel(selItem(def))} · ${rot}${lift}${floor}</strong><div>${t('build.stock', { n: String(n) })}</div><div class="msg">${buildMessage}</div><small>${t(
         def.id === 'pipe'
           ? 'factory.helpPipe'
           : isLinear(def.id)
@@ -765,6 +768,11 @@ export function startGameView(
 
   // --- Poser machines et tapis -----------------------------------------------------------------
   const selectedMachine = (): MachineDef | null => machineForItem(options.state.selectedItem());
+  /** Objet du sac de la machine choisie (pour un tapis : le palier tenu en main). */
+  const selItem = (def: MachineDef): string =>
+    options.state.selectedItem() && machineForItem(options.state.selectedItem())?.id === def.id
+      ? (options.state.selectedItem() as string)
+      : def.item;
   let buildingMachine = false;
   let machinePath: Cell[] = [];
   /** Tracé en cours : forme du premier tapis, et formes choisies en route (PageUp / PageDown) par rang. */
@@ -860,7 +868,8 @@ export function startGameView(
       return;
     }
     const player = { x: playerX, z: playerZ };
-    const stock = options.state.inventory[def.item] ?? 0;
+    const stock = options.state.inventory[selItem(def)] ?? 0;
+    const tier = tierOfItem(options.state.selectedItem());
     // Portée de pose des machines : large (on bâtit une ligne en marchant), illimitée ou presque en vue du dessus.
     const reach = rig.view === 'top' ? 80 : MACHINE_REACH_M;
     const near = (cell: Cell): boolean =>
@@ -939,7 +948,7 @@ export function startGameView(
       ];
       return (
         options.find((o) =>
-          factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked, baseLift),
+          factory.canPlace(def.id, o.gx, o.gz, baseRot, machineBlocked, baseLift, tier),
         ) ?? options[0]
       );
     };
@@ -1053,7 +1062,7 @@ export function startGameView(
       const rot = rotAt(i);
       if (lift === HIDDEN) return { type: def.id, gx: cell.gx, gz: cell.gz, rot, ok: false, lift };
       const free =
-        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked, lift) &&
+        factory.canPlace(def.id, cell.gx, cell.gz, rot, machineBlocked, lift, tier) &&
         tileWithin(cell) &&
         tunnelOk(i);
       const ok = free && left > 0;
@@ -1067,8 +1076,16 @@ export function startGameView(
       for (const g of ghosts) {
         if (
           g.ok &&
-          options.state.placeMachine(factory, def.id, g.gx, g.gz, g.rot, machineBlocked, g.lift) ===
-            'ok'
+          options.state.placeMachine(
+            factory,
+            def.id,
+            g.gx,
+            g.gz,
+            g.rot,
+            machineBlocked,
+            g.lift,
+            tier,
+          ) === 'ok'
         )
           placed++;
       }
@@ -1108,7 +1125,7 @@ export function startGameView(
     const def = machineDef(m.type);
     const status = factory.status(m);
     const rows: string[] = [];
-    rows.push(`<strong>${t(`item.${def.item}` as TranslationKey)}</strong>`);
+    rows.push(`<strong>${t(`item.${itemOfTier(def, m.tier)}` as TranslationKey)}</strong>`);
     rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
     if (status === 'noPower') rows.push(`<div class="sub">${t('factory.hint.noPower')}</div>`);
     if (status === 'noWater' && m.type === 'boiler')
@@ -1239,7 +1256,7 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
       );
-      rows.push(`<div>${t('factory.speed', { n: String(def.cellsPerSecond ?? 1) })}</div>`);
+      rows.push(`<div>${t('factory.speed', { n: String(beltSpeed(m.tier)) })}</div>`);
       const block = factory.beltBlock(m);
       if (block) {
         const what = t(`item.${block.item}` as TranslationKey);
@@ -1628,8 +1645,7 @@ export function startGameView(
     if (!m) return;
     const [dx, dz] = RISE_DIR[m.rot];
     // Le tapis emporte un peu plus que la vitesse des objets : on le sent en marchant dessus.
-    const dist =
-      (machineDef('conveyor').cellsPerSecond ?? 0.75) * 2 * CELL_SIZE_M * dt * CARRY_BOOST;
+    const dist = beltSpeed(m.tier) * 2 * CELL_SIZE_M * dt * CARRY_BOOST;
     const nx = playerX + dx * dist;
     const nz = playerZ + dz * dist;
     if (canStand(nx, nz)) {
