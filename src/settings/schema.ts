@@ -87,6 +87,13 @@ export interface Settings {
     autosaveKeep: number;
     showTips: boolean;
     confirmDelete: boolean;
+    /** Taille des commandes tactiles (%). */
+    touchScale: number;
+    /** Commandes tactiles inversées (joystick à droite, boutons à gauche). */
+    touchLeftHanded: boolean;
+    /** Vitesse du regard à la manette (%) et zone morte des sticks (%). */
+    padSensitivity: number;
+    padDeadzone: number;
   };
 }
 
@@ -162,6 +169,15 @@ export function defaultSettings(preset: KeyboardPreset): Settings {
     },
     keyboard: preset,
     controls: defaultControls(preset),
-    game: { autosaveMinutes: 10, autosaveKeep: 5, showTips: true, confirmDelete: true },
+    game: {
+      autosaveMinutes: 10,
+      autosaveKeep: 5,
+      showTips: true,
+      confirmDelete: true,
+      touchScale: 100,
+      touchLeftHanded: false,
+      padSensitivity: 100,
+      padDeadzone: 20,
+    },
   };
 }

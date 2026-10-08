@@ -24,6 +24,8 @@ function apply(s: Settings): void {
     const el = document.getElementById(id);
     if (el) el.style.setProperty('zoom', scale);
   }
+  document.documentElement.style.setProperty('--touch-scale', String(s.game.touchScale / 100));
+  document.body.classList.toggle('touch-left', s.game.touchLeftHanded);
   document.documentElement.style.setProperty('--accent', ACCENT[s.display.colorblind]);
 }
 

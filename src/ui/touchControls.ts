@@ -14,6 +14,8 @@ export interface TouchOptions {
   input: Input;
   /** Déplacement de la caméra par glissement (pixels). */
   onLook(dx: number, dy: number): void;
+  /** Pincement : zoom de la caméra (+1 rapprocher, −1 éloigner). */
+  onZoom(step: 1 | -1): void;
   onPause(): void;
   /** Le monde 3D : un appui bref dessus compte comme un clic (poser une machine, viser). */
   canvas: HTMLElement;
@@ -83,39 +85,91 @@ export function mountTouchControls(container: HTMLElement, options: TouchOptions
       if (e.pointerId === stickId) release();
     });
 
-  // --- Zone de caméra : on glisse le doigt ---
+  // --- Zone de caméra : on glisse le doigt ; appui bref = clic, appui long = démolir, pincement = zoom ---
   const look = document.createElement('div');
   look.className = 'touch-look';
+  const fingers = new Map<number, { x: number; y: number }>();
   let lookId: number | null = null;
   let last = { x: 0, y: 0 };
   let start = { x: 0, y: 0, at: 0 };
   let moved = 0;
+  let pinchFrom = 0;
+  let holdTimer = 0;
+  let demolishing = false;
+  const aimAt = (x: number, y: number): void => {
+    options.canvas.dispatchEvent(
+      new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }),
+    );
+  };
+  const stopDemolish = (): void => {
+    window.clearTimeout(holdTimer);
+    if (demolishing) input.setVirtual('secondary', false);
+    demolishing = false;
+  };
+  const spread = (): number => {
+    const [a, b] = [...fingers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
   look.addEventListener('pointerdown', (e) => {
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    look.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    if (fingers.size === 2) {
+      // Deuxième doigt : pincement, plus de clic ni de démolition.
+      stopDemolish();
+      lookId = null;
+      pinchFrom = spread();
+      return;
+    }
     lookId = e.pointerId;
     last = { x: e.clientX, y: e.clientY };
     start = { x: e.clientX, y: e.clientY, at: performance.now() };
     moved = 0;
-    look.setPointerCapture(e.pointerId);
-    e.preventDefault();
+    // Appui long sans bouger : démolir ce qui est visé (comme le clic droit maintenu).
+    holdTimer = window.setTimeout(() => {
+      if (lookId === e.pointerId && moved < 10) {
+        aimAt(start.x, start.y);
+        input.setVirtual('secondary', true);
+        demolishing = true;
+      }
+    }, 500);
   });
   look.addEventListener('pointermove', (e) => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 2) {
+      const d = spread();
+      if (Math.abs(d - pinchFrom) > 24) {
+        options.onZoom(d > pinchFrom ? 1 : -1);
+        pinchFrom = d;
+      }
+      return;
+    }
     if (e.pointerId !== lookId) return;
     moved = Math.max(moved, Math.hypot(e.clientX - start.x, e.clientY - start.y));
+    if (demolishing) return;
     options.onLook((e.clientX - last.x) * 1.4, (e.clientY - last.y) * 1.4);
     last = { x: e.clientX, y: e.clientY };
   });
   look.addEventListener('pointerup', (e) => {
+    fingers.delete(e.pointerId);
     if (e.pointerId !== lookId) return;
     lookId = null;
+    const wasDemolishing = demolishing;
+    stopDemolish();
     // Appui bref sans glissement : un clic sur le monde (pose d'une machine…).
-    if (moved < 10 && performance.now() - start.at < 350) {
+    if (!wasDemolishing && moved < 10 && performance.now() - start.at < 350) {
       const at = { clientX: e.clientX, clientY: e.clientY, bubbles: true, button: 0 };
       for (const name of ['mousemove', 'mousedown', 'mouseup', 'click'])
         options.canvas.dispatchEvent(new MouseEvent(name, at));
     }
   });
   look.addEventListener('pointercancel', (e) => {
-    if (e.pointerId === lookId) lookId = null;
+    fingers.delete(e.pointerId);
+    if (e.pointerId === lookId) {
+      lookId = null;
+      stopDemolish();
+    }
   });
 
   // --- Boutons ---
@@ -142,8 +196,9 @@ export function mountTouchControls(container: HTMLElement, options: TouchOptions
       });
       for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const)
         b.addEventListener(type, () => {
-          input.setVirtual(def.action, false);
           b.classList.remove('on');
+          // Un appui très bref doit durer au moins une image du jeu, sinon il passerait inaperçu.
+          window.setTimeout(() => input.setVirtual(def.action, false), 60);
         });
     }
     pad.append(b);

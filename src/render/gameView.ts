@@ -1555,6 +1555,9 @@ export function startGameView(
           if (!paused && !uiOpen) rig.look(dx, dy, getSettings().views);
           if (Math.hypot(dx, dy) > 2) tutorial.signal('look');
         },
+        onZoom: (step) => {
+          if (!paused && !uiOpen) rig.zoom(step, getSettings().views);
+        },
         onPause: () => options.onRequestPause?.(),
         canvas: renderer.domElement,
       })

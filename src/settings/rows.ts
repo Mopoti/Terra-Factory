@@ -181,6 +181,10 @@ export const GAME_SECTION: Section = {
     range('game.autosaveKeep', 1, 20, 1),
     toggle('game.showTips'),
     toggle('game.confirmDelete'),
+    range('game.touchScale', 70, 150, 5, '%'),
+    toggle('game.touchLeftHanded'),
+    range('game.padSensitivity', 20, 200, 10, '%'),
+    range('game.padDeadzone', 5, 40, 5, '%'),
   ],
 };
 

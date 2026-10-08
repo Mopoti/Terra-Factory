@@ -410,3 +410,10 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - Le paquet T4 (`science_pack_4`, débloqué par Réacteur T4) existait déjà ; il sert maintenant à **mélanger les types de paquets** dans les technologies de fin de partie : **Fusion** = 200 paquets T4 + 100 paquets T3 ; **Balise hyperfréquence** = 300 paquets T4 + 150 paquets T3. Les autres technologies gardent le paquet du tier précédent.
 - Mécanique déjà en place, testée pour ce cas : le laboratoire (4 emplacements, donc 4 types de paquets à la fois) ne consomme que les types réclamés par l'étude ; un paquet d'un autre type (T2) est refusé ; l'étude n'est finie que quand **tous** les types sont complets, et la progression est enregistrée par type.
 - Quantités à rééquilibrer en jouant.
+
+## Point 12 — réglages tactiles / manette, petits écrans (Tour 125)
+
+- **Réglages** (Paramètres → Jeu) : taille des commandes tactiles (70–150 %), commandes pour gaucher (joystick à droite, boutons et caméra à gauche), vitesse du regard à la manette (20–200 %), zone morte des sticks (5–40 %). Appliqués tout de suite (variables CSS / classe `touch-left`, lus à chaque image par la manette).
+- **Tactile** : **appui long** (0,5 s sans bouger) sur le monde = démolir ce qui est visé (clic droit maintenu) ; **pincement** à deux doigts = zoom de la caméra. Correction : un appui très bref sur un bouton passait parfois inaperçu (relâché avant l'image suivante) ; il dure maintenant au moins 60 ms.
+- **Petits écrans** (largeur ≤ 700 px ou hauteur ≤ 520 px) : sac, machines, carte et technologies occupent tout l'écran, boutons de 40 px minimum, une seule colonne de technologies. Vérifié à 660 × 360 avec un écran tactile simulé.
+- **Pas encore** : remappage des boutons de la manette, menu principal navigable à la manette, icônes de boutons dans les textes.

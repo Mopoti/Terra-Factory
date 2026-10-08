@@ -1,3 +1,4 @@
+import { getSettings } from '../settings/store';
 import type { Input } from './input';
 import type { ActionId } from '../settings/controls';
 
@@ -57,7 +58,12 @@ export const withDeadzone = (v: number, zone = STICK_DEADZONE): number => {
  * Traduit l'état d'une manette. `previous` sert à repérer les boutons « tout juste pressés » ; `ui` indique que
  * le jeu est en pause ou qu'une fenêtre est ouverte (la manette navigue alors dans les menus).
  */
-export function readPad(state: PadState, previous: PadState | null, ui: boolean): PadFrame {
+export function readPad(
+  state: PadState,
+  previous: PadState | null,
+  ui: boolean,
+  deadzone = STICK_DEADZONE,
+): PadFrame {
   const held = new Set<ActionId>();
   const edges = new Set<PadEdge>();
   const down = (i: number): boolean => state.buttons[i] === true;
@@ -85,7 +91,10 @@ export function readPad(state: PadState, previous: PadState | null, ui: boolean)
   }
   const look = ui
     ? { x: 0, y: 0 }
-    : { x: withDeadzone(state.axes[2] ?? 0), y: withDeadzone(state.axes[3] ?? 0) };
+    : {
+        x: withDeadzone(state.axes[2] ?? 0, deadzone),
+        y: withDeadzone(state.axes[3] ?? 0, deadzone),
+      };
   return { held, look, edges };
 }
 
@@ -135,12 +144,17 @@ export function mountGamepad(options: GamepadOptions): { dispose(): void; active
         axes: [...pad.axes],
       };
       const ui = options.inMenu();
-      const frame = readPad(state, previous.get(pad.index) ?? null, ui);
+      const frame = readPad(
+        state,
+        previous.get(pad.index) ?? null,
+        ui,
+        getSettings().game.padDeadzone / 100,
+      );
       previous.set(pad.index, state);
       for (const a of frame.held) wanted.add(a);
       if (frame.held.size > 0 || frame.edges.size > 0 || frame.look.x !== 0 || frame.look.y !== 0)
         lastUsed = now;
-      const speed = options.lookSpeed ?? 700;
+      const speed = (options.lookSpeed ?? 700) * (getSettings().game.padSensitivity / 100);
       if (frame.look.x !== 0 || frame.look.y !== 0)
         options.onLook(frame.look.x * speed * dt, frame.look.y * speed * dt);
       for (const edge of frame.edges) {
