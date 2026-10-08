@@ -22,6 +22,7 @@ import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
 import { mountMenuPad } from './input/gamepad';
+import { installKeyHints } from './ui/keyHints';
 import { PeerNetwork } from './net/peerNetwork';
 import { HostSession } from './core/net/host';
 import { GuestClient, RefusedError } from './core/net/guest';
@@ -31,6 +32,7 @@ import { mergeChanges } from './core/game/playerData';
 import type { WorldChanges } from './core/game/worldChanges';
 
 initLocale();
+installKeyHints();
 await initKeyboardLayout();
 loadSettings();
 startApplyingSettings();

@@ -68,9 +68,17 @@ export function onLocaleChange(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
+/** Texte d'une action (touche ou bouton de manette selon le périphérique) : `{@action}` dans un texte. */
+let hintResolver: ((action: string) => string) | null = null;
+export function setHintResolver(fn: (action: string) => string): void {
+  hintResolver = fn;
+}
+
 /** Traduit une clé ; `{nom}` dans le texte est remplacé par la valeur fournie. */
 export function t(key: TranslationKey, params: Record<string, string> = {}): string {
   // Une clé manquante ne doit jamais faire planter l'affichage : on montre la clé elle-même.
   const text = dictionaries[current][key] ?? dictionaries.fr[key] ?? key;
-  return text.replace(/\{(\w+)\}/g, (_, name: string) => params[name] ?? `{${name}}`);
+  return text
+    .replace(/\{(\w+)\}/g, (_, name: string) => params[name] ?? `{${name}}`)
+    .replace(/\{@(\w+)\}/g, (all, action: string) => hintResolver?.(action) ?? all);
 }

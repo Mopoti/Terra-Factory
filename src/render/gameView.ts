@@ -106,6 +106,7 @@ import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
 import { mountGamepad } from '../input/gamepad';
+import { onDeviceChange } from '../input/lastDevice';
 import { cellKey } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
@@ -439,6 +440,10 @@ export function startGameView(
   const itemLabel = (id: string): string => t(`item.${id}` as TranslationKey);
   const stockOf = (kind: PieceKind): number => options.state.inventory[pieceDef(kind).item] ?? 0;
   const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
+  // Les aides de pose suivent le dernier périphérique utilisé (clavier ou manette).
+  const offDevice = onDeviceChange(() => {
+    if (building) renderBuildHud();
+  });
   function renderBuildHud(): void {
     if (buildingMachine) {
       const def = selectedMachine();
@@ -3159,6 +3164,7 @@ export function startGameView(
       tutorialPanel.dispose();
       disposeTouch?.();
       gamepad.dispose();
+      offDevice();
       craftHud.remove();
       closeFinale?.();
       window.removeEventListener('blur', onMouseUp);

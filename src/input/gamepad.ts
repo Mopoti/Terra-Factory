@@ -1,3 +1,4 @@
+import { noteDevice } from './lastDevice';
 import { DEFAULT_PAD, type PadMap } from '../settings/schema';
 import { getSettings } from '../settings/store';
 import type { Input } from './input';
@@ -130,6 +131,7 @@ export function mountMenuPad(): () => void {
       const state: PadState = { buttons: pad.buttons.map((b) => b.pressed), axes: [...pad.axes] };
       const frame = readPad(state, previous.get(pad.index) ?? null, true);
       previous.set(pad.index, state);
+      if (frame.edges.size > 0) noteDevice('pad');
       for (const edge of frame.edges) applyMenuEdge(edge);
     }
   };
@@ -168,6 +170,8 @@ export function mountGamepad(options: GamepadOptions): { dispose(): void; active
       for (const a of frame.held) wanted.add(a);
       if (frame.held.size > 0 || frame.edges.size > 0 || frame.look.x !== 0 || frame.look.y !== 0)
         lastUsed = now;
+      if (state.buttons.some(Boolean) || state.axes.some((a) => Math.abs(a) > 0.5))
+        noteDevice('pad');
       const speed = (options.lookSpeed ?? 700) * (getSettings().game.padSensitivity / 100);
       if (frame.look.x !== 0 || frame.look.y !== 0)
         options.onLook(frame.look.x * speed * dt, frame.look.y * speed * dt);

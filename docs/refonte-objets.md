@@ -430,3 +430,10 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Remappage** : Paramètres → Jeu → « Manette : … » (13 actions : saut, utiliser, s'accroupir, changer de vue, agir, démolir, courir, tourner, carte, sac, technologies, étage −/+). Chaque action choisit un bouton de la disposition standard (A, B, X, Y, LB, RB, LT, RT, Retour, L3, R3, croix) ou « Aucun » ; Start reste la pause, les épaules servent encore à parcourir la barre d'objets. Par défaut : voir `DEFAULT_PAD`.
 - **Menus** : la manette navigue aussi dans les menus avant la partie (principal, création, chargement, paramètres, rejoindre…) : croix ou stick = focus, A = valider, B / Start = retour. Vérifié avec une fausse manette.
 - **Pas fait (cosmétique)** : icônes de boutons de manette dans les textes d'aide et le tutoriel (ils parlent encore de touches de clavier ou d'appuis tactiles).
+
+## Icônes de manette dans les textes (Tour 129)
+
+- **Dernier périphérique utilisé** (`src/input/lastDevice.ts`) : clavier / souris ou manette. Une touche ou un clic (événement réel, pas ceux que la manette fabrique) passe en clavier ; un bouton de manette ou un stick poussé passe en manette. Le joueur peut mélanger les deux à volonté.
+- **Textes dynamiques** : `{@action}` dans une traduction (par exemple `{@rotate}`, `{@interact}`, `{@techTree}`) est remplacé à l'affichage par la touche du clavier (selon ses réglages) ou par le bouton de la manette (selon son remappage : A, X, RT, L3, ↑…) ; le déplacement donne « le stick gauche », la barre d'objets « LB / RB ». Une action sans bouton de manette garde sa touche. En mode tactile, ce sont les noms des boutons à l'écran.
+- **Textes convertis** : tutoriel (en entier), aides de pose (pièces, machines, tuyaux, tapis), « technologie requise », laboratoire, démolition et ouverture des structures et portes, aide de la carte. L'aide du sac (glisser, clic droit, Ctrl / Maj) reste pour la souris : on ne peut pas déplacer les piles à la manette.
+- Les textes affichés en continu (tutoriel, aide de pose) se mettent à jour dès qu'on change de périphérique ; les autres, à leur prochaine ouverture.
