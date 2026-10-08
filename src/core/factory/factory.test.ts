@@ -3,6 +3,7 @@ import { machineDef } from '../data/machines';
 import { MOULD_CYCLES } from '../data/recipes';
 import {
   Factory,
+  filterPasses,
   chestPut,
   chestRoom,
   emptyMachine,
@@ -1316,5 +1317,117 @@ describe('point 5a : tapis et foreuses par palier', () => {
     const b = emptyMachine(1, 'conveyor', 0, 0, 0, 0, 3);
     expect(normalizeMachines(JSON.parse(JSON.stringify([b])))[0].tier).toBe(3);
     expect(normalizeMachines([{ ...JSON.parse(JSON.stringify(b)), tier: 9 }])[0].tier).toBe(3);
+  });
+});
+
+describe('point 5b : bras filtrant et trieur', () => {
+  const powerFor = (...ms: Machine[]): Factory => {
+    const gen = emptyMachine(90, 'generator', 6, 2, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const pole = emptyMachine(91, 'pole', 11, 6, 0);
+    return new Factory([gen, pole, ...ms], makeWorld().world);
+  };
+  const chestWith = (id: number, gx: number, gz: number, item: string, n: number): Machine => {
+    const c = emptyMachine(id, 'chest_wood', gx, gz, 0);
+    c.slots.push({ item, count: n });
+    return c;
+  };
+
+  it('le filtre : liste blanche = seulement les objets cochés ; liste noire = tout sauf eux ; sans filtre tout passe', () => {
+    expect(filterPasses(undefined, 'coal')).toBe(true);
+    expect(filterPasses({ mode: 'deny', items: [] }, 'coal')).toBe(true);
+    expect(filterPasses({ mode: 'deny', items: ['coal'] }, 'coal')).toBe(false);
+    expect(filterPasses({ mode: 'deny', items: ['coal'] }, 'wood')).toBe(true);
+    expect(filterPasses({ mode: 'allow', items: [] }, 'wood')).toBe(false);
+    expect(filterPasses({ mode: 'allow', items: ['wood'] }, 'wood')).toBe(true);
+    expect(filterPasses({ mode: 'allow', items: ['wood'] }, 'coal')).toBe(false);
+  });
+
+  it('le bras filtrant en liste blanche ne prend que l’objet coché, même derrière un autre', () => {
+    const src = emptyMachine(1, 'chest_wood', 10, 8, 0);
+    src.slots.push({ item: 'stone', count: 5 }, { item: 'copper_ingot', count: 5 });
+    const arm = emptyMachine(2, 'arm_filter', 10, 10, 0);
+    arm.filters[0] = { mode: 'allow', items: ['copper_ingot'] };
+    const dest = emptyMachine(3, 'chest_wood', 10, 12, 0);
+    const f = powerFor(src, arm, dest);
+    run(f, 3);
+    expect(dest.slots).toEqual([{ item: 'copper_ingot', count: 5 }]);
+    expect(src.slots.find((s) => s.item === 'stone')?.count).toBe(5);
+    // le cuivre est épuisé : la pierre reste là mais le filtre la refuse, donc rien à prendre
+    expect(f.armDiagnosis(arm)).toBe('noSource');
+  });
+
+  it('le bras filtrant en liste noire laisse tout passer sauf l’objet coché ; il est 3 fois plus rapide (0,3 s)', () => {
+    const src = chestWith(1, 10, 8, 'stone', 6);
+    src.slots.push({ item: 'wood', count: 6 });
+    const arm = emptyMachine(2, 'arm_filter', 10, 10, 0);
+    arm.filters[0] = { mode: 'deny', items: ['stone'] };
+    const dest = emptyMachine(3, 'chest_wood', 10, 12, 0);
+    const f = powerFor(src, arm, dest);
+    run(f, 2.1);
+    expect(dest.slots).toEqual([{ item: 'wood', count: 6 }]);
+    expect(machineDef('arm_filter').swingSeconds).toBe(0.3);
+  });
+
+  it('sans courant le bras filtrant ne bouge pas', () => {
+    const src = chestWith(1, 10, 8, 'wood', 3);
+    const arm = emptyMachine(2, 'arm_filter', 10, 10, 0);
+    const dest = emptyMachine(3, 'chest_wood', 10, 12, 0);
+    const f = new Factory([src, arm, dest], makeWorld().world);
+    run(f, 3);
+    expect(dest.slots).toHaveLength(0);
+    expect(f.status(arm)).toBe('noPower');
+  });
+
+  it('le trieur envoie chaque objet vers la sortie dont le filtre l’accepte', () => {
+    // Trieur 2×2 en (8,8) tourné vers +z : devant (z = 10), gauche (+1 → +x), droite (+3 → −x).
+    const sorter = emptyMachine(1, 'sorter', 8, 8, 0);
+    sorter.filters[0] = { mode: 'allow', items: ['iron_ingot'] }; // devant
+    sorter.filters[1] = { mode: 'allow', items: ['copper_ingot'] }; // gauche
+    sorter.filters[2] = { mode: 'deny', items: ['iron_ingot', 'copper_ingot'] }; // droite : le reste
+    const front = emptyMachine(2, 'chest_wood', 8, 10, 0);
+    const left = emptyMachine(3, 'chest_wood', 10, 8, 0);
+    const right = emptyMachine(4, 'chest_wood', 6, 8, 0);
+    const feed = emptyMachine(5, 'conveyor', 8, 6, 0);
+    for (const item of ['iron_ingot', 'copper_ingot', 'stone', 'iron_ingot', 'wood'])
+      feed.belt.push({ item, pos: 1 - feed.belt.length * 0.34 });
+    const f = powerFor(feed, sorter, front, left, right);
+    run(f, 8);
+    const names = (c: Machine): string[] => c.slots.map((s) => `${s.item}×${s.count}`).sort();
+    expect(names(front)).toEqual(['iron_ingot×2']);
+    expect(names(left)).toEqual(['copper_ingot×1']);
+    expect(names(right)).toEqual(['stone×1', 'wood×1']);
+  });
+
+  it('le trieur n’aiguille rien sans courant, et un objet que personne n’accepte reste bloqué', () => {
+    const sorter = emptyMachine(1, 'sorter', 8, 8, 0);
+    sorter.filters[0] = { mode: 'allow', items: ['wood'] };
+    sorter.filters[1] = { mode: 'allow', items: ['wood'] };
+    sorter.filters[2] = { mode: 'allow', items: ['wood'] };
+    const out = emptyMachine(2, 'chest_wood', 8, 10, 0);
+    const feed = emptyMachine(5, 'conveyor', 8, 6, 0);
+    feed.belt.push({ item: 'stone', pos: 1 });
+    const dark = new Factory([feed, sorter, out], makeWorld().world);
+    run(dark, 3);
+    expect(dark.status(sorter)).toBe('noPower');
+    expect(out.slots).toHaveLength(0);
+    const f = powerFor(feed, sorter, out);
+    run(f, 3);
+    expect(sorter.stock?.item).toBe('stone'); // aucune sortie n'accepte la pierre
+    expect(out.slots).toHaveLength(0);
+  });
+
+  it('les filtres survivent à la sauvegarde ; un type ou un nombre invalide est ignoré', () => {
+    const sorter = emptyMachine(1, 'sorter', 8, 8, 0);
+    sorter.filters[1] = { mode: 'allow', items: ['coal', 'wood'] };
+    const back = normalizeMachines(JSON.parse(JSON.stringify([sorter])));
+    expect(back[0].filters).toHaveLength(3);
+    expect(back[0].filters[1]).toEqual({ mode: 'allow', items: ['coal', 'wood'] });
+    const bad = normalizeMachines([
+      { ...JSON.parse(JSON.stringify(sorter)), filters: [5, { mode: 'x', items: [1, 'coal'] }] },
+    ]);
+    expect(bad[0].filters[0]).toEqual({ mode: 'deny', items: [] });
+    expect(bad[0].filters[1]).toEqual({ mode: 'deny', items: ['coal'] });
+    expect(emptyMachine(1, 'conveyor', 0, 0, 0).filters).toHaveLength(0);
   });
 });

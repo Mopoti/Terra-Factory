@@ -1568,3 +1568,36 @@
   font-weight: 700;
   opacity: 1 !important;
 }
+
+/* Filtres du bras filtrant et du trieur. */
+.filter-box {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+.filter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.filter-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--item) 60%, transparent);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.filter-chip.on {
+  background: color-mix(in srgb, var(--item) 55%, transparent);
+  font-weight: 600;
+}
+.mach-search {
+  width: 100%;
+  margin-top: 6px;
+}

@@ -90,9 +90,21 @@
       "cellsPerSecond": 0.75,
       "capacity": 6,
       "height": 0.15,
-      "tierItems": ["machine_conveyor", "machine_conveyor_2", "machine_conveyor_3"],
-      "tierSpeeds": [0.75, 1.5, 3.0],
-      "tierColors": ["#3f4a55", "#3f6f9a", "#cfd6dc"]
+      "tierItems": [
+        "machine_conveyor",
+        "machine_conveyor_2",
+        "machine_conveyor_3"
+      ],
+      "tierSpeeds": [
+        0.75,
+        1.5,
+        3.0
+      ],
+      "tierColors": [
+        "#3f4a55",
+        "#3f6f9a",
+        "#cfd6dc"
+      ]
     },
     {
       "id": "chest_wood",
@@ -205,6 +217,27 @@
       "fuel": false,
       "consumesKw": 20,
       "swingSeconds": 0.45,
+      "height": 0.5
+    },
+    {
+      "id": "arm_filter",
+      "w": 2,
+      "d": 2,
+      "item": "machine_arm_filter",
+      "color": "#2f6f8f",
+      "fuel": false,
+      "consumesKw": 30,
+      "swingSeconds": 0.3,
+      "height": 0.5
+    },
+    {
+      "id": "sorter",
+      "w": 2,
+      "d": 2,
+      "item": "machine_sorter",
+      "color": "#3f5f7a",
+      "fuel": false,
+      "consumesKw": 15,
       "height": 0.5
     },
     {

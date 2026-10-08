@@ -440,6 +440,28 @@
       }
     },
     {
+      "id": "machine_arm_filter",
+      "weightKg": 5,
+      "volumeL": 8,
+      "color": "#2f6f8f",
+      "recipe": {
+        "steel_ingot": 4,
+        "iron_gear": 4,
+        "copper_wire": 8
+      }
+    },
+    {
+      "id": "machine_sorter",
+      "weightKg": 4,
+      "volumeL": 6,
+      "color": "#3f5f7a",
+      "recipe": {
+        "steel_ingot": 3,
+        "iron_gear": 2,
+        "copper_wire": 6
+      }
+    },
+    {
       "id": "machine_assembler",
       "weightKg": 15,
       "volumeL": 30,

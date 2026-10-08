@@ -94,6 +94,7 @@ export function mountMachineWindow(
       m.stock?.item ?? null,
       m.slots.map((x) => x.item),
       m.recipe,
+      m.filters.length,
       selected,
       state.hand,
     ]);
@@ -482,6 +483,77 @@ export function mountMachineWindow(
     return out;
   }
 
+  /** Filtres d'un bras filtrant (1) ou d'un trieur (1 par sortie) : liste blanche / noire et objets à cocher. */
+  const filterSearch = new Map<string, string>();
+  function filterRows(m: Machine): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    const names = [t('machine.filter.front'), t('machine.filter.left'), t('machine.filter.right')];
+    m.filters.forEach((f, index) => {
+      const box = el('div', 'filter-box');
+      const head = el('div', 'mach-row');
+      head.append(
+        el('span', 'mach-label', m.filters.length > 1 ? names[index] : t('machine.filter.title')),
+      );
+      const mode = el('select', 'mach-select');
+      mode.append(
+        new Option(t('machine.filter.deny'), 'deny', false, f.mode === 'deny'),
+        new Option(t('machine.filter.allow'), 'allow', false, f.mode === 'allow'),
+      );
+      mode.value = f.mode;
+      mode.addEventListener('change', () => {
+        state.setFilterMode(m, index, mode.value === 'allow' ? 'allow' : 'deny');
+        playSfx('pickup');
+        render();
+      });
+      const clear = el('button', undefined, t('machine.filter.clear'));
+      clear.type = 'button';
+      clear.addEventListener('click', () => {
+        state.clearFilter(m, index);
+        render();
+      });
+      head.append(mode, clear);
+      box.append(head);
+      const key = `${m.id}:${index}`;
+      const search = el('input', 'mach-search') as HTMLInputElement;
+      search.type = 'search';
+      search.placeholder = t('machine.filter.search');
+      search.value = filterSearch.get(key) ?? '';
+      const grid = el('div', 'filter-grid');
+      const fill = (): void => {
+        grid.replaceChildren();
+        const q = (filterSearch.get(key) ?? '').trim().toLowerCase();
+        for (const def of ITEMS) {
+          const name = itemName(def.id);
+          if (q && !name.toLowerCase().includes(q) && !f.items.includes(def.id)) continue;
+          const on = f.items.includes(def.id);
+          const chip = el('button', on ? 'filter-chip on' : 'filter-chip', name);
+          chip.type = 'button';
+          chip.style.setProperty('--item', def.color);
+          chip.addEventListener('click', () => {
+            state.toggleFilterItem(m, index, def.id);
+            playSfx('pickup');
+            fill();
+            summary.textContent = describe();
+          });
+          grid.append(chip);
+        }
+      };
+      const describe = (): string =>
+        t(f.mode === 'allow' ? 'machine.filter.onlyThese' : 'machine.filter.allBut', {
+          n: String(f.items.length),
+        });
+      const summary = el('div', 'mach-info', describe());
+      search.addEventListener('input', () => {
+        filterSearch.set(key, search.value);
+        fill();
+      });
+      fill();
+      box.append(search, summary, grid);
+      out.push(box);
+    });
+    return out;
+  }
+
   function putInChest(m: Machine, item: string): void {
     const hand = state.hand;
     const moved =
@@ -568,6 +640,7 @@ export function mountMachineWindow(
       rows.append(fuelInfo);
     }
     if (isAssembler(m.type)) rows.append(...assemblerRows(m));
+    if (m.filters.length > 0) rows.append(...filterRows(m));
     if (isSmith(m.type)) {
       rows.append(...assemblerRows(m));
       const mould = recipeById(m.recipe)?.mould;

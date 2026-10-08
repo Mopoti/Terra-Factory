@@ -209,3 +209,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Cadences** (`mineSeconds`) : T1 1 s, T2 0,25 s, T3 0,1 s. Un tapis T1 (≈ 2 minerais/s) sature avant une foreuse T2 (4/s) : c'est voulu, il faut passer au T2.
 - Panneau d'infos et fenêtre : le nom et la vitesse suivent le palier ; le tapis qui emporte le joueur suit aussi son palier.
 - **À reprendre** : les coûts des paliers (provisoires), les paquets de science T2/T3, les limites de débit par tuile (6 objets).
+
+### 5.3 Réalisé (5b, Tour 93) : bras filtrant et trieur
+
+- **Filtre** (`Machine.filters`, sauvegardé) : un mode (**liste noire** par défaut, vide = tout passe ; **liste blanche** = seuls les objets cochés passent) et une liste d'objets. Fenêtre de la machine : choix du mode, **grille d'objets à cocher** (recherche par nom, « Tout décocher »), résumé « Seulement N objet(s) » ou « Tout passe sauf N objet(s) ».
+- **Bras filtrant T3** (`arm_filter`, 2×2, électrique 30 kW, cycle **0,3 s**, 1 filtre ; 4 lingots d'acier + 4 engrenages + 8 fils de cuivre) : il ne prend que les objets autorisés, même derrière un objet refusé ; diagnostic « rien à prendre » quand le filtre refuse tout. Débloqué par **Logistique T3** (avec le tapis T3).
+- **Trieur T3** (`sorter`, 2×2, électrique 15 kW, **3 filtres : devant, gauche, droite** ; 3 lingots d'acier + 2 engrenages + 6 fils de cuivre) : comme le séparateur (1 entrée derrière, 3 sorties) mais chaque objet va vers la sortie dont le filtre l'accepte, à tour de rôle entre les sorties qui l'acceptent ; sans courant il n'aiguille rien (« Pas de courant ») ; un objet qu'aucune sortie n'accepte reste bloqué. Débloqué par **Tri T3** (120 paquets de science, après Logistique T3).
+- **À faire** : filtrer sur d'autres critères (catégorie, « tout sauf »), copier-coller d'un filtre, voyants lumineux montrant les sorties actives.

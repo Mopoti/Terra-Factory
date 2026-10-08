@@ -808,6 +808,34 @@ export class GameState {
     return { x: last.x, z: last.z };
   }
 
+  /** Filtre d'un bras filtrant ou d'un trieur : passe de liste blanche à liste noire (ou l'inverse). */
+  setFilterMode(m: Machine, index: number, mode: 'allow' | 'deny'): boolean {
+    const f = m.filters[index];
+    if (!f) return false;
+    f.mode = mode;
+    this.emit({ type: 'factory' });
+    return true;
+  }
+
+  /** Coche ou décoche un objet dans un filtre. Renvoie vrai s'il est maintenant coché. */
+  toggleFilterItem(m: Machine, index: number, item: string): boolean {
+    const f = m.filters[index];
+    if (!f) return false;
+    const at = f.items.indexOf(item);
+    if (at >= 0) f.items.splice(at, 1);
+    else f.items.push(item);
+    this.emit({ type: 'factory' });
+    return at < 0;
+  }
+
+  /** Vide un filtre (liste noire vide : tout passe). */
+  clearFilter(m: Machine, index: number): void {
+    const f = m.filters[index];
+    if (!f) return;
+    f.items = [];
+    this.emit({ type: 'factory' });
+  }
+
   placeVehicle(x: number, z: number, yaw: number): Vehicle | null {
     if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
     this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;

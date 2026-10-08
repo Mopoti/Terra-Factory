@@ -16,9 +16,11 @@ export type MachineType =
   | 'waterwheel'
   | 'pole'
   | 'splitter'
+  | 'sorter'
   | 'merger'
   | 'arm'
   | 'arm_electric'
+  | 'arm_filter'
   | 'assembler'
   | 'lab'
   | 'turret'
@@ -98,10 +100,16 @@ export const isSmith = (type: MachineType): boolean =>
 export const isAssembler = (type: MachineType): boolean => type === 'assembler';
 
 /** Séparateur (1 entrée, 3 sorties) ou groupeur (3 entrées, 1 sortie) : aiguille les objets d'un tapis à l'autre. */
-export const isRouter = (type: MachineType): boolean => type === 'splitter' || type === 'merger';
+export const isRouter = (type: MachineType): boolean =>
+  type === 'splitter' || type === 'merger' || type === 'sorter';
+
+/** Machine à filtres (liste blanche ou noire d'objets) : le bras filtrant (1 filtre) et le trieur (1 par sortie). */
+export const filterCount = (type: MachineType): number =>
+  type === 'arm_filter' ? 1 : type === 'sorter' ? 3 : 0;
 
 /** Bras robotique (à combustible ou électrique). */
-export const isArm = (type: MachineType): boolean => type === 'arm' || type === 'arm_electric';
+export const isArm = (type: MachineType): boolean =>
+  type === 'arm' || type === 'arm_electric' || type === 'arm_filter';
 
 /** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
 export const isLab = (type: MachineType): boolean => type === 'lab';

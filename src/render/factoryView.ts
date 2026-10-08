@@ -127,7 +127,7 @@ export function beltEntry(
   const feeds = (n: Machine | null): boolean => {
     if (!n || n === m) return false;
     if (n.type === 'conveyor' && liftEnd(n) !== liftStart(m)) return false;
-    if (n.type === 'splitter') {
+    if (n.type === 'splitter' || n.type === 'sorter') {
       // Trois sorties : devant, gauche, droite (pas derrière).
       const back = (n.rot + 2) % 4;
       return [0, 1, 2, 3].some(
@@ -643,6 +643,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   merger: 0.4,
   arm: 0.7,
   arm_electric: 0.7,
+  arm_filter: 0.7,
+  sorter: 0.4,
   assembler: 1.0,
   lab: 0.9,
   pipe: 0.3,
@@ -1014,10 +1016,15 @@ function addMachineBody(
     );
     return;
   }
-  if (type === 'splitter' || type === 'merger') {
+  if (type === 'splitter' || type === 'merger' || type === 'sorter') {
     // Boîtier plat (les entrées et sorties sont indiquées par des flèches au sol).
     mb.box(x, 0, z, sx, 0.25, sz, color, true);
     mb.box(x, 0.25, z, sx - 0.16, 0.08, sz - 0.16, shade(color, 1.3), true);
+    if (type === 'sorter') {
+      // Trieur : petit écran lumineux et trois voyants, un par sortie.
+      mb.box(x - fx * 0.12, 0.33, z - fz * 0.12, 0.24, 0.1, 0.24, hexToRgb('#27323b'), true);
+      mb.box(x - fx * 0.12, 0.43, z - fz * 0.12, 0.16, 0.02, 0.16, hexToRgb('#4fe3c1'), true);
+    }
     return;
   }
   if (type === 'pole') {

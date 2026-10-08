@@ -10,6 +10,7 @@ import {
 } from '../data/recipes';
 import {
   beltSpeed,
+  filterCount,
   hasOutput,
   isChest,
   isArm,
@@ -48,6 +49,16 @@ export interface BeltItem {
 }
 
 /** Une machine posée (foreuse, fourneau) ou un élément de tapis. */
+/** Filtre d'objets : en liste blanche seuls les objets listés passent, en liste noire tous sauf ceux listés. */
+export interface ItemFilter {
+  mode: 'allow' | 'deny';
+  items: string[];
+}
+
+/** Un objet passe-t-il ce filtre ? (un filtre absent laisse tout passer) */
+export const filterPasses = (f: ItemFilter | undefined, item: string): boolean =>
+  !f || (f.mode === 'allow' ? f.items.includes(item) : !f.items.includes(item));
+
 export interface Machine {
   id: number;
   type: MachineType;
@@ -80,6 +91,8 @@ export interface Machine {
   fluid: Record<FluidKind, number>;
   /** Tapis : palier (1 à 3) qui fixe la vitesse. */
   tier: number;
+  /** Bras filtrant (1 filtre) et trieur (3 : devant, gauche, droite) : liste blanche ou noire d'objets. */
+  filters: ItemFilter[];
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
 }
@@ -327,10 +340,12 @@ export function ports(
     case 'generator':
       return { ins: [into(rot)], outs: [] };
     case 'splitter':
+    case 'sorter':
       return { ins: [into(back)], outs: [out(rot), out(left), out(right)] };
     case 'merger':
     case 'arm':
     case 'arm_electric':
+    case 'arm_filter':
     case 'assembler':
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
@@ -369,6 +384,10 @@ export function emptyMachine(
     // Une machine qui n'a qu'une recette (concasseur, Bessemer, bétonnière) la prend d'office.
     recipe: AUTO_RECIPE[type] ?? null,
     wear: 0,
+    filters: Array.from({ length: filterCount(type) }, () => ({
+      mode: 'deny' as const,
+      items: [],
+    })),
     tier: type === 'conveyor' ? Math.min(3, Math.max(1, Math.floor(tier) || 1)) : 1,
     fluid: emptyFluid(),
     lift:
@@ -425,6 +444,17 @@ export function normalizeMachines(raw: unknown): Machine[] {
     machine.input = normalizeStack(m.input);
     machine.stock = normalizeStack(m.stock);
     machine.extra = isSmith(machine.type) ? normalizeStack(m.extra) : null;
+    if (Array.isArray(m.filters)) {
+      machine.filters.forEach((slot, i) => {
+        const raw = m.filters && (m.filters as unknown[])[i];
+        if (typeof raw !== 'object' || raw === null) return;
+        const f = raw as Record<string, unknown>;
+        slot.mode = f.mode === 'allow' ? 'allow' : 'deny';
+        slot.items = Array.isArray(f.items)
+          ? (f.items as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 200)
+          : [];
+      });
+    }
     machine.progress = isNum(m.progress) && m.progress > 0 ? m.progress : 0;
     if (Array.isArray(m.belt)) {
       for (const b of m.belt) {
@@ -496,6 +526,8 @@ const MACHINE_TYPES: MachineType[] = [
   'waterwheel',
   'pole',
   'splitter',
+  'sorter',
+  'arm_filter',
   'merger',
   'arm',
   'arm_electric',
@@ -957,6 +989,7 @@ export class Factory {
         m.slots.length >= (def.slots ?? 0) && m.slots.every((x) => x.count >= CHEST_STACK);
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
+    if (m.type === 'sorter' && this.powerFactor(m) <= 0) return 'noPower';
     if (isRouter(m.type)) return m.stock ? 'blocked' : 'idle';
     if (isAssembler(m.type)) {
       const need = recipeOf(m);
@@ -1056,6 +1089,7 @@ export class Factory {
     if (isLab(m.type)) return this.labWorking(m);
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
+    if (m.type === 'sorter') return m.stock !== null;
     if (isArm(m.type)) return m.stock !== null || this.armCandidate(m) !== null;
     if (isSmith(m.type)) return !!machineDef(m.type).consumesKw && this.smithReady(m);
     if (!isDrill(m.type)) return false;
@@ -1242,7 +1276,7 @@ export class Factory {
   private canAccept(target: Machine, from: Machine, item: string, dir: number): boolean {
     if (isChest(target.type)) return chestRoom(target, item) > 0;
     // Séparateur : une seule case d'attente. Groupeur : va chercher lui-même sur les tapis qui l'alimentent.
-    if (target.type === 'splitter') return !target.stock;
+    if (target.type === 'splitter' || target.type === 'sorter') return !target.stock;
     if (target.type === 'merger') return !target.stock && from.type !== 'conveyor';
     if (target.type === 'conveyor') {
       // Une sortie de tunnel ne reçoit que de son entrée.
@@ -1547,14 +1581,19 @@ export class Factory {
       }
     }
     if (!m.stock) return;
-    const outs = m.type === 'splitter' ? [front, (front + 1) % 4, (front + 3) % 4] : [front];
+    const multi = m.type === 'splitter' || m.type === 'sorter';
+    // Le trieur est électrique : sans courant il n'aiguille rien.
+    if (m.type === 'sorter' && this.powerFactor(m) <= 0) return;
+    const outs = multi ? [front, (front + 1) % 4, (front + 3) % 4] : [front];
     for (let i = 0; i < outs.length; i++) {
-      const k = m.type === 'splitter' ? (Math.floor(m.progress) + i) % 3 : 0;
+      const k = multi ? (Math.floor(m.progress) + i) % 3 : 0;
       const dir = outs[k];
+      // Trieur : chaque sortie a son filtre (devant, gauche, droite).
+      if (m.type === 'sorter' && !filterPasses(m.filters[k], m.stock!.item)) continue;
       const target = this.neighbors(m, dir).find((t) => this.deliver(t, m, m.stock!.item, dir));
       if (!target) continue;
       m.stock = null;
-      if (m.type === 'splitter') m.progress = (k + 1) % 3;
+      if (multi) m.progress = (k + 1) % 3;
       break;
     }
   }
@@ -1619,8 +1658,10 @@ export class Factory {
       const side = (turn + i) % 3;
       for (const src of this.neighbors(m, (m.rot + [2, 1, 3][side]) % 4)) {
         if (dests.includes(src)) continue;
-        const found = this.peekSources(src).find((f) =>
-          dests.some((d) => this.canAccept(d, m, f.item, m.rot)),
+        const found = this.peekSources(src).find(
+          (f) =>
+            filterPasses(m.filters[0], f.item) &&
+            dests.some((d) => this.canAccept(d, m, f.item, m.rot)),
         );
         if (found) return { ...found, side };
       }
@@ -1637,6 +1678,7 @@ export class Factory {
       for (const src of this.neighbors(m, (m.rot + side) % 4)) {
         if (dests.includes(src)) continue;
         for (const f of this.peekSources(src)) {
+          if (!filterPasses(m.filters[0], f.item)) continue;
           any = true;
           if (dests.some((d) => this.canAccept(d, m, f.item, m.rot))) return 'ok';
         }
