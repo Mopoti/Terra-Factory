@@ -665,7 +665,7 @@ function addBelt(
 
 /**
  * Orientation des modèles de tapis du kit (voir `RISE_DIR` : tourner de `t` quarts de tour envoie +z vers `RISE_DIR[t]`).
- * Le tapis droit circule le long de l'axe x du modèle ; le coude relie les côtés +x et −z.
+ * Le tapis droit circule le long de l'axe x du modèle ; le coude relie les côtés −x et +z (son coin extérieur arrondi est en +x, −z).
  */
 const BELT_TURN_OFFSET = 3;
 
@@ -688,10 +688,10 @@ function addBeltModel(
   const mix = m.broken ? 0.7 : 0.1;
   let turns = (m.rot + BELT_TURN_OFFSET) % 4;
   if (entry.curved) {
-    // Coude : relie la sortie à un côté voisin ; le modèle (côtés +x et −z) est tourné pour couvrir cette paire.
+    // Coude : relie la sortie à un côté voisin ; le modèle (côtés −x et +z) est tourné pour couvrir cette paire.
     const entrySide = RISE_DIR.findIndex(([ex, ez]) => ex === entry.ex && ez === entry.ez);
     const first = entrySide === (m.rot + 1) % 4 ? m.rot : (m.rot + 3) % 4;
-    turns = (first + 3) % 4;
+    turns = (first + 1) % 4;
   }
   mb.model(model, x, height, z, turns, TILE_M / model.size.x, tint, mix, false, scaleY);
   // Flèche de sens, claire, sur le dessus.
