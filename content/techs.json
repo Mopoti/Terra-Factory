@@ -37,7 +37,8 @@
       ],
       "unlocks": [
         "zinc_ingot",
-        "machine_bessemer"
+        "machine_bessemer",
+        "steel_plate"
       ]
     },
     {
@@ -64,8 +65,31 @@
       "unlocks": [
         "machine_builder",
         "machine_pipe_2",
+        "science_pack_2"
+      ]
+    },
+    {
+      "id": "fluids_2",
+      "cost": {
+        "science_pack": 40
+      },
+      "requires": [
+        "manufacturing_2"
+      ],
+      "unlocks": [
         "machine_booster",
-        "machine_cooling_tower",
+        "machine_cooling_tower"
+      ]
+    },
+    {
+      "id": "washing_2",
+      "cost": {
+        "science_pack": 40
+      },
+      "requires": [
+        "manufacturing_2"
+      ],
+      "unlocks": [
         "machine_washer",
         "iron_ore_washed",
         "copper_ore_washed",
@@ -75,7 +99,7 @@
     {
       "id": "heavy_press_3",
       "cost": {
-        "science_pack": 100
+        "science_pack_2": 100
       },
       "requires": [
         "manufacturing_2",
@@ -89,7 +113,7 @@
     {
       "id": "silicon_3",
       "cost": {
-        "science_pack": 120
+        "science_pack_2": 120
       },
       "requires": [
         "heavy_press_3"
@@ -103,7 +127,7 @@
     {
       "id": "oil_3",
       "cost": {
-        "science_pack": 140
+        "science_pack_2": 140
       },
       "requires": [
         "barrels_3",
@@ -117,7 +141,7 @@
     {
       "id": "plastic_3",
       "cost": {
-        "science_pack": 160
+        "science_pack_2": 160
       },
       "requires": [
         "oil_3",
@@ -147,7 +171,7 @@
     {
       "id": "logistics_3",
       "cost": {
-        "science_pack": 100
+        "science_pack_2": 100
       },
       "requires": [
         "logistics_2"
@@ -160,7 +184,7 @@
     {
       "id": "sorting_3",
       "cost": {
-        "science_pack": 120
+        "science_pack_2": 120
       },
       "requires": [
         "logistics_3"
@@ -172,7 +196,7 @@
     {
       "id": "extraction_3",
       "cost": {
-        "science_pack": 60
+        "science_pack_2": 60
       },
       "requires": [
         "metallurgy_2",
@@ -248,7 +272,7 @@
     {
       "id": "barrels_3",
       "cost": {
-        "science_pack": 80
+        "science_pack_2": 80
       },
       "requires": [
         "steam",

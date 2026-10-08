@@ -8,7 +8,7 @@ import {
   recipeByproduct,
   recipeProduct,
 } from '../data/recipes';
-import { isSciencePack, packValue } from '../data/techs';
+import { isSciencePack } from '../data/techs';
 import {
   beltSpeed,
   filterCount,
@@ -225,7 +225,8 @@ export type MachineStatus =
   | 'noSteam'
   | 'noWater'
   | 'broken'
-  | 'lowPressure';
+  | 'lowPressure'
+  | 'wrongPack';
 
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
@@ -1112,6 +1113,7 @@ export class Factory {
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
       if (this.hasPacks(m) && this.labDemand <= 0) return 'noStudy';
+      if (this.hasPacks(m) && !this.usablePack(m)) return 'wrongPack';
       return this.labWorking(m) ? 'running' : 'idle';
     }
     if (isArm(m.type)) {
@@ -1214,7 +1216,9 @@ export class Factory {
   /** Paquets de science que les laboratoires peuvent encore utiliser (fixé par la partie selon la recherche en cours). */
   labDemand = 0;
   /** Paquets consommés depuis la dernière lecture (la partie les ajoute à la recherche). */
-  private labDone = 0;
+  private labDone: Record<string, number> = {};
+  /** Paquets encore utiles à l'étude en cours, par type (null = n'importe lequel). */
+  labNeeds: Record<string, number> | null = null;
   /** Objets fabriqués par les machines depuis le dernier relevé (compteurs des découvertes). */
   private readonly made = new Map<string, number>();
 
@@ -1226,9 +1230,9 @@ export class Factory {
     return out;
   }
 
-  takeLabPacks(): number {
+  takeLabPacks(): Record<string, number> {
     const n = this.labDone;
-    this.labDone = 0;
+    this.labDone = {};
     return n;
   }
 
@@ -1720,7 +1724,16 @@ export class Factory {
 
   /** Laboratoire : a-t-il des paquets et une étude à mener ? */
   private labWorking(m: Machine): boolean {
-    return this.hasPacks(m) && this.labDemand > 0;
+    return this.labDemand > 0 && this.usablePack(m) !== null;
+  }
+
+  /** Premier emplacement dont les paquets servent à l'étude en cours. */
+  private usablePack(m: Machine): Stack | null {
+    return (
+      m.slots.find(
+        (s) => s.count > 0 && (this.labNeeds === null || (this.labNeeds[s.item] ?? 0) > 0),
+      ) ?? null
+    );
   }
 
   /** Le laboratoire a-t-il au moins un paquet dans l'un de ses emplacements ? */
@@ -1738,15 +1751,14 @@ export class Factory {
     const seconds = machineDef(m.type).craftSeconds ?? 6;
     if (m.progress < seconds) return;
     m.progress -= seconds;
-    // On use d'abord le paquet le moins précieux (un paquet T3 ne sert pas tant qu'il reste des T1).
-    const stack = [...m.slots].sort((a, b) => packValue(a.item) - packValue(b.item))[0];
-    const value = stack ? packValue(stack.item) : 1;
-    if (stack) {
-      stack.count--;
-      if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
-    }
-    this.labDemand -= value;
-    this.labDone += value;
+    const stack = this.usablePack(m);
+    if (!stack) return;
+    const item = stack.item;
+    stack.count--;
+    if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);
+    this.labDemand--;
+    if (this.labNeeds) this.labNeeds[item] = (this.labNeeds[item] ?? 0) - 1;
+    this.labDone[item] = (this.labDone[item] ?? 0) + 1;
   }
 
   private ingredientRoom(m: Machine, item: string): boolean {

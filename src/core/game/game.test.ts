@@ -658,7 +658,7 @@ describe('technologies', () => {
     expect(s.research('logistics')).toBe('ok');
     expect(s.research('electricity')).toBe('ok');
     expect(s.study('automation')).toBe('ok');
-    s.addStudy(20);
+    s.addStudy({ science_pack: 20 });
     expect(s.research('textile')).toBe('missing');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
@@ -672,13 +672,30 @@ describe('technologies', () => {
     expect(s.study('textile')).toBe('notLab');
     expect(s.study('automation')).toBe('ok');
     expect(s.studyRemaining()).toBe(20);
-    s.addStudy(8);
+    s.addStudy({ science_pack: 8 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.researching).toBe('automation');
     expect(copy.studyRemaining()).toBe(12);
-    copy.addStudy(30);
+    copy.addStudy({ science_pack: 30 });
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
     expect(copy.changes.researching).toBeNull();
+  });
+
+  it('une technologie T3 réclame des paquets T2 : les autres paquets ne comptent pas', () => {
+    const s = new GameState({ inventory: {} });
+    for (const id of ['logistics', 'electricity', 'metallurgy', 'metallurgy_2', 'manufacturing_2'])
+      s.changes.unlocked.push(id);
+    s.changes.unlocked.push('construction_2');
+    expect(s.study('heavy_press_3')).toBe('ok');
+    expect(s.studyNeeds()).toEqual({ science_pack_2: 100 });
+    s.addStudy({ science_pack: 50 });
+    expect(s.studyRemaining()).toBe(100);
+    s.addStudy({ science_pack_2: 60 });
+    expect(s.studyNeeds()).toEqual({ science_pack_2: 40 });
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.studyNeeds()).toEqual({ science_pack_2: 40 });
+    copy.addStudy({ science_pack_2: 99 });
+    expect(copy.isUnlocked('machine_heavy_press')).toBe(true);
   });
 
   it('une ancienne sauvegarde (sans recherche) garde tout débloqué', () => {

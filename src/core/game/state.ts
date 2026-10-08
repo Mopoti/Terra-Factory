@@ -13,7 +13,7 @@ import {
   type Stack,
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
-import { TECHS, scienceCost, techById, techFor } from '../data/techs';
+import { TECHS, packCost, scienceCost, techById, techFor } from '../data/techs';
 import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
@@ -639,20 +639,50 @@ export class GameState {
     return null;
   }
 
-  /** Paquets de science encore à étudier pour la technologie en cours. */
-  studyRemaining(): number {
-    const id = this.changes.researching;
-    if (!id) return 0;
-    return Math.max(0, scienceCost(techById(id)) - (this.changes.progress[id] ?? 0));
+  /** Paquets déjà étudiés pour une technologie, par type (une ancienne sauvegarde ne connaît que le paquet T1). */
+  private packsDone(id: string): Record<string, number> {
+    const done = this.changes.packProgress[id];
+    if (done) return done;
+    const legacy = this.changes.progress[id] ?? 0;
+    return legacy > 0 ? { science_pack: legacy } : {};
   }
 
-  /** Les laboratoires ont étudié `n` paquets : la technologie avance, et se débloque à la fin. */
-  addStudy(n: number): void {
+  /** Paquets de science encore à étudier pour la technologie en cours, par type. */
+  studyNeeds(): Record<string, number> {
     const id = this.changes.researching;
-    if (!id || n <= 0) return;
-    const cost = scienceCost(techById(id));
-    this.changes.progress[id] = Math.min(cost, (this.changes.progress[id] ?? 0) + n);
-    if (this.changes.progress[id] >= cost) {
+    if (!id) return {};
+    const done = this.packsDone(id);
+    const needs: Record<string, number> = {};
+    for (const [pack, n] of Object.entries(packCost(techById(id)))) {
+      const left = n - (done[pack] ?? 0);
+      if (left > 0) needs[pack] = left;
+    }
+    return needs;
+  }
+
+  /** Total de paquets encore à étudier pour la technologie en cours. */
+  studyRemaining(): number {
+    return Object.values(this.studyNeeds()).reduce((x, y) => x + y, 0);
+  }
+
+  /** Les laboratoires ont étudié ces paquets : la technologie avance, et se débloque à la fin. */
+  addStudy(packs: Record<string, number>): void {
+    const id = this.changes.researching;
+    if (!id) return;
+    const wanted = packCost(techById(id));
+    const done = { ...this.packsDone(id) };
+    let added = 0;
+    for (const [pack, n] of Object.entries(packs)) {
+      const room = (wanted[pack] ?? 0) - (done[pack] ?? 0);
+      const used = Math.min(n, room);
+      if (used <= 0) continue;
+      done[pack] = (done[pack] ?? 0) + used;
+      added += used;
+    }
+    if (added <= 0) return;
+    this.changes.packProgress[id] = done;
+    this.changes.progress[id] = Object.values(done).reduce((x, y) => x + y, 0);
+    if (Object.entries(wanted).every(([pack, n]) => (done[pack] ?? 0) >= n)) {
       this.changes.unlocked.push(id);
       this.changes.researching = null;
     }

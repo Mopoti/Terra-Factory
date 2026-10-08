@@ -646,6 +646,22 @@
       }
     },
     {
+      "id": "steel_plate",
+      "weightKg": 0.5,
+      "volumeL": 0.2,
+      "color": "#aab4bd"
+    },
+    {
+      "id": "science_pack_2",
+      "weightKg": 0.1,
+      "volumeL": 0.2,
+      "color": "#4f8fd6",
+      "recipe": {
+        "steel_plate": 1,
+        "machine_pipe_2": 1
+      }
+    },
+    {
       "id": "machine_lab",
       "weightKg": 12,
       "volumeL": 25,

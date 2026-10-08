@@ -2787,6 +2787,7 @@ export function startGameView(
       }
       while (simAcc >= 0.05) {
         factory.labDemand = options.state.studyRemaining();
+        factory.labNeeds = options.state.studyNeeds();
         factory.tick(0.05);
         options.state.addStudy(factory.takeLabPacks());
         for (const [item, n] of factory.takeProduced()) options.state.countProduced(item, n);

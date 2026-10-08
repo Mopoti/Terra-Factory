@@ -93,6 +93,18 @@
       "seconds": 3
     },
     {
+      "id": "steel_plate",
+      "machine": "stamper",
+      "in": {
+        "steel_ingot": 1
+      },
+      "out": {
+        "steel_plate": 1
+      },
+      "seconds": 2,
+      "mould": "mould_plate"
+    },
+    {
       "id": "iron_plate",
       "machine": "stamper",
       "in": {

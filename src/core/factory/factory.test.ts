@@ -618,13 +618,13 @@ describe('laboratoire', () => {
     expect(m.slots[0]?.count).toBe(5); // rien à étudier
     f.labDemand = 3;
     run(f, 13);
-    expect(f.takeLabPacks()).toBe(2);
+    expect(f.takeLabPacks()).toEqual({ science_pack: 2 });
     expect(m.slots[0]?.count).toBe(3);
-    expect(f.takeLabPacks()).toBe(0);
+    expect(f.takeLabPacks()).toEqual({});
     const g = new Factory([lab()], makeWorld().world);
     g.labDemand = 3;
     run(g, 7);
-    expect(g.takeLabPacks()).toBe(0);
+    expect(g.takeLabPacks()).toEqual({});
     expect(g.status(g.machines[0])).toBe('noPower');
   });
 
@@ -1802,17 +1802,23 @@ describe('raffinerie et plastique (7c)', () => {
 });
 
 describe('câble isolé, puce et paquet T3 (7d)', () => {
-  it('un paquet de science T3 vaut 3 études au laboratoire', () => {
+  it('le laboratoire ne consomme que les paquets que l’étude en cours réclame', () => {
     const lab = emptyMachine(1, 'lab', 8, 0, 0);
-    lab.slots.push({ item: 'science_pack_3', count: 2 });
+    lab.slots.push({ item: 'science_pack', count: 3 }, { item: 'science_pack_2', count: 3 });
     const gen = emptyMachine(90, 'generator', 0, 0, 0);
     gen.fuel = { item: 'coal', count: 20 };
     const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), lab], makeWorld().world);
-    f.labDemand = 10;
-    run(f, 7);
-    expect(f.takeLabPacks()).toBe(3);
-    expect(lab.slots[0]?.count).toBe(1);
-    expect(f.labDemand).toBe(7);
+    f.labDemand = 2;
+    f.labNeeds = { science_pack_2: 2 };
+    run(f, 13);
+    expect(f.takeLabPacks()).toEqual({ science_pack_2: 2 });
+    expect(lab.slots.map((s) => [s.item, s.count])).toEqual([
+      ['science_pack', 3],
+      ['science_pack_2', 1],
+    ]);
+    f.labDemand = 1;
+    f.labNeeds = { science_pack_3: 1 };
+    expect(f.status(lab)).toBe('wrongPack');
   });
 
   it('les recettes : 4 fils + 1 isolant → 4 câbles isolés ; puce ; paquet T3', () => {
@@ -1840,22 +1846,27 @@ describe('laboratoire à plusieurs emplacements', () => {
     expect(chestRoom(l, 'science_pack_3')).toBe(15);
   });
 
-  it('il use d’abord le paquet le moins précieux', () => {
-    const { f, l } = lab();
-    chestPut(l, 'science_pack_3', 2);
-    chestPut(l, 'science_pack', 1);
-    f.labDemand = 10;
-    run(f, 6.5);
-    expect(l.slots.map((s) => s.item)).toEqual(['science_pack_3']);
-    run(f, 6.5);
-    expect(f.takeLabPacks()).toBe(1 + 3);
-  });
-
   it('un laboratoire d’une ancienne sauvegarde garde ses paquets', () => {
     const [m] = normalizeMachines([
       { id: 1, type: 'lab', gx: 0, gz: 0, rot: 0, input: { item: 'science_pack', count: 7 } },
     ]);
     expect(m.slots).toEqual([{ item: 'science_pack', count: 7 }]);
     expect(m.input).toBeNull();
+  });
+});
+
+describe('plaque d’acier et paquet T2', () => {
+  it('l’estampeuse fait une plaque d’acier avec le moule de plaque ; le paquet T2 = plaque + tuyau de laiton', () => {
+    const st = emptyMachine(1, 'stamper', 8, 0, 0);
+    st.recipe = 'steel_plate';
+    st.slots.push({ item: 'steel_ingot', count: 1 });
+    st.input = { item: 'mould_plate', count: 1 };
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), st], makeWorld().world);
+    st.fuel = { item: 'coal', count: 5 };
+    run(f, 4);
+    expect(st.stock).toEqual({ item: 'steel_plate', count: 1 });
+    expect(itemById('science_pack_2').recipe).toEqual({ steel_plate: 1, machine_pipe_2: 1 });
   });
 });

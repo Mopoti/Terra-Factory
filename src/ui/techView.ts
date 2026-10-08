@@ -1,7 +1,7 @@
 import { playSfx } from '../audio/sfx';
 import { DISCOVERIES, type DiscoveryDef } from '../core/data/discoveries';
 import { itemById } from '../core/data/items';
-import { SCIENCE_PACK, TECHS, scienceCost, type TechDef } from '../core/data/techs';
+import { TECHS, isSciencePack, packCost, scienceCost, type TechDef } from '../core/data/techs';
 import type { GameState } from '../core/game/state';
 import { t, type TranslationKey } from '../i18n';
 import './menu.css';
@@ -44,7 +44,7 @@ export function mountTech(
     cost.className = 'tech-line';
     cost.append(`${t('tech.cost')} : `);
     for (const [item, n] of Object.entries(tech.cost)) {
-      if (item === SCIENCE_PACK) continue;
+      if (isSciencePack(item)) continue;
       const have = state.inventory[item] ?? 0;
       const span = document.createElement('span');
       span.className = have >= n ? 'ok' : 'lack';
@@ -53,12 +53,17 @@ export function mountTech(
     }
     const science = scienceCost(tech);
     if (science > 0) {
-      const line = document.createElement('span');
-      line.textContent = t('tech.science', {
-        have: String(state.changes.progress[tech.id] ?? 0),
-        need: String(science),
-      });
-      cost.append(line);
+      const done = state.changes.packProgress[tech.id];
+      for (const [pack, need] of Object.entries(packCost(tech))) {
+        const line = document.createElement('span');
+        const have = done
+          ? (done[pack] ?? 0)
+          : pack === 'science_pack'
+            ? (state.changes.progress[tech.id] ?? 0)
+            : 0;
+        line.textContent = `${t('tech.science.pack', { pack: itemName(pack), have: String(have), need: String(need) })}  `;
+        cost.append(line);
+      }
     }
     box.append(cost);
     const unlocks = document.createElement('div');

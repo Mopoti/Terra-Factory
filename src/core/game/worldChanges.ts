@@ -7,7 +7,7 @@ import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
-import { TECHS } from '../data/techs';
+import { TECHS, isSciencePack } from '../data/techs';
 import type { ChunkData } from '../world/worldgen';
 
 /** Un véhicule posé dans le monde : position, cap (rad) et carburant (secondes de marche). */
@@ -91,6 +91,8 @@ export interface WorldChanges {
   /** Technologie étudiée par les laboratoires (null = aucune) et paquets de science déjà consommés par technologie. */
   researching: string | null;
   progress: Record<string, number>;
+  /** Paquets déjà étudiés par technologie et par type de paquet (la somme est `progress`). */
+  packProgress: Record<string, Record<string, number>>;
   /** Pollution par cellule de 32 m (« pcx,pcz »). */
   pollution: Record<string, number>;
   /** Pollution du sol, par cellule de 32 m. */
@@ -143,6 +145,7 @@ export function emptyChanges(): WorldChanges {
     nextSpawnId: 1,
     researching: null,
     progress: {},
+    packProgress: {},
     pollution: {},
     groundPollution: {},
     enemies: [],
@@ -261,6 +264,17 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];
       if (isNum(v) && v > 0) result.progress[t.id] = Math.floor(v);
+    }
+  }
+  if (typeof r.packProgress === 'object' && r.packProgress !== null) {
+    for (const t of TECHS) {
+      const row = (r.packProgress as Record<string, unknown>)[t.id];
+      if (typeof row !== 'object' || row === null) continue;
+      for (const [pack, v] of Object.entries(row as Record<string, unknown>)) {
+        if (isSciencePack(pack) && isNum(v) && v > 0) {
+          (result.packProgress[t.id] ??= {})[pack] = Math.floor(v);
+        }
+      }
     }
   }
   if (isNum(r.time) && r.time > 0) result.time = r.time;
