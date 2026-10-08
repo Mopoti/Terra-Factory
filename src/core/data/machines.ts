@@ -19,6 +19,7 @@ export type MachineType =
   | 'generator'
   | 'waterwheel'
   | 'pole'
+  | 'crank'
   | 'splitter'
   | 'sorter'
   | 'merger'

@@ -284,16 +284,42 @@ describe('électricité', () => {
       emptyMachine(6, 'drill_electric', 0, -3, 0),
     ];
     const f = new Factory([gen, pole, ...drills], rich);
-    run(f, 20);
+    run(f, 1.9); // avant le délai de blackout (surcharge de plus de 10 % : 2 s)
     const g = f.gridInfo(drills[0])!;
     expect(g.demandKw).toBe(360);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBeCloseTo(300 / 360, 3);
-    // 20 s x 4 minerais/s x 5/6 de courant, soit 66 à 67 minerais chacune.
-    expect(drills[0].stock!.count).toBeGreaterThanOrEqual(66);
-    expect(drills[0].stock!.count).toBeLessThanOrEqual(67);
-    // À pleine charge le générateur brûle 1 s de combustible par seconde.
-    expect(gen.fuelLeft).toBeLessThanOrEqual(100 - 9);
+    // 1,9 s x 4 minerais/s x 5/6 de courant, soit 6 à 7 minerais chacune.
+    expect(drills[0].stock!.count).toBeGreaterThanOrEqual(6);
+    expect(drills[0].stock!.count).toBeLessThanOrEqual(7);
+  });
+
+  it('blackout : surcharge de plus de 10 % pendant 2 s, réamorçage à la manivelle', () => {
+    const rich: FactoryWorld = {
+      oreAt: () => ({ id: 'iron_ore', item: 'iron_ore', amount: 9999 }),
+      mineOre: (_x, _z, n) => n,
+    };
+    const gen = emptyMachine(1, 'generator', 10, 0, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const pole = emptyMachine(2, 'pole', 6, 1, 0);
+    const crank = emptyMachine(7, 'crank', 8, 4, 0);
+    const drills = [
+      emptyMachine(3, 'drill_electric', 0, 0, 0),
+      emptyMachine(4, 'drill_electric', 0, 3, 0),
+      emptyMachine(5, 'drill_electric', 3, 3, 0),
+      emptyMachine(6, 'drill_electric', 0, -3, 0),
+    ];
+    const f = new Factory([gen, pole, crank, ...drills], rich);
+    run(f, 3);
+    const g = f.gridInfo(drills[0])!;
+    expect(g.blackout).toBe(true);
+    expect(f.status(drills[0])).toBe('noPower');
+    expect(f.crank(crank)).toBe('tooMuch'); // la demande dépasse toujours la production
+    f.remove(drills[3].id);
+    expect(f.crank(crank)).toBe('ok');
+    run(f, 3);
+    expect(f.gridInfo(drills[0])!.blackout).toBe(false);
+    expect(f.status(drills[0])).toBe('running');
   });
 });
 

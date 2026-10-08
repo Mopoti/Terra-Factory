@@ -221,7 +221,17 @@ export interface GridInfo {
   demandKw: number;
   /** Part de la demande satisfaite (0 à 1). */
   satisfaction: number;
+  /** Secondes passées en surcharge (demande > production) d'affilée. */
+  overloadS: number;
+  /** Réseau éteint par une surcharge : tout s'arrête jusqu'à un réamorçage à la manivelle. */
+  blackout: boolean;
 }
+
+/** Surcharge de 0 à 10 % : les machines ralentissent ; au-delà de 10 s elle provoque un blackout. */
+export const OVERLOAD_SOFT_S = 10;
+/** Surcharge de plus de 10 % : blackout après ce délai (s). */
+export const OVERLOAD_HARD_S = 2;
+export const OVERLOAD_HARD_RATIO = 1.1;
 
 export interface Cell {
   gx: number;
@@ -541,6 +551,7 @@ const MACHINE_TYPES: MachineType[] = [
   'generator',
   'waterwheel',
   'pole',
+  'crank',
   'splitter',
   'sorter',
   'arm_filter',
@@ -777,7 +788,15 @@ export class Factory {
     this.grids = new Map(
       [...new Set(this.gridOf.values())].map((id) => [
         id,
-        { id, machines: members.get(id) ?? 0, capacityKw: 0, demandKw: 0, satisfaction: 1 },
+        {
+          id,
+          machines: members.get(id) ?? 0,
+          capacityKw: 0,
+          demandKw: 0,
+          satisfaction: 1,
+          overloadS: this.overloadOf.get(id) ?? 0,
+          blackout: this.blackedOut.has(id),
+        },
       ]),
     );
   }
@@ -1084,7 +1103,7 @@ export class Factory {
   tick(dt: number): void {
     stepFluids(this.links, dt);
     stepFluids(this.tunnelLinks, dt);
-    this.updateGrids();
+    this.updateGrids(dt);
     for (const m of this.machines) {
       if (m.type === 'conveyor') this.tickBelt(m, dt);
       else if (isRouter(m.type)) this.tickRouter(m);
@@ -1142,7 +1161,26 @@ export class Factory {
   /** Bras robotiques : prochain côté à servir (pas sauvegardé). */
   private readonly armTurn = new Map<number, number>();
 
-  private updateGrids(): void {
+  /** Réseaux en blackout et temps de surcharge (par identifiant de réseau), conservés quand le plan est refait. */
+  private readonly blackedOut = new Set<number>();
+  private readonly overloadOf = new Map<number, number>();
+
+  /**
+   * Manivelle : réamorce le réseau de la manivelle `m` après un blackout. Il faut que la production couvre
+   * la demande (sinon il faut couper des machines ou ajouter des générateurs d'abord).
+   */
+  crank(m: Machine): 'ok' | 'running' | 'tooMuch' {
+    const g = this.gridInfo(m);
+    if (!g || !g.blackout) return 'running';
+    if (g.demandKw > g.capacityKw) return 'tooMuch';
+    this.blackedOut.delete(g.id);
+    this.overloadOf.delete(g.id);
+    g.blackout = false;
+    g.overloadS = 0;
+    return 'ok';
+  }
+
+  private updateGrids(dt: number): void {
     for (const g of this.grids.values()) {
       g.capacityKw = 0;
       g.demandKw = 0;
@@ -1160,13 +1198,27 @@ export class Factory {
     }
     for (const g of this.grids.values()) {
       g.satisfaction = g.demandKw <= 0 ? 1 : Math.min(1, g.capacityKw / g.demandKw);
+      const ratio = g.capacityKw > 0 ? g.demandKw / g.capacityKw : 0;
+      if (ratio > 1 && !g.blackout) {
+        g.overloadS += dt;
+        if (
+          g.overloadS >= OVERLOAD_SOFT_S ||
+          (ratio > OVERLOAD_HARD_RATIO && g.overloadS >= OVERLOAD_HARD_S)
+        ) {
+          g.blackout = true;
+          this.blackedOut.add(g.id);
+        }
+      } else if (ratio <= 1) g.overloadS = 0;
+      if (g.overloadS > 0) this.overloadOf.set(g.id, g.overloadS);
+      else this.overloadOf.delete(g.id);
+      if (g.blackout) g.satisfaction = 0;
     }
   }
 
   /** Un générateur ne brûle que ce qu'il faut pour la demande du réseau. */
   private tickGenerator(m: Machine, dt: number): void {
     const g = this.gridInfo(m);
-    if (!g || g.demandKw <= 0 || g.capacityKw <= 0) return;
+    if (!g || g.blackout || g.demandKw <= 0 || g.capacityKw <= 0) return;
     if (!this.fire(m)) return;
     this.burn(m, dt * Math.min(1, g.demandKw / g.capacityKw));
   }
@@ -1448,7 +1500,7 @@ export class Factory {
   private tickTurbine(m: Machine, dt: number): void {
     const g = this.gridInfo(m);
     const e = this.turbineEfficiency(m);
-    if (!g || g.demandKw <= 0 || g.capacityKw <= 0 || e <= 0) return;
+    if (!g || g.blackout || g.demandKw <= 0 || g.capacityKw <= 0 || e <= 0) return;
     const load = Math.min(1, g.demandKw / g.capacityKw);
     m.fluid.steam = Math.max(
       0,

@@ -632,6 +632,19 @@ export function mountMachineWindow(
         current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
       ),
     );
+    if (m.type === 'crank') {
+      const note = el('div', 'mach-info', t('machine.crank.help'));
+      const out = el('div', 'mach-info');
+      const button = el('button', 'btn', t('machine.crank.button'));
+      button.type = 'button';
+      button.addEventListener('click', () => {
+        const g = factory.gridInfo(m);
+        out.textContent = t(
+          g ? (`machine.crank.${factory.crank(m)}` as TranslationKey) : 'machine.crank.unlinked',
+        );
+      });
+      rows.append(note, button, out);
+    }
     if (isChest(m.type)) rows.append(chestGrid(m), el('small', 'help', t('machine.chestHint')));
     if (def.fuel || m.id < 0) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));

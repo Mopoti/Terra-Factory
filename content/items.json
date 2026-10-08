@@ -371,6 +371,16 @@
       }
     },
     {
+      "id": "machine_crank",
+      "weightKg": 6,
+      "volumeL": 8,
+      "color": "#8a6a3a",
+      "recipe": {
+        "iron_plate": 4,
+        "iron_gear": 2
+      }
+    },
+    {
       "id": "machine_pole",
       "weightKg": 2,
       "volumeL": 6,

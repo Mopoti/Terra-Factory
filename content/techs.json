@@ -161,6 +161,7 @@
       "requires": [],
       "unlocks": [
         "machine_pole",
+        "machine_crank",
         "machine_generator",
         "machine_drill_electric",
         "machine_lab"

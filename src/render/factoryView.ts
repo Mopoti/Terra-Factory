@@ -644,6 +644,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   chest_iron: 0.6,
   generator: 1.1,
   pole: 3.6,
+  crank: 1.0,
   splitter: 0.4,
   merger: 0.4,
   arm: 0.7,
@@ -925,6 +926,14 @@ function addMachineBody(
       true,
     );
     mb.box(x, 1.5, z, 0.14, 0.2, 0.14, hexToRgb('#ffd27a'), true);
+    return;
+  }
+  if (type === 'crank') {
+    // Manivelle : socle, montant et manivelle à bras.
+    mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
+    mb.box(x, 0.2, z, 0.2, 0.6, 0.2, color, true);
+    mb.box(x, 0.7, z, 0.6, 0.08, 0.1, hexToRgb('#3d3a38'), true);
+    mb.box(x + 0.28, 0.5, z, 0.08, 0.28, 0.08, hexToRgb('#3d3a38'), true);
     return;
   }
   if (type === 'builder') {

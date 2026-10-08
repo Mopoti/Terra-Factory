@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 97** : point 6a : surcharge → ralentissement puis blackout (>110 % 2 s ou >10 s), manivelle de réamorçage (`crank`). Reste : 6b Bars (pression, friction, paliers de tuyaux, surpresseur, rupture/réparation), 6c refroidissement, puis 7, 8, 10, 11, 12.
 - **Tour 96** : point 3b-3 : constructeur T2 (tuyau de laiton), presse hydraulique lourde T3 (tuyau d'acier), station de lavage (2 minerais + 20 L → 3 purifiés, recettes de fourneau associées), tuyaux par palier (amélioration sur place, couleurs). Reste : point 6 (pression, tuyaux), 7, 8, 10, 11, 12, temps de fabrication à la main, tableau type×tier, paquets T2–T4.
 - **Tour 95** : point 5d : remplisseuse/videuse de barils T3 (`barreler`, recettes avec `fluid`), baril vide (2 acier) et baril d'eau (100 L), technologie « barils T3 ». Reste : 3b-3, point 6 (pression, tuyaux T2/T3), 7, 8, 10, 11, 12.
 - **Tour 94** : point 5c : portée des tunnels par niveau de tapis (4/8/16, tuyaux 4), patron d'entrée avec sortie fantôme et paires enchaînées, piliers automatiques sous les tapis surélevés. Reste : 5d barils (avec fluides), 3b-3, point 6, 7, 8, 10, 11, 12.

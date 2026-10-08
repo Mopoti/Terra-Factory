@@ -238,3 +238,13 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Tuyaux par palier** : `machine_pipe` (cuivre, T1), `machine_pipe_2` (laiton, T2), `machine_pipe_3` (acier, T3) ; on pose un palier supérieur par-dessus pour améliorer sur place (le fluide reste). Couleurs cuivre / laiton / acier. **Pression, friction et portée de tunnel par palier : point 6** (aujourd'hui, seule la couleur change).
 - Technologies : **Fabrication T2** (40 paquets, après Métallurgie T2 : constructeur, tuyau de laiton, lavage) ; **Presse lourde T3** (100 paquets, après Fabrication T2 et Construction T2 : presse, tuyau d'acier).
 - **À faire** : durée de fabrication à la main selon l'outil ; eau « sous pression » du lavage et boost de vitesse du constructeur à l'eau froide (point 6).
+
+## 6. Point 6 — réseaux Volts et Bars
+
+- **Découpage (PO)** : **6a** Volts (surcharge, blackout, manivelle) ; **6b** Bars (pression, friction, paliers de tuyaux, surpresseur, rupture et réparation, valeurs du document : cuivre 5 bars / −0,1 par case, laiton 20 bars / −0,05, acier 50 bars / −0,02) ; **6c** refroidissement à l'eau (+50 % de vitesse) et eau sous pression du lavage.
+
+### 6.1 Point 6a : surcharge et blackout (Tour 97)
+
+- Demande entre 100 et 110 % de la production : les machines **ralentissent** (comme avant). Demande **au-delà de 110 % pendant 2 s**, ou **surcharge de plus de 10 s** : **blackout** du réseau (poteaux reliés) : plus aucune machine ne tourne (« Pas de courant »), les générateurs ne brûlent plus.
+- **Manivelle de réamorçage** (`crank`, 2×2, 4 plaques de fer + 2 engrenages ; débloquée par Électricité) : posée près d'un poteau, sa fenêtre a un bouton « Actionner la manivelle ». Le réseau repart seulement si la production couvre la demande ; sinon « Demande trop forte » : couper des machines (les retirer) ou ajouter des générateurs.
+- Le poteau affiche « BLACKOUT » ou « Surcharge depuis N s ». Le blackout n'est pas sauvegardé (un rechargement rallume le réseau).

@@ -140,6 +140,16 @@
       "pollutionKind": "air"
     },
     {
+      "id": "crank",
+      "w": 2,
+      "d": 2,
+      "item": "machine_crank",
+      "color": "#8a6a3a",
+      "fuel": false,
+      "producesKw": 0.1,
+      "height": 1.0
+    },
+    {
       "id": "pole",
       "w": 2,
       "d": 2,

@@ -1283,6 +1283,11 @@ export function startGameView(
       );
     } else if (m.type === 'pole') {
       const g = factory.gridInfo(m);
+      if (g?.blackout) rows.push(`<div class="warn">${t('factory.power.blackout')}</div>`);
+      else if (g && g.overloadS > 0)
+        rows.push(
+          `<div class="warn">${t('factory.power.overload', { s: String(Math.round(g.overloadS)) })}</div>`,
+        );
       rows.push(
         g && g.machines > 0
           ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(Math.round(g.capacityKw)), demand: String(Math.round(g.demandKw)) })}</div>`
