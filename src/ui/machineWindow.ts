@@ -1,5 +1,6 @@
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
+import { isSciencePack } from '../core/data/techs';
 import { isAssembler, isChest, isDrill, isSmith, machineDef } from '../core/data/machines';
 import {
   MOULD_CYCLES,
@@ -110,7 +111,7 @@ export function mountMachineWindow(
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
     (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
-    (slot === 'input' && m.type === 'lab' && item === 'science_pack') ||
+    (slot === 'input' && m.type === 'lab' && isSciencePack(item)) ||
     (slot === 'input' && m.type === 'turret' && item === 'magazine');
 
   function drop(m: Machine, slot: SlotName, item: string): void {

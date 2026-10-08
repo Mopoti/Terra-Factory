@@ -96,7 +96,8 @@
       ],
       "unlocks": [
         "machine_furnace_electric",
-        "silicon_raw"
+        "silicon_raw",
+        "silicon_chip"
       ]
     },
     {
@@ -119,12 +120,15 @@
         "science_pack": 160
       },
       "requires": [
-        "oil_3"
+        "oil_3",
+        "silicon_3"
       ],
       "unlocks": [
         "machine_refinery",
         "machine_plastic_press",
-        "plastic_insulator"
+        "plastic_insulator",
+        "cable_insulated",
+        "science_pack_3"
       ]
     },
     {

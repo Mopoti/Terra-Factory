@@ -291,3 +291,10 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Presse à plastique T3** (`plastic_press`, 3×3, 80 kW ; 8 lingots d'acier + 6 engrenages + 10 fils) : recette unique **20 L de polymère (côté gauche) → 4 isolants en plastique** en 3 s ; les isolants sortent devant.
 - Technologie **Plastique T3** (160 paquets, après Pétrole T3).
 - À venir (7d) : câble isolé (4 fils de cuivre + 1 isolant → 4 câbles), puce en silicium, paquet de science T3.
+
+### 7.4 Point 7d : câble isolé, puce en silicium, paquet de science T3 (Tour 103)
+
+- **Câble isolé** : 4 fils de cuivre + 1 isolant en plastique → **4 câbles isolés** (technologie Plastique T3, qui demande maintenant aussi Silicium T3).
+- **Puce en silicium** (recette provisoire du PO à confirmer) : 1 silicium brut + 2 fils de cuivre → 1 puce (technologie Silicium T3).
+- **Paquet de science T3** : 1 puce en silicium + 1 câble isolé → 1 paquet (comme le tableau du §1.3). Le laboratoire l'accepte (un seul type de paquet à la fois dans sa case) et **1 paquet T3 compte pour 3 études** : valeur provisoire en attendant le tableau type × tier (technologies qui exigent chacune leur paquet).
+- Point 7 terminé. Reste à faire : paquets T2 (plaque d'acier + tuyau de laiton) et T4, tableau type × tier.

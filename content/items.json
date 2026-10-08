@@ -615,6 +615,37 @@
       }
     },
     {
+      "id": "cable_insulated",
+      "weightKg": 0.05,
+      "volumeL": 0.1,
+      "color": "#d9a441",
+      "recipe": {
+        "copper_wire": 4,
+        "plastic_insulator": 1
+      },
+      "yield": 4
+    },
+    {
+      "id": "silicon_chip",
+      "weightKg": 0.02,
+      "volumeL": 0.05,
+      "color": "#2f6f5a",
+      "recipe": {
+        "silicon_raw": 1,
+        "copper_wire": 2
+      }
+    },
+    {
+      "id": "science_pack_3",
+      "weightKg": 0.1,
+      "volumeL": 0.2,
+      "color": "#7a5cd6",
+      "recipe": {
+        "silicon_chip": 1,
+        "cable_insulated": 1
+      }
+    },
+    {
       "id": "machine_lab",
       "weightKg": 12,
       "volumeL": 25,

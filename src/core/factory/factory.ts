@@ -8,6 +8,7 @@ import {
   recipeByproduct,
   recipeProduct,
 } from '../data/recipes';
+import { isSciencePack, packValue } from '../data/techs';
 import {
   beltSpeed,
   filterCount,
@@ -1477,7 +1478,8 @@ export class Factory {
       );
     if (isLab(target.type))
       return (
-        item === 'science_pack' &&
+        isSciencePack(item) &&
+        (!target.input || target.input.item === item) &&
         (target.input?.count ?? 0) < (machineDef(target.type).stockMax ?? 20)
       );
     return false;
@@ -1722,12 +1724,13 @@ export class Factory {
     const seconds = machineDef(m.type).craftSeconds ?? 6;
     if (m.progress < seconds) return;
     m.progress -= seconds;
+    const value = m.input ? packValue(m.input.item) : 1;
     if (m.input) {
       m.input.count--;
       if (m.input.count <= 0) m.input = null;
     }
-    this.labDemand--;
-    this.labDone++;
+    this.labDemand -= value;
+    this.labDone += value;
   }
 
   private ingredientRoom(m: Machine, item: string): boolean {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { itemById } from '../data/items';
 import { machineDef } from '../data/machines';
 import { MOULD_CYCLES } from '../data/recipes';
 import {
@@ -1797,5 +1798,27 @@ describe('raffinerie et plastique (7c)', () => {
     run(strong.f, 30);
     expect(strong.r.pressure).toBeGreaterThanOrEqual(8);
     expect(strong.r.fluid.polymer).toBeGreaterThan(5);
+  });
+});
+
+describe('câble isolé, puce et paquet T3 (7d)', () => {
+  it('un paquet de science T3 vaut 3 études au laboratoire', () => {
+    const lab = emptyMachine(1, 'lab', 8, 0, 0);
+    lab.input = { item: 'science_pack_3', count: 2 };
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), lab], makeWorld().world);
+    f.labDemand = 10;
+    run(f, 7);
+    expect(f.takeLabPacks()).toBe(3);
+    expect(lab.input?.count).toBe(1);
+    expect(f.labDemand).toBe(7);
+  });
+
+  it('les recettes : 4 fils + 1 isolant → 4 câbles isolés ; puce ; paquet T3', () => {
+    expect(itemById('cable_insulated').recipe).toEqual({ copper_wire: 4, plastic_insulator: 1 });
+    expect(itemById('cable_insulated').yield).toBe(4);
+    expect(itemById('silicon_chip').recipe).toEqual({ silicon_raw: 1, copper_wire: 2 });
+    expect(itemById('science_pack_3').recipe).toEqual({ silicon_chip: 1, cable_insulated: 1 });
   });
 });
