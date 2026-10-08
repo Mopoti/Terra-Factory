@@ -11,6 +11,13 @@ export interface PauseActions {
   manualSaveNames(): string[];
   /** Enregistre une sauvegarde manuelle. */
   save(name: string): void;
+  /** Multijoueur : ouvrir la partie aux invités (absent si la partie n'est pas multijoueur). */
+  multi?: {
+    code(): string | null;
+    players(): string[];
+    start(): Promise<string>;
+    stop(): void;
+  };
   /** Quitte vers le menu principal (une sauvegarde automatique est faite avant). */
   quit(): void;
 }
@@ -23,7 +30,7 @@ export interface PauseMenu {
   dispose(): void;
 }
 
-type Screen = 'main' | 'save' | 'settings';
+type Screen = 'main' | 'save' | 'settings' | 'multi';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -62,6 +69,7 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
       el('h1', undefined, t('pause.title')),
       button(t('pause.resume'), close, 'menu-btn primary'),
       button(t('pause.save'), () => setScreen('save')),
+      ...(actions.multi ? [button(t('pause.multi'), () => setScreen('multi'))] : []),
       button(t('pause.settings'), () => setScreen('settings')),
     );
     const quit = button('', actions.quit);
@@ -111,10 +119,65 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
     return panel;
   }
 
+  let multiTimer = 0;
+  function multiPanel(): HTMLElement {
+    const panel = el('div', 'panel');
+    const multi = actions.multi;
+    panel.append(el('h2', undefined, t('pause.multi')));
+    if (!multi) return panel;
+    const status = el('p', 'note');
+    const list = el('ul', 'mp-players');
+    const code = multi.code();
+    if (!code) {
+      status.textContent = t('pause.multi.closed');
+      const open = button(
+        t('pause.multi.open'),
+        () => {
+          open.disabled = true;
+          status.textContent = t('pause.multi.opening');
+          multi.start().then(
+            () => render(),
+            () => {
+              open.disabled = false;
+              status.textContent = t('pause.multi.error');
+            },
+          );
+        },
+        'menu-btn primary',
+      );
+      panel.append(status, open);
+    } else {
+      const big = el('div', 'invite-code', code);
+      const link = `${window.location.origin}${window.location.pathname}?join=${code}`;
+      const copy = button(t('pause.multi.copy'), () => {
+        void navigator.clipboard?.writeText(link);
+        copy.textContent = t('pause.multi.copied');
+      });
+      status.textContent = t('pause.multi.open.help');
+      panel.append(status, big, copy, el('h3', undefined, t('pause.multi.players')), list);
+      const refresh = (): void => {
+        list.replaceChildren(...multi.players().map((n) => el('li', undefined, n)));
+      };
+      refresh();
+      window.clearInterval(multiTimer);
+      multiTimer = window.setInterval(refresh, 1000);
+      panel.append(
+        button(t('pause.multi.stop'), () => {
+          multi.stop();
+          render();
+        }),
+      );
+    }
+    panel.append(button(t('common.back'), () => setScreen('main')));
+    return panel;
+  }
+
   function render(): void {
+    window.clearInterval(multiTimer);
     root.replaceChildren(el('div', 'pause-dim'));
     if (screen === 'main') root.append(mainPanel());
     else if (screen === 'save') root.append(savePanel());
+    else if (screen === 'multi') root.append(multiPanel());
     else root.append(buildSettingsPanel(() => setScreen('main'), render));
     root
       .querySelector<HTMLElement>(screen === 'save' ? 'input' : '.panel button')

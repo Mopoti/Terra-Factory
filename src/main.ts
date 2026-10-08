@@ -21,6 +21,8 @@ import { mountTech, type TechWindow } from './ui/techView';
 import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
+import { PeerNetwork } from './net/peerNetwork';
+import { HostSession } from './core/net/host';
 
 initLocale();
 await initKeyboardLayout();
@@ -69,9 +71,13 @@ interface Session {
   toastTimer: number;
 }
 
-const resetMenu = mountMenu(uiEl, { saves, devMode, onStartGame: startGame });
+const network = new PeerNetwork();
+const resetMenu = mountMenu(uiEl, { saves, devMode, onStartGame: startGame, network });
 let stopBackground: () => void = () => undefined;
 let session: Session | null = null;
+/** Partie ouverte aux invités (multijoueur) : fermée quand on quitte la partie. */
+let host: HostSession | null = null;
+let hostCode: string | null = null;
 
 function showToast(text: string): void {
   hudEl.querySelector('.toast')?.remove();
@@ -118,6 +124,9 @@ function quitToMenu(): void {
   s.hotbar.dispose();
   s.machine.dispose();
   s.view.dispose();
+  host?.close();
+  host = null;
+  hostCode = null;
   session = null;
   showMenu();
 }
@@ -243,6 +252,32 @@ function startGame(game: GameSummary, slot?: SaveSlot): void {
       s.lastManualName = name;
       showToast(t('pause.saved', { name }));
     },
+    multi: game.options.multiplayer.enabled
+      ? {
+          code: () => hostCode,
+          players: () => host?.players().map((p) => p.name) ?? [],
+          start: async () => {
+            host = new HostSession({
+              state,
+              factory: view.factory,
+              blockedFor: view.blockedFor,
+              world: game.world,
+              options: game.options,
+              hostName: t('join.defaultName'),
+              approve: (name) => window.confirm(t('pause.multi.approve', { name })),
+            });
+            hostCode = await host.open(network);
+            view.setHost(host);
+            return hostCode;
+          },
+          stop: () => {
+            view.setHost(null);
+            host?.close();
+            host = null;
+            hostCode = null;
+          },
+        }
+      : undefined,
     quit: quitToMenu,
   });
 

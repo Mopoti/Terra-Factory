@@ -1833,3 +1833,20 @@ body.touch-mode .tutorial-panel {
 body.touch-mode .craft-hud {
   bottom: 84px;
 }
+
+.invite-code {
+  font:
+    700 34px/1 ui-monospace,
+    monospace;
+  letter-spacing: 6px;
+  text-align: center;
+  padding: 14px 0;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  user-select: all;
+}
+.mp-players {
+  margin: 4px 0;
+  padding-left: 18px;
+  font-size: 14px;
+}

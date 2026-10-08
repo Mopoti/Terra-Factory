@@ -36,3 +36,21 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 - **Joueur / monde** (`src/core/game/playerData.ts`) : `PLAYER_KEYS` (barre d'objets, outils, équipement, munitions, cadavres, réapparition, tutoriel), `RESEARCH_KEYS` et `CREDIT_KEYS` (individuels seulement si le partage est désactivé), `splitChanges` / `mergeChanges` : séparer puis recoller redonne exactement les mêmes changements ; le **format des sauvegardes ne change pas**.
 - **Commandes** (`src/core/game/commands.ts`, `CommandBus`) : 12 commandes sérialisables (poser / démolir une machine, recette, ingrédients, réparer le réacteur, balise, vendre, acheter, recherche, étude, fabrication, annulation). Le terrain est fourni par l'hôte (`blockedFor`). Branchées dans le jeu, la fenêtre des machines, les technologies et le sac. Une commande survit à `JSON.stringify` (testé).
 - **Pas encore passé par des commandes** (à faire en M2, quand on branche le réseau) : récolte et ramassage, pièces de construction, sac ↔ coffres et cases des machines (`putInChest`, `loadMachine`…, qui manipulent encore la machine elle-même), duvets / lits, véhicules, filtres, combat du joueur. Le bus est synchrone ; pour un invité il deviendra asynchrone (envoi à l'hôte).
+
+## M2 — réseau à deux (Tour 118) : socle fait, jeu en réseau à finir
+
+**Fait et testé**
+
+- **Protocole** (`src/core/net/protocol.ts`) : l'invité envoie `join`, `cmd` (une commande du bus), `pos`, `leave` ; l'hôte répond `welcome` (monde, règles, état du monde, fiche du joueur), `refused`, `result`, `snap` (état du monde, toutes les 0,5 s), `players` (positions, 10 fois par seconde), `me` (sa fiche après chaque commande), `hit` (coup reçu).
+- **Transport** (`transport.ts`) : deux interfaces (`Link`, `Network`) ; un réseau **en mémoire** pour les tests et un réseau **réel** (`src/net/peerNetwork.ts`, WebRTC entre navigateurs avec le service de mise en relation gratuit de PeerJS ; `?peerServer=hôte:port` en choisit un autre pour les tests). Code d'invitation à 6 caractères, accepté seul ou dans un lien `?join=CODE`.
+- **Hôte** (`host.ts`) : accueille ou refuse (version, partie fermée, 5 joueurs, mot de passe, refus de l'hôte pour une partie privée) ; applique chaque commande d'un invité **sur l'état de CE joueur** (`GameState.forPlayer` : même monde, fiche individuelle, sac commun ou non selon les réglages) avec **le terrain de l'hôte** ; ignore les commandes inconnues ; un joueur qui revient (même nom) retrouve sa fiche. La simulation voit tous les joueurs (`simPlayers`) et les coups reçus sont renvoyés au bon joueur.
+- **Invité** (`guest.ts`) : rejoint par code, envoie des commandes (réponse attendue), reçoit le monde, les joueurs, sa fiche.
+- **Menus** : pause → **Multijoueur** (ouvrir la partie aux invités, code et lien, liste des joueurs, fermer) ; menu principal → **Rejoindre une partie** (code, nom, mot de passe). Une partie privée demande à l'hôte d'accepter chaque arrivant (boîte de confirmation).
+- **Vérifié avec deux vrais navigateurs** (service de mise en relation local) : l'hôte ouvre la partie, l'invité entre avec le code, l'hôte accepte, les deux voient la liste des joueurs. 13 tests en mémoire (refus, mot de passe, sac commun / individuel, technologies communes, commandes mal formées, retour d'un joueur…).
+
+**Pas encore fait (M2c : l'invité joue vraiment)**
+
+- Aujourd'hui l'invité se connecte puis voit une liste de joueurs : **il n'a pas encore le monde 3D**. À faire : lancer sa vue avec le monde reçu (même seed), appliquer les états du monde (machines, pièces, ennemis) à son usine locale sans la faire tourner, afficher les autres joueurs, envoyer sa position.
+- Brancher par commandes la récolte, les pièces de construction, les coffres et cases des machines, les véhicules (listés en M1) : sans cela, l'invité ne peut pas encore récolter ni construire des pièces.
+- Le bus d'un invité doit être asynchrone (réponse de l'hôte) ; l'état du monde est envoyé en entier à chaque fois (à remplacer par des différences en M3).
+- Le service de mise en relation PeerJS est un tiers gratuit : sans lui on ne peut pas se trouver (une fois connectés, les joueurs échangent directement). Mot de passe encore stocké en clair dans la partie.

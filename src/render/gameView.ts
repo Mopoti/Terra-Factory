@@ -100,7 +100,8 @@ import {
 import { pipeMaxBar } from '../core/factory/fluids';
 import { Tutorial } from '../core/game/tutorial';
 import { WorldSimulation, type SimEvent } from '../core/game/simulation';
-import { CommandBus } from '../core/game/commands';
+import { CommandBus, type CommandContext } from '../core/game/commands';
+import type { HostSession } from '../core/net/host';
 import { mountTutorialPanel } from '../ui/tutorialPanel';
 import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
@@ -172,6 +173,10 @@ export interface GameViewHandle {
   threat: Threat;
   /** Commandes du joueur (poser, démolir, fabriquer, vendre…). */
   bus: CommandBus;
+  /** Terrain vu par les commandes : cases bloquées pour une machine à ce niveau (utilisé par l'hôte multijoueur). */
+  blockedFor: CommandContext['blockedFor'];
+  /** Branche (ou, avec null, débranche) la session d'hôte : la simulation et les envois aux invités la suivent. */
+  setHost(session: HostSession | null): void;
   /** Le coffre d'un buggy vu comme une machine (identifiant négatif = −identifiant du buggy), ou null. */
   vehicleMachine(id: number): Machine | null;
   /** Identifiant (négatif, pour la fenêtre) du buggy que conduit le joueur, ou null. */
@@ -823,7 +828,7 @@ export function startGameView(
     );
 
   /** Bus de commandes : les actions qui changent le monde passent par lui (voir core/game/commands.ts). */
-  const bus = new CommandBus({
+  const busContext: CommandContext = {
     state: options.state,
     factory,
     blockedFor: (type, level) => {
@@ -835,7 +840,8 @@ export function startGameView(
       if (type === 'pump') return (cell) => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz);
       return machineBlocked;
     },
-  });
+  };
+  const bus = new CommandBus(busContext);
 
   function extendPoleLine(down: boolean): void {
     if (!down || !poleChain || !factory.machines.includes(poleChain)) {
@@ -2338,6 +2344,8 @@ export function startGameView(
     options.state.changes.enemies,
   );
   const sim = new WorldSimulation(options.state, factory, threat);
+  /** Session d'hôte multijoueur (quand la partie est ouverte aux invités). */
+  let hostSession: HostSession | null = null;
   const enemyView = new EnemyView(scene);
   const MAX_HEALTH = 100;
   let playerHealth = MAX_HEALTH;
@@ -2889,7 +2897,16 @@ export function startGameView(
     if (building && !paused && !uiOpen) updateBuild(dt);
     // Monde : simulation à pas fixe (20 par seconde), la même que celle d'un hôte multijoueur.
     if (!paused) {
-      for (const e of sim.advance(dt, [{ id: 'player', x: playerX, z: playerZ }])) onSimEvent(e);
+      const me = { x: playerX, z: playerZ };
+      const events = sim.advance(
+        dt,
+        hostSession ? hostSession.simPlayers(me) : [{ id: 'player', ...me }],
+      );
+      for (const e of events) onSimEvent(e);
+      if (hostSession) {
+        hostSession.routeEvents(events);
+        hostSession.advance(dt, { x: playerX, y: playerY, z: playerZ, yaw: facing });
+      }
     }
     if (!paused) updateThreat(dt);
     factoryView.updateSmoke(now / 1000);
@@ -2979,6 +2996,10 @@ export function startGameView(
     factory,
     threat,
     bus,
+    blockedFor: busContext.blockedFor,
+    setHost: (session) => {
+      hostSession = session;
+    },
     vehicleMachine,
     mountedMachineId: () => (mounted ? -mounted.id : null),
     dropItem: (item, count) => {

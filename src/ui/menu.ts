@@ -19,10 +19,12 @@ import {
 import { buildGameEditor } from './gameEditor';
 import { downloadBlob, pickFile } from './files';
 import { confirmModal, infoModal, promptModal } from './modal';
+import { GuestClient, RefusedError } from '../core/net/guest';
+import { parseInviteCode, type Network } from '../core/net/transport';
 import { buildSettingsPanel } from './settingsScreen';
 import './menu.css';
 
-type Screen = 'main' | 'newGame' | 'loadGame' | 'settings';
+type Screen = 'main' | 'newGame' | 'loadGame' | 'settings' | 'join';
 
 /** Icône « corbeille ». */
 const TRASH_ICON =
@@ -83,6 +85,8 @@ export interface MenuOptions {
   devMode: boolean;
   /** Appelé quand le joueur lance une partie (nouvelle, continuée ou chargée). */
   onStartGame: (game: GameSummary, slot?: SaveSlot) => void;
+  /** Réseau réel (WebRTC) pour rejoindre la partie d'un autre joueur. */
+  network?: Network;
 }
 
 /** Monte le menu une seule fois ; la fonction renvoyée le remet sur l'écran principal. */
@@ -137,6 +141,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     panel.append(button(t('menu.newGame'), () => go('newGame')));
     if (games.length > 0) panel.append(button(t('menu.loadGame'), () => go('loadGame')));
     else panel.append(button(t('manage.import'), () => void importFromFile()));
+    if (options.network) panel.append(button(t('menu.join'), () => go('join')));
     panel.append(button(t('menu.settings'), () => go('settings')));
     if (canQuit()) panel.append(button(t('menu.quit'), () => window.close()));
 
@@ -439,7 +444,102 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     return panel;
   }
 
+  /** Rejoindre la partie d'un autre joueur : code d'invitation, nom, mot de passe. (Test de connexion : le jeu en réseau lui-même arrive à l'étape M2c.) */
+  let guest: GuestClient | null = null;
+  let joinTimer = 0;
+  function joinPanel(): HTMLElement {
+    const panel = el('div', 'panel');
+    panel.append(el('h2', undefined, t('menu.join')));
+    const network = options.network;
+    if (!network) return panel;
+    const leave = (): void => {
+      window.clearInterval(joinTimer);
+      guest?.leave();
+      guest = null;
+    };
+    if (guest) {
+      const g = guest;
+      const list = el('ul', 'mp-players');
+      const refresh = (): void => {
+        list.replaceChildren(...g.players.map((p) => el('li', undefined, p.name)));
+      };
+      refresh();
+      window.clearInterval(joinTimer);
+      joinTimer = window.setInterval(refresh, 1000);
+      g.onClose(() => {
+        guest = null;
+        render();
+      });
+      panel.append(
+        el('p', 'note', t('join.connected', { seed: g.worldParams.seed })),
+        list,
+        el('p', 'note', t('join.m2c')),
+        button(t('join.leave'), () => {
+          leave();
+          render();
+        }),
+      );
+      return panel;
+    }
+    const fields = (label: string, type: string, value = ''): HTMLInputElement => {
+      const f = el('label', 'field');
+      f.append(el('span', undefined, label));
+      const input = el('input');
+      input.type = type;
+      input.value = value;
+      input.maxLength = 80;
+      f.append(input);
+      panel.append(f);
+      return input;
+    };
+    const code = fields(
+      t('join.code'),
+      'text',
+      new URLSearchParams(window.location.search).get('join') ?? '',
+    );
+    const who = fields(t('join.name'), 'text', t('join.defaultName'));
+    const pass = fields(t('join.password'), 'password');
+    const status = el('p', 'note');
+    const go = button(
+      t('join.connect'),
+      () => {
+        const parsed = parseInviteCode(code.value);
+        if (!parsed) {
+          status.textContent = t('join.badCode');
+          return;
+        }
+        go.disabled = true;
+        status.textContent = t('join.connecting');
+        GuestClient.connect(network, parsed, {
+          name: who.value.trim() || 'Joueur',
+          password: pass.value,
+        }).then(
+          (g) => {
+            guest = g;
+            render();
+          },
+          (e: unknown) => {
+            go.disabled = false;
+            status.textContent =
+              e instanceof RefusedError
+                ? t(`join.refused.${e.reason}` as TranslationKey)
+                : t('join.unreachable');
+          },
+        );
+      },
+      'menu-btn primary',
+    );
+    panel.append(
+      status,
+      go,
+      button(t('common.back'), () => go_('main')),
+    );
+    return panel;
+  }
+  const go_ = (next: Screen): void => go(next);
+
   function render(): void {
+    window.clearInterval(joinTimer);
     // Plus aucune partie (la dernière vient d'être supprimée) : retour à l'écran principal.
     if (screen === 'loadGame' && saves.list().length === 0) screen = 'main';
     disposeEditor();
@@ -457,6 +557,9 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
         break;
       case 'settings':
         root.append(buildSettingsPanel(() => go('main'), render));
+        break;
+      case 'join':
+        root.append(joinPanel());
         break;
     }
     const first = screen === 'newGame' ? root.querySelector('input') : root.querySelector('button');

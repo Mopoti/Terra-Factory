@@ -16,6 +16,7 @@ import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { TECHS, packCost, scienceCost, techById, techFor } from '../data/techs';
 import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
 import { buyPrice, sellPrice } from './trade';
+import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from './playerData';
 import { recipeById } from '../data/recipes';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { pillarsFor, pillarsForFace } from '../build/support';
@@ -123,6 +124,56 @@ export class GameState {
   ) {
     this.inventory = normalizeInventory(saved?.inventory);
     this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
+  }
+
+  /** Rejoue chez l'hôte un événement venu de l'état d'un joueur invité (le monde a changé : affichage à refaire). */
+  relay(e: StateEvent): void {
+    if (e.type === 'build') this.roomCache = null;
+    this.emit(e);
+  }
+
+  /**
+   * État d'un joueur invité vu par l'hôte : le MONDE est celui de l'hôte (même objet, modifié sur place) et les champs
+   * individuels (barre d'objets, outils, tutoriel… et, si le partage est désactivé, technologies et crédits) sont ceux
+   * de sa fiche. Les actions du joueur s'exécutent sur cet état avec le même code que pour l'hôte.
+   */
+  static forPlayer(
+    host: GameState,
+    profile: { inventory: Inventory; changes: PlayerChanges },
+    share: { research: boolean; credits: boolean; inventory: boolean },
+  ): GameState {
+    const guest = new GameState(undefined, host.baseLimits);
+    const keys = new Set<string>(perPlayerKeys(share));
+    const own = profile.changes as Record<string, unknown>;
+    const fresh = splitChanges(emptyChanges(), [...keys] as PlayerKey[]).player as Record<
+      string,
+      unknown
+    >;
+    for (const k of keys) if (own[k] === undefined) own[k] = fresh[k];
+    guest.changes = new Proxy(host.changes, {
+      get: (target, k) => (typeof k === 'string' && keys.has(k) ? own[k] : Reflect.get(target, k)),
+      set: (target, k, v) => {
+        if (typeof k === 'string' && keys.has(k)) own[k] = v;
+        else Reflect.set(target, k, v);
+        return true;
+      },
+    });
+    guest.inventory = profile.inventory;
+    if (share.inventory) {
+      Object.defineProperty(guest, 'inventory', {
+        get: () => host.inventory,
+        set: (v: Inventory) => {
+          host.inventory = v;
+        },
+      });
+    }
+    guest.creative = host.creative;
+    guest.onChange((e) => {
+      if (e.type === 'inventory' || e.type === 'hotbar') {
+        if (share.inventory) host.relay(e);
+      } else host.relay(e);
+    });
+    return guest;
   }
 
   /** Mode Créatif : recherche et fabrication gratuites, sac sans limite de poids ni de volume. */
