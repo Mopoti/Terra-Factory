@@ -3,6 +3,21 @@ import { t, type TranslationKey } from '../i18n';
 import { actionLabel, getDevice } from './keyHints';
 import { getSettings } from '../settings/store';
 
+/** Noms des objets cités dans les textes : toujours ceux du jeu (hématite, fourneau…), jamais écrits en dur. */
+function names(): Record<string, string> {
+  const item = (id: string): string => t(`item.${id}` as TranslationKey).toLocaleLowerCase();
+  return {
+    tool: item('tool_stone'),
+    wood: item('wood'),
+    stone: item('stone'),
+    furnace: item('machine_furnace'),
+    coal: item('coal'),
+    ore: item('iron_ore'),
+    ingot: item('iron_ingot'),
+    recipe: t('recipe.iron').toLocaleLowerCase(),
+  };
+}
+
 /** Panneau du tutoriel en haut à droite : l'étape en cours, un compteur, et « Passer le tutoriel ». */
 export function mountTutorialPanel(
   container: HTMLElement,
@@ -53,7 +68,7 @@ export function mountTutorialPanel(
         `${t('tutorial.title')} — ${t('tutorial.step', { n: String(n), total: String(TUTORIAL_STEPS.length) })}`,
       ),
       textLine('small', t(`tutorial.group.${step.group}` as TranslationKey)),
-      textLine('p', t(`tutorial.step.${step.id}` as TranslationKey, { keys })),
+      textLine('p', t(`tutorial.step.${step.id}` as TranslationKey, { keys, ...names() })),
       ...(progress.total > 1 ? [progressBar(progress.have, progress.total)] : []),
       skip,
     );

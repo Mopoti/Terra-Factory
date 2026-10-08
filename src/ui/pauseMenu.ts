@@ -204,7 +204,8 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
   }
 
   const onKey = (e: KeyboardEvent): void => {
-    if (e.key !== 'Escape' || e.repeat) return;
+    // « Esc » : ancien nom de la touche sur certains navigateurs.
+    if ((e.key !== 'Escape' && e.key !== 'Esc' && e.code !== 'Escape') || e.repeat) return;
     if (!open) openMenu();
     else if (screen !== 'main') setScreen('main');
     else close();

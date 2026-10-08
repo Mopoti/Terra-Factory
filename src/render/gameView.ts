@@ -3139,7 +3139,9 @@ export function startGameView(
       if (value) {
         releaseLock();
       } else {
-        ignoreUnlockUntil = performance.now() + 600;
+        // Reprise du jeu : on ne masque presque pas les libérations de la souris, pour qu'un nouvel Échap
+        // tout de suite après rouvre bien le menu.
+        ignoreUnlockUntil = performance.now() + 150;
         wantLock = rig.view === 'first';
         requestLock();
       }
@@ -3149,7 +3151,7 @@ export function startGameView(
       if (value) {
         releaseLock();
       } else if (!paused) {
-        ignoreUnlockUntil = performance.now() + 600;
+        ignoreUnlockUntil = performance.now() + 300;
         wantLock = rig.view === 'first';
         requestLock();
       }

@@ -471,3 +471,8 @@ Voir **`docs/multijoueur.md`** : décisions du PO (hôte = un joueur, 5 joueurs 
 - **Clic droit bref** (sans bouger) : range l'objet tenu ou désélectionne la case de la barre (`clearHand`) ; le patron disparaît et la main est vide. Un clic droit maintenu garde son rôle (démolir).
 - Une case de la barre dont le stock est à zéro ne se sélectionne plus (il n'y a rien à poser).
 - Vérifié dans le navigateur : pose de deux fours (le patron reste après le premier, disparaît après le second) ; clic droit bref.
+
+## Tutoriel : noms des objets, et touche Échap (Tour 135)
+
+- **Noms du jeu dans le tutoriel** : les étapes four / charbon / fer citent maintenant les objets par leur nom réel, pris dans les traductions (`{furnace}` = fourneau, `{ore}` = hématite (fer), `{recipe}`, `{ingot}`, `{tool}`, `{coal}`…), au lieu de « four » et « minerai de fer » écrits en dur. Un test refuse les anciens noms dans les textes du tutoriel.
+- **Échap** : le menu pause s'ouvre bien dans les cas que j'ai pu essayer (3e personne, 1ère personne avec souris verrouillée, patron de pose actif, sac ouvert puis refermé, partie multijoueur). Deux durcissements : un Échap pressé juste après avoir repris le jeu (moins de 0,6 s) était ignoré en 1ère personne — le délai passe de 600 à 150 ms (reprise du jeu) et 300 ms (fermeture d'une fenêtre) ; la touche est aussi reconnue par son code (`Escape`) ou l'ancien nom (`Esc`). Si le problème persiste, il faut connaître la vue, le navigateur et ce qui était ouvert.
