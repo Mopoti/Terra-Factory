@@ -222,7 +222,8 @@ export class FactoryView {
         );
       } else {
         const start = mb.positions.length;
-        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift);
+        const tint = m.type === 'pipe' ? machineDef('pipe').tierColors?.[m.tier - 1] : undefined;
+        addMachineBody(mb, m.type, m.gx, m.gz, m.rot, this.factory.fluidSides(m), m.lift, tint);
         growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
@@ -635,6 +636,9 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   bessemer: 1.5,
   mixer: 1.0,
   barreler: 1.0,
+  builder: 1.0,
+  heavy_press: 1.2,
+  washer: 1.0,
   waterwheel: 1.5,
   chest_wood: 0.6,
   chest_iron: 0.6,
@@ -690,6 +694,7 @@ function addMachineBody(
   rot: number,
   sides: number[] = [],
   lift = 0,
+  tint?: string,
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -697,7 +702,7 @@ function addMachineBody(
   const z = (gz + d / 2) * CELL_SIZE_M;
   const sx = w * CELL_SIZE_M - 0.06;
   const sz = d * CELL_SIZE_M - 0.06;
-  const color = hexToRgb(def.color);
+  const color = hexToRgb(tint ?? def.color);
   const [fx, fz] = RISE_DIR[rot];
   if (isArm(type)) {
     // Bras : socle, mât, bras horizontal vers l'avant et pince .
@@ -920,6 +925,61 @@ function addMachineBody(
       true,
     );
     mb.box(x, 1.5, z, 0.14, 0.2, 0.14, hexToRgb('#ffd27a'), true);
+    return;
+  }
+  if (type === 'builder') {
+    // Constructeur : caisson fermé, tête à outils au-dessus et bec de sortie.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx - 0.2, 0.55, sz - 0.2, color, true);
+    mb.box(x, 0.8, z, sx - 0.6, 0.14, sz - 0.6, shade(color, 1.3), true);
+    mb.box(x, 0.94, z, 0.12, 0.1, 0.12, hexToRgb('#e0a030'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    return;
+  }
+  if (type === 'heavy_press') {
+    // Presse hydraulique lourde : bâti, deux colonnes, vérin et plateau.
+    mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.7), true);
+    mb.box(x - sx / 2 + 0.15, 0.3, z, 0.2, 0.9, sz - 0.2, shade(color, 0.9), true);
+    mb.box(x + sx / 2 - 0.15, 0.3, z, 0.2, 0.9, sz - 0.2, shade(color, 0.9), true);
+    mb.box(x, 1.0, z, sx - 0.1, 0.2, sz - 0.3, color, true);
+    mb.box(x, 0.55, z, 0.3, 0.45, 0.3, hexToRgb('#8fa0ad'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.2,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
+    return;
+  }
+  if (type === 'washer') {
+    // Station de lavage : bassin ouvert (bords et eau) avec une rampe d'arrosage.
+    mb.box(x, 0, z, sx, 0.25, sz, shade(color, 0.7), true);
+    mb.box(x, 0.25, z, sx, 0.35, sz, color, true);
+    mb.box(x, 0.58, z, sx - 0.3, 0.04, sz - 0.3, hexToRgb('#3fa9f5'), true);
+    mb.box(x, 0.8, z, sx - 0.1, 0.08, 0.1, hexToRgb('#8fa0ad'), true);
+    mb.box(
+      x + fx * (sx / 2 - 0.05),
+      0.15,
+      z + fz * (sz / 2 - 0.05),
+      fx !== 0 ? 0.1 : 0.35,
+      0.12,
+      fz !== 0 ? 0.1 : 0.35,
+      hexToRgb('#3d3a38'),
+      true,
+    );
     return;
   }
   if (type === 'barreler') {

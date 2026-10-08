@@ -54,6 +54,37 @@
       ]
     },
     {
+      "id": "manufacturing_2",
+      "cost": {
+        "science_pack": 40
+      },
+      "requires": [
+        "metallurgy_2"
+      ],
+      "unlocks": [
+        "machine_builder",
+        "machine_pipe_2",
+        "machine_washer",
+        "iron_ore_washed",
+        "copper_ore_washed",
+        "zinc_ore_washed"
+      ]
+    },
+    {
+      "id": "heavy_press_3",
+      "cost": {
+        "science_pack": 100
+      },
+      "requires": [
+        "manufacturing_2",
+        "construction_2"
+      ],
+      "unlocks": [
+        "machine_heavy_press",
+        "machine_pipe_3"
+      ]
+    },
+    {
       "id": "logistics_2",
       "cost": {
         "science_pack": 40

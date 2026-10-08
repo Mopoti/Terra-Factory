@@ -649,6 +649,69 @@
       "color": "#4a8fc4"
     },
     {
+      "id": "machine_pipe_2",
+      "weightKg": 1,
+      "volumeL": 1,
+      "color": "#d9b44a"
+    },
+    {
+      "id": "machine_pipe_3",
+      "weightKg": 1.5,
+      "volumeL": 1,
+      "color": "#aab4bd"
+    },
+    {
+      "id": "machine_builder",
+      "weightKg": 25,
+      "volumeL": 40,
+      "color": "#7a8fa5",
+      "recipe": {
+        "iron_plate": 10,
+        "iron_gear": 6,
+        "copper_wire": 10
+      }
+    },
+    {
+      "id": "machine_heavy_press",
+      "weightKg": 60,
+      "volumeL": 60,
+      "color": "#5a5f66",
+      "recipe": {
+        "steel_ingot": 12,
+        "iron_gear": 8,
+        "copper_wire": 12
+      }
+    },
+    {
+      "id": "machine_washer",
+      "weightKg": 30,
+      "volumeL": 50,
+      "color": "#4a7f9f",
+      "recipe": {
+        "iron_plate": 8,
+        "iron_gear": 4,
+        "stone": 10
+      }
+    },
+    {
+      "id": "iron_ore_washed",
+      "weightKg": 0.4,
+      "volumeL": 0.3,
+      "color": "#a1887f"
+    },
+    {
+      "id": "copper_ore_washed",
+      "weightKg": 0.45,
+      "volumeL": 0.3,
+      "color": "#e08a4b"
+    },
+    {
+      "id": "zinc_ore_washed",
+      "weightKg": 0.5,
+      "volumeL": 0.3,
+      "color": "#d1c060"
+    },
+    {
       "id": "machine_boiler",
       "weightKg": 20,
       "volumeL": 30,

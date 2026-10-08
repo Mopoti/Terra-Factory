@@ -947,6 +947,7 @@ export class GameState {
       });
       const fresh = emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier);
       fresh.belt = old.belt;
+      fresh.fluid = old.fluid;
       factory.add(fresh);
       this.emit({ type: 'factory' });
       this.emit({ type: 'inventory' });

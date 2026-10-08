@@ -229,3 +229,12 @@ Tant que les objets n'existent pas, on branche une **recette provisoire** (paque
 - **Remplisseuse / videuse de barils T3** (`barreler`, 2×2, électrique 20 kW, réserve 200 L) : une seule machine, deux recettes choisies dans sa fenêtre (« Remplir » : baril vide + 100 L d'eau → baril d'eau ; « Vider » : l'inverse), 2 s par cycle. Eau par les côtés (tuyaux), objets : entrée derrière, sortie devant. 4 lingots d'acier + 4 engrenages + 8 fils de cuivre. Débloquée par **Logistique : barils T3** (80 paquets, après Vapeur et Logistique T3).
 - **Baril vide** : 2 lingots d'acier (120 L de volume, 8 kg) ; **baril d'eau** : 100 L (108 kg). C'est un objet solide : tapis, coffre, sac.
 - Seule l'eau se met en baril pour l'instant ; les autres fluides (pétrole…) arriveront avec les points 6/7 en ajoutant une recette (`fluid` dans `recipes.json`).
+
+### 3.7 Point 3b-3 : constructeur T2, presse lourde T3, lavage, tuyaux laiton et acier (Tour 96)
+
+- **Constructeur T2** (`builder`, 3×3, 40 kW électrique ; 10 plaques de fer + 6 engrenages + 10 fils de cuivre) : recette **tuyaux de laiton** = 1 lingot de cuivre + 1 lingot de zinc → 2 tuyaux, 2 s.
+- **Presse hydraulique lourde T3** (`heavy_press`, 3×3, **150 kW** : « électricité lourde » ; 12 lingots d'acier + 8 engrenages + 12 fils) : **tuyaux d'acier** = 2 lingots d'acier → 2 tuyaux, 3 s.
+- **Station de lavage T2** (`washer`, 3×3, 25 kW, réserve 200 L, eau par les côtés ; 8 plaques de fer + 4 engrenages + 10 pierre) : 2 minerais bruts + 20 L d'eau → **3 minerais purifiés** (fer, cuivre, zinc), 3 s. Le fourneau a des recettes équivalentes avec le minerai purifié (mêmes quantités et durées) : le rendement passe de 1 à 1,5 lingot par minerai brut.
+- **Tuyaux par palier** : `machine_pipe` (cuivre, T1), `machine_pipe_2` (laiton, T2), `machine_pipe_3` (acier, T3) ; on pose un palier supérieur par-dessus pour améliorer sur place (le fluide reste). Couleurs cuivre / laiton / acier. **Pression, friction et portée de tunnel par palier : point 6** (aujourd'hui, seule la couleur change).
+- Technologies : **Fabrication T2** (40 paquets, après Métallurgie T2 : constructeur, tuyau de laiton, lavage) ; **Presse lourde T3** (100 paquets, après Fabrication T2 et Construction T2 : presse, tuyau d'acier).
+- **À faire** : durée de fabrication à la main selon l'outil ; eau « sous pression » du lavage et boost de vitesse du constructeur à l'eau froide (point 6).

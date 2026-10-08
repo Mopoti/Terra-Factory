@@ -183,6 +183,120 @@
       "seconds": 2
     },
     {
+      "id": "brass_pipe",
+      "machine": "builder",
+      "in": {
+        "copper_ingot": 1,
+        "zinc_ingot": 1
+      },
+      "out": {
+        "machine_pipe_2": 2
+      },
+      "seconds": 2
+    },
+    {
+      "id": "steel_pipe",
+      "machine": "heavy_press",
+      "in": {
+        "steel_ingot": 2
+      },
+      "out": {
+        "machine_pipe_3": 2
+      },
+      "seconds": 3
+    },
+    {
+      "id": "wash_iron",
+      "machine": "washer",
+      "in": {
+        "iron_ore": 2
+      },
+      "out": {
+        "iron_ore_washed": 3
+      },
+      "fluid": {
+        "kind": "water",
+        "amount": 20
+      },
+      "seconds": 3
+    },
+    {
+      "id": "wash_copper",
+      "machine": "washer",
+      "in": {
+        "copper_ore": 2
+      },
+      "out": {
+        "copper_ore_washed": 3
+      },
+      "fluid": {
+        "kind": "water",
+        "amount": 20
+      },
+      "seconds": 3
+    },
+    {
+      "id": "wash_zinc",
+      "machine": "washer",
+      "in": {
+        "zinc_ore": 2
+      },
+      "out": {
+        "zinc_ore_washed": 3
+      },
+      "fluid": {
+        "kind": "water",
+        "amount": 20
+      },
+      "seconds": 3
+    },
+    {
+      "id": "iron_washed",
+      "machine": "furnace",
+      "in": {
+        "iron_ore_washed": 2,
+        "coal": 1
+      },
+      "out": {
+        "iron_ingot": 2
+      },
+      "seconds": 2
+    },
+    {
+      "id": "cast_iron_washed",
+      "machine": "furnace",
+      "in": {
+        "iron_ore_washed": 2,
+        "coal": 3
+      },
+      "out": {
+        "cast_iron_ingot": 2
+      },
+      "seconds": 4
+    },
+    {
+      "id": "copper_washed",
+      "machine": "furnace",
+      "in": {
+        "copper_ore_washed": 2
+      },
+      "out": {
+        "copper_ingot": 2
+      },
+      "seconds": 3
+    },
+    {
+      "id": "zinc_washed",
+      "machine": "furnace",
+      "in": {
+        "zinc_ore_washed": 2
+      },
+      "out": {
+        "zinc_ingot": 2
+      },
+      "seconds": 3
+    },
+    {
       "id": "concrete",
       "machine": "mixer",
       "in": {

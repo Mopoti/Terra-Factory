@@ -341,6 +341,9 @@ export function ports(
     case 'bessemer':
     case 'mixer':
     case 'barreler':
+    case 'builder':
+    case 'heavy_press':
+    case 'washer':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
     case 'drill_eco':
@@ -396,7 +399,8 @@ export function emptyMachine(
       mode: 'deny' as const,
       items: [],
     })),
-    tier: type === 'conveyor' ? Math.min(3, Math.max(1, Math.floor(tier) || 1)) : 1,
+    tier:
+      type === 'conveyor' || type === 'pipe' ? Math.min(3, Math.max(1, Math.floor(tier) || 1)) : 1,
     fluid: emptyFluid(),
     lift:
       type === 'conveyor'
@@ -528,6 +532,9 @@ const MACHINE_TYPES: MachineType[] = [
   'bessemer',
   'mixer',
   'barreler',
+  'builder',
+  'heavy_press',
+  'washer',
   'conveyor',
   'chest_wood',
   'chest_iron',
@@ -882,11 +889,10 @@ export class Factory {
 
   /** Le tapis de palier inférieur que ce tapis remplacerait (même case, même forme), ou null. */
   upgradeOf(type: MachineType, gx: number, gz: number, lift: number, tier: number): Machine | null {
-    if (type !== 'conveyor') return null;
+    if (type !== 'conveyor' && type !== 'pipe') return null;
     return (
       this.machines.find(
-        (m) =>
-          m.type === 'conveyor' && m.gx === gx && m.gz === gz && m.lift === lift && m.tier < tier,
+        (m) => m.type === type && m.gx === gx && m.gz === gz && m.lift === lift && m.tier < tier,
       ) ?? null
     );
   }

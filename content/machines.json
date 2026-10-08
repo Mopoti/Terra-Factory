@@ -273,6 +273,16 @@
       "w": 2,
       "d": 2,
       "item": "machine_pipe",
+      "tierItems": [
+        "machine_pipe",
+        "machine_pipe_2",
+        "machine_pipe_3"
+      ],
+      "tierColors": [
+        "#c97a3a",
+        "#d9b44a",
+        "#aab4bd"
+      ],
       "color": "#c97a3a",
       "fuel": false,
       "fluidCap": 100,
@@ -299,6 +309,40 @@
       "fuel": false,
       "consumesKw": 20,
       "stockMax": 20,
+      "fluidCap": 200,
+      "height": 1.0
+    },
+    {
+      "id": "builder",
+      "w": 3,
+      "d": 3,
+      "item": "machine_builder",
+      "color": "#7a8fa5",
+      "fuel": false,
+      "consumesKw": 40,
+      "stockMax": 100,
+      "height": 1.0
+    },
+    {
+      "id": "heavy_press",
+      "w": 3,
+      "d": 3,
+      "item": "machine_heavy_press",
+      "color": "#5a5f66",
+      "fuel": false,
+      "consumesKw": 150,
+      "stockMax": 100,
+      "height": 1.0
+    },
+    {
+      "id": "washer",
+      "w": 3,
+      "d": 3,
+      "item": "machine_washer",
+      "color": "#4a7f9f",
+      "fuel": false,
+      "consumesKw": 25,
+      "stockMax": 100,
       "fluidCap": 200,
       "height": 1.0
     },

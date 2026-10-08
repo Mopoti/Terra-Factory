@@ -1271,6 +1271,42 @@ describe('métallurgie 3b-2 : Bessemer (acier + scorie) et bétonnière', () => 
     expect(d.fluid.water).toBeCloseTo(100);
   });
 
+  it('le constructeur fait 2 tuyaux de laiton, la presse lourde 2 tuyaux d’acier', () => {
+    const b = emptyMachine(1, 'builder', 8, 0, 0);
+    b.recipe = 'brass_pipe';
+    b.slots.push({ item: 'copper_ingot', count: 1 }, { item: 'zinc_ingot', count: 1 });
+    const f = powered(b);
+    run(f, 2.2);
+    expect(b.stock).toEqual({ item: 'machine_pipe_2', count: 2 });
+    const p = emptyMachine(2, 'heavy_press', 8, 4, 0);
+    p.recipe = 'steel_pipe';
+    p.slots.push({ item: 'steel_ingot', count: 2 });
+    const g = powered(p);
+    run(g, 3.2);
+    expect(p.stock).toEqual({ item: 'machine_pipe_3', count: 2 });
+  });
+
+  it('la station de lavage : 2 minerais + 20 L d’eau → 3 minerais purifiés', () => {
+    const w = emptyMachine(1, 'washer', 8, 0, 0);
+    w.recipe = 'wash_iron';
+    w.slots.push({ item: 'iron_ore', count: 2 });
+    const f = powered(w);
+    run(f, 3.2);
+    expect(f.status(w)).not.toBe('running'); // pas d'eau : rien n'a été lavé
+    expect(w.stock).toBeNull();
+    w.fluid.water = 50;
+    run(f, 3.2);
+    expect(w.stock).toEqual({ item: 'iron_ore_washed', count: 3 });
+    expect(w.fluid.water).toBeCloseTo(30);
+  });
+
+  it('un tuyau de laiton remplace un tuyau de cuivre (amélioration sur place)', () => {
+    const f = new Factory([emptyMachine(1, 'pipe', 4, 4, 0)], makeWorld().world);
+    expect(f.upgradeOf('pipe', 4, 4, 0, 2)?.id).toBe(1);
+    expect(f.upgradeOf('pipe', 4, 4, 0, 1)).toBeNull();
+    expect(emptyMachine(2, 'pipe', 0, 0, 0, 0, 3).tier).toBe(3);
+  });
+
   it('le sous-produit survit à la sauvegarde', () => {
     const b = emptyMachine(1, 'bessemer', 8, 0, 0);
     b.extra = { item: 'slag', count: 7 };
