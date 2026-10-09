@@ -1485,7 +1485,7 @@ export function startGameView(
           ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(Math.round(g.capacityKw)), demand: String(Math.round(g.demandKw)) })}</div>`
           : `<div class="sub">${t('factory.power.unlinked')}</div>`,
       );
-    } else if (m.type === 'generator') {
+    } else if (m.type === 'generator' || m.type === 'waterwheel') {
       const g = factory.gridInfo(m);
       const load =
         g && g.capacityKw > 0 ? Math.min(100, Math.round((g.demandKw / g.capacityKw) * 100)) : 0;
@@ -1496,7 +1496,11 @@ export function startGameView(
             : t('factory.power.generatorOff')
         }</div>`,
       );
-    } else {
+    } else if (m.type === 'waypoint') {
+      rows.push(
+        `<div class="sub">${(m.label || t('waypoint.default')).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}</div>`,
+      );
+    } else if (m.type === 'conveyor') {
       rows.push(
         `<div>${t('factory.belt', { n: String(m.belt.length), max: String(def.capacity ?? 3) })}</div>`,
       );
