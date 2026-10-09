@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 151** : buissons de fibres = herbes et plantes du pack Low Poly Nature par biome ; ancien système de plantes à cartes supprimé ; à discuter avec le PO : ressources de combat (carapace sur les corps d'ennemis, ressource des nids, paquet de science combat).
 - **Tour 150** : arbres du pack « Low Poly Nature » par biome (prairie/forêt/désert/toundra), tailles petit/moyen/grand (4/6/8 bois) et rochers petit/moyen/grand (10/20/32 pierres, 40 % moins fréquents), bûches du pack pour le bois au sol ; `lowpoly.json`, `nature.ts` réécrit ; 550 tests. Équilibre de la pierre à surveiller.
 - **Tour 149** : bras du personnage en vue subjective (mannequin découpé derrière la caméra, piolet à la main) ; texture d'eau animée et atlas de textures des gisements dessinés par le code (`src/render/groundTextures.ts`).
 - **Tour 148** : mineur retourné de 180° (os gauche/droite inversés, casque et lampe ramenés à l'avant) ; buissons de fibres remplacés par les plantes de l'archive (herbe, buisson fleuri, fougère ; `plantMaterial`, `plant1-4.obj`).

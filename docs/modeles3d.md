@@ -89,3 +89,7 @@
 - **Tailles** (`content/resources.json`, clé `sizes`, tirage pondéré fixe par emplacement) : arbre petit (40 %) = 4 bois, moyen (40 %) = 6, grand (20 %) = 8, de 0,7 / 1 / 1,3 × 5,5 m. Rocher petit (50 %) = 10 pierres, moyen (35 %) = 20, grand (15 %) = 32, de 0,55 / 1 / 1,6 × 0,95 m. Densité des rochers à 60 % de l'ancienne (moins fréquents) ; la pierre moyenne par rocher passe de 20 à environ 17. La quantité et la hauteur de survol suivent la taille (`PlacedObject.size`, `amount`).
 - **Bois au sol** : une bûche du pack (Tree025) pour 1 ou 2 bois, une paire de bûches (Stump) à partir de 3 ; les autres objets restent de petits blocs colorés.
 - Non utilisés : les autres arbres (arbres à champignon, cactus, etc.), souches, champignons, herbes et fleurs du pack ; ils pourraient décorer certains biomes.
+
+## Buissons du pack (Tour 151)
+- Les buissons de fibres utilisent maintenant les herbes et plantes du pack « Low Poly Nature » (couleur par sommet, comme les arbres), par biome : prairie (Grass007, 005, 011, 003), forêt (004, 012, 005, 008), désert (006, 011, 010), toundra (012, 006, 003, givrées). Hauteur moyenne 0,6 m, largeur limitée à 0,95 m.
+- Le système de plantes à cartes texturées du Tour 148 est supprimé (`plant1-4.obj`, `plants.png`, `plantMaterial`) : `lowpoly.json` contient maintenant 36 modèles.
