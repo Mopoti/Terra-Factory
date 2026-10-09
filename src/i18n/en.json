@@ -1077,5 +1077,11 @@
   "tech.armor_4b": "Heavy-plated armor (legs, boots)",
   "tech.turret_4": "Plasma turret",
   "display.contextLost": "The browser dropped the 3D display (graphics memory full). Close other tabs or lower the view distance and quality in the settings.",
-  "display.contextRestored": "The 3D display is back."
+  "display.contextRestored": "The 3D display is back.",
+  "item.waypoint": "Waypoint",
+  "tech.routing": "Routing",
+  "waypoint.default": "Waypoint",
+  "waypoint.name": "Waypoint name",
+  "waypoint.color": "Color",
+  "waypoint.help": "Visible from afar and on the map, with its name and color."
 }

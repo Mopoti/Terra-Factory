@@ -61,7 +61,7 @@ export const scienceCost = (tech: TechDef): number =>
  * technologie garde tout ce qu'elle débloquait.
  */
 export const LEGACY_TECH_SPLITS: Record<string, string[]> = {
-  logistics: ['handling'],
+  logistics: ['handling', 'routing'],
   electricity: ['power_generation', 'laboratory'],
   steam: ['steam_power'],
   textile: ['clothing', 'handwear', 'bedding'],

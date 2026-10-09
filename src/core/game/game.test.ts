@@ -623,6 +623,7 @@ describe('assembleur dans la partie', () => {
     expect(s.placeMachine(f, 'assembler', 4, 4, 0, () => false)).toBe('ok');
     const m = s.changes.machines[0];
     expect(s.loadIngredient(m, 'iron_ingot', 5)).toBe(0); // pas de recette
+    s.changes.unlocked.push('logistics');
     expect(s.setRecipe(m, 'machine_conveyor')).toBe(true);
     expect(s.loadIngredient(m, 'copper_ingot', 4)).toBe(0); // pas un ingrédient
     expect(s.loadIngredient(m, 'iron_ingot', 100)).toBe(10); // plafonné à 10 pour 1 par objet
@@ -673,7 +674,7 @@ describe('technologies', () => {
     const s = new GameState({ inventory: { iron_ingot: 60, copper_ingot: 20, wood: 10 } });
     expect(s.isUnlocked('machine_pole')).toBe(false);
     expect(s.craft('machine_pole', 1)).toEqual({ made: 0, stopped: 'locked' });
-    expect(s.isUnlocked('machine_conveyor')).toBe(true);
+    expect(s.isUnlocked('machine_conveyor')).toBe(false); // les tapis demandent « Logistique »
     expect(s.research('electricity')).toBe('ok');
     expect(s.inventory.iron_ingot).toBe(45);
     expect(s.research('electricity')).toBe('done');
@@ -1033,10 +1034,10 @@ describe('amélioration d’un tapis (palier supérieur posé par-dessus)', () =
 describe('mode Créatif', () => {
   it('fabrication et recherche gratuites, sac sans limite de poids ni de volume', () => {
     const s = new GameState({ inventory: {} });
-    expect(s.craft('machine_splitter', 1).stopped).toBe('locked');
+    expect(s.craft('machine_conveyor', 1).stopped).toBe('locked');
     s.creative = true;
     expect(s.research('logistics')).toBe('ok'); // aucun objet demandé
-    expect(s.craft('machine_splitter', 2).made).toBe(2); // aucun ingrédient demandé
+    expect(s.craft('machine_conveyor', 2).made).toBe(2); // aucun ingrédient demandé
     expect(s.inventory.iron_ingot ?? 0).toBe(0);
     expect(s.limits.maxWeightG).toBe(Infinity);
     expect(s.limits.maxVolumeMl).toBe(Infinity);

@@ -240,6 +240,30 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     }
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
+    // Balises : un losange à leur couleur avec leur nom.
+    for (const wp of options.factory.machines) {
+      if (wp.type !== 'waypoint') continue;
+      const wx = (wp.gx + 0.5 - gx0) * zoom;
+      const wz = (wp.gz + 0.5 - gz0) * zoom;
+      ctx.fillStyle = wp.tint ?? '#e5484d';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(wx, wz - 8);
+      ctx.lineTo(wx + 6, wz);
+      ctx.lineTo(wx, wz + 8);
+      ctx.lineTo(wx - 6, wz);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fill();
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeText(wp.label || t('waypoint.default'), wx, wz - 13);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(wp.label || t('waypoint.default'), wx, wz - 13);
+      ctx.textAlign = 'start';
+    }
     // Autres joueurs : un point à leur couleur et leur nom (plus tard : seulement ceux de son groupe).
     for (const o of options.others?.() ?? []) {
       const ox = (o.x / CELL_SIZE_M - gx0) * zoom;
@@ -328,6 +352,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem('rgba(214,48,49,0.3)', t('map.pollution')),
       legendItem('rgba(150,90,30,0.32)', t('map.ground')),
       legendItem('#ff5a4d', `✝ ${t('map.corpse')}`),
+      legendItem('#e5484d', `◆ ${t('item.waypoint')}`),
       legendItem('#6bd4ff', `⚑ ${t('map.respawn')}`),
       legendItem('#6bd4ff', `⚐ ${t('map.spawnBag')}`),
       legendItem('#ff3b3b', t('map.enemies')),

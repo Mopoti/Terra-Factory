@@ -5,7 +5,7 @@
  * simulation et son propre terrain, puis renvoie le résultat.
  */
 import type { MachineType } from '../data/machines';
-import type { Cell, Factory, Machine } from '../factory/factory';
+import { WAYPOINT_NAME_MAX, type Cell, type Factory, type Machine } from '../factory/factory';
 import type { GameState } from './state';
 
 /** Chaque commande : ses arguments et le type de son résultat. */
@@ -25,6 +25,7 @@ export interface CommandSpecs {
     args: { id: number };
     result: 'ok' | 'done' | 'noPlasma' | 'noAntenna' | 'unknown';
   };
+  setWaypoint: { args: { id: number; label: string; tint: string }; result: boolean };
   sell: { args: { item: string; count: number }; result: number };
   buy: { args: { item: string; count: number }; result: number };
   research: {
@@ -93,6 +94,15 @@ export class CommandBus {
       case 'activateBeacon': {
         const m = this.machine(c.id);
         return (m ? state.activateBeacon(factory, m) : 'unknown') as CommandSpecs[K]['result'];
+      }
+      case 'setWaypoint': {
+        const m = this.machine(c.id);
+        if (!m || m.type !== 'waypoint' || !/^#[0-9a-fA-F]{6}$/.test(String(c.tint)))
+          return false as CommandSpecs[K]['result'];
+        m.label = String(c.label).trim().slice(0, WAYPOINT_NAME_MAX) || undefined;
+        m.tint = c.tint;
+        state.relay({ type: 'factory' });
+        return true as CommandSpecs[K]['result'];
       }
       case 'sell':
         return state.sellItem(c.item, c.count) as CommandSpecs[K]['result'];

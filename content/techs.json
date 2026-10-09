@@ -8,7 +8,7 @@
         "science_pack": 10
       },
       "requires": [],
-      "unlocks": ["machine_splitter", "machine_merger"]
+      "unlocks": ["machine_conveyor"]
     },
     {
       "id": "handling",
@@ -17,7 +17,7 @@
         "science_pack": 10
       },
       "requires": ["logistics"],
-      "unlocks": ["machine_chest_iron", "machine_arm"]
+      "unlocks": ["machine_chest_iron", "machine_arm", "waypoint"]
     },
     {
       "id": "metallurgy",
@@ -460,6 +460,15 @@
       "requires": ["turret_3"],
       "reveal": ["turret_3"],
       "unlocks": ["machine_turret_plasma"]
+    },
+    {
+      "id": "routing",
+      "tier": 1,
+      "cost": {
+        "science_pack": 10
+      },
+      "requires": ["logistics"],
+      "unlocks": ["machine_splitter", "machine_merger"]
     }
   ]
 }

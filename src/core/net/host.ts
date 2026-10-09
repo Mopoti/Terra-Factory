@@ -73,6 +73,7 @@ const COMMAND_TYPES: ReadonlySet<string> = new Set<CommandType>([
   'loadIngredient',
   'repairReactor',
   'activateBeacon',
+  'setWaypoint',
   'sell',
   'buy',
   'research',

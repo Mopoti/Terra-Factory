@@ -605,6 +605,16 @@
       "height": 1.0,
       "pollution": 0,
       "consumesKw": 70
+    },
+    {
+      "id": "waypoint",
+      "w": 1,
+      "d": 1,
+      "item": "waypoint",
+      "color": "#e5484d",
+      "fuel": false,
+      "height": 2.0,
+      "pollution": 0
     }
   ]
 }

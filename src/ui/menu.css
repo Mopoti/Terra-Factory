@@ -1985,3 +1985,25 @@ body.touch-mode .menu-corner {
   min-width: 110px;
   flex: 1;
 }
+
+/* Balise : palette de couleurs dans la fenêtre. */
+.waypoint-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.waypoint-color {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 0;
+}
+.waypoint-color.on {
+  border-color: #fff;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 4px #fff;
+}

@@ -1077,5 +1077,11 @@
   "tech.armor_4b": "Armure à blindage lourd (jambes, bottes)",
   "tech.turret_4": "Tourelle à plasma",
   "display.contextLost": "L'affichage 3D a été coupé par le navigateur (mémoire graphique pleine). Ferme d'autres onglets ou baisse la distance d'affichage et la qualité dans les réglages.",
-  "display.contextRestored": "L'affichage 3D est revenu."
+  "display.contextRestored": "L'affichage 3D est revenu.",
+  "item.waypoint": "Balise",
+  "tech.routing": "Aiguillage",
+  "waypoint.default": "Balise",
+  "waypoint.name": "Nom de la balise",
+  "waypoint.color": "Couleur",
+  "waypoint.help": "Visible de loin et sur la carte, avec son nom et sa couleur."
 }

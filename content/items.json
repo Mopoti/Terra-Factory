@@ -1449,6 +1449,17 @@
         "slot": "feet",
         "armor": 14
       }
+    },
+    {
+      "id": "waypoint",
+      "category": "buildings",
+      "weightKg": 2,
+      "volumeL": 4,
+      "color": "#e5484d",
+      "recipe": {
+        "iron_ingot": 4,
+        "copper_wire": 2
+      }
     }
   ]
 }

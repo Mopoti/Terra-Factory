@@ -31,6 +31,7 @@ export type MachineType =
   | 'arm_filter'
   | 'assembler'
   | 'lab'
+  | 'waypoint'
   | 'turret'
   | 'turret_heavy'
   | 'turret_laser'

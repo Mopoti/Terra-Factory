@@ -24,9 +24,11 @@ import {
   outputCell,
   ports,
   sideCell,
+  WAYPOINT_COLORS,
   type Factory,
   type Machine,
 } from '../core/factory/factory';
+import { t } from '../i18n';
 import { fluidPorts } from '../core/factory/fluids';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
@@ -200,6 +202,8 @@ export class FactoryView {
   private ghostKey = '';
   /** Instant (s) où chaque tuyau rompu a été vu pour la première fois (gerbe de vapeur). */
   private readonly burstAt = new Map<number, number>();
+  /** Balises : faisceau coloré et nom flottant, refaits à chaque `rebuild`. */
+  private readonly flags = new THREE.Group();
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -213,7 +217,7 @@ export class FactoryView {
     this.bodies.castShadow = true;
     this.items.castShadow = false;
     this.smoke.frustumCulled = false;
-    this.root.add(this.bodies, this.items, this.wires, this.smoke, this.movers);
+    this.root.add(this.bodies, this.items, this.wires, this.smoke, this.movers, this.flags);
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
@@ -246,7 +250,9 @@ export class FactoryView {
             ? m.broken
               ? '#7a2e2a'
               : machineDef('pipe').tierColors?.[m.tier - 1]
-            : undefined;
+            : m.type === 'waypoint'
+              ? (m.tint ?? WAYPOINT_COLORS[0])
+              : undefined;
         const parts = animatedParts(m.type);
         addMachineBody(
           mb,
@@ -271,6 +277,7 @@ export class FactoryView {
     }
     this.bodies.geometry.dispose();
     this.bodies.geometry = geometryOf(mb);
+    this.rebuildFlags();
     // Fils électriques : du haut d'un poteau au poteau voisin ou à la machine raccordée.
     const pts: number[] = [];
     const top = (m: Machine): [number, number, number] => {
@@ -293,6 +300,57 @@ export class FactoryView {
     this.wires.geometry = new THREE.BufferGeometry();
     this.wires.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
     this.updateItems();
+  }
+
+  /** Balises : un faisceau lumineux (visible de loin) et leur nom au-dessus. */
+  private rebuildFlags(): void {
+    for (const child of [...this.flags.children]) {
+      this.flags.remove(child);
+      const mesh = child as THREE.Mesh | THREE.Sprite;
+      if ('geometry' in mesh) mesh.geometry.dispose();
+      const material = mesh.material as THREE.Material & { map?: THREE.Texture | null };
+      material.map?.dispose();
+      material.dispose();
+    }
+    for (const m of this.factory.machines) {
+      if (m.type !== 'waypoint') continue;
+      const color = m.tint ?? WAYPOINT_COLORS[0];
+      const x = (m.gx + 0.5) * CELL_SIZE_M;
+      const z = (m.gz + 0.5) * CELL_SIZE_M;
+      const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.12, 60, 8, 1, true),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.28,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      beam.position.set(x, 30, z);
+      this.flags.add(beam);
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = 'bold 34px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 8, 256, 48);
+        ctx.fillStyle = color;
+        ctx.fillRect(0, 8, 8, 48);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(m.label || t('waypoint.default'), 132, 44, 236);
+      }
+      const label = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false }),
+      );
+      label.scale.set(2.4, 0.6, 1);
+      label.position.set(x, 2.6, z);
+      label.renderOrder = 10;
+      this.flags.add(label);
+    }
   }
 
   /** Parties mobiles des modèles articulés (piston, bras, tête de scanner) : un objet par machine. */
@@ -532,6 +590,7 @@ export class FactoryView {
   dispose(): void {
     this.scene.remove(this.root, this.ghost);
     this.clearMovers();
+    for (const child of [...this.flags.children]) this.flags.remove(child);
     this.bodies.geometry.dispose();
     this.items.geometry.dispose();
     this.wires.geometry.dispose();
@@ -1535,6 +1594,14 @@ function addMachineBody(
       mb.box(x - fx * 0.12, 0.33, z - fz * 0.12, 0.24, 0.1, 0.24, hexToRgb('#27323b'), true);
       mb.box(x - fx * 0.12, 0.43, z - fz * 0.12, 0.16, 0.02, 0.16, hexToRgb('#4fe3c1'), true);
     }
+    return;
+  }
+  if (type === 'waypoint') {
+    // Balise : socle, mât mince et fanion de la couleur choisie.
+    mb.box(x, 0, z, 0.36, 0.08, 0.36, shade(color, 0.5), true);
+    mb.box(x, 0.08, z, 0.08, 1.7, 0.08, hexToRgb('#d9dfe6'), true);
+    mb.box(x + 0.16, 1.4, z, 0.3, 0.26, 0.04, color, true);
+    mb.box(x, 1.78, z, 0.16, 0.16, 0.16, color, true);
     return;
   }
   if (type === 'pole') {

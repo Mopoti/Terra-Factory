@@ -24,6 +24,8 @@ import {
   hasSlotStore,
   ingredientCap,
   recipeOf,
+  WAYPOINT_COLORS,
+  WAYPOINT_NAME_MAX,
   type Factory,
   type Machine,
   type Stack,
@@ -351,6 +353,42 @@ export function mountMachineWindow(
       playSfx('pickup');
       render();
     }
+  }
+
+  /** Balise : un nom (« Balise » par défaut) et une couleur, vus de loin et sur la carte. */
+  function waypointRows(m: Machine): HTMLElement[] {
+    const tint = m.tint ?? WAYPOINT_COLORS[0];
+    const apply = (label: string, color: string): void => {
+      actions.bus.dispatch<'setWaypoint'>({ type: 'setWaypoint', id: m.id, label, tint: color });
+      render();
+    };
+    const name = el('input', 'mach-search');
+    name.type = 'text';
+    name.maxLength = WAYPOINT_NAME_MAX;
+    name.placeholder = t('waypoint.default');
+    name.value = m.label ?? '';
+    name.setAttribute('aria-label', t('waypoint.name'));
+    name.addEventListener('change', () => apply(name.value, tint));
+    name.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // taper un nom ne déclenche aucune action du jeu
+      if (e.key === 'Enter') name.blur();
+    });
+    const palette = el('div', 'waypoint-colors');
+    for (const color of WAYPOINT_COLORS) {
+      const b = el('button', color === tint ? 'waypoint-color on' : 'waypoint-color');
+      b.type = 'button';
+      b.style.background = color;
+      b.title = color;
+      b.addEventListener('click', () => apply(name.value, color));
+      palette.append(b);
+    }
+    return [
+      el('div', 'mach-info', t('waypoint.name')),
+      name,
+      el('div', 'mach-info', t('waypoint.color')),
+      palette,
+      el('small', 'help', t('waypoint.help')),
+    ];
   }
 
   /** Le sac, toujours visible à gauche. */
@@ -818,6 +856,7 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
+    if (m.type === 'waypoint') rows.append(...waypointRows(m));
     if (isChest(m.type) || hasSlotStore(m.type))
       rows.append(
         chestGrid(m),

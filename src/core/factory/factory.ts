@@ -103,6 +103,9 @@ export interface Machine {
   broken: boolean;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
+  /** Balise : nom affiché (« Balise » par défaut) et couleur (#rrggbb). */
+  label?: string;
+  tint?: string;
 }
 
 /**
@@ -525,6 +528,10 @@ export function normalizeMachines(raw: unknown): Machine[] {
       });
     }
     machine.progress = isNum(m.progress) && m.progress > 0 ? m.progress : 0;
+    if (machine.type === 'waypoint') {
+      if (typeof m.label === 'string') machine.label = m.label.slice(0, WAYPOINT_NAME_MAX);
+      if (typeof m.tint === 'string' && /^#[0-9a-fA-F]{6}$/.test(m.tint)) machine.tint = m.tint;
+    }
     if (Array.isArray(m.belt)) {
       for (const b of m.belt) {
         if (typeof b !== 'object' || b === null) continue;
@@ -593,6 +600,22 @@ export function normalizeMachines(raw: unknown): Machine[] {
   return out;
 }
 
+/** Longueur maximale du nom d'une balise. */
+export const WAYPOINT_NAME_MAX = 24;
+/** Couleurs proposées pour une balise. */
+export const WAYPOINT_COLORS = [
+  '#e5484d',
+  '#f5a524',
+  '#f4d03f',
+  '#46c46a',
+  '#27c1b8',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f4f4f5',
+  '#6b7280',
+] as const;
+
 const MACHINE_TYPES: MachineType[] = [
   'drill',
   'drill_electric',
@@ -624,6 +647,7 @@ const MACHINE_TYPES: MachineType[] = [
   'arm_electric',
   'assembler',
   'lab',
+  'waypoint',
   'turret',
   'turret_heavy',
   'turret_laser',
@@ -778,19 +802,13 @@ export class Factory {
    * Pompe : sa première ligne (côté sortie) est sur la terre, le reste de l'emprise est dans l'eau.
    */
   /** La machine touche-t-elle un étang (une case d'eau contre l'un de ses côtés) sans être elle-même dans l'eau ? */
-  private waterAdjacent(type: MachineType, gx: number, gz: number, rot: number): boolean {
+  /** Roue à aube : à cheval sur la rive (au moins une case dans l'eau et au moins une sur la terre). */
+  private onShore(type: MachineType, gx: number, gz: number, rot: number): boolean {
     const water = this.world.waterAt;
     if (!water) return false;
     const cells = footprint(type, gx, gz, rot);
-    if (cells.some((c) => water.call(this.world, c.gx, c.gz))) return false;
-    return cells.some((c) =>
-      [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ].some(([dx, dz]) => water.call(this.world, c.gx + dx, c.gz + dz)),
-    );
+    const wet = cells.filter((c) => water.call(this.world, c.gx, c.gz)).length;
+    return wet > 0 && wet < cells.length;
   }
 
   private waterNear(type: MachineType, gx: number, gz: number, rot: number): boolean {
@@ -1005,14 +1023,19 @@ export class Factory {
     gx: number,
     gz: number,
     rot: number,
-    blocked: (c: Cell) => boolean,
+    blockedBy: (c: Cell) => boolean,
     lift = 0,
     tier = 1,
   ): boolean {
+    // La roue à aube se pose dans l'eau : les cases d'eau ne la bloquent pas (le reste, oui).
+    const blocked =
+      type === 'waterwheel'
+        ? (c: Cell): boolean => !this.world.waterAt?.call(this.world, c.gx, c.gz) && blockedBy(c)
+        : blockedBy;
     // Un tapis d'un palier supérieur se pose par-dessus un tapis plus lent, à la même place : il le remplace.
     if (this.upgradeOf(type, gx, gz, lift, tier)) return true;
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
-    if (type === 'waterwheel' && !this.waterAdjacent(type, gx, gz, rot)) return false;
+    if (type === 'waterwheel' && !this.onShore(type, gx, gz, rot)) return false;
     const cells = footprint(type, gx, gz, rot);
     if (isLinear(type)) {
       const layers = type === 'conveyor' ? (LIFTS[lift]?.layers ?? [0]) : [0];

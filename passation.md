@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 156** : balise (F : nom + couleur, faisceau, carte), tapis débloqués par Logistique (séparateur/groupeur → nouvelle technologie Aiguillage), roue à aubes à cheval sur la rive ; 568 tests.
 - **Tour 155** : piles du sac indépendantes dans les fenêtres de machine (pile choisie par index, plus de fusion ni de prélèvement dans une autre pile) ; multijoueur : sac individuel, arbre et rochers mis à jour chez tous, autres joueurs sur la carte ; prise de l'outil à la main (manche tenu au quart) ; 564 tests.
 - **Tour 154** : outil en main réorienté (tête vers l'avant au moment du coup, pointe vers le bas ; élan bras levé), en 3e personne et en vue subjective ; build ES2020 (Safari 14+) ; `docs/compatibilite.md` (Chromium testé ; Safari et Firefox non testés).
 - **Tour 153** : perte du contexte WebGL (écran blanc) : message au joueur et reprise automatique ; mesure mémoire du jeu (tas JavaScript 40 à 90 Mo, pas de fuite visible). Les « Out of Memory » vus par le PO sur d'autres sites viennent de sa machine/son navigateur, pas du jeu.

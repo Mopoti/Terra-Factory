@@ -1182,15 +1182,21 @@ describe('roue à aubes (tier 0)', () => {
   const lake = (_gx: number, gz: number): boolean => gz < 0;
   const world = (): FactoryWorld => ({ ...makeWorld().world, waterAt: lake });
 
-  it('se pose contre un étang (pas dedans, pas loin), 10 kW constants sans combustible', () => {
+  it('se pose à cheval sur la rive : ni sur la terre, ni au milieu de l’eau', () => {
     const f = new Factory([], world());
-    expect(f.canPlace('waterwheel', 10, 0, 0, () => false)).toBe(true); // touche l'eau (z = -1)
-    expect(f.canPlace('waterwheel', 10, 5, 0, () => false)).toBe(false); // trop loin
-    expect(f.canPlace('waterwheel', 10, -4, 0, () => false)).toBe(false); // dans l'eau
+    // Les cases d'eau comptent comme bloquées pour le reste du jeu, mais pas pour la roue.
+    const blocked = (c: { gx: number; gz: number }): boolean => lake(c.gx, c.gz);
+    expect(f.canPlace('waterwheel', 10, -1, 0, blocked)).toBe(true); // une rangée d'eau, deux de terre
+    expect(f.canPlace('waterwheel', 10, -2, 0, blocked)).toBe(true); // deux rangées d'eau, une de terre
+    expect(f.canPlace('waterwheel', 10, 0, 0, blocked)).toBe(false); // sur la terre, même contre l'eau
+    expect(f.canPlace('waterwheel', 10, 5, 0, blocked)).toBe(false); // trop loin
+    expect(f.canPlace('waterwheel', 10, -4, 0, blocked)).toBe(false); // au milieu de l'eau
+    // Un obstacle sur la terre ferme (arbre, rocher) la bloque toujours.
+    expect(f.canPlace('waterwheel', 10, -1, 0, (c) => lake(c.gx, c.gz) || c.gz === 1)).toBe(false);
   });
 
   it('alimente un réseau : une foreuse électrique tourne à 10/90 de sa vitesse', () => {
-    const wheel = emptyMachine(1, 'waterwheel', 10, 0, 0);
+    const wheel = emptyMachine(1, 'waterwheel', 10, -1, 0);
     const pole = emptyMachine(2, 'pole', 14, 0, 0);
     const lamp = emptyMachine(3, 'lab', 17, 0, 0);
     lamp.slots.push({ item: 'science_pack', count: 5 });
