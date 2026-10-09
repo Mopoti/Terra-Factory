@@ -1277,8 +1277,30 @@
   color: #9fb0c2;
 }
 
+/* Cases du sac et des coffres : toutes carrées et de la même taille, 5 colonnes (le sac de base fait 5 × 6 = 30 cases). */
+.slot-grid.square,
 .chest-grid {
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  grid-template-columns: repeat(5, 72px);
+  justify-content: start;
+}
+.slot-grid.square .slot,
+.chest-grid .slot {
+  width: 72px;
+  height: 72px;
+  min-height: 0;
+  padding: 3px 4px;
+  font-size: 10.5px;
+  overflow: hidden;
+}
+.slot-grid.square .slot-name,
+.chest-grid .slot-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 /* Croix de fermeture en haut à droite des fenêtres (sac, machine). */
@@ -1419,6 +1441,7 @@
 #tech .panel {
   position: relative;
   width: min(900px, calc(100vw - 32px));
+  box-sizing: border-box;
   max-height: calc(100vh - 110px);
   overflow-y: auto;
 }
@@ -1944,6 +1967,16 @@ body.touch-mode .craft-hud {
   }
   .slot-grid {
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  }
+  .slot-grid.square,
+  .chest-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .slot-grid.square .slot,
+  .chest-grid .slot {
+    width: auto;
+    height: auto;
+    aspect-ratio: 1;
   }
 }
 

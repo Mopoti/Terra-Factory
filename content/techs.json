@@ -499,6 +499,46 @@
       },
       "requires": [],
       "unlocks": ["machine_waterwheel"]
+    },
+    {
+      "id": "research_1",
+      "tier": 1,
+      "cost": {
+        "iron_ingot": 20,
+        "copper_ingot": 20
+      },
+      "requires": ["laboratory"],
+      "unlocks": []
+    },
+    {
+      "id": "research_2",
+      "tier": 2,
+      "cost": {
+        "science_pack": 30
+      },
+      "requires": ["research_1"],
+      "reveal": ["research_1"],
+      "unlocks": []
+    },
+    {
+      "id": "research_3",
+      "tier": 3,
+      "cost": {
+        "science_pack_2": 80
+      },
+      "requires": ["research_2"],
+      "reveal": ["research_2"],
+      "unlocks": []
+    },
+    {
+      "id": "research_4",
+      "tier": 4,
+      "cost": {
+        "science_pack_3": 150
+      },
+      "requires": ["research_3"],
+      "reveal": ["research_3"],
+      "unlocks": []
     }
   ]
 }

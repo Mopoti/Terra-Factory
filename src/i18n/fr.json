@@ -1096,5 +1096,13 @@
   "log.legacy": "Technologie ajoutée par la mise à jour de la sauvegarde (ancienne technologie découpée) : {name}",
   "log.discovery": "Découverte : {name}",
   "tech.section.done": "Recherchées",
-  "tech.section.todo": "À rechercher"
+  "tech.section.todo": "À rechercher",
+  "tech.research_1": "Recherche T1",
+  "tech.research_2": "Recherche T2",
+  "tech.research_3": "Recherche T3",
+  "tech.research_4": "Recherche T4",
+  "tech.effect.research_1": "Effet : les laboratoires consomment un paquet T1 en 4 s (au lieu de 5 s)",
+  "tech.effect.research_2": "Effet : paquets T1 en 3 s, paquets T2 en 4 s",
+  "tech.effect.research_3": "Effet : paquets T1 en 2 s, T2 en 3 s, T3 en 4 s",
+  "tech.effect.research_4": "Effet : paquets T1 en 1 s, T2 en 2 s, T3 en 3 s, T4 en 4 s"
 }

@@ -348,7 +348,7 @@ export function mountInventory(
 
     // Gauche : les cases du sac.
     const bag = el('div', 'inv-bag');
-    const grid = el('div', 'slot-grid');
+    const grid = el('div', 'slot-grid square');
     for (let i = 0; i < bagCellsShown(state); i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');

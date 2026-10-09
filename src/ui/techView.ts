@@ -77,7 +77,10 @@ export function mountTech(
     box.append(cost);
     const unlocks = document.createElement('div');
     unlocks.className = 'tech-line sub';
-    unlocks.textContent = `${t('tech.unlocks')} : ${tech.unlocks.map(itemName).join(', ')}`;
+    unlocks.textContent =
+      tech.unlocks.length > 0
+        ? `${t('tech.unlocks')} : ${tech.unlocks.map(itemName).join(', ')}`
+        : t(`tech.effect.${tech.id}` as TranslationKey);
     box.append(unlocks);
     const button = document.createElement('button');
     button.type = 'button';
@@ -115,7 +118,7 @@ export function mountTech(
     });
     box.append(button);
     // Objets débloqués : couleur d'accent.
-    box.style.setProperty('--item', itemById(tech.unlocks[0]).color);
+    if (tech.unlocks.length > 0) box.style.setProperty('--item', itemById(tech.unlocks[0]).color);
     return box;
   }
 
@@ -188,6 +191,7 @@ export function mountTech(
   }
 
   function render(): void {
+    const scroll = root.querySelector('.tech-panel')?.scrollTop ?? 0;
     const panel = document.createElement('div');
     panel.className = 'panel tech-panel';
     panel.setAttribute('role', 'dialog');
@@ -234,6 +238,7 @@ export function mountTech(
     x.addEventListener('click', closeWindow);
     panel.append(title, toggle, ...body, msg, help, x);
     root.replaceChildren(panel);
+    panel.scrollTop = scroll;
   }
 
   function openWindow(): void {

@@ -616,7 +616,7 @@ describe('laboratoire', () => {
     return new Factory([m, gen, emptyMachine(91, 'pole', 12, 10, 0)], makeWorld().world);
   };
 
-  it('consomme un paquet toutes les 6 s, seulement pour une étude en cours et avec du courant', () => {
+  it('consomme un paquet toutes les 5 s, seulement pour une étude en cours et avec du courant', () => {
     const m = lab();
     const f = power(m);
     f.labDemand = 0;
@@ -632,6 +632,17 @@ describe('laboratoire', () => {
     run(g, 7);
     expect(g.takeLabPacks()).toEqual({});
     expect(g.status(g.machines[0])).toBe('noPower');
+  });
+
+  it('les technologies Recherche accélèrent la consommation, et la barre suit le paquet en cours', () => {
+    const m = lab();
+    const f = power(m);
+    f.labDemand = 10;
+    f.labLevel = 2; // T1 en 3 s
+    run(f, 7);
+    expect(m.slots[0]?.count).toBe(3);
+    run(f, 1.5);
+    expect(f.cycleFraction(m)).toBeCloseTo(2.5 / 3, 1);
   });
 
   it('reçoit seulement des paquets de science, par un bras ou un tapis', () => {

@@ -81,3 +81,22 @@ export function expandLegacyTechs(ids: readonly unknown[]): string[] {
     if (have.has(old)) for (const p of parts) have.add(p);
   return TECHS.map((t) => t.id).filter((id) => have.has(id));
 }
+
+/** Durée de base (en secondes) pour qu'un laboratoire consomme un paquet. */
+export const LAB_PACK_SECONDS = 5;
+/** Paquets accélérés par les technologies « Recherche » : le niveau n retire 1 s aux paquets des paliers 1 à n. */
+const LAB_TIERED_PACKS = ['science_pack', 'science_pack_2', 'science_pack_3', 'science_pack_4'];
+
+/** Niveau de recherche atteint (0 à 4) d'après les technologies déjà recherchées. */
+export function labResearchLevel(researched: readonly string[]): number {
+  let level = 0;
+  while (level < 4 && researched.includes(`research_${level + 1}`)) level++;
+  return level;
+}
+
+/** Secondes qu'un laboratoire met à consommer un paquet de ce type, selon le niveau de recherche. */
+export function labPackSeconds(item: string, level: number): number {
+  const tier = LAB_TIERED_PACKS.indexOf(item);
+  if (tier < 0 || tier >= level) return LAB_PACK_SECONDS;
+  return LAB_PACK_SECONDS - (level - tier);
+}

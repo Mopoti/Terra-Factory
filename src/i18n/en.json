@@ -1096,5 +1096,13 @@
   "log.legacy": "Technology added when the save was updated (old split technology): {name}",
   "log.discovery": "Discovery: {name}",
   "tech.section.done": "Researched",
-  "tech.section.todo": "To research"
+  "tech.section.todo": "To research",
+  "tech.research_1": "Research T1",
+  "tech.research_2": "Research T2",
+  "tech.research_3": "Research T3",
+  "tech.research_4": "Research T4",
+  "tech.effect.research_1": "Effect: labs consume a T1 pack in 4 s (instead of 5 s)",
+  "tech.effect.research_2": "Effect: T1 packs in 3 s, T2 packs in 4 s",
+  "tech.effect.research_3": "Effect: T1 packs in 2 s, T2 in 3 s, T3 in 4 s",
+  "tech.effect.research_4": "Effect: T1 packs in 1 s, T2 in 2 s, T3 in 3 s, T4 in 4 s"
 }

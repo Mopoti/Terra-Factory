@@ -18,7 +18,7 @@
 | Bétonnière, centrifugeuse | `piston-round` |
 | Générateur | `machine-fortified` |
 | Constructeur | `machine-bed` |
-| Laboratoire | `scanner-high` |
+| Laboratoire | `machine` |
 | Station de lavage | `machine-connection-pipe` |
 | Presse à plastique | `piston-thin-round` |
 | Raffinerie | `hopper-high-square` |
@@ -42,7 +42,6 @@
 |---|---|
 | Estampeuse, presse lourde, presse à plastique | **piston** : reste en haut, puis s'abat de 14 cm sur le dernier quart du cycle (suit la barre de progression) |
 | Bras (mécanique, électrique, filtrant) | **pivote** de ±0,9 rad tant que la machine est « en marche », puis revient droit |
-| Laboratoire | la **tête du scanner tourne** tant qu'il étudie |
 
 - Testé en code (`movers.test.ts` : le piston descend en fin de cycle, le bras pivote puis se redresse, la tête s'arrête au repos). **Pas encore vérifié à l'œil en mouvement** : à regarder en jouant (amplitudes, vitesses, coupe du piston).
 - Les modèles du kit sont d'un seul bloc : on ne peut pas articuler les doigts de la pince ou les segments du bras séparément. Pour cela il faudrait des modèles découpés en pièces (ou les fabriquer).

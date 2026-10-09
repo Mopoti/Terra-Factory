@@ -42,25 +42,19 @@ describe('modèles articulés', () => {
     view.dispose();
   });
 
-  it('le bras pivote quand il travaille et revient droit au repos ; la tête du scanner tourne', () => {
+  it('le bras pivote quand il travaille et revient droit au repos', () => {
     registerModel(MACHINE_MODELS.arm as string, block());
-    registerModel(MACHINE_MODELS.lab as string, block());
     const arm = emptyMachine(1, 'arm', 0, 0, 0);
-    const lab = emptyMachine(2, 'lab', 6, 0, 0);
-    const factory = new Factory([arm, lab], world);
+    const factory = new Factory([arm], world);
     let state: 'running' | 'idle' = 'running';
     factory.status = () => state;
     const view = new FactoryView(new THREE.Scene(), factory);
-    const [armMover, labMover] = (view as unknown as { moverList: { mesh: THREE.Mesh }[] })
-      .moverList;
+    const [armMover] = (view as unknown as { moverList: { mesh: THREE.Mesh }[] }).moverList;
     for (let i = 0; i < 40; i++) view.updateMovers(0.5 + i * 0.05);
     expect(Math.abs(armMover.mesh.rotation.y)).toBeGreaterThan(0.05);
-    expect(labMover.mesh.rotation.y).toBeGreaterThan(1);
-    const turned = labMover.mesh.rotation.y;
     state = 'idle';
     for (let i = 0; i < 80; i++) view.updateMovers(3 + i * 0.05);
     expect(Math.abs(armMover.mesh.rotation.y)).toBeLessThan(0.01);
-    expect(labMover.mesh.rotation.y).toBe(turned); // la tête s'arrête
     view.dispose();
   });
 });

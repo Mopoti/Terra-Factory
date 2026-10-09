@@ -1,6 +1,6 @@
 # Équilibrage — état des lieux (Tour 126)
 
-Mesures faites par calcul sur les données du jeu (valeur d'un objet = celle du comptoir spatial, `itemValue`, déduite des recettes ; temps de laboratoire = 6 s par paquet et par laboratoire). **Aucune valeur n'a été changée** : les choix sont à valider.
+Mesures faites par calcul sur les données du jeu (valeur d'un objet = celle du comptoir spatial, `itemValue`, déduite des recettes ; temps de laboratoire = 5 s par paquet de base et par laboratoire). **Aucune valeur n'a été changée** : les choix sont à valider.
 
 ## Paquets de science (valeur en crédits)
 

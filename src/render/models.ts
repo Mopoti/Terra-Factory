@@ -29,7 +29,7 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
   generator: 'machine-fortified',
   assembler: 'machine-window-bar',
   builder: 'machine-bed',
-  lab: 'scanner-high',
+  lab: 'machine',
   heavy_press: 'piston-square',
   washer: 'machine-connection-pipe',
   plastic_press: 'piston-thin-round',
@@ -192,7 +192,6 @@ export const MACHINE_ANIM: Partial<Record<MachineType, { kind: AnimKind; split: 
   arm: { kind: 'swing', split: 0.2 },
   arm_electric: { kind: 'swing', split: 0.2 },
   arm_filter: { kind: 'swing', split: 0.2 },
-  lab: { kind: 'spin', split: 0.45 },
 };
 
 const splits = new Map<string, { low: BakedModel; high: BakedModel }>();

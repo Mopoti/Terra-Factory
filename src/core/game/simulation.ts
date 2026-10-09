@@ -6,6 +6,7 @@
  */
 import { CELL_SIZE_M } from '../constants';
 import { machineDef, isTurret, turretSpec } from '../data/machines';
+import { labResearchLevel } from '../data/techs';
 import { dims, type Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
 import type { GameState } from './state';
@@ -82,6 +83,7 @@ export class WorldSimulation {
     factory.tradeOpen = state.changes.beacon;
     factory.labDemand = state.studyRemaining();
     factory.labNeeds = state.studyNeeds();
+    factory.labLevel = labResearchLevel(state.changes.unlocked);
     factory.tick(dt);
     state.addStudy(factory.takeLabPacks());
     for (const [item, n] of factory.takeSold()) state.creditSale(item, n);

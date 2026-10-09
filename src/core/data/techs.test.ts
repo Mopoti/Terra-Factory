@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, ITEM_CATEGORIES, categoryOf, itemById } from './items';
-import { expandLegacyTechs, isTechVisible, scienceCost, techById, TECHS } from './techs';
+import {
+  expandLegacyTechs,
+  isTechVisible,
+  labPackSeconds,
+  labResearchLevel,
+  scienceCost,
+  techById,
+  TECHS,
+} from './techs';
 
 /** Machines et équipements : seuls objets comptés dans la limite de 2 par technologie (les matériaux sont libres). */
 const counted = (item: string): boolean =>
@@ -80,5 +88,26 @@ describe('visibilité des technologies', () => {
       expect(Object.keys(t.cost).every((k) => k === 'science_pack') || scienceCost(t) === 0).toBe(
         true,
       );
+  });
+});
+
+describe('technologies Recherche', () => {
+  it('raccourcissent la consommation des paquets palier par palier', () => {
+    const secs = (level: number): number[] =>
+      ['science_pack', 'science_pack_2', 'science_pack_3', 'science_pack_4'].map((p) =>
+        labPackSeconds(p, level),
+      );
+    expect(secs(0)).toEqual([5, 5, 5, 5]);
+    expect(secs(1)).toEqual([4, 5, 5, 5]);
+    expect(secs(2)).toEqual([3, 4, 5, 5]);
+    expect(secs(3)).toEqual([2, 3, 4, 5]);
+    expect(secs(4)).toEqual([1, 2, 3, 4]);
+    expect(labPackSeconds('combat_pack', 4)).toBe(5);
+  });
+
+  it('le niveau suit les technologies dans l’ordre', () => {
+    expect(labResearchLevel([])).toBe(0);
+    expect(labResearchLevel(['research_1', 'research_2'])).toBe(2);
+    expect(labResearchLevel(['research_2'])).toBe(0);
   });
 });

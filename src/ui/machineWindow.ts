@@ -405,7 +405,7 @@ export function mountMachineWindow(
       ),
     );
     const slots = state.bagSlots();
-    const grid = el('div', 'slot-grid');
+    const grid = el('div', 'slot-grid square');
     for (let i = 0; i < bagCellsShown(state); i++) {
       const slot = slots[i];
       const cell = el('button', slot ? 'slot' : 'slot empty');
@@ -504,6 +504,7 @@ export function mountMachineWindow(
         cell.style.setProperty('--item', itemById(stack.item).color);
         const count = el('span', 'slot-count', String(stack.count));
         live.chest[i] = count;
+        cell.title = itemName(stack.item);
         cell.append(el('span', 'slot-name', itemName(stack.item)), count);
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {

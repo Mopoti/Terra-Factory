@@ -8,7 +8,7 @@ import {
   recipeByproduct,
   recipeProduct,
 } from '../data/recipes';
-import { isSciencePack } from '../data/techs';
+import { isSciencePack, labPackSeconds } from '../data/techs';
 import {
   beltSpeed,
   filterCount,
@@ -1142,7 +1142,10 @@ export class Factory {
       const r = recipeById(m.recipe);
       return r ? clamp(m.progress / r.seconds) : null;
     }
-    if (isLab(m.type)) return clamp(m.progress / (def.craftSeconds ?? 6));
+    if (isLab(m.type)) {
+      const pack = this.usablePack(m);
+      return pack ? clamp(m.progress / labPackSeconds(pack.item, this.labLevel)) : null;
+    }
     if (isAssembler(m.type)) return clamp(m.progress / (def.craftSeconds ?? 2));
     if (isDrill(m.type) && (def.mineSeconds ?? 1) >= 0.5)
       return clamp(m.progress / (def.mineSeconds ?? 1));
@@ -1319,6 +1322,8 @@ export class Factory {
   /** Puissance disponible et demandée sur chaque réseau, puis part satisfaite. */
   /** Paquets de science que les laboratoires peuvent encore utiliser (fixé par la partie selon la recherche en cours). */
   labDemand = 0;
+  /** Niveau des technologies « Recherche » (0 à 4) : raccourcit la consommation des paquets. */
+  labLevel = 0;
   /** Paquets consommés depuis la dernière lecture (la partie les ajoute à la recherche). */
   private labDone: Record<string, number> = {};
   /** Le comptoir spatial est ouvert (balise activée) : le relais achète tout ce qu'un tapis lui amène. */
@@ -2071,12 +2076,12 @@ export class Factory {
       if (!this.labWorking(m)) m.progress = 0;
       return;
     }
-    m.progress += dt * speed;
-    const seconds = machineDef(m.type).craftSeconds ?? 6;
-    if (m.progress < seconds) return;
-    m.progress -= seconds;
     const stack = this.usablePack(m);
     if (!stack) return;
+    m.progress += dt * speed;
+    const seconds = labPackSeconds(stack.item, this.labLevel);
+    if (m.progress < seconds) return;
+    m.progress -= seconds;
     const item = stack.item;
     stack.count--;
     if (stack.count <= 0) m.slots.splice(m.slots.indexOf(stack), 1);

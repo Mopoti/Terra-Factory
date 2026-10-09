@@ -368,7 +368,7 @@ Fonctionnement résumé :
 - **Fourneau** : une entrée (minerai), un combustible, une sortie ; **un seul minerai à la fois**.
 - **Coffres** : 16 cases (bois), 32 cases (fer).
 - **Assembleur** : on choisit la **recette** (n'importe quel objet à recette : tapis, bras, coffres, pièces…) ; consomme les ingrédients amenés par tapis/bras ; 2 s par cycle ; 60 kW.
-- **Laboratoire** : consomme des paquets de science pour étudier une technologie ; 30 kW, 6 s par paquet, stock de 20 paquets.
+- **Laboratoire** : consomme des paquets de science pour étudier une technologie ; 30 kW, **5 s par paquet** (barre de progression dans la fenêtre), stock de 20 paquets ; les technologies _Recherche T1 à T4_ retirent 1 s par niveau aux paquets des paliers 1 à n (T1 : 4 s ; T2 : T1 3 s, T2 4 s ; T3 : 2/3/4 s ; T4 : 1/2/3/4 s). Le paquet de combat reste à 5 s.
 - **Poteau** : porte le courant (câble de **8 m**, raccord machine à **4 m**).
 - **Tourelle** : voir §9.4.
 - Chaque machine affiche un **état** (en marche, arrêt, panne de combustible, pas de courant, pas d'eau, plein, pas d'étude, etc.) et une infobulle de diagnostic quand on la vise.
@@ -425,7 +425,7 @@ Un objet qui n'appartient à aucune technologie est disponible dès le départ. 
 ### 8.2 Deux modes de recherche
 
 - **À la main** : le coût (objets du sac) est consommé immédiatement.
-- **En laboratoire** : le coût est en **paquets de science** ; on choisit la technologie étudiée ; un laboratoire alimenté (tapis, bras ou main) et en courant consomme les paquets (6 s chacun) ; **sans étude choisie, les laboratoires étudient automatiquement** la première technologie disponible. L'avancement est sauvegardé.
+- **En laboratoire** : le coût est en **paquets de science** ; on choisit la technologie étudiée ; un laboratoire alimenté (tapis, bras ou main) et en courant consomme les paquets (5 s chacun, moins avec les technologies Recherche) ; **sans étude choisie, les laboratoires étudient automatiquement** la première technologie disponible. L'avancement est sauvegardé.
 
 ### 8.3 Arbre actuel
 
@@ -598,7 +598,7 @@ Français et anglais ; **aucun texte en dur** (fichiers `fr.json` / `en.json` au
 | Tapis                 | 0,75 case/s, 6 objets par tuile        |
 | Bras                  | 0,9 s / geste (0,45 s électrique)      |
 | Assembleur            | 2 s / cycle                            |
-| Laboratoire           | 6 s / paquet de science                |
+| Laboratoire           | 5 s / paquet de science (4 → 1 s avec Recherche) |
 | Pompe                 | 100 eau/s                              |
 | Chaudière             | 60 vapeur/s                            |
 | Turbine               | 200 kW pour 20 vapeur/s                |
