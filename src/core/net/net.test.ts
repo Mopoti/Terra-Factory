@@ -140,11 +140,12 @@ describe('jouer ensemble', () => {
     expect(guest.snapshots).toBeGreaterThan(0);
   });
 
-  it('sac commun : l’invité dépense le sac de l’hôte', async () => {
-    const { net, state, factory, code } = await setup({
+  it('le sac est toujours individuel, même si l’ancien réglage « sac commun » est enregistré', async () => {
+    const { net, state, host, code } = await setup({
       share: { research: true, credits: true, inventory: true },
     });
     const guest = await GuestClient.connect(net, code, { name: 'Ana' });
+    expect(host.remotes.get(guest.you.id)!.state.inventory).not.toBe(state.inventory);
     const r = await guest.command<'placeMachine'>({
       type: 'placeMachine',
       machine: 'furnace',
@@ -154,20 +155,41 @@ describe('jouer ensemble', () => {
       lift: 0,
       tier: 1,
     });
-    expect(r).toBe('ok');
-    expect(state.inventory.machine_furnace).toBe(2);
-    expect(factory.machines).toHaveLength(1);
+    expect(r).toBe('missing');
+    expect(state.inventory.machine_furnace).toBe(3);
+  });
+
+  it('récolter : le bois va dans le sac de celui qui récolte, et tout le monde voit le reste de l’arbre', async () => {
+    const { net, state, host, code } = await setup();
+    const a = await GuestClient.connect(net, code, { name: 'Ana' });
+    const b = await GuestClient.connect(net, code, { name: 'Bob' });
+    // Ana coupe 4 des 6 bois d'un arbre : il en reste 2 pour l'hôte et pour Bob.
+    await a.call('harvest', ['10,10', 6, 'wood', 4]);
+    await flush();
+    expect(host.remotes.get(a.you.id)!.state.inventory.wood).toBe(4);
+    expect(state.inventory.wood ?? 0).toBe(0);
+    expect(state.changes.taken['10,10']).toBe(4);
+    host.advance(1, { x: 0, y: 0, z: 0, yaw: 0 });
+    await flush();
+    expect(b.world.taken['10,10']).toBe(4);
+    // L'hôte récolte à son tour, dans son propre sac : Ana et Bob voient l'arbre disparaître.
+    state.harvest('10,10', 6, 'wood', 2);
+    host.advance(1, { x: 0, y: 0, z: 0, yaw: 0 });
+    await flush();
+    expect(a.world.taken['10,10']).toBe(6);
+    expect(b.world.taken['10,10']).toBe(6);
+    expect(state.inventory.wood).toBe(2);
   });
 
   it('technologies communes : une recherche de l’invité profite à l’hôte ; individuelle sinon', async () => {
     const shared = await setup();
     const a = await GuestClient.connect(shared.net, shared.code, { name: 'Ana' });
-    shared.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
+    shared.host.remotes.get(a.you.id)!.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
     expect(await a.command<'research'>({ type: 'research', tech: 'electricity' })).toBe('ok');
     expect(shared.state.changes.unlocked).toContain('electricity');
     const own = await setup({ share: { research: false, credits: true, inventory: true } });
     const b = await GuestClient.connect(own.net, own.code, { name: 'Bob' });
-    own.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
+    own.host.remotes.get(b.you.id)!.state.inventory = { iron_ingot: 50, copper_ingot: 50 };
     expect(await b.command<'research'>({ type: 'research', tech: 'electricity' })).toBe('ok');
     expect(own.state.changes.unlocked).not.toContain('electricity');
   });

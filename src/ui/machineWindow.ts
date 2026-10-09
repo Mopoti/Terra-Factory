@@ -121,6 +121,7 @@ export function mountMachineWindow(
       m.recipe,
       m.filters.length,
       selected,
+      selectedSlot,
       state.hand,
     ]);
 
@@ -138,13 +139,15 @@ export function mountMachineWindow(
     (slot === 'input' && isTurret(m.type) && item === turretSpec(m.type).ammo) ||
     (slot === 'input' && m.type === 'fission_reactor' && item === 'uranium_rod');
 
-  function drop(m: Machine, slot: SlotName, item: string): void {
+  function drop(m: Machine, slot: SlotName, item: string, bagIndex?: number): void {
     if (!accepts(m, slot, item)) {
       playSfx('deny');
       return;
     }
     const max = machineDef(m.type).stockMax ?? 100;
-    playSfx(state.loadMachine(m, slot as 'fuel' | 'input', item, max) > 0 ? 'pickup' : 'deny');
+    playSfx(
+      state.loadMachine(m, slot as 'fuel' | 'input', item, max, bagIndex) > 0 ? 'pickup' : 'deny',
+    );
     render();
   }
 
@@ -203,7 +206,9 @@ export function mountMachineWindow(
         if (!item) return;
         e.preventDefault();
         dragging = false;
-        drop(m, slot, item);
+        // Seule la pile glissée est utilisée : les autres piles du même objet ne bougent pas.
+        const pile = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+        drop(m, slot, item, pile ? Number(pile) : undefined);
       });
     }
     row.append(box);
@@ -229,7 +234,8 @@ export function mountMachineWindow(
         });
         return;
       }
-      if (selected && !isOutputSlot(slot)) return drop(m, slot, selected);
+      if (selected && !isOutputSlot(slot))
+        return drop(m, slot, selected, selectedSlot ?? undefined);
       if (stack && state.takeSlotToHand(m, slot, stack.count) > 0) playSfx('pickup');
       render();
     });
@@ -321,21 +327,22 @@ export function mountMachineWindow(
   }
 
   /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
-  function quickLoad(m: Machine, item: string, count: number): void {
+  function quickLoad(m: Machine, item: string, count: number, bagIndex?: number): void {
     const max = machineDef(m.type).stockMax ?? 100;
     let moved = 0;
-    if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count);
+    if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count, bagIndex);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
       moved = actions.bus.dispatch<'loadIngredient'>({
         type: 'loadIngredient',
         id: m.id,
         item,
         count,
+        slot: bagIndex,
       });
     else {
       for (const slot of ['input', 'fuel'] as const) {
         if (accepts(m, slot, item)) {
-          moved = state.loadMachine(m, slot, item, Math.min(count, max));
+          moved = state.loadMachine(m, slot, item, Math.min(count, max), bagIndex);
           break;
         }
       }
@@ -367,7 +374,7 @@ export function mountMachineWindow(
       cell.type = 'button';
       if (slot) {
         cell.style.setProperty('--item', itemById(slot.item).color);
-        cell.classList.toggle('selected', slot.item === selected);
+        cell.classList.toggle('selected', selectedSlot === i);
         cell.append(
           el('span', 'slot-name', itemName(slot.item)),
           el('span', 'slot-count', String(slot.count)),
@@ -388,25 +395,18 @@ export function mountMachineWindow(
             render();
             return;
           }
-          // Une pile est déjà choisie et on clique une autre pile du même objet : elles fusionnent.
-          if (selected === slot.item && selectedSlot !== null && selectedSlot !== i) {
-            state.moveBagSlot(selectedSlot, i);
-            selectedSlot = null;
-            playSfx('pickup');
-            render();
-            return;
-          }
           // Maj + clic : la pile part directement dans la bonne case de la machine (rien si elle n'en veut pas).
           if (e.shiftKey) {
-            quickLoad(m, slot.item, slot.count);
+            quickLoad(m, slot.item, slot.count, i);
             return;
           }
           if (e.ctrlKey || e.metaKey) {
             void takeAsked(state, slot.item, itemName(slot.item), slot.count, e, i).then(render);
             return;
           }
-          selected = selected === slot.item ? null : slot.item;
-          selectedSlot = selected ? i : null;
+          // On choisit CETTE pile (deux piles du même objet restent bien distinctes) ; recliquer la désélectionne.
+          selectedSlot = selectedSlot === i ? null : i;
+          selected = selectedSlot === null ? null : slot.item;
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
@@ -505,7 +505,7 @@ export function mountMachineWindow(
       } else {
         cell.addEventListener('click', () => {
           if (state.hand) return putInChest(m, state.hand.item);
-          if (selected) putInChest(m, selected);
+          if (selected) putInChest(m, selected, selectedSlot ?? undefined);
         });
       }
       grid.append(cell);
@@ -518,13 +518,14 @@ export function mountMachineWindow(
       if (!item) return;
       e.preventDefault();
       dragging = false;
-      putInChest(m, item);
+      const pile = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+      putInChest(m, item, pile ? Number(pile) : undefined);
     });
     return grid;
   }
 
   /** Dépose un ingrédient (de la main, de l'objet choisi ou glissé) dans l'assembleur. */
-  function putIngredient(m: Machine, item: string): void {
+  function putIngredient(m: Machine, item: string, bagIndex?: number): void {
     const hand = state.hand;
     const moved =
       hand && hand.item === item
@@ -541,6 +542,7 @@ export function mountMachineWindow(
             id: m.id,
             item,
             count: 100,
+            slot: bagIndex,
           });
     playSfx(moved > 0 ? 'pickup' : 'deny');
     render();
@@ -594,7 +596,7 @@ export function mountMachineWindow(
         cell.append(el('span', 'slot-name', `${n} × ${itemName(item)}`), count);
         cell.addEventListener('click', () => {
           if (state.hand) return putIngredient(m, state.hand.item);
-          if (selected) return putIngredient(m, selected);
+          if (selected) return putIngredient(m, selected, selectedSlot ?? undefined);
           const index = m.slots.findIndex((x) => x.item === item);
           if (index >= 0 && state.takeChestToHand(m, index, m.slots[index].count) > 0)
             playSfx('pickup');
@@ -617,7 +619,8 @@ export function mountMachineWindow(
           if (!dropped) return;
           e.preventDefault();
           dragging = false;
-          putIngredient(m, dropped);
+          const pile = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+          putIngredient(m, dropped, pile ? Number(pile) : undefined);
         });
         grid.append(cell);
       }
@@ -697,12 +700,12 @@ export function mountMachineWindow(
     return out;
   }
 
-  function putInChest(m: Machine, item: string): void {
+  function putInChest(m: Machine, item: string, bagIndex?: number): void {
     const hand = state.hand;
     const moved =
       hand && hand.item === item
         ? state.useHand((it, n) => state.putInChest(m, it, n))
-        : state.putInChest(m, item, 100);
+        : state.putInChest(m, item, 100, bagIndex);
     playSfx(moved > 0 ? 'pickup' : 'deny');
     render();
   }

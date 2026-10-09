@@ -58,14 +58,18 @@ import {
   type WorldChanges,
 } from './worldChanges';
 
-export type StateEvent =
+export type StateEvent = (
   | { type: 'harvest'; key: string }
   | { type: 'drops' }
   | { type: 'inventory' }
   | { type: 'build' }
   | { type: 'hotbar' }
   | { type: 'factory' }
-  | { type: 'discovery'; id: string };
+  | { type: 'discovery'; id: string }
+) & {
+  /** L'événement vient d'un autre joueur (invité) : la vue locale doit se mettre à jour. */
+  remote?: boolean;
+};
 
 export interface HarvestResult {
   /** Unités réellement ajoutées au sac. */
@@ -177,8 +181,8 @@ export class GameState {
     guest.creative = host.creative;
     guest.onChange((e) => {
       if (e.type === 'inventory' || e.type === 'hotbar') {
-        if (share.inventory) host.relay(e);
-      } else host.relay(e);
+        if (share.inventory) host.relay({ ...e, remote: true });
+      } else host.relay({ ...e, remote: true });
     });
     return guest;
   }
@@ -312,6 +316,26 @@ export class GameState {
       bag[from] = b;
     }
     this.emit({ type: 'inventory' });
+  }
+
+  /** Unités disponibles : celles de la pile `bagIndex` si on la désigne, sinon tout le sac. */
+  private availableIn(item: string, bagIndex?: number): number {
+    if (bagIndex === undefined) return this.inventory[item] ?? 0;
+    const s = this.bagSlots()[bagIndex];
+    return s && s.item === item ? s.count : 0;
+  }
+
+  /** Retire `n` unités du sac, en commençant par la pile `bagIndex` si on la désigne (les autres piles restent intactes). */
+  private takeUnits(item: string, n: number, bagIndex?: number): void {
+    if (bagIndex !== undefined) {
+      const s = this.bagSlots()[bagIndex];
+      if (s && s.item === item) {
+        const cut = Math.min(n, s.count);
+        s.count -= cut;
+        if (s.count <= 0) this.bag[bagIndex] = null;
+      }
+    }
+    this.inventory = remove(this.inventory, item, n).inventory;
   }
 
   /** Vide la case du sac (avant de retirer ses objets du contenu, par exemple pour les jeter). */
@@ -1302,14 +1326,14 @@ export class GameState {
   }
 
   /** Assembleur : met des ingrédients du sac dans la machine (seulement ceux de la recette). Renvoie la quantité. */
-  loadIngredient(m: Machine, item: string, count: number): number {
+  loadIngredient(m: Machine, item: string, count: number, bagIndex?: number): number {
     const need = recipeOf(m)?.[item];
     if ((m.type !== 'assembler' && !isSmith(m.type)) || !need) return 0;
     const stack = m.slots.find((x) => x.item === item);
     const room = ingredientCap(need) - (stack?.count ?? 0);
-    const moved = Math.min(count, this.inventory[item] ?? 0, room);
+    const moved = Math.min(count, this.availableIn(item, bagIndex), room);
     if (moved <= 0) return 0;
-    this.inventory = remove(this.inventory, item, moved).inventory;
+    this.takeUnits(item, moved, bagIndex);
     if (stack) stack.count += moved;
     else m.slots.push({ item, count: moved });
     this.emit({ type: 'factory' });
@@ -1438,7 +1462,13 @@ export class GameState {
    * Met des objets du sac dans la case de combustible ou d'entrée d'une machine (un seul type par case).
    * Renvoie la quantité déplacée.
    */
-  loadMachine(m: Machine, slot: 'fuel' | 'input', item: string, count: number): number {
+  loadMachine(
+    m: Machine,
+    slot: 'fuel' | 'input',
+    item: string,
+    count: number,
+    bagIndex?: number,
+  ): number {
     const max = machineDef(m.type).stockMax ?? 100;
     if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).energyMJ))
       return 0;
@@ -1451,9 +1481,9 @@ export class GameState {
       return 0;
     const current: Stack | null = slot === 'fuel' ? m.fuel : m.input;
     if (current && current.item !== item) return 0;
-    const moved = Math.min(count, this.inventory[item] ?? 0, max - (current?.count ?? 0));
+    const moved = Math.min(count, this.availableIn(item, bagIndex), max - (current?.count ?? 0));
     if (moved <= 0) return 0;
-    this.inventory = remove(this.inventory, item, moved).inventory;
+    this.takeUnits(item, moved, bagIndex);
     const next = { item, count: (current?.count ?? 0) + moved };
     if (slot === 'fuel') m.fuel = next;
     else m.input = next;
@@ -1484,11 +1514,11 @@ export class GameState {
   }
 
   /** Range des objets du sac dans un coffre (jusqu'à `count`). Renvoie la quantité rangée. */
-  putInChest(m: Machine, item: string, count: number): number {
-    const n = Math.min(count, this.inventory[item] ?? 0, chestRoom(m, item));
+  putInChest(m: Machine, item: string, count: number, bagIndex?: number): number {
+    const n = Math.min(count, this.availableIn(item, bagIndex), chestRoom(m, item));
     if (n <= 0) return 0;
     const stored = chestPut(m, item, n);
-    this.inventory = remove(this.inventory, item, stored).inventory;
+    this.takeUnits(item, stored, bagIndex);
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
     return stored;

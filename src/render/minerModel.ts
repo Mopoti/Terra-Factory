@@ -168,7 +168,9 @@ export class Miner {
       new THREE.Vector3(-1, 0, 0).applyQuaternion(rest.clone().invert()).multiplyScalar(0.7),
     );
     holder.scale.setScalar(1 / this.scale);
-    tool.position.set(0, 0, 0);
+    // La main serre le manche, pas le milieu de la pioche : on recule l'outil pour que la prise soit à un quart de sa
+    // longueur depuis le bout du manche (la tête dépasse devant le poing).
+    tool.position.set(0, 0, 0.21 * size);
     tool.rotation.set(0, 0, 0);
     tool.scale.setScalar(size);
     holder.add(tool);

@@ -1,3 +1,4 @@
+import { playerHue } from '../render/remotePlayers';
 import { applyChanges } from '../core/game/worldChanges';
 import { CELL_SIZE_M, CHUNK_CELLS } from '../core/constants';
 import { machineDef } from '../core/data/machines';
@@ -25,6 +26,8 @@ export interface MapOptions {
   threat: Threat;
   /** Position et cap du joueur (x, z en mètres ; yaw comme la caméra). */
   player(): { x: number; z: number; yaw: number };
+  /** Les autres joueurs (multijoueur) : un point coloré avec leur nom. */
+  others?(): { id: string; name: string; x: number; z: number; yaw: number }[];
   onOpenChange(open: boolean): void;
 }
 
@@ -237,6 +240,25 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     }
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
+    // Autres joueurs : un point à leur couleur et leur nom (plus tard : seulement ceux de son groupe).
+    for (const o of options.others?.() ?? []) {
+      const ox = (o.x / CELL_SIZE_M - gx0) * zoom;
+      const oz = (o.z / CELL_SIZE_M - gz0) * zoom;
+      ctx.fillStyle = `hsl(${playerHue(o.id)} 70% 55%)`;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ox, oz, 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fill();
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeText(o.name, ox, oz - 11);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(o.name, ox, oz - 11);
+      ctx.textAlign = 'start';
+    }
     // Joueur : flèche blanche dans le sens du regard.
     const p = options.player();
     const px = (p.x / CELL_SIZE_M - gx0) * zoom;

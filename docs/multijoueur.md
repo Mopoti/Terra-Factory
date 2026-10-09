@@ -87,3 +87,12 @@ _Décisions du PO (Tour 116). Rien de réseau n'est codé : l'étape M0 ne fait 
 ## Mot de passe (Tour 128)
 
 Le mot de passe d'une partie publique est rangé sous forme d'**empreinte SHA-256 salée** (`sha256:sel:empreinte`, `src/core/net/password.ts`) au moment de créer la partie ; l'hôte compare l'empreinte du mot de passe tapé par l'invité. Une ancienne sauvegarde avec un mot de passe en clair reste acceptée. Le mot de passe n'est jamais envoyé aux invités (ni en clair ni en empreinte).
+
+## Sac individuel, récolte visible par tous, joueurs sur la carte (Tour 155)
+- **Sac individuel** : le réglage « sac commun » n'existe plus (`share.inventory` est toujours faux, même dans une ancienne sauvegarde ; la case a disparu de l'éditeur de partie). Chaque joueur a sa fiche (sac, barre d'objets, équipement…) ; seuls les technologies et les crédits peuvent encore être partagés.
+- **Récolte** : le bois va dans le sac de celui qui récolte. Quand un invité récolte, l'hôte redessine la zone (événement `harvest` marqué `remote`) ; quand quelqu'un récolte chez un invité, il ne redessine que les chunks dont `taken` a changé (au lieu de tous). Le reste d'un arbre est donc le même partout, et l'arbre disparaît pour tout le monde quand il est épuisé.
+- **Carte** : les autres joueurs apparaissent comme un point à leur couleur avec leur nom (`MapOptions.others`, `GameViewHandle.otherPlayers`). Un système de groupe filtrera plus tard cette liste.
+
+## Piles du sac et machines (Tour 155)
+- Charger une machine (combustible, entrée, coffre, ingrédient) depuis une pile précise (glisser, Maj + clic, pile choisie) ne prend QUE dans cette pile, jusqu'à la limite de la machine (`loadMachine`, `putInChest`, `loadIngredient` avec `bagIndex` ; commande `loadIngredient.slot`). Les autres piles du même objet ne bougent plus.
+- Dans la fenêtre d'une machine, choisir une pile choisit cette pile (plus de fusion en cliquant une seconde pile du même objet) ; on fusionne en glissant une pile sur une autre.

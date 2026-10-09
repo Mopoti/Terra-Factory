@@ -302,6 +302,7 @@ function startGame(
       const p = view.getState();
       return { x: p.x, z: p.z, yaw: p.yaw };
     },
+    others: () => view.otherPlayers(),
     onOpenChange: syncPaused,
   });
   s.inventory = mountInventory(inventoryEl, state, {

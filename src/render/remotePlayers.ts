@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import type { PlayerInfo } from '../core/net/protocol';
 import { Miner, minerReady } from './minerModel';
 
+/** Teinte propre à chaque joueur (silhouette, mannequin et point de la carte). */
+export function playerHue(id: string): number {
+  return [...id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 17);
+}
+
 /** Affichage des autres joueurs : une silhouette colorée et leur nom, lissées entre deux envois du réseau. */
 export class RemotePlayersView {
   private readonly root = new THREE.Group();
@@ -15,7 +20,7 @@ export class RemotePlayersView {
   }
 
   private make(p: PlayerInfo): THREE.Group {
-    const hue = [...p.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 17);
+    const hue = playerHue(p.id);
     const color = new THREE.Color().setHSL(hue / 360, 0.6, 0.5);
     const g = new THREE.Group();
     const body = new THREE.Mesh(
@@ -70,7 +75,7 @@ export class RemotePlayersView {
       }
       // Le mannequin articulé remplace la silhouette dès que le fichier est chargé.
       if (!entry.miner && minerReady()) {
-        const hue = [...p.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 17);
+        const hue = playerHue(p.id);
         entry.miner = new Miner(1.7, new THREE.Color().setHSL(hue / 360, 0.6, 0.5).getHex());
         entry.miner.root.position.y = 0.85;
         entry.group.add(entry.miner.root);

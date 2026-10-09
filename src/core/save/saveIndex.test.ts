@@ -290,12 +290,12 @@ describe('lecture des anciens formats', () => {
 });
 
 describe('réglages multijoueur', () => {
-  it('par défaut : désactivé, privé, tout partagé', () => {
+  it('par défaut : désactivé, privé, technologies et crédits partagés, sac individuel', () => {
     expect(DEFAULT_MULTIPLAYER).toEqual({
       enabled: false,
       visibility: 'private',
       password: '',
-      share: { research: true, credits: true, inventory: true },
+      share: { research: true, credits: true, inventory: false },
     });
     expect(normalizeMultiplayer(undefined)).toEqual(DEFAULT_MULTIPLAYER);
   });
@@ -309,7 +309,7 @@ describe('réglages multijoueur', () => {
     expect(mp.enabled).toBe(true);
     expect(mp.visibility).toBe('public');
     expect(mp.password).toHaveLength(100);
-    expect(mp.share).toEqual({ research: false, credits: true, inventory: true });
+    expect(mp.share).toEqual({ research: false, credits: true, inventory: false });
     expect(normalizeMultiplayer({ visibility: 'secret' }).visibility).toBe('private');
   });
 });

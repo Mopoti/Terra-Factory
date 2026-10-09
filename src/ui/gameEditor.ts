@@ -319,7 +319,7 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   visRow.append(visControl);
   const visHelp = el('small', 'help', t('editor.mp.visibility.help'));
   mpBox.append(visRow, visHelp, el('h4', undefined, t('editor.mp.share')));
-  for (const key of ['research', 'credits', 'inventory'] as const) {
+  for (const key of ['research', 'credits'] as const) {
     const row = checkbox(
       t(`editor.mp.share.${key}` as TranslationKey),
       '',

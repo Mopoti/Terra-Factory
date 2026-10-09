@@ -16,7 +16,10 @@ export interface CommandSpecs {
   };
   removeMachine: { args: { id: number; at: { x: number; z: number } }; result: boolean };
   setRecipe: { args: { id: number; item: string | null }; result: boolean };
-  loadIngredient: { args: { id: number; item: string; count: number }; result: number };
+  loadIngredient: {
+    args: { id: number; item: string; count: number; slot?: number };
+    result: number;
+  };
   repairReactor: { args: { id: number }; result: 'ok' | 'missing' | 'notBroken' };
   activateBeacon: {
     args: { id: number };
@@ -79,7 +82,9 @@ export class CommandBus {
       }
       case 'loadIngredient': {
         const m = this.machine(c.id);
-        return (m ? state.loadIngredient(m, c.item, c.count) : 0) as CommandSpecs[K]['result'];
+        return (
+          m ? state.loadIngredient(m, c.item, c.count, c.slot) : 0
+        ) as CommandSpecs[K]['result'];
       }
       case 'repairReactor': {
         const m = this.machine(c.id);

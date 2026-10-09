@@ -58,7 +58,7 @@ export interface MultiplayerOptions {
   visibility: 'private' | 'public';
   /** Mot de passe d'une partie publique (vide = aucun). */
   password: string;
-  /** Ce que les joueurs partagent (tout partagé par défaut) : technologies, crédits du comptoir, sac. */
+  /** Ce que les joueurs partagent (technologies et crédits par défaut) ; le sac est toujours individuel. */
   share: { research: boolean; credits: boolean; inventory: boolean };
 }
 export const MAX_PLAYERS = 5;
@@ -67,7 +67,7 @@ export const DEFAULT_MULTIPLAYER: MultiplayerOptions = {
   enabled: false,
   visibility: 'private',
   password: '',
-  share: { research: true, credits: true, inventory: true },
+  share: { research: true, credits: true, inventory: false },
 };
 
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
@@ -95,7 +95,8 @@ export function normalizeMultiplayer(raw: unknown): MultiplayerOptions {
     share: {
       research: flag(s.research, d.share.research),
       credits: flag(s.credits, d.share.credits),
-      inventory: flag(s.inventory, d.share.inventory),
+      // Le sac est propre à chaque joueur : l'ancien réglage « sac commun » n'existe plus.
+      inventory: false,
     },
   };
 }

@@ -117,6 +117,7 @@ import { Interaction } from './interaction';
 import { WEAPONS, isWeapon, type WeaponSpec } from '../core/data/weapons';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
+import type { PlayerInfo } from '../core/net/protocol';
 import { loadModels } from './models';
 import { loadNature } from './nature';
 import { tickWater } from './groundTextures';
@@ -194,6 +195,8 @@ export interface GameViewHandle {
   vehicleMachine(id: number): Machine | null;
   /** Identifiant (négatif, pour la fenêtre) du buggy que conduit le joueur, ou null. */
   mountedMachineId(): number | null;
+  /** Les autres joueurs de la partie (position et cap), pour la carte ; vide hors multijoueur. */
+  otherPlayers(): PlayerInfo[];
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -567,6 +570,12 @@ export function startGameView(
     buildHud.innerHTML = `<strong>${itemLabel(pieceDef(kind).item)} · ${t('build.level', { n: String(buildLevel) })} · ${buildRot === null ? t('build.rotationAuto') : t('build.rotation', { deg: String(buildRot * 90) })}</strong><div>${t('build.stock', { n: String(stockOf(kind)) })}</div>${wall}${plan}<div>${t('build.rooms', { n: String(rooms) })}${here ? ` · ${t('build.inRoom')}` : ''}</div><div class="msg">${buildMessage}</div><small>${t('build.help')}</small>`;
   }
   const unsubscribeBuild = options.state.onChange((e) => {
+    // Un invité récolte (arbre, rocher…) : l'hôte redessine la zone pour que le reste de la ressource soit juste.
+    if (e.type === 'harvest' && e.remote) {
+      const [gx, gz] = e.key.split(',').map(Number);
+      if (Number.isFinite(gx) && Number.isFinite(gz))
+        dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+    }
     if (e.type === 'discovery') {
       const d = DISCOVERIES.find((x) => x.id === e.id);
       if (d)
@@ -2520,10 +2529,23 @@ export function startGameView(
   const remotePlayers = new RemotePlayersView(scene);
   if (guest) {
     // L'état du monde reçu de l'hôte : les arbres et rochers récoltés, les nids… se redessinent.
+    let takenSeen: Record<string, number> = { ...options.state.changes.taken };
     guest.onWorldChange((changed) => {
-      if (changed.includes('taken') || changed.includes('nests')) {
+      if (changed.includes('nests')) {
         nestCache.clear();
         for (const k of chunks.keys()) dirtyChunks.add(k);
+      }
+      if (changed.includes('taken')) {
+        // Un autre joueur a récolté : on ne redessine que les zones touchées (arbre entamé ou disparu, rocher…).
+        const now = options.state.changes.taken;
+        for (const key of new Set([...Object.keys(now), ...Object.keys(takenSeen)])) {
+          if (now[key] === takenSeen[key]) continue;
+          const [gx, gz] = key.split(',').map(Number);
+          if (Number.isFinite(gx) && Number.isFinite(gz))
+            dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+        }
+        takenSeen = { ...now };
+        nestCache.clear();
       }
     });
     guest.onHit((amount) => onSimEvent({ type: 'playerHit', player: guest.client.you.id, amount }));
@@ -3268,6 +3290,10 @@ export function startGameView(
     setHost: (session) => {
       hostSession = session;
     },
+    otherPlayers: () =>
+      guest
+        ? guest.client.players.filter((p) => p.id !== guest.client.you.id)
+        : (hostSession?.players().filter((p) => p.id !== HOST_ID) ?? []),
     vehicleMachine,
     mountedMachineId: () => (mounted ? -mounted.id : null),
     dropItem: (item, count) => {
