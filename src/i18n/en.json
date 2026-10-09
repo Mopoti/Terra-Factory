@@ -1105,5 +1105,6 @@
   "tech.effect.research_2": "Effect: T1 packs in 3 s, T2 packs in 4 s",
   "tech.effect.research_3": "Effect: T1 packs in 2 s, T2 in 3 s, T3 in 4 s",
   "tech.effect.research_4": "Effect: T1 packs in 1 s, T2 in 2 s, T3 in 3 s, T4 in 4 s",
-  "machine.fuelBurn": "Fuel currently burning"
+  "machine.fuelBurn": "Fuel currently burning",
+  "res.stone_ore": "Stone deposit"
 }

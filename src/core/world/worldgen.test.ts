@@ -492,3 +492,20 @@ describe('tailles des arbres et des rochers', () => {
     for (const r of rocks) expect([10, 20, 32][r.size ?? 1]).toBe(r.amount);
   });
 });
+
+describe('gisements de pierre', () => {
+  it('existent près du départ, comme le charbon, et donnent de la pierre', () => {
+    const gen = new WorldGenerator(defaultWorldParams('terra'));
+    let cells = 0;
+    let nearest = Infinity;
+    for (let cx = -6; cx <= 6; cx++)
+      for (let cz = -6; cz <= 6; cz++)
+        for (const o of gen.chunk(cx, cz).ore)
+          if (o.id === 'stone_ore') {
+            cells++;
+            nearest = Math.min(nearest, Math.hypot(o.gx, o.gz) * CELL_SIZE_M);
+          }
+    expect(cells).toBeGreaterThan(50);
+    expect(nearest).toBeLessThan(300);
+  });
+});

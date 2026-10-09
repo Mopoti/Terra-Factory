@@ -15,9 +15,10 @@ export const ORE_TILES = [
   'sand',
   'oil',
   'uraninite',
+  'stone_ore',
 ] as const;
 const COLUMNS = 4;
-const ROWS = 2;
+const ROWS = 3;
 const TILE_PX = 128;
 
 /** Taille (m) que couvre la texture de l'eau avant de se répéter. */
@@ -83,6 +84,11 @@ const STYLES: Record<(typeof ORE_TILES)[number], TileStyle> = {
     base: 0x1c1c22,
     chunks: { n: 28, min: 12, max: 30, colors: [0x101015, 0x26262f, 0x15151c] },
     flecks: { n: 40, colors: [0x4a3b78, 0x2f5f78, 0x6a4a58], size: 3 },
+  },
+  stone_ore: {
+    base: 0x6f8196,
+    chunks: { n: 70, min: 6, max: 16, colors: [0x5f7084, 0x8a9bb0, 0x4f5f72, 0x7c8ea3] },
+    flecks: { n: 80, colors: [0xd8dbe0, 0x555a62], size: 2 },
   },
   uraninite: {
     base: 0x2f7d46,

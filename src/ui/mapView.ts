@@ -343,8 +343,16 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       legendItem(resourceById('copper_ore').color, t('item.copper_ore' as TranslationKey)),
       legendItem(resourceById('coal').color, t('item.coal' as TranslationKey)),
       legendItem(resourceById('sand').color, t('item.silica_sand' as TranslationKey)),
-      ...['zinc_ore', 'bauxite', 'oil', 'uraninite'].map((id) =>
-        legendItem(resourceById(id).color, t(`item.${id}` as TranslationKey)),
+      legendItem(resourceById('stone_ore').color, t('item.stone' as TranslationKey)),
+      ...(
+        [
+          ['zinc_ore', 'zinc_ore'],
+          ['bauxite', 'bauxite'],
+          ['oil', 'crude_oil'],
+          ['uraninite', 'uraninite'],
+        ] as const
+      ).map(([id, item]) =>
+        legendItem(resourceById(id).color, t(`item.${item}` as TranslationKey)),
       ),
       legendItem(OBJECT_COLORS.tree, t('map.trees')),
       legendItem(OBJECT_COLORS.rock, t('map.rocks')),

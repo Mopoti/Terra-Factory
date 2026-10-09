@@ -221,6 +221,28 @@
       }
     },
     {
+      "id": "stone_ore",
+      "family": "ores",
+      "kind": "deposit",
+      "color": "#6f8196",
+      "candidateSizeM": 96,
+      "presence": 0.45,
+      "radiusM": [6, 16],
+      "centerAmount": 1000,
+      "edgeRatio": 0.09,
+      "richness": [0.8, 1.2],
+      "biomeWeight": {
+        "prairie": 0.8,
+        "forest": 0.7,
+        "desert": 1,
+        "tundra": 1.4
+      },
+      "harvest": {
+        "item": "stone",
+        "secondsPerUnit": 0.5
+      }
+    },
+    {
       "id": "oil",
       "family": "ores",
       "kind": "deposit",
