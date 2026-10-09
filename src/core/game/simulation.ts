@@ -5,13 +5,7 @@
  * la simulation renvoie des événements (dégâts reçus, machine perdue…) que chacun applique.
  */
 import { CELL_SIZE_M } from '../constants';
-import {
-  machineDef,
-  isTurret,
-  TURRET_DAMAGE,
-  TURRET_RANGE_M,
-  TURRET_EVERY_S,
-} from '../data/machines';
+import { machineDef, isTurret, turretSpec } from '../data/machines';
 import { dims, type Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
 import type { GameState } from './state';
@@ -169,10 +163,11 @@ export class WorldSimulation {
         m.progress = Math.max(0, m.progress - dt);
         if (m.progress > 0 || !factory.turretReady(m)) continue;
         const c = centerOf(m);
-        const result = threat.hit(c.x, c.z, TURRET_RANGE_M, TURRET_DAMAGE);
+        const spec = turretSpec(m.type);
+        const result = threat.hit(c.x, c.z, spec.range, spec.damage);
         if (!result) continue;
         factory.turretTake(m);
-        m.progress = TURRET_EVERY_S;
+        m.progress = spec.every;
         events.push({ type: 'turretShot', id: m.id, kill: result === 'kill' });
       }
     }

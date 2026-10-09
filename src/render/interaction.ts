@@ -255,10 +255,25 @@ export class Interaction {
       const h = 0.1 + Math.min(0.25, d.count * 0.01);
       // Le bois se pose sous forme de bûche (une seule, ou une paire à partir de trois) ; le reste, en petit bloc.
       const log = d.item === 'wood' ? lowModel(d.count >= 3 ? LOG_PAIR : LOG) : null;
+      // Dépouilles : une carapace en demi-coque bombée, du tissu vivant en grosse goutte.
+      const shell = d.item === 'carapace' || d.item === 'living_tissue';
       const mesh = log
         ? new THREE.Mesh(logGeometry(log, d.count >= 3 ? 0.7 : 0.9), logMaterial)
-        : new THREE.Mesh(new THREE.BoxGeometry(0.34, h, 0.34), this.dropMaterial(d.item));
-      mesh.position.set(d.x, log ? 0 : h / 2, d.z);
+        : shell
+          ? new THREE.Mesh(
+              new THREE.SphereGeometry(
+                d.item === 'carapace' ? 0.26 : 0.2,
+                10,
+                6,
+                0,
+                Math.PI * 2,
+                0,
+                d.item === 'carapace' ? Math.PI / 2 : Math.PI,
+              ).scale(1, d.item === 'carapace' ? 0.6 : 0.7, 1.25),
+              this.dropMaterial(d.item),
+            )
+          : new THREE.Mesh(new THREE.BoxGeometry(0.34, h, 0.34), this.dropMaterial(d.item));
+      mesh.position.set(d.x, log ? 0 : shell ? (d.item === 'carapace' ? 0 : 0.14) : h / 2, d.z);
       mesh.rotation.y = (Number(d.id.replace(/\D/g, '')) * 0.9) % Math.PI;
       mesh.castShadow = true;
       this.dropGroup.add(mesh);

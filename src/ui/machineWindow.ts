@@ -1,6 +1,15 @@
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
-import { isAssembler, isChest, isDrill, isLab, isSmith, machineDef } from '../core/data/machines';
+import {
+  isAssembler,
+  isChest,
+  isDrill,
+  isLab,
+  isSmith,
+  isTurret,
+  machineDef,
+  turretSpec,
+} from '../core/data/machines';
 import {
   MOULD_CYCLES,
   recipeById,
@@ -126,7 +135,7 @@ export function mountMachineWindow(
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
     (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
     (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
-    (slot === 'input' && m.type === 'turret' && item === 'magazine') ||
+    (slot === 'input' && isTurret(m.type) && item === turretSpec(m.type).ammo) ||
     (slot === 'input' && m.type === 'fission_reactor' && item === 'uranium_rod');
 
   function drop(m: Machine, slot: SlotName, item: string): void {
@@ -868,7 +877,8 @@ export function mountMachineWindow(
         );
       }
     }
-    if (m.type === 'turret') rows.append(machineSlot(m, 'input', t('machine.magazines'), m.input));
+    if (isTurret(m.type) && turretSpec(m.type).ammo)
+      rows.append(machineSlot(m, 'input', t('machine.magazines'), m.input));
     if (m.type === 'fission_reactor') {
       rows.append(machineSlot(m, 'input', t('machine.rods'), m.input));
       rows.append(machineSlot(m, 'stock', t('machine.wasteOut'), m.stock));

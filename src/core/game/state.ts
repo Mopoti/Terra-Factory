@@ -14,7 +14,15 @@ import {
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { TECHS, packCost, scienceCost, techById, techFor } from '../data/techs';
-import { isSmith, itemOfTier, machineDef, type MachineType } from '../data/machines';
+import { WEAPONS, isWeapon, type WeaponSpec } from '../data/weapons';
+import {
+  isSmith,
+  isTurret,
+  itemOfTier,
+  machineDef,
+  turretSpec,
+  type MachineType,
+} from '../data/machines';
 import { buyPrice, sellPrice } from './trade';
 import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from './playerData';
 import { recipeById } from '../data/recipes';
@@ -41,7 +49,6 @@ import {
   type Inventory,
 } from './inventory';
 import {
-  MAGAZINE_ROUNDS,
   emptyChanges,
   normalizeChanges,
   type Corpse,
@@ -536,6 +543,13 @@ export class GameState {
     return stack;
   }
 
+  /** Laisse au sol des objets qui n'appartiennent à personne (dépouilles d'ennemis) : rien n'est retiré du sac. */
+  dropLoot(item: string, count: number, x: number, z: number): void {
+    if (count <= 0) return;
+    this.changes.drops.push({ id: `drop-${this.changes.nextDropId++}`, item, count, x, z });
+    this.emit({ type: 'drops' });
+  }
+
   /** Ramasse (tout ou en partie, selon la place) une pile posée au sol. */
   pickUp(stackId: string): HarvestResult {
     const stack = this.changes.drops.find((d) => d.id === stackId);
@@ -612,6 +626,18 @@ export class GameState {
     return id && (this.inventory[id] ?? 0) > 0 ? id : null;
   }
 
+  /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
+  armorPercent(): number {
+    let total = 0;
+    for (const id of Object.values(this.changes.equipment)) total += itemById(id).equip?.armor ?? 0;
+    return Math.min(80, total);
+  }
+
+  /** Dégâts réellement subis après l'armure. */
+  mitigate(amount: number): number {
+    return this.creative ? amount : amount * (1 - this.armorPercent() / 100);
+  }
+
   /** Bonus de récolte de l'outil en place (null = mains nues). */
   harvestTool(): { speed: number; yield: number } | null {
     const id = this.toolItem();
@@ -623,7 +649,7 @@ export class GameState {
     if (index < 0 || index >= this.changes.tools.length) return false;
     if (item !== null) {
       const def = itemById(item);
-      if (!def.tool && def.id !== 'pistol') return false;
+      if (!def.tool && !isWeapon(def.id)) return false;
     }
     this.changes.tools[index] = item;
     this.carried = null;
@@ -1291,20 +1317,28 @@ export class GameState {
     return moved;
   }
 
-  /** Recharge le pistolet avec un chargeur du sac. */
-  reload(): 'ok' | 'noMagazine' | 'full' {
-    if (this.changes.ammo >= MAGAZINE_ROUNDS) return 'full';
-    if ((this.inventory.magazine ?? 0) <= 0) return 'noMagazine';
-    this.inventory = remove(this.inventory, 'magazine', 1).inventory;
-    this.changes.ammo = MAGAZINE_ROUNDS;
+  /** Balles restantes dans l'arme. */
+  ammoOf(weapon: WeaponSpec['id'] = 'pistol'): number {
+    return weapon === 'rifle' ? this.changes.rifleAmmo : this.changes.ammo;
+  }
+
+  /** Recharge l'arme avec un chargeur du sac. */
+  reload(weapon: WeaponSpec['id'] = 'pistol'): 'ok' | 'noMagazine' | 'full' {
+    const spec = WEAPONS[weapon];
+    if (this.ammoOf(weapon) >= spec.rounds) return 'full';
+    if ((this.inventory[spec.magazine] ?? 0) <= 0) return 'noMagazine';
+    this.inventory = remove(this.inventory, spec.magazine, 1).inventory;
+    if (weapon === 'rifle') this.changes.rifleAmmo = spec.rounds;
+    else this.changes.ammo = spec.rounds;
     this.emit({ type: 'inventory' });
     return 'ok';
   }
 
-  /** Tire une balle ; renvoie faux si le pistolet est vide. */
-  fire(): boolean {
-    if (this.changes.ammo <= 0) return false;
-    this.changes.ammo--;
+  /** Tire une balle ; renvoie faux si l'arme est vide. */
+  fire(weapon: WeaponSpec['id'] = 'pistol'): boolean {
+    if (this.ammoOf(weapon) <= 0) return false;
+    if (weapon === 'rifle') this.changes.rifleAmmo--;
+    else this.changes.ammo--;
     return true;
   }
 
@@ -1411,7 +1445,7 @@ export class GameState {
     if (
       slot === 'input' &&
       !(isSmith(m.type) && !!item && recipeById(m.recipe)?.mould === item) &&
-      !(m.type === 'turret' && item === 'magazine') &&
+      !(isTurret(m.type) && item === turretSpec(m.type).ammo) &&
       !(m.type === 'fission_reactor' && item === 'uranium_rod')
     )
       return 0;

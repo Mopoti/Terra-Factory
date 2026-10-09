@@ -643,10 +643,10 @@ describe('équipement et sac à dos', () => {
     expect(s.limits.maxWeightG).toBeGreaterThan(s.baseLimitsView().maxWeightG);
     // On remplit au-delà de la capacité de base : le sac à dos ne peut plus être retiré.
     s.inventory = { stone: 48 };
-    expect(s.unequip('torso')).toBe('bagFull');
-    expect(s.changes.equipment.torso).toBe('backpack');
+    expect(s.unequip('back')).toBe('bagFull');
+    expect(s.changes.equipment.back).toBe('backpack');
     s.inventory = { stone: 10 };
-    expect(s.unequip('torso')).toBe('ok');
+    expect(s.unequip('back')).toBe('ok');
     expect(s.inventory.backpack).toBe(1);
     expect(s.limits.maxSlots).toBe(base);
   });
@@ -902,7 +902,7 @@ describe('carburant du buggy', () => {
 describe('mort, corps à récupérer, duvet et lit', () => {
   const newState = (): GameState => {
     const s = new GameState({ inventory: { coal: 30, wood: 10, sleeping_bag: 1, bed: 1 } });
-    s.changes.equipment.torso = 'backpack';
+    s.changes.equipment.back = 'backpack';
     return s;
   };
 
@@ -912,11 +912,11 @@ describe('mort, corps à récupérer, duvet et lit', () => {
     expect(s.inventory).toEqual({});
     expect(s.changes.equipment).toEqual({});
     expect(corpse.inventory.coal).toBe(30);
-    expect(corpse.equipment.torso).toBe('backpack');
+    expect(corpse.equipment.back).toBe('backpack');
     expect(s.recoverCorpse(corpse.id)).toBe('recovered');
     expect(s.inventory.coal).toBe(30);
     expect(s.inventory.bed).toBe(1);
-    expect(s.changes.equipment.torso).toBe('backpack');
+    expect(s.changes.equipment.back).toBe('backpack');
     expect(s.changes.corpses).toHaveLength(0);
   });
 

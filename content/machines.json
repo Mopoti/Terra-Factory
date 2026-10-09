@@ -90,21 +90,9 @@
       "cellsPerSecond": 0.75,
       "capacity": 6,
       "height": 0.15,
-      "tierItems": [
-        "machine_conveyor",
-        "machine_conveyor_2",
-        "machine_conveyor_3"
-      ],
-      "tierSpeeds": [
-        0.75,
-        1.5,
-        3.0
-      ],
-      "tierColors": [
-        "#3f4a55",
-        "#3f6f9a",
-        "#cfd6dc"
-      ]
+      "tierItems": ["machine_conveyor", "machine_conveyor_2", "machine_conveyor_3"],
+      "tierSpeeds": [0.75, 1.5, 3.0],
+      "tierColors": ["#3f4a55", "#3f6f9a", "#cfd6dc"]
     },
     {
       "id": "chest_wood",
@@ -284,26 +272,10 @@
       "w": 2,
       "d": 2,
       "item": "machine_pipe",
-      "tierItems": [
-        "machine_pipe",
-        "machine_pipe_2",
-        "machine_pipe_3"
-      ],
-      "tierMaxBar": [
-        5,
-        20,
-        50
-      ],
-      "tierFrictionBar": [
-        0.1,
-        0.05,
-        0.02
-      ],
-      "tierColors": [
-        "#c97a3a",
-        "#d9b44a",
-        "#aab4bd"
-      ],
+      "tierItems": ["machine_pipe", "machine_pipe_2", "machine_pipe_3"],
+      "tierMaxBar": [5, 20, 50],
+      "tierFrictionBar": [0.1, 0.05, 0.02],
+      "tierColors": ["#c97a3a", "#d9b44a", "#aab4bd"],
       "color": "#c97a3a",
       "fuel": false,
       "fluidCap": 100,
@@ -598,6 +570,41 @@
       "fuel": false,
       "producesKw": 10,
       "height": 1.5
+    },
+    {
+      "id": "turret_heavy",
+      "w": 3,
+      "d": 2,
+      "item": "machine_turret_heavy",
+      "color": "#5a4d3a",
+      "fuel": false,
+      "stockMax": 20,
+      "height": 1.0,
+      "pollution": 0
+    },
+    {
+      "id": "turret_laser",
+      "w": 3,
+      "d": 2,
+      "item": "machine_turret_laser",
+      "color": "#4b6f8f",
+      "fuel": false,
+      "stockMax": 20,
+      "height": 1.0,
+      "pollution": 0,
+      "consumesKw": 25
+    },
+    {
+      "id": "turret_plasma",
+      "w": 3,
+      "d": 3,
+      "item": "machine_turret_plasma",
+      "color": "#8f4bb0",
+      "fuel": false,
+      "stockMax": 20,
+      "height": 1.0,
+      "pollution": 0,
+      "consumesKw": 70
     }
   ]
 }

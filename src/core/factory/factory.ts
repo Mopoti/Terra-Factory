@@ -20,7 +20,7 @@ import {
   isFluid,
   isLab,
   isTurret,
-  TURRET_ROUNDS,
+  turretSpec,
   isLinear,
   isRouter,
   machineDef,
@@ -409,6 +409,9 @@ export function ports(
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
     case 'turret':
+    case 'turret_heavy':
+    case 'turret_laser':
+    case 'turret_plasma':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     case 'boiler':
     case 'fusion_reactor':
@@ -622,6 +625,9 @@ const MACHINE_TYPES: MachineType[] = [
   'assembler',
   'lab',
   'turret',
+  'turret_heavy',
+  'turret_laser',
+  'turret_plasma',
   'pipe',
   'pump',
   'pumpjack',
@@ -1177,7 +1183,10 @@ export class Factory {
       if (this.turbineEfficiency(m) <= 0) return 'noSteam';
       return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
     }
-    if (isTurret(m.type)) return this.turretReady(m) ? 'idle' : 'noAmmo';
+    if (isTurret(m.type)) {
+      if (turretSpec(m.type).ammo === null) return this.powerFactor(m) > 0 ? 'idle' : 'noPower';
+      return this.turretReady(m) ? 'idle' : 'noAmmo';
+    }
     if (isLab(m.type)) {
       if (this.powerFactor(m) <= 0) return 'noPower';
       if (this.hasPacks(m) && this.labDemand <= 0) return 'noStudy';
@@ -1707,7 +1716,8 @@ export class Factory {
       );
     if (isTurret(target.type))
       return (
-        item === 'magazine' && (target.input?.count ?? 0) < (machineDef('turret').stockMax ?? 20)
+        item === turretSpec(target.type).ammo &&
+        (target.input?.count ?? 0) < (machineDef(target.type).stockMax ?? 20)
       );
     if (target.type === 'relay') return this.tradeOpen;
     if (isLab(target.type) || target.type === 'fusion_reactor')
@@ -1717,16 +1727,20 @@ export class Factory {
 
   /** Une tourelle a-t-elle de quoi tirer (balles dans le chargeur en place ou chargeurs en réserve) ? */
   turretReady(m: Machine): boolean {
-    return m.fuelLeft >= 1 || (m.input?.item === 'magazine' && m.input.count > 0);
+    const spec = turretSpec(m.type);
+    if (spec.ammo === null) return this.powerFactor(m) > 0;
+    return m.fuelLeft >= 1 || (m.input?.item === spec.ammo && m.input.count > 0);
   }
 
   /** Tire une balle de la tourelle (recharge un chargeur au besoin). Renvoie faux sans munitions. */
   turretTake(m: Machine): boolean {
+    const spec = turretSpec(m.type);
+    if (spec.ammo === null) return this.powerFactor(m) > 0;
     if (m.fuelLeft < 1) {
-      if (m.input?.item !== 'magazine' || m.input.count <= 0) return false;
+      if (m.input?.item !== spec.ammo || m.input.count <= 0) return false;
       m.input.count--;
       if (m.input.count <= 0) m.input = null;
-      m.fuelLeft = TURRET_ROUNDS;
+      m.fuelLeft = spec.rounds;
     }
     m.fuelLeft -= 1;
     return true;

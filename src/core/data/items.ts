@@ -16,14 +16,19 @@ export interface ItemDef {
   /** Combustible : énergie libérée par 1 unité, en mégajoules (absent = n'est pas un combustible). */
   energyMJ: number | null;
   /** Équipement porté : emplacement du corps et bonus de capacité du sac. */
-  equip: { slot: EquipSlot; bonus: { slots: number; weightG: number; volumeMl: number } } | null;
+  equip: {
+    slot: EquipSlot;
+    bonus: { slots: number; weightG: number; volumeMl: number };
+    /** Protection (en %) : réduit les dégâts reçus (somme des pièces portées, plafonnée). */
+    armor: number;
+  } | null;
   /** Outil (case d'outils) : multiplicateur de vitesse de récolte et unités obtenues par coup. */
   tool: { speed: number; yield: number } | null;
 }
 
-export type EquipSlot = 'head' | 'torso' | 'legs' | 'feet' | 'hands';
+export type EquipSlot = 'head' | 'torso' | 'back' | 'legs' | 'feet' | 'hands';
 /** Ordre d'affichage : de la tête aux pieds. */
-export const EQUIP_SLOTS: EquipSlot[] = ['head', 'torso', 'hands', 'legs', 'feet'];
+export const EQUIP_SLOTS: EquipSlot[] = ['head', 'torso', 'back', 'hands', 'legs', 'feet'];
 
 export interface BagLimits {
   maxWeightG: number;
@@ -43,7 +48,11 @@ interface RawItem {
   category?: ItemCategory;
   energyMJ?: number;
   tool?: { speed: number; yield: number };
-  equip?: { slot: EquipSlot; bag?: { slots?: number; weightKg?: number; volumeL?: number } };
+  equip?: {
+    slot: EquipSlot;
+    bag?: { slots?: number; weightKg?: number; volumeL?: number };
+    armor?: number;
+  };
 }
 
 export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
@@ -59,6 +68,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   equip: i.equip
     ? {
         slot: i.equip.slot,
+        armor: i.equip.armor ?? 0,
         bonus: {
           slots: i.equip.bag?.slots ?? 0,
           weightG: Math.round((i.equip.bag?.weightKg ?? 0) * 1000),
@@ -86,6 +96,7 @@ export const ITEM_CATEGORIES = [
   'science',
   'buildings',
   'equipment',
+  'armor',
   'tools',
 ] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];

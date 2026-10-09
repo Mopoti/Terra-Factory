@@ -162,10 +162,12 @@ export class GuestClient {
   fire(
     origin: { x: number; y: number; z: number },
     dir: { x: number; y: number; z: number },
+    weapon?: string,
   ): void {
     if (this.closed) return;
     this.link.send({
       t: 'fire',
+      weapon,
       origin: [origin.x, origin.y, origin.z],
       dir: [dir.x, dir.y, dir.z],
     } satisfies ToHost);

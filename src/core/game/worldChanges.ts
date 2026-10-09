@@ -7,6 +7,7 @@ import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
+import { WEAPONS, isWeapon } from '../data/weapons';
 import { TECHS, expandLegacyTechs, isSciencePack } from '../data/techs';
 import { TUTORIAL_STEPS } from './tutorial';
 import type { ChunkData, PlacedObject } from '../world/worldgen';
@@ -126,6 +127,8 @@ export interface WorldChanges {
   nests: ExtraNest[];
   /** Balles dans le pistolet. */
   ammo: number;
+  /** Balles dans le fusil. */
+  rifleAmmo: number;
   /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
   energyVersion: number;
   /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case). */
@@ -179,6 +182,7 @@ export function emptyChanges(): WorldChanges {
     vehicles: [],
     nests: [],
     ammo: 0,
+    rifleAmmo: 0,
     energyVersion: 1,
     footprintVersion: FOOTPRINT_VERSION,
   };
@@ -220,6 +224,21 @@ export function applyChanges(chunk: ChunkData, changes: WorldChanges): ChunkData
   return { ...chunk, objects, ore };
 }
 
+/**
+ * Emplacement où ranger `item` d'après l'emplacement enregistré : null s'il ne convient pas. Une ancienne sauvegarde
+ * rangeait le sac à dos dans l'emplacement du torse ; il a maintenant le sien (« dos »).
+ */
+function equipSlotOf(saved: string, item: string): EquipSlot | null {
+  try {
+    const slot = itemById(item).equip?.slot;
+    if (!slot) return null;
+    if (slot === saved) return slot;
+    return saved === 'torso' && slot === 'back' ? 'back' : null;
+  } catch {
+    return null;
+  }
+}
+
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** Lit des changements enregistrés (ignore ce qui est inutilisable). */
@@ -251,7 +270,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     for (const [slot, id] of Object.entries(r.equipment as Record<string, unknown>)) {
       if (typeof id !== 'string') continue;
       try {
-        if (itemById(id).equip?.slot === slot) result.equipment[slot as EquipSlot] = id;
+        const target = equipSlotOf(slot, id);
+        if (target) result.equipment[target] = id;
       } catch {
         /* objet inconnu */
       }
@@ -286,7 +306,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     const equipment: Partial<Record<EquipSlot, string>> = {};
     for (const [slot, id] of Object.entries(rec(o.equipment) ?? {})) {
       const item = typeof id === 'string' ? migrateItemId(id) : null;
-      if (item && itemById(item).equip?.slot === slot) equipment[slot as EquipSlot] = item;
+      const target = item ? equipSlotOf(slot, item) : null;
+      if (item && target) equipment[target] = item;
     }
     result.corpses.push({
       id: isNum(o.id) ? Math.floor(o.id) : result.corpses.length + 1,
@@ -405,6 +426,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     }
   }
   if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));
+  if (isNum(r.rifleAmmo))
+    result.rifleAmmo = Math.max(0, Math.min(WEAPONS.rifle.rounds, Math.floor(r.rifleAmmo)));
   if (typeof r.groundPollution === 'object' && r.groundPollution !== null) {
     for (const [k, v] of Object.entries(r.groundPollution as Record<string, unknown>)) {
       if (/^-?\d+,-?\d+$/.test(k) && isNum(v) && v > 0) result.groundPollution[k] = v;
@@ -436,7 +459,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       try {
         const id = migrateItemId(rawId);
         const def = itemById(id);
-        if (def.tool || def.id === 'pistol') result.tools[i] = id;
+        if (def.tool || isWeapon(def.id)) result.tools[i] = id;
       } catch {
         /* objet inconnu : case vide */
       }

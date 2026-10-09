@@ -31,6 +31,7 @@ describe('nids détruits et mode débogage', () => {
 describe('corps et points de réapparition', () => {
   it('sont enregistrés avec leur contenu, ignorés s’ils sont invalides', () => {
     const c = normalizeChanges({
+      // Ancienne sauvegarde : le sac à dos rangé dans « torse » passe dans « dos ».
       corpses: [
         { id: 4, x: 3, z: -4, yaw: 1, inventory: { coal: 7 }, equipment: { torso: 'backpack' } },
         { x: 'a' },
@@ -42,7 +43,7 @@ describe('corps et points de réapparition', () => {
     });
     expect(c.corpses).toHaveLength(1);
     expect(c.corpses[0].inventory).toEqual({ coal: 7 });
-    expect(c.corpses[0].equipment).toEqual({ torso: 'backpack' });
+    expect(c.corpses[0].equipment).toEqual({ back: 'backpack' });
     expect(c.nextCorpseId).toBe(5);
     expect(c.spawns).toEqual([{ id: 2, x: 10, z: 12, kind: 'bed' }]);
     expect(c.nextSpawnId).toBe(3);

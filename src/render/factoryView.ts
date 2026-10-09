@@ -8,6 +8,7 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  isTurret,
   GROW_M,
   machineDef,
   visualHeight,
@@ -1052,8 +1053,8 @@ function addMachineBody(
     );
     return;
   }
-  if (type === 'turret') {
-    // Tourelle : socle large, tourelle ronde et canon vers l'avant.
+  if (isTurret(type)) {
+    // Tourelle : socle large, tourelle ronde et canon vers l'avant (canon double pour la lourde, pointe lumineuse pour les électriques).
     mb.box(x, 0, z, sx, 0.3, sz, shade(color, 0.7), true);
     mb.cone(x, 0.3, z, Math.min(sx, sz) * 0.36, 0.3, 10, color, Math.min(sx, sz) * 0.3);
     mb.box(
@@ -1067,6 +1068,28 @@ function addMachineBody(
       true,
     );
     mb.box(x - fx * 0.12, 0.6, z - fz * 0.12, 0.24, 0.12, 0.24, shade(color, 1.3), true);
+    if (type === 'turret_heavy')
+      mb.box(
+        x + fx * 0.28 + fz * 0.14,
+        0.5,
+        z + fz * 0.28 + fx * 0.14,
+        fx !== 0 ? 0.6 : 0.1,
+        0.1,
+        fz !== 0 ? 0.6 : 0.1,
+        hexToRgb('#3d3a38'),
+        true,
+      );
+    if (type === 'turret_laser' || type === 'turret_plasma')
+      mb.box(
+        x + fx * 0.62,
+        0.5,
+        z + fz * 0.62,
+        0.14,
+        0.14,
+        0.14,
+        hexToRgb(type === 'turret_laser' ? '#7fd0ff' : '#d08cff'),
+        true,
+      );
     return;
   }
   if (type === 'lab') {

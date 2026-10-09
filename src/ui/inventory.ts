@@ -147,7 +147,7 @@ export function mountInventory(
       });
       return cell;
     };
-    const rows: EquipSlot[][] = [['head'], ['torso', 'hands'], ['legs'], ['feet']];
+    const rows: EquipSlot[][] = [['head'], ['torso', 'back'], ['legs', 'hands'], ['feet']];
     for (const row of rows) {
       const r = el('div', 'equip-row');
       for (const slot of row) r.append(slotBox(slot));
@@ -164,6 +164,7 @@ export function mountInventory(
           l: String((bonus.maxVolumeMl - state.baseLimitsView().maxVolumeMl) / 1000),
         })}`,
       ),
+      el('small', 'help', t('equip.armorTotal', { v: String(state.armorPercent()) })),
       el('small', 'help', t('equip.hint')),
     );
     return col;
@@ -205,6 +206,9 @@ export function mountInventory(
           }),
         ),
       );
+    }
+    if (def.equip?.armor) {
+      tooltip.append(el('div', 'ok', t('equip.armor', { v: String(def.equip.armor) })));
     }
     if (def.energyMJ) {
       tooltip.append(el('div', 'note', t('inv.energy', { v: String(def.energyMJ) })));

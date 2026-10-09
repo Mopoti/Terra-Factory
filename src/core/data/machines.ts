@@ -32,6 +32,9 @@ export type MachineType =
   | 'assembler'
   | 'lab'
   | 'turret'
+  | 'turret_heavy'
+  | 'turret_laser'
+  | 'turret_plasma'
   | 'pipe'
   | 'pump'
   | 'pumpjack'
@@ -157,13 +160,28 @@ export const isArm = (type: MachineType): boolean =>
 /** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
 export const isLab = (type: MachineType): boolean => type === 'lab';
 
-/** Tourelle automatique : tire sur les ennemis proches avec des chargeurs. */
-export const isTurret = (type: MachineType): boolean => type === 'turret';
-/** Balles par chargeur dans une tourelle, portée (m), dégâts par balle, secondes entre deux tirs. */
-export const TURRET_ROUNDS = 12;
-export const TURRET_RANGE_M = 22;
-export const TURRET_DAMAGE = 9;
-export const TURRET_EVERY_S = 0.6;
+/** Une tourelle : munitions (null = tourelle électrique), balles par chargeur, portée (m), dégâts par tir, secondes entre deux tirs. */
+export interface TurretSpec {
+  ammo: string | null;
+  rounds: number;
+  range: number;
+  damage: number;
+  every: number;
+}
+/** Tourelles automatiques : légère (pistolet), lourde (fusil), laser et plasma (électriques, sans munitions). */
+export const TURRETS: Partial<Record<MachineType, TurretSpec>> = {
+  turret: { ammo: 'magazine', rounds: 12, range: 22, damage: 9, every: 0.6 },
+  turret_heavy: { ammo: 'rifle_magazine', rounds: 30, range: 28, damage: 15, every: 0.25 },
+  turret_laser: { ammo: null, rounds: 0, range: 34, damage: 24, every: 0.4 },
+  turret_plasma: { ammo: null, rounds: 0, range: 42, damage: 60, every: 0.5 },
+};
+/** Tourelle automatique : tire sur les ennemis proches. */
+export const isTurret = (type: MachineType): boolean => type in TURRETS;
+export const turretSpec = (type: MachineType): TurretSpec => {
+  const spec = TURRETS[type];
+  if (!spec) throw new Error(`Pas une tourelle : ${type}`);
+  return spec;
+};
 
 /** Machine du réseau de fluides (tuyau, pompe, chaudière, turbine). */
 export const isFluid = (type: MachineType): boolean =>

@@ -28,7 +28,7 @@ export type ToHost =
   | { t: 'call'; method: string; args: unknown[] }
   /** Barre d'objets, outils, équipement, munitions, tutoriel : décidés par l'invité. */
   /** Tir de pistolet (origine et direction du rayon) et coup au corps à corps : l'hôte applique les dégâts aux ennemis. */
-  | { t: 'fire'; origin: [number, number, number]; dir: [number, number, number] }
+  | { t: 'fire'; origin: [number, number, number]; dir: [number, number, number]; weapon?: string }
   | { t: 'melee' }
   | { t: 'loadout'; loadout: Record<string, unknown> }
   | { t: 'leave' };

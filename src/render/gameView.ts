@@ -34,6 +34,7 @@ import type { GameState } from '../core/game/state';
 import { DISCOVERIES } from '../core/data/discoveries';
 import { MOULD_CYCLES, recipeById } from '../core/data/recipes';
 import { applyChanges, extraNestsIn, MAX_EXTRA_NESTS, NEST_HP } from '../core/game/worldChanges';
+import { hash01 } from '../core/world/rng';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
@@ -113,7 +114,7 @@ import { FactoryView } from './factoryView';
 import type { Structure } from './interaction';
 import { BuildingView, type BuildAim } from './buildingView';
 import { Interaction } from './interaction';
-import { MAGAZINE_ROUNDS } from '../core/game/worldChanges';
+import { WEAPONS, isWeapon, type WeaponSpec } from '../core/data/weapons';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import { loadModels } from './models';
@@ -364,10 +365,12 @@ export function startGameView(
       worn.add(mesh);
     };
     // Le personnage regarde vers +z (repère local) : le dos est vers -z. Capsule : y de -0,85 à +0,85.
-    if (eq.torso) {
-      add(new THREE.BoxGeometry(0.4, 0.5, 0.22), eq.torso, 0, 0.18, -0.32);
-      add(new THREE.BoxGeometry(0.3, 0.14, 0.05), eq.torso, 0, 0.32, -0.45);
+    if (eq.back) {
+      add(new THREE.BoxGeometry(0.4, 0.5, 0.22), eq.back, 0, 0.18, -0.32);
+      add(new THREE.BoxGeometry(0.3, 0.14, 0.05), eq.back, 0, 0.32, -0.45);
     }
+    // Plastron d'armure : par-dessus le torse du personnage.
+    if (eq.torso) add(new THREE.BoxGeometry(0.5, 0.46, 0.3), eq.torso, 0, 0.2, 0.01);
     if (eq.head) {
       add(
         new THREE.SphereGeometry(0.3, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.62),
@@ -2434,6 +2437,13 @@ export function startGameView(
       const home = threat.enemies[i].home;
       if (home && Math.hypot(home.x - nest.x, home.z - nest.z) < 1) threat.enemies.splice(i, 1);
     }
+    // Un nid détruit laisse du tissu vivant (4 à 6 morceaux), qui sert aux paquets de combat.
+    options.state.dropLoot(
+      'living_tissue',
+      4 + Math.floor(hash01(1, nest.gx, nest.gz, 77) * 3),
+      nest.x,
+      nest.z,
+    );
     playSfx('rockBreak');
     options.onMessage?.(t('threat.nestDestroyed'));
     return 'kill';
@@ -2528,8 +2538,12 @@ export function startGameView(
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x4a4f57 });
   const gripMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22 });
   /** Un pistolet est prêt : dans la case d'outils, ou choisi dans la barre de raccourcis. */
-  const pistolReady = (): boolean =>
-    options.state.toolItem() === 'pistol' || options.state.selectedItem() === 'pistol';
+  const weaponInHand = (): WeaponSpec | null => {
+    const picked = options.state.selectedItem();
+    const id = isWeapon(picked) ? picked : options.state.toolItem();
+    return isWeapon(id) ? WEAPONS[id] : null;
+  };
+  const pistolReady = (): boolean => weaponInHand() !== null;
   function makeGun(): THREE.Group {
     const g = new THREE.Group();
     const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.34), gunMat);
@@ -2556,10 +2570,11 @@ export function startGameView(
   ammoBox.hidden = true;
   container.appendChild(ammoBox);
   function renderAmmo(): void {
+    const weapon = weaponInHand() ?? WEAPONS.pistol;
     ammoBox.textContent = t('weapon.ammo', {
-      n: String(options.state.changes.ammo),
-      max: String(MAGAZINE_ROUNDS),
-      mags: String(options.state.inventory.magazine ?? 0),
+      n: String(options.state.ammoOf(weapon.id)),
+      max: String(weapon.rounds),
+      mags: String(options.state.inventory[weapon.magazine] ?? 0),
     });
   }
   let lastAcidMessage = -1e9;
@@ -2650,7 +2665,7 @@ export function startGameView(
   function onSimEvent(e: SimEvent): void {
     switch (e.type) {
       case 'playerHit':
-        playerHealth -= e.amount;
+        playerHealth -= options.state.mitigate(e.amount);
         sinceHurt = 0;
         playSfx('deny');
         break;
@@ -2688,33 +2703,37 @@ export function startGameView(
     attackCooldown = Math.max(0, attackCooldown - dt);
     tracerLife = Math.max(0, tracerLife - dt);
     tracer.visible = tracerLife > 0;
-    const armed = pistolReady() && !building;
-    // Le pistolet de la case d'outils ne sort que pendant l'action de tir ; celui de la barre reste en main.
+    const weapon = weaponInHand();
+    const armed = weapon !== null && !building;
+    // L'arme de la case d'outils ne sort que pendant l'action de tir ; celle de la barre reste en main.
     const gunOut =
-      armed && (options.state.selectedItem() === 'pistol' || input.isActionActive('interact'));
+      armed && (isWeapon(options.state.selectedItem()) || input.isActionActive('interact'));
+    const longGun = weapon?.id === 'rifle';
+    gun.scale.set(1, 1, longGun ? 1.7 : 1);
+    gunBody.scale.set(1.4, 1.4, longGun ? 2.4 : 1.4);
     gun.visible = gunOut && rig.view === 'first';
     gunBody.visible = gunOut && rig.view !== 'first';
     if (armed) {
       if (pressed('rotate')) {
-        const result = options.state.reload();
+        const result = options.state.reload(weapon.id);
         if (result === 'ok') {
           playSfx('reload');
           options.onMessage?.(t('weapon.reloaded'));
         } else if (result === 'noMagazine') options.onMessage?.(t('weapon.noMagazine'));
       }
       // Pistolet de la case d'outils : on tire quand il n'y a rien à récolter sous la visée.
-      const canShoot = options.state.selectedItem() === 'pistol' || !interaction.aimed;
+      const canShoot = isWeapon(options.state.selectedItem()) || !interaction.aimed;
       if (attackCooldown <= 0 && canShoot && input.isActionActive('interact')) {
-        attackCooldown = 0.35;
-        if (!options.state.fire()) {
+        attackCooldown = weapon.every;
+        if (!options.state.fire(weapon.id)) {
           playSfx('deny');
           options.onMessage?.(t('weapon.empty'));
         } else {
           computeRay();
-          const shot = threat.shoot(rayOrigin, rayDir, 40, 10);
-          guest?.client.fire(rayOrigin, rayDir);
+          const shot = threat.shoot(rayOrigin, rayDir, weapon.range, weapon.damage);
+          guest?.client.fire(rayOrigin, rayDir, weapon.id);
           // Un nid sur la ligne de tir (et plus près qu'un ennemi touché) encaisse le tir.
-          const nestAt = shot.result === null ? shootNest(shot.distance, 10) : null;
+          const nestAt = shot.result === null ? shootNest(shot.distance, weapon.damage) : null;
           if (nestAt !== null) shot.distance = nestAt;
           playSfx('shot');
           const end = rayOrigin.clone().addScaledVector(rayDir, shot.distance);
@@ -3142,6 +3161,11 @@ export function startGameView(
       );
     } else if (!guest) remotePlayers.update([], HOST_ID, dt);
     if (!paused) updateThreat(dt);
+    // Dépouilles : chaque ennemi tué laisse 1 à 2 carapaces à ramasser (toujours 2 pour un mutant).
+    if (!guest)
+      for (const d of threat.deaths.splice(0))
+        options.state.dropLoot('carapace', d.mutant ? 2 : 1 + (d.id % 2), d.x, d.z);
+    else threat.deaths.length = 0;
     factoryView.updateSmoke(now / 1000);
     factoryView.updateMovers(now / 1000);
     enemyView.update(

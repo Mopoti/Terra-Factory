@@ -14,6 +14,7 @@ export const PLAYER_KEYS = [
   'tools',
   'equipment',
   'ammo',
+  'rifleAmmo',
   'corpses',
   'nextCorpseId',
   'spawns',

@@ -172,6 +172,20 @@ export class Threat {
     );
   }
 
+  /** Ennemis tués depuis le dernier relevé (position, variante) : la partie en tire des carapaces à ramasser. */
+  readonly deaths: { id: number; x: number; z: number; kind: EnemyKind; mutant: boolean }[] = [];
+
+  private kill(e: Enemy): void {
+    this.enemies.splice(this.enemies.indexOf(e), 1);
+    this.deaths.push({
+      id: e.id,
+      x: e.x,
+      z: e.z,
+      kind: e.kind ?? (e.home ? 'guard' : 'scout'),
+      mutant: !!e.mutant,
+    });
+  }
+
   /** Le joueur frappe : touche l'ennemi le plus proche à portée. Renvoie 'kill', 'hit' ou null. */
   hit(x: number, z: number, range: number, damage: number): 'kill' | 'hit' | null {
     let best: Enemy | null = null;
@@ -186,7 +200,7 @@ export class Threat {
     if (!best) return null;
     best.hp -= damage;
     if (best.hp <= 0) {
-      this.enemies.splice(this.enemies.indexOf(best), 1);
+      this.kill(best);
       return 'kill';
     }
     return 'hit';
@@ -219,7 +233,7 @@ export class Threat {
     if (!best) return { result: null, distance: range };
     best.hp -= damage;
     if (best.hp <= 0) {
-      this.enemies.splice(this.enemies.indexOf(best), 1);
+      this.kill(best);
       return { result: 'kill', distance: bestAlong };
     }
     return { result: 'hit', distance: bestAlong };

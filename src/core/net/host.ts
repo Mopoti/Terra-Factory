@@ -3,6 +3,7 @@
  * applique sur l'état de CE joueur (même monde, fiche individuelle) avec son propre terrain, puis répond. Il diffuse
  * régulièrement l'état du monde et la position des joueurs.
  */
+import { WEAPONS, isWeapon } from '../data/weapons';
 import type { Threat } from '../game/threat';
 import type { Factory } from '../factory/factory';
 import { CommandBus, type Command, type CommandContext, type CommandType } from '../game/commands';
@@ -232,7 +233,7 @@ export class HostSession {
       if (!player) return; // rien n'est accepté avant l'arrivée
       if (msg.t === 'cmd') this.command(player, msg.seq, msg.cmd);
       else if (msg.t === 'call') this.call(player, msg.method, msg.args);
-      else if (msg.t === 'fire') this.fire(player, msg.origin, msg.dir);
+      else if (msg.t === 'fire') this.fire(player, msg.origin, msg.dir, msg.weapon);
       else if (msg.t === 'melee') this.melee(player);
       else if (msg.t === 'loadout') this.loadout(player, msg.loadout);
       else if (msg.t === 'pos') {
@@ -320,7 +321,7 @@ export class HostSession {
   }
 
   /** Tir d'un invité : le rayon part d'au plus 5 m de sa position connue ; portée et dégâts sont ceux de l'hôte. */
-  private fire(player: Remote, origin: unknown, dir: unknown): void {
+  private fire(player: Remote, origin: unknown, dir: unknown, weapon?: unknown): void {
     const threat = this.opts.threat;
     const vec = (v: unknown): { x: number; y: number; z: number } | null =>
       Array.isArray(v) &&
@@ -334,7 +335,8 @@ export class HostSession {
     if (Math.hypot(o.x - player.info.x, o.z - player.info.z) > 5) return;
     const len = Math.hypot(d.x, d.y, d.z);
     if (len < 0.5 || len > 1.5) return;
-    threat.shoot(o, d, GUN_RANGE_M, GUN_DAMAGE);
+    const spec = isWeapon(weapon) ? WEAPONS[weapon] : null;
+    threat.shoot(o, d, spec?.range ?? GUN_RANGE_M, spec?.damage ?? GUN_DAMAGE);
   }
 
   private melee(player: Remote): void {

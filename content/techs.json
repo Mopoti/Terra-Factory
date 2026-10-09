@@ -349,10 +349,117 @@
       "id": "defense",
       "tier": 1,
       "cost": {
-        "science_pack": 15
+        "iron_plate": 10
       },
       "requires": ["logistics"],
       "unlocks": ["machine_turret"]
+    },
+    {
+      "id": "weapons_1",
+      "tier": 1,
+      "cost": {
+        "iron_plate": 10
+      },
+      "requires": [],
+      "unlocks": ["pistol", "magazine"]
+    },
+    {
+      "id": "armor_1a",
+      "tier": 1,
+      "cost": {
+        "iron_plate": 10
+      },
+      "requires": [],
+      "unlocks": ["armor1_head", "armor1_torso"]
+    },
+    {
+      "id": "armor_1b",
+      "tier": 1,
+      "cost": {
+        "iron_plate": 10
+      },
+      "requires": [],
+      "unlocks": ["armor1_legs", "armor1_feet"]
+    },
+    {
+      "id": "weapons_2",
+      "tier": 2,
+      "cost": {
+        "combat_pack": 5
+      },
+      "requires": ["weapons_1"],
+      "reveal": ["weapons_1"],
+      "unlocks": ["rifle", "rifle_magazine"]
+    },
+    {
+      "id": "armor_2a",
+      "tier": 2,
+      "cost": {
+        "combat_pack": 5
+      },
+      "requires": ["armor_1a"],
+      "reveal": ["armor_1a"],
+      "unlocks": ["armor2_head", "armor2_torso"]
+    },
+    {
+      "id": "armor_2b",
+      "tier": 2,
+      "cost": {
+        "combat_pack": 5
+      },
+      "requires": ["armor_1b"],
+      "reveal": ["armor_1b"],
+      "unlocks": ["armor2_legs", "armor2_feet"]
+    },
+    {
+      "id": "turret_2",
+      "tier": 2,
+      "cost": {
+        "combat_pack": 5
+      },
+      "requires": ["defense"],
+      "reveal": ["defense"],
+      "unlocks": ["machine_turret_heavy"]
+    },
+    {
+      "id": "turret_3",
+      "tier": 3,
+      "cost": {
+        "combat_pack": 10
+      },
+      "requires": ["turret_2"],
+      "reveal": ["turret_2"],
+      "unlocks": ["machine_turret_laser"]
+    },
+    {
+      "id": "armor_4a",
+      "tier": 4,
+      "cost": {
+        "combat_pack": 20
+      },
+      "requires": ["armor_2a"],
+      "reveal": ["armor_2a"],
+      "unlocks": ["armor4_head", "armor4_torso"]
+    },
+    {
+      "id": "armor_4b",
+      "tier": 4,
+      "cost": {
+        "combat_pack": 20
+      },
+      "requires": ["armor_2b"],
+      "reveal": ["armor_2b"],
+      "unlocks": ["armor4_legs", "armor4_feet"]
+    },
+    {
+      "id": "turret_4",
+      "tier": 4,
+      "cost": {
+        "combat_pack": 20
+      },
+      "requires": ["turret_3"],
+      "reveal": ["turret_3"],
+      "unlocks": ["machine_turret_plasma"]
     }
   ]
 }

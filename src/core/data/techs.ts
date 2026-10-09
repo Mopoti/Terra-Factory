@@ -42,6 +42,8 @@ export const SCIENCE_PACKS = [
   'science_pack_2',
   'science_pack_3',
   'science_pack_4',
+  /** Paquet de combat : à part des paliers, fabriqué avec les dépouilles des ennemis (carapaces, tissu vivant). */
+  'combat_pack',
 ] as const;
 export const isSciencePack = (item: string | null | undefined): boolean =>
   !!item && (SCIENCE_PACKS as readonly string[]).includes(item);
