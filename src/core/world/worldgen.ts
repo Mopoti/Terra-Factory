@@ -75,6 +75,8 @@ export interface PlacedObject {
   scale: number;
   rotation: number;
   amount: number;
+  /** Taille tirée parmi celles de la ressource (0 = petit, 1 = moyen, 2 = grand) ; 1 par défaut. */
+  size?: number;
 }
 export interface OreCell {
   id: string;
@@ -496,14 +498,28 @@ export class WorldGenerator {
           );
           if (starter) p = Math.max(p, res.biomeDensity.prairie * fam.density);
           if (hash01(this.seed, slotX, slotZ, saltId) < p) {
+            const jitter = hash01(this.seed, slotX, slotZ, saltId + 1);
+            const sizes = res.sizes;
+            let size = 1;
+            let amount = res.amount;
+            let scale = 0.8 + 0.45 * jitter;
+            if (sizes) {
+              const total = sizes.reduce((a, s) => a + s.weight, 0);
+              let pick = hash01(this.seed, slotX, slotZ, saltId + 3) * total;
+              size = sizes.findIndex((s) => (pick -= s.weight) < 0);
+              if (size < 0) size = sizes.length - 1;
+              amount = sizes[size].amount;
+              scale = sizes[size].scale * (0.92 + 0.16 * jitter);
+            }
             objects.push({
               id: res.id,
               gx,
               gz,
               cells: OBJECT_SLOT_CELLS,
-              scale: 0.8 + 0.45 * hash01(this.seed, slotX, slotZ, saltId + 1),
+              scale,
               rotation: hash01(this.seed, slotX, slotZ, saltId + 2) * Math.PI * 2,
-              amount: res.amount,
+              amount,
+              size,
             });
             break;
           }

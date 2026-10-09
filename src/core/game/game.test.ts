@@ -161,11 +161,12 @@ describe('le monde garde la trace des actions', () => {
     const trees = chunk.objects.filter((o) => o.id === 'tree');
     const [a, b] = trees;
     const changes = emptyChanges();
-    changes.taken[cellKey(a.gx, a.gz)] = 4;
+    changes.taken[cellKey(a.gx, a.gz)] = a.amount;
     if (b) changes.taken[cellKey(b.gx, b.gz)] = 1;
     const after = applyChanges(chunk, changes);
     expect(after.objects.find((o) => o.gx === a.gx && o.gz === a.gz)).toBeUndefined();
-    if (b) expect(after.objects.find((o) => o.gx === b.gx && o.gz === b.gz)?.amount).toBe(3);
+    if (b)
+      expect(after.objects.find((o) => o.gx === b.gx && o.gz === b.gz)?.amount).toBe(b.amount - 1);
     expect(after.objects.length).toBe(chunk.objects.length - 1);
   });
   it('les nids ne sont jamais touchés par les changements', () => {

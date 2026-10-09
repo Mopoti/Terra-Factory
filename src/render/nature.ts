@@ -1,36 +1,114 @@
 /**
- * Décor naturel : un conifère (feuillage en cartes texturées à transparence, d'où un matériau à part) et un tas de
- * cailloux (couleur par sommet, fusionné avec le reste du décor). Voir `docs/modeles3d.md` pour les sources.
- * Tant que les fichiers ne sont pas chargés, le décor garde ses formes simples.
+ * Décor naturel. Arbres, rochers et bûches viennent du pack « Low Poly Nature » (couleurs de sommet, fusionnées avec
+ * le reste du décor) ; les plantes basses sont des cartes texturées à transparence (matériau à part). Voir
+ * `docs/modeles3d.md` pour les sources. Tant que les fichiers ne sont pas chargés, le décor garde ses formes simples.
  */
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { bake, bakedModel, registerModel, type BakedModel } from './models';
+import type { BiomeId } from '../core/world/biomes';
+import type { BakedModel } from './models';
 
+/** Modèle à cartes texturées (plantes) : sommets, normales, coordonnées de texture. */
 export interface TreeModel {
   positions: Float32Array;
   normals: Float32Array;
   uvs: Float32Array;
   index: Uint32Array;
-  /** Position (x, z) de la base du tronc et hauteur totale, dans le repère du fichier. */
+  /** Position (x, z) du pied et hauteur totale, dans le repère du fichier. */
   base: { x: number; z: number; minY: number };
   height: number;
   /** Plus grande largeur horizontale. */
   width: number;
 }
 
-let tree: TreeModel | null = null;
 const plants: TreeModel[] = [];
-/** Hauteur d'un conifère moyen dans le jeu (m) : le fichier d'origine en fait presque 18. */
-export const TREE_MODEL_HEIGHT_M = 5.5;
+const lows = new Map<string, BakedModel>();
 
-export const treeModel = (): TreeModel | null => tree;
 /** Plantes basses (herbes, buissons fleuris, fougères) : plusieurs formes, à choisir au hasard. */
 export const plantModels = (): readonly TreeModel[] => plants;
-export const rockModel = (): BakedModel | null => bakedModel('pebbles');
 
-/** Matériau du feuillage : texture peinte, les zones transparentes sont découpées. */
-export const foliageMaterial = new THREE.MeshStandardMaterial({
+/** Arbres de chaque biome (noms dans `lowpoly.json`) : feuillus en prairie, conifères en forêt, arbres secs au désert. */
+export const TREES_BY_BIOME: Record<BiomeId, readonly string[]> = {
+  prairie: ['Tree016', 'Tree019', 'Tree012', 'Tree013'],
+  forest: ['Tree009', 'Tree017', 'Tree018', 'Tree010', 'Tree001', 'Tree004'],
+  desert: ['Tree022', 'Tree024', 'Tree026'],
+  tundra: ['Tree007', 'Tree008', 'Tree005', 'Tree003'],
+};
+/** Rochers, du plus petit aspect au plus massif ; les petits, moyens et grands piochent dans toute la liste. */
+export const ROCKS = [
+  'Stone014',
+  'Stone012',
+  'Stone003',
+  'Stone001',
+  'Stone002',
+  'Stone004',
+  'Stone005',
+];
+/** Bûche seule et paire de bûches (objets de bois posés au sol). */
+export const LOG = 'Tree025';
+export const LOG_PAIR = 'Stump';
+
+/** Hauteur (m) d'un arbre de taille moyenne ; largeur (m) d'un rocher de taille moyenne. */
+export const TREE_MODEL_HEIGHT_M = 5.5;
+export const ROCK_MODEL_WIDTH_M = 0.95;
+
+/** Modèle du pack par nom, ou null tant qu'il n'est pas chargé. */
+export const lowModel = (name: string): BakedModel | null => lows.get(name) ?? null;
+/** Arbres disponibles pour ce biome (vide tant que le pack n'est pas chargé). */
+export const treeModelsFor = (biome: BiomeId): BakedModel[] =>
+  TREES_BY_BIOME[biome].flatMap((n) => lows.get(n) ?? []);
+export const rockModels = (): BakedModel[] => ROCKS.flatMap((n) => lows.get(n) ?? []);
+
+interface LowFile {
+  [name: string]: { ref: string; p: number[]; n: number[]; c: number[]; i: number[] };
+}
+
+/** Transforme le fichier compact du pack en modèles prêts à fusionner (couleurs en linéaire). */
+export function parseLowpoly(file: LowFile): Map<string, BakedModel> {
+  const out = new Map<string, BakedModel>();
+  for (const [name, m] of Object.entries(file)) {
+    const count = m.p.length / 3;
+    const positions = new Float32Array(count * 3);
+    const normals = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) {
+      positions[i] = m.p[i] / 1000;
+      normals[i] = m.n[i] / 100;
+      colors[i] = (m.c[i] / 255) ** 2.2;
+    }
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (let i = 0; i < count; i++) {
+      minX = Math.min(minX, positions[i * 3]);
+      maxX = Math.max(maxX, positions[i * 3]);
+      minY = Math.min(minY, positions[i * 3 + 1]);
+      maxY = Math.max(maxY, positions[i * 3 + 1]);
+      minZ = Math.min(minZ, positions[i * 3 + 2]);
+      maxZ = Math.max(maxZ, positions[i * 3 + 2]);
+    }
+    // Un arbre est posé par le pied de son tronc : on déclare la boîte symétrique autour de lui.
+    const byFoot = m.ref === 'h';
+    const ax = Math.max(Math.abs(minX), Math.abs(maxX));
+    const az = Math.max(Math.abs(minZ), Math.abs(maxZ));
+    out.set(name, {
+      positions,
+      normals,
+      colors,
+      index: new Uint32Array(m.i),
+      min: byFoot ? { x: -ax, y: minY, z: -az } : { x: minX, y: minY, z: minZ },
+      size: byFoot
+        ? { x: 2 * ax, y: maxY - minY, z: 2 * az }
+        : { x: maxX - minX, y: maxY - minY, z: maxZ - minZ },
+    });
+  }
+  return out;
+}
+
+/** Matériau des plantes : texture peinte, les zones transparentes sont découpées. */
+export const plantMaterial = new THREE.MeshStandardMaterial({
   alphaTest: 0.5,
   side: THREE.DoubleSide,
   roughness: 1,
@@ -113,39 +191,17 @@ export function parseTree(text: string): TreeModel {
   };
 }
 
-/** Matériau des plantes : autre texture peinte, même découpe de la transparence. */
-export const plantMaterial = new THREE.MeshStandardMaterial({
-  alphaTest: 0.5,
-  side: THREE.DoubleSide,
-  roughness: 1,
-});
-
 let loading: Promise<void> | null = null;
 
-/** Charge (une seule fois) l'arbre et les cailloux ; un échec est ignoré. */
+/** Charge (une seule fois) le pack d'arbres et de rochers et les plantes ; un échec est ignoré. */
 export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<void> {
   if (loading) return loading;
   const dir = `${baseUrl}models/nature/`;
-  const treeLoad = fetch(`${dir}tree.obj`)
-    .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
-    .then(
-      (text) =>
-        new Promise<void>((resolve) => {
-          const parsed = parseTree(text);
-          new THREE.TextureLoader().load(
-            `${dir}tree.png`,
-            (texture) => {
-              texture.colorSpace = THREE.SRGBColorSpace;
-              foliageMaterial.map = texture;
-              foliageMaterial.needsUpdate = true;
-              tree = parsed;
-              resolve();
-            },
-            undefined,
-            () => resolve(),
-          );
-        }),
-    )
+  const lowLoad = fetch(`${dir}lowpoly.json`)
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+    .then((file: LowFile) => {
+      for (const [name, model] of parseLowpoly(file)) lows.set(name, model);
+    })
     .catch(() => undefined);
   const plantsLoad = Promise.all(
     [1, 2, 3, 4].map((n) =>
@@ -172,18 +228,6 @@ export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
         }),
     )
     .catch(() => undefined);
-  const rocksLoad = new Promise<void>((resolve) => {
-    new GLTFLoader().load(
-      `${dir}pebbles.gltf`,
-      (gltf) => {
-        const model = bake(gltf.scene);
-        if (model) registerModel('pebbles', model);
-        resolve();
-      },
-      undefined,
-      () => resolve(),
-    );
-  });
-  loading = Promise.all([treeLoad, plantsLoad, rocksLoad]).then(() => undefined);
+  loading = Promise.all([lowLoad, plantsLoad]).then(() => undefined);
   return loading;
 }

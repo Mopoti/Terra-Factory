@@ -25,7 +25,24 @@
       "harvest": {
         "item": "wood",
         "secondsPerUnit": 0.8
-      }
+      },
+      "sizes": [
+        {
+          "weight": 0.4,
+          "amount": 4,
+          "scale": 0.7
+        },
+        {
+          "weight": 0.4,
+          "amount": 6,
+          "scale": 1
+        },
+        {
+          "weight": 0.2,
+          "amount": 8,
+          "scale": 1.3
+        }
+      ]
     },
     {
       "id": "rock",
@@ -34,10 +51,10 @@
       "amount": 20,
       "color": "#8a8f98",
       "biomeDensity": {
-        "prairie": 0.14,
-        "forest": 0.12,
-        "desert": 0.2,
-        "tundra": 0.18
+        "prairie": 0.084,
+        "forest": 0.072,
+        "desert": 0.12,
+        "tundra": 0.108
       },
       "biomeCover": {
         "prairie": 0.5,
@@ -50,7 +67,24 @@
       "harvest": {
         "item": "stone",
         "secondsPerUnit": 0.5
-      }
+      },
+      "sizes": [
+        {
+          "weight": 0.5,
+          "amount": 10,
+          "scale": 0.55
+        },
+        {
+          "weight": 0.35,
+          "amount": 20,
+          "scale": 1
+        },
+        {
+          "weight": 0.15,
+          "amount": 32,
+          "scale": 1.6
+        }
+      ]
     },
     {
       "id": "iron_ore",

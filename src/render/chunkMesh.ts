@@ -8,12 +8,13 @@ import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
 import { WATER_TILE_M, oreAtlas, oreTile, waterTexture } from './groundTextures';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 import {
+  ROCK_MODEL_WIDTH_M,
   TREE_MODEL_HEIGHT_M,
-  foliageMaterial,
   plantMaterial,
   plantModels,
-  rockModel,
-  treeModel,
+  rockModels,
+  treeModelsFor,
+  type TreeModel,
 } from './nature';
 
 const GROUND_COLORS = Object.fromEntries(
@@ -104,7 +105,6 @@ if (uGhostOn > 0.5 && vGhostY > 0.45 && -vViewPosition.z < uGhostDepth - 0.35) {
     );
 };
 propsMaterial.onBeforeCompile = ghostShader;
-foliageMaterial.onBeforeCompile = ghostShader;
 plantMaterial.onBeforeCompile = ghostShader;
 
 function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry {
@@ -211,7 +211,7 @@ function foliageMesh(
 /** Ajoute un modèle texturé : pied en (x, z), tourné de `angle`, multiplié par `k` (m par unité du fichier). */
 function addFoliage(
   f: Foliage,
-  m: NonNullable<ReturnType<typeof treeModel>>,
+  m: TreeModel,
   x: number,
   z: number,
   angle: number,
@@ -240,12 +240,13 @@ function buildProps(
   data: ChunkData,
   blocked: string[],
   tall: [string, number][],
-  foliage: { tree: Foliage; plant: Foliage },
+  foliage: { plant: Foliage },
   ground: { ore: TexBuf; water: TexBuf },
+  biomeAt: (xM: number, zM: number) => BiomeId,
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
-  const treeMesh = treeModel();
-  const rockMesh = rockModel();
+  const rockMeshes = rockModels();
+  const treeCache = new Map<BiomeId, ReturnType<typeof treeModelsFor>>();
   const plants = plantModels();
   const ox = data.cx * CHUNK_SIZE_M;
   const oz = data.cz * CHUNK_SIZE_M;
@@ -278,16 +279,18 @@ function buildProps(
       const x = cxm + Math.cos(o.rotation) * 0.2;
       const z = czm + Math.sin(o.rotation) * 0.2;
       // Tronc haut et fin (le personnage de 1,70 m passe dessous), feuillage au-dessus de 2 m.
-      if (treeMesh)
-        addFoliage(
-          foliage.tree,
-          treeMesh,
-          x,
-          z,
-          o.rotation,
-          (TREE_MODEL_HEIGHT_M / treeMesh.height) * o.scale,
-        );
-      else {
+      // Arbre du pack propre au biome (feuillus, conifères, arbres secs, résineux givrés) ; taille = petit, moyen, grand.
+      const biome = biomeAt(cxm + ox, czm + oz);
+      let trees = treeCache.get(biome);
+      if (!trees) treeCache.set(biome, (trees = treeModelsFor(biome)));
+      if (trees.length > 0) {
+        const model = trees[Math.floor(hash01(4, o.gx, o.gz, 11) * trees.length)];
+        const frost = biome === 'tundra' ? { r: 0.92, g: 0.96, b: 1 } : undefined;
+        // Les feuillus larges sont ramenés à une emprise raisonnable (3 m au plus pour un arbre moyen).
+        const wide = Math.max(model.size.x, model.size.z) / model.size.y;
+        const k = TREE_MODEL_HEIGHT_M * o.scale * Math.min(1, 0.6 / wide);
+        b.model(model, x, 0, z, o.rotation / (Math.PI / 2), k, frost, frost ? 0.45 : 0);
+      } else {
         b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
         const green = shade(base, jitter);
         b.cone(x, 2.0 * o.scale, z, 0.95 * o.scale, 1.7 * o.scale, 8, green);
@@ -320,9 +323,10 @@ function buildProps(
     } else if (o.id === 'rock') {
       const x = cxm + Math.cos(o.rotation) * 0.15;
       const z = czm + Math.sin(o.rotation) * 0.15;
-      if (rockMesh) {
-        const k = 0.26 * o.scale;
-        b.model(rockMesh, x, 0, z, Math.round(o.rotation * 2) % 4, k, undefined, 0, false, k * 1.6);
+      if (rockMeshes.length > 0) {
+        const model = rockMeshes[Math.floor(hash01(4, o.gx, o.gz, 12) * rockMeshes.length)];
+        const k = ROCK_MODEL_WIDTH_M * o.scale;
+        b.model(model, x, 0, z, o.rotation / (Math.PI / 2), k);
       } else {
         b.octahedron(
           x,
@@ -514,9 +518,11 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   group.add(ground);
 
   ensureGroundTextures();
-  const foliage = { tree: emptyFoliage(), plant: emptyFoliage() };
+  const foliage = { plant: emptyFoliage() };
   const cover = { ore: emptyTexBuf(), water: emptyTexBuf() };
-  const propsGeometry = buildProps(data, blocked, tall, foliage, cover);
+  const propsGeometry = buildProps(data, blocked, tall, foliage, cover, (x, z) =>
+    gen.biomeAt(x, z),
+  );
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
     props.castShadow = true;
@@ -524,7 +530,6 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
     group.add(props);
   }
   const foliageGeometries = [
-    foliageMesh(group, foliage.tree, foliageMaterial),
     foliageMesh(group, foliage.plant, plantMaterial),
     foliageMesh(group, cover.ore, oreMaterial, cover.ore.colors),
     foliageMesh(group, cover.water, waterMaterial, undefined, true),

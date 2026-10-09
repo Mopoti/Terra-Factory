@@ -17,11 +17,18 @@ interface Base {
   family: FamilyId;
   color: string;
 }
+export interface ObjectSize {
+  weight: number;
+  amount: number;
+  scale: number;
+}
 export interface ObjectResource extends Base {
   kind: 'object';
   harvest: Harvest;
-  /** Quantité récoltable (bois, pierre…). */
+  /** Quantité récoltable (bois, pierre…) d'un objet de taille moyenne. */
   amount: number;
+  /** Tailles possibles (petit, moyen, grand) : tirage pondéré, quantité récoltable et échelle d'affichage de chacune. */
+  sizes?: ObjectSize[];
   /** Probabilité qu'un emplacement de 1 m × 1 m contienne cet objet DANS un bosquet / affleurement, par biome. */
   biomeDensity: BiomeTable;
   /** Part du terrain occupée par des bosquets / affleurements, par biome (×1 = moitié du terrain à fréquence ×1). */

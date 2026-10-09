@@ -468,3 +468,27 @@ describe('ratio de distance', () => {
     expect(normalizeWorldParams('s').distanceRatio).toBe(1);
   });
 });
+
+describe('tailles des arbres et des rochers', () => {
+  const gen = new WorldGenerator(defaultWorldParams('terra'));
+  const objects = (id: string): { amount: number; size?: number }[] => {
+    const found: { amount: number; size?: number }[] = [];
+    for (let cx = -6; cx <= 6; cx++)
+      for (let cz = -6; cz <= 6; cz++)
+        for (const o of gen.chunk(cx, cz).objects) if (o.id === id) found.push(o);
+    return found;
+  };
+
+  it('un arbre donne 4, 6 ou 8 bois selon sa taille (petit, moyen, grand)', () => {
+    const trees = objects('tree');
+    expect(trees.length).toBeGreaterThan(50);
+    for (const t of trees) expect([4, 6, 8][t.size ?? 1]).toBe(t.amount);
+    expect(new Set(trees.map((t) => t.size))).toEqual(new Set([0, 1, 2]));
+  });
+
+  it('un rocher donne 10, 20 ou 32 pierres selon sa taille', () => {
+    const rocks = objects('rock');
+    expect(rocks.length).toBeGreaterThan(10);
+    for (const r of rocks) expect([10, 20, 32][r.size ?? 1]).toBe(r.amount);
+  });
+});

@@ -8,6 +8,9 @@ import { cellKey, type DroppedStack } from '../core/game/worldChanges';
 import type { ChunkData } from '../core/world/worldgen';
 import { playSfx } from '../audio/sfx';
 import { t, type TranslationKey } from '../i18n';
+import { MeshBuilder } from './meshBuilder';
+import type { BakedModel } from './models';
+import { LOG, LOG_PAIR, loadNature, lowModel } from './nature';
 
 /** Temps pour ramasser une pile posée au sol (s). */
 const PICKUP_SECONDS = 0.35;
@@ -15,8 +18,22 @@ const PICKUP_SECONDS = 0.35;
 const BARE_HANDS_FACTOR = 3;
 const FEED_SECONDS = 2.2;
 const ORE_HEIGHT_M = 0.1;
-const TREE_HEIGHT_M = 5.5;
-const ROCK_HEIGHT_M = 0.8;
+const logMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+/** Géométrie d'une bûche du pack, ramenée à `length` mètres de long. */
+function logGeometry(model: BakedModel, length: number): THREE.BufferGeometry {
+  const b = new MeshBuilder();
+  b.model(model, 0, 0, 0, 0, length);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(b.positions, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(b.normals, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(b.colors, 3));
+  return g;
+}
+
+/** Hauteur des arbres (petit, moyen, grand), m. */
+const TREE_HEIGHTS_M = [3.9, 5.5, 7.2];
+/** Hauteur des rochers (petit, moyen, grand), m. */
+const ROCK_HEIGHTS_M = [0.45, 0.8, 1.3];
 const BUSH_HEIGHT_M = 0.6;
 const DROP_PICK_RADIUS_M = 0.5;
 /** Portée pour frapper une construction (m). */
@@ -148,6 +165,8 @@ export class Interaction {
     container.append(this.hud, this.feed);
 
     this.refreshDrops();
+    // Les bûches du pack arrivent après le chargement : on redessine alors le bois déjà posé au sol.
+    void loadNature().then(() => this.refreshDrops());
     this.unsubscribe = state.onChange((e) => {
       if (e.type === 'drops') this.refreshDrops();
     });
@@ -178,10 +197,14 @@ export class Interaction {
         gx: o.gx,
         gz: o.gz,
         cells: o.cells,
-        total: res.amount,
+        total: o.amount + (this.state.changes.taken[cellKey(o.gx, o.gz)] ?? 0),
         left: o.amount,
         height:
-          o.id === 'tree' ? TREE_HEIGHT_M : o.id === 'fiber_bush' ? BUSH_HEIGHT_M : ROCK_HEIGHT_M,
+          o.id === 'tree'
+            ? TREE_HEIGHTS_M[o.size ?? 1]
+            : o.id === 'fiber_bush'
+              ? BUSH_HEIGHT_M
+              : ROCK_HEIGHTS_M[o.size ?? 1],
         item: res.harvest.item,
         secondsPerUnit: res.harvest.secondsPerUnit,
       });
@@ -230,8 +253,12 @@ export class Interaction {
     }
     for (const d of this.state.changes.drops) {
       const h = 0.1 + Math.min(0.25, d.count * 0.01);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.34, h, 0.34), this.dropMaterial(d.item));
-      mesh.position.set(d.x, h / 2, d.z);
+      // Le bois se pose sous forme de bûche (une seule, ou une paire à partir de trois) ; le reste, en petit bloc.
+      const log = d.item === 'wood' ? lowModel(d.count >= 3 ? LOG_PAIR : LOG) : null;
+      const mesh = log
+        ? new THREE.Mesh(logGeometry(log, d.count >= 3 ? 0.7 : 0.9), logMaterial)
+        : new THREE.Mesh(new THREE.BoxGeometry(0.34, h, 0.34), this.dropMaterial(d.item));
+      mesh.position.set(d.x, log ? 0 : h / 2, d.z);
       mesh.rotation.y = (Number(d.id.replace(/\D/g, '')) * 0.9) % Math.PI;
       mesh.castShadow = true;
       this.dropGroup.add(mesh);
