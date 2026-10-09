@@ -139,17 +139,34 @@ export class Miner {
     if (!this.firstPerson) this.addHelmet(model);
   }
 
-  /** Place un outil dans la main droite (`tool` : objet de ~0,7 m de long, tête vers +z) : il suit le bras. */
+  /**
+   * Place un outil dans la main droite (`tool` : objet de ~0,7 m de long, tête vers +z, pointe vers -y) : il suit le
+   * bras. Il est orienté pour que, au moment du coup (bras tendu vers l'avant), la tête pointe vers l'avant et la
+   * pointe vers le bas ; il se lève avec le bras pour l'élan.
+   */
   attachHandTool(tool: THREE.Object3D, size = 1.15): void {
     const j = this.joints.get(BONES.armR[2]);
     if (!j) return;
-    const rest = new THREE.Quaternion();
-    j.bone.getWorldQuaternion(rest);
-    const inverse = rest.clone().invert();
+    // Orientation de l'os de la main par rapport au personnage (indépendante de sa position dans le monde).
+    const rootInverse = new THREE.Quaternion();
+    const relative = (): THREE.Quaternion => {
+      this.root.updateMatrixWorld(true);
+      this.root.getWorldQuaternion(rootInverse).invert();
+      return rootInverse.clone().multiply(j.bone.getWorldQuaternion(new THREE.Quaternion()));
+    };
+    const rest = relative();
+    // Pose du coup : bras droit tendu vers l'avant, coude plié.
+    this.arm('L', 0);
+    this.arm('R', 0, this.firstPerson ? -1.5 : -1.0, 0.6);
+    const impact = relative();
+    for (const joint of this.joints.values()) joint.bone.quaternion.copy(joint.rest);
+    this.root.updateMatrixWorld(true);
     const holder = new THREE.Object3D();
-    // Au repos (bras en croix) l'outil est aligné sur les axes du monde : tête vers l'avant, comme un poing fermé.
-    holder.quaternion.copy(inverse);
-    holder.position.copy(new THREE.Vector3(-1, 0, 0).applyQuaternion(inverse).multiplyScalar(0.7));
+    holder.quaternion.copy(impact.invert());
+    // La main est au bout du bras : on décale l'outil le long de l'os (à plat, le bras part vers -x).
+    holder.position.copy(
+      new THREE.Vector3(-1, 0, 0).applyQuaternion(rest.clone().invert()).multiplyScalar(0.7),
+    );
     holder.scale.setScalar(1 / this.scale);
     tool.position.set(0, 0, 0);
     tool.rotation.set(0, 0, 0);
