@@ -32,7 +32,7 @@ describe('textes des ressources du monde', () => {
     for (const r of RESOURCES) {
       expect(fr[`res.${r.id}`], `res.${r.id} (fr)`).toBeTruthy();
       expect(en[`res.${r.id}`], `res.${r.id} (en)`).toBeTruthy();
-      if (r.kind === 'object') {
+      if (r.kind === 'object' || r.kind === 'deposit') {
         expect(fr[`target.${r.id}`], `target.${r.id} (fr)`).toBeTruthy();
         expect(en[`target.${r.id}`], `target.${r.id} (en)`).toBeTruthy();
       }

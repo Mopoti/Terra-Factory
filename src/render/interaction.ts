@@ -518,8 +518,15 @@ export class Interaction {
         : hit.type === 'structure'
           ? hit.structure.name
           : t(`target.${hit.target.resId}` as TranslationKey);
-    this.hudName.textContent = name;
     if (item && !bagFull && !this.state.hasRoomFor(item)) bagFull = true;
+    // Ressource récoltable : « [icône] Pierre : 309 » sur une seule ligne (l'état n'apparaît que s'il y a un souci).
+    const compact = hit.type === 'target' && reachable && !bagFull;
+    if (compact && hit.type === 'target') {
+      const swatch = document.createElement('i');
+      swatch.className = 'interact-icon';
+      swatch.style.background = itemById(item).color;
+      this.hudName.replaceChildren(swatch, `${itemName(item)} : ${hit.target.left}`);
+    } else this.hudName.textContent = name;
     let status: string;
     if (!reachable) status = t('harvest.tooFar');
     else if (bagFull) status = t('harvest.bagFull');
@@ -533,7 +540,8 @@ export class Interaction {
           : 'harvest.demolish',
       );
     } else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
-    this.hudDetail.textContent = status;
+    this.hudDetail.textContent = compact ? '' : status;
+    this.hudDetail.hidden = compact;
     this.hudDetail.classList.toggle('warn', !reachable || bagFull);
     const holding = reachable && holdingNow && this.holdingId === id;
     this.hudBar.hidden = !holding;
