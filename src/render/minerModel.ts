@@ -148,7 +148,7 @@ export class Miner {
     j.bone.add(holder);
   }
 
-  /** Casque jaune et lampe : posés sur le modèle (pas sur l'os, la tête ne bouge pas). */
+  /** Casque jaune et lampe : posés sur le modèle (retourné d'un demi-tour : l'avant est donc du côté -z du fichier) (pas sur l'os, la tête ne bouge pas). */
   private addHelmet(model: THREE.Object3D): void {
     const helmet = new THREE.Mesh(
       new THREE.SphereGeometry(2.1, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.55),
@@ -160,7 +160,7 @@ export class Miner {
       new THREE.CylinderGeometry(2.4, 2.4, 0.2, 16),
       new THREE.MeshStandardMaterial({ color: 0xf2c21b, roughness: 0.6 }),
     );
-    brim.position.set(0, 10.2, 0.2);
+    brim.position.set(0, 10.2, -0.2);
     const lamp = new THREE.Mesh(
       new THREE.CylinderGeometry(0.55, 0.7, 0.7, 10),
       new THREE.MeshStandardMaterial({
@@ -170,7 +170,7 @@ export class Miner {
       }),
     );
     lamp.rotation.x = Math.PI / 2;
-    lamp.position.set(0, 11.0, 2.1);
+    lamp.position.set(0, 11.0, -2.1);
     model.add(helmet, brim, lamp);
   }
 
