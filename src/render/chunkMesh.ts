@@ -5,6 +5,7 @@ import { valueNoise } from '../core/world/noise';
 import { hash01 } from '../core/world/rng';
 import { BIOME_COLORS, type BiomeId } from '../core/world/biomes';
 import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
+import { WATER_TILE_M, oreAtlas, oreTile, waterTexture } from './groundTextures';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 import {
   TREE_MODEL_HEIGHT_M,
@@ -45,6 +46,22 @@ export const ghostUniforms = {
   uGhostDepth: { value: 0 },
   uGhostRadius: { value: 100 },
 };
+
+/** Gisements : texture de l'atlas × éclairage de la richesse (couleur de sommet). */
+const oreMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+/** Eau : texture qui coule (voir `tickWater`). */
+const waterMaterial = new THREE.MeshStandardMaterial({ roughness: 0.25, metalness: 0.05 });
+/** Les textures dessinées par le code n'existent qu'une fois la page prête : on les pose à la première construction. */
+function ensureGroundTextures(): void {
+  if (!oreMaterial.map) {
+    oreMaterial.map = oreAtlas();
+    oreMaterial.needsUpdate = true;
+  }
+  if (!waterMaterial.map) {
+    waterMaterial.map = waterTexture();
+    waterMaterial.needsUpdate = true;
+  }
+}
 
 const groundMaterial = new THREE.MeshStandardMaterial({ vertexColors: true });
 /** Teinte du sol selon la saison. */
@@ -142,6 +159,30 @@ interface Foliage {
   index: number[];
 }
 
+/** Maillage texturé avec couleurs de sommet (gisements). */
+interface TexBuf extends Foliage {
+  colors: number[];
+}
+const emptyTexBuf = (): TexBuf => ({ positions: [], normals: [], uvs: [], index: [], colors: [] });
+
+/** Quatre sommets d'un rectangle : positions, normale, uv (4 paires), couleur. */
+function quad(
+  f: TexBuf,
+  corners: [number, number, number][],
+  normal: [number, number, number],
+  uv: [number, number][],
+  shadeColor: number,
+): void {
+  const first = f.positions.length / 3;
+  corners.forEach((c, i) => {
+    f.positions.push(...c);
+    f.normals.push(...normal);
+    f.uvs.push(...uv[i]);
+    f.colors.push(shadeColor, shadeColor, shadeColor);
+  });
+  f.index.push(first, first + 1, first + 2, first, first + 2, first + 3);
+}
+
 const emptyFoliage = (): Foliage => ({ positions: [], normals: [], uvs: [], index: [] });
 
 /** Fabrique le maillage texturé d'un feuillage (rien s'il est vide) et l'ajoute au groupe. */
@@ -149,16 +190,19 @@ function foliageMesh(
   group: THREE.Group,
   f: Foliage,
   material: THREE.Material,
+  colors?: number[],
+  flat = false,
 ): THREE.BufferGeometry | null {
   if (f.positions.length === 0) return null;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(f.positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(f.normals, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(f.uvs, 2));
+  if (colors) geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setIndex(f.index);
   geometry.computeBoundingSphere();
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = true;
+  mesh.castShadow = !flat;
   mesh.receiveShadow = true;
   group.add(mesh);
   return geometry;
@@ -197,6 +241,7 @@ function buildProps(
   blocked: string[],
   tall: [string, number][],
   foliage: { tree: Foliage; plant: Foliage },
+  ground: { ore: TexBuf; water: TexBuf },
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
   const treeMesh = treeModel();
@@ -322,27 +367,128 @@ function buildProps(
   for (const w of data.water) {
     markBlocked(w.gx, w.gz, 1);
     const shadeW = 0.92 + 0.16 * (((w.gx * 7 + w.gz * 13) % 5) / 5);
-    b.box(
-      (w.gx + 0.5) * CELL_SIZE_M - ox,
-      0,
-      (w.gz + 0.5) * CELL_SIZE_M - oz,
-      CELL_SIZE_M,
-      WATER_HEIGHT_M,
-      CELL_SIZE_M,
-      shade(hexToRgb(resourceById('water').color), shadeW),
+    const x0 = w.gx * CELL_SIZE_M - ox;
+    const z0 = w.gz * CELL_SIZE_M - oz;
+    const x1 = x0 + CELL_SIZE_M;
+    const z1 = z0 + CELL_SIZE_M;
+    // Coordonnées de texture dans le monde : l'eau se raccorde d'une case et d'un chunk à l'autre.
+    const u0 = (w.gx * CELL_SIZE_M) / WATER_TILE_M;
+    const v0 = (w.gz * CELL_SIZE_M) / WATER_TILE_M;
+    const du = CELL_SIZE_M / WATER_TILE_M;
+    quad(
+      ground.water,
+      [
+        [x0, WATER_HEIGHT_M, z0],
+        [x0, WATER_HEIGHT_M, z1],
+        [x1, WATER_HEIGHT_M, z1],
+        [x1, WATER_HEIGHT_M, z0],
+      ],
+      [0, 1, 0],
+      [
+        [u0, v0],
+        [u0, v0 + du],
+        [u0 + du, v0 + du],
+        [u0 + du, v0],
+      ],
+      shadeW,
     );
   }
   for (const o of data.ore) {
     const richness = Math.min(1, o.amount / ORE_FULL_AMOUNT);
     const height = ORE_MIN_HEIGHT_M + (ORE_MAX_HEIGHT_M - ORE_MIN_HEIGHT_M) * richness;
-    b.box(
-      (o.gx + 0.5) * CELL_SIZE_M - ox,
-      0,
-      (o.gz + 0.5) * CELL_SIZE_M - oz,
-      CELL_SIZE_M,
-      height,
-      CELL_SIZE_M,
-      shade(hexToRgb(resourceById(o.id).color), 0.8 + 0.4 * richness),
+    const x0 = o.gx * CELL_SIZE_M - ox;
+    const z0 = o.gz * CELL_SIZE_M - oz;
+    const x1 = x0 + CELL_SIZE_M;
+    const z1 = z0 + CELL_SIZE_M;
+    const tile = oreTile(o.id);
+    if (!tile) {
+      b.box(
+        (o.gx + 0.5) * CELL_SIZE_M - ox,
+        0,
+        (o.gz + 0.5) * CELL_SIZE_M - oz,
+        CELL_SIZE_M,
+        height,
+        CELL_SIZE_M,
+        shade(hexToRgb(resourceById(o.id).color), 0.8 + 0.4 * richness),
+      );
+      continue;
+    }
+    const [tu0, tv0, tu1, tv1] = tile;
+    // La vignette est tournée ou retournée au hasard pour que deux cases voisines ne se ressemblent pas.
+    const corners: [number, number][] = [
+      [tu0, tv0],
+      [tu0, tv1],
+      [tu1, tv1],
+      [tu1, tv0],
+    ];
+    const turn = Math.floor(hash01(3, o.gx, o.gz, 21) * 4);
+    const rotated = corners.map((_, i) => corners[(i + turn) % 4]);
+    if (hash01(3, o.gx, o.gz, 22) < 0.5) rotated.reverse();
+    const light = 0.85 + 0.25 * richness;
+    const top = height;
+    quad(
+      ground.ore,
+      [
+        [x0, top, z0],
+        [x0, top, z1],
+        [x1, top, z1],
+        [x1, top, z0],
+      ],
+      [0, 1, 0],
+      rotated as [number, number][],
+      light,
+    );
+    // Flancs : couleur moyenne de la vignette (un point au centre), un peu plus sombres.
+    const mid: [number, number] = [(tu0 + tu1) / 2, (tv0 + tv1) / 2];
+    const flat: [number, number][] = [mid, mid, mid, mid];
+    const side = light * 0.7;
+    quad(
+      ground.ore,
+      [
+        [x0, 0, z1],
+        [x0, top, z1],
+        [x1, top, z1],
+        [x1, 0, z1],
+      ],
+      [0, 0, 1],
+      flat,
+      side,
+    );
+    quad(
+      ground.ore,
+      [
+        [x1, 0, z0],
+        [x1, top, z0],
+        [x0, top, z0],
+        [x0, 0, z0],
+      ],
+      [0, 0, -1],
+      flat,
+      side,
+    );
+    quad(
+      ground.ore,
+      [
+        [x0, 0, z0],
+        [x0, top, z0],
+        [x0, top, z1],
+        [x0, 0, z1],
+      ],
+      [-1, 0, 0],
+      flat,
+      side,
+    );
+    quad(
+      ground.ore,
+      [
+        [x1, 0, z1],
+        [x1, top, z1],
+        [x1, top, z0],
+        [x1, 0, z0],
+      ],
+      [1, 0, 0],
+      flat,
+      side,
     );
   }
 
@@ -367,8 +513,10 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   ground.receiveShadow = true;
   group.add(ground);
 
+  ensureGroundTextures();
   const foliage = { tree: emptyFoliage(), plant: emptyFoliage() };
-  const propsGeometry = buildProps(data, blocked, tall, foliage);
+  const cover = { ore: emptyTexBuf(), water: emptyTexBuf() };
+  const propsGeometry = buildProps(data, blocked, tall, foliage, cover);
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
     props.castShadow = true;
@@ -378,6 +526,8 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   const foliageGeometries = [
     foliageMesh(group, foliage.tree, foliageMaterial),
     foliageMesh(group, foliage.plant, plantMaterial),
+    foliageMesh(group, cover.ore, oreMaterial, cover.ore.colors),
+    foliageMesh(group, cover.water, waterMaterial, undefined, true),
   ];
   return {
     group,

@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Tour 149** : bras du personnage en vue subjective (mannequin découpé derrière la caméra, piolet à la main) ; texture d'eau animée et atlas de textures des gisements dessinés par le code (`src/render/groundTextures.ts`).
 - **Tour 148** : mineur retourné de 180° (os gauche/droite inversés, casque et lampe ramenés à l'avant) ; buissons de fibres remplacés par les plantes de l'archive (herbe, buisson fleuri, fougère ; `plantMaterial`, `plant1-4.obj`).
 - **Tour 147** : personnage = mannequin CC0 articulé (`src/render/minerModel.ts`) avec casque à lampe, marche et geste de frappe calculés, piolet fixé à la main ; remplace la capsule du joueur et des autres joueurs.
 - **Tour 146** : piolet 3D (`public/models/tool/icepick.glb`, `src/render/toolModel.ts`) à la place de la pioche en boîtes, teinté selon l'outil ; licence à vérifier ; look moderne à remplacer plus tard.

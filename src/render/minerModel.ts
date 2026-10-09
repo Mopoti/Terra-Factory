@@ -25,20 +25,18 @@ export function loadMiner(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<b
       `${baseUrl}models/character/miner.glb`,
       (gltf) => {
         source = gltf.scene;
-        // Couleurs par région, d'après la position de repos de chaque sommet.
+        // Région de chaque sommet, d'après sa position de repos : 0 = combinaison, 1 = peau, 2 = pantalon.
         source.traverse((o) => {
           const mesh = o as THREE.SkinnedMesh;
           if (!mesh.isSkinnedMesh) return;
           const pos = mesh.geometry.getAttribute('position');
-          const colors = new Float32Array(pos.count * 3);
-          const suit = new THREE.Color(0xffffff);
+          const region = new Uint8Array(pos.count);
           for (let i = 0; i < pos.count; i++) {
             const x = Math.abs(pos.getX(i));
             const y = pos.getY(i);
-            const c = y > 8.7 ? SKIN : x > 7 ? SKIN : y < 2.2 ? PANTS : suit;
-            colors.set([c.r, c.g, c.b], i * 3);
+            region[i] = y > 8.7 || x > 7 ? 1 : y < 2.2 ? 2 : 0;
           }
-          mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+          mesh.geometry.setAttribute('region', new THREE.BufferAttribute(region, 1));
         });
         resolve(true);
       },
@@ -78,14 +76,17 @@ const tmp2 = new THREE.Quaternion();
 export class Miner {
   readonly root = new THREE.Group();
   private readonly joints = new Map<string, Joint>();
-  private readonly suit = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+  /** Matériau du corps (public : la vue à la 1re personne le découpe derrière la caméra). */
+  readonly suit = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+  private readonly firstPerson: boolean;
   private readonly scale: number;
   private phase = 0;
   private strike = 0;
   private amount = 0;
 
   /** `height` : taille du personnage (m) ; `color` : couleur de la combinaison. */
-  constructor(height: number, color: number) {
+  constructor(height: number, color: number, options: { firstPerson?: boolean } = {}) {
+    this.firstPerson = options.firstPerson ?? false;
     if (!source) throw new Error('Mineur non chargé');
     const model = cloneSkinned(source) as THREE.Group;
     model.rotation.y = Math.PI;
@@ -95,12 +96,21 @@ export class Miner {
       if ((o as THREE.Bone).isBone) bones.set(o.name, o as THREE.Bone);
       const mesh = o as THREE.SkinnedMesh;
       if (mesh.isSkinnedMesh) {
+        // Couleurs propres à ce joueur : la combinaison prend sa couleur, la peau et le pantalon gardent la leur.
+        mesh.geometry = mesh.geometry.clone();
+        const region = mesh.geometry.getAttribute('region');
+        const colors = new Float32Array(region.count * 3);
+        const suitColor = new THREE.Color(color);
+        for (let i = 0; i < region.count; i++) {
+          const c = region.getX(i) === 1 ? SKIN : region.getX(i) === 2 ? PANTS : suitColor;
+          colors.set([c.r, c.g, c.b], i * 3);
+        }
+        mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
         mesh.material = this.suit;
-        mesh.castShadow = true;
+        mesh.castShadow = !this.firstPerson;
         mesh.frustumCulled = false;
       }
     });
-    this.suit.color.set(color);
     const names = [
       BONES.spine,
       BONES.head,
@@ -126,11 +136,11 @@ export class Miner {
     model.scale.setScalar(k);
     model.position.y = -FOOT_Y * k - height / 2;
     this.root.add(model);
-    this.addHelmet(model);
+    if (!this.firstPerson) this.addHelmet(model);
   }
 
   /** Place un outil dans la main droite (`tool` : objet de ~0,7 m de long, tête vers +z) : il suit le bras. */
-  attachHandTool(tool: THREE.Object3D): void {
+  attachHandTool(tool: THREE.Object3D, size = 1.15): void {
     const j = this.joints.get(BONES.armR[2]);
     if (!j) return;
     const rest = new THREE.Quaternion();
@@ -143,7 +153,7 @@ export class Miner {
     holder.scale.setScalar(1 / this.scale);
     tool.position.set(0, 0, 0);
     tool.rotation.set(0, 0, 0);
-    tool.scale.setScalar(1.15);
+    tool.scale.setScalar(size);
     holder.add(tool);
     j.bone.add(holder);
   }
@@ -184,7 +194,7 @@ export class Miner {
   }
 
   /** Bras : on l'abaisse le long du corps (autour de z), puis on le balance d'avant en arrière (autour de x). */
-  private arm(side: 'L' | 'R', swing: number, raise = 0): void {
+  private arm(side: 'L' | 'R', swing: number, raise = 0, bend = 0.25): void {
     const names = side === 'L' ? BONES.armL : BONES.armR;
     const down = side === 'L' ? -1.35 : 1.35;
     const j = this.joints.get(names[0]);
@@ -197,7 +207,7 @@ export class Miner {
       j.parentInverse.clone().multiply(world).multiply(j.parentWorld).multiply(j.rest),
     );
     // Coude : légèrement plié vers l'avant.
-    this.rotate(names[1], X, -0.25 - Math.max(0, -swing) * 0.5);
+    this.rotate(names[1], X, -bend - Math.max(0, -swing) * 0.5);
   }
 
   private leg(side: 'L' | 'R', swing: number): void {
@@ -212,6 +222,14 @@ export class Miner {
     this.phase += dt * (3 + Math.min(speed, 6) * 1.6);
     this.strike += dt * 7.5;
     const s = Math.sin(this.phase) * 0.7 * this.amount;
+    if (this.firstPerson) {
+      // Vue subjective : seul le bras droit compte, tendu devant soi ; il se lève puis s'abat quand on frappe.
+      const t = 0.5 + 0.5 * Math.sin(this.strike);
+      const bob = Math.sin(this.phase * 0.5) * 0.04 * this.amount;
+      this.arm('L', 0);
+      this.arm('R', 0, -(striking ? 1.5 + 1.0 * t : 1.7) + bob, striking ? 0.6 : 0.9);
+      return;
+    }
     this.leg('L', s);
     this.leg('R', -s);
     this.arm('L', -s * 0.8);

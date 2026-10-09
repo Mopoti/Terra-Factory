@@ -118,6 +118,7 @@ import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import { loadModels } from './models';
 import { loadNature } from './nature';
+import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
 import { loadPickModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
@@ -234,6 +235,10 @@ export function startGameView(
   // Le mannequin articulé remplace la capsule dès que le fichier est chargé (la capsule reste invisible, elle sert
   // encore de support aux objets portés).
   let miner: Miner | null = null;
+  let firstArm: Miner | null = null;
+  const firstClip = new THREE.Plane();
+  const clipDir = new THREE.Vector3();
+  const clipPos = new THREE.Vector3();
   void loadMiner().then((ok) => {
     if (!ok || !viewAlive) return;
     miner = new Miner(PLAYER_HEIGHT_M, 0xd9822b);
@@ -241,6 +246,17 @@ export function startGameView(
     (player.material as THREE.Material).visible = false;
     player.castShadow = false;
     miner.attachHandTool(bodyTool);
+    // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
+    // caméra (tête, torse) est découpé.
+    firstArm = new Miner(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson: true });
+    firstArm.root.position.set(0.02, -0.55, 0.12);
+    firstArm.root.scale.setScalar(0.8);
+    firstArm.root.rotation.y = Math.PI;
+    firstArm.suit.clippingPlanes = [firstClip];
+    renderer.localClippingEnabled = true;
+    camera.add(firstArm.root);
+    firstArm.attachHandTool(hand);
+    bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
   const corpseGeometry = new THREE.CapsuleGeometry(
@@ -3047,6 +3063,7 @@ export function startGameView(
         ? edgePan(mouseX, mouseY, window.innerWidth, window.innerHeight)
         : { x: 0, y: 0 };
     rig.update(dt, { x: playerX, y: playerY, z: playerZ }, motion, views, edge, obstacleAt);
+    tickWater(performance.now() / 1000);
 
     player.visible = rig.view !== 'first';
     player.position.set(playerX, playerY + PLAYER_HEIGHT_M / 2, playerZ);
@@ -3066,7 +3083,15 @@ export function startGameView(
     );
     lastX = playerX;
     lastZ = playerZ;
-    bareHand.visible = rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
+    if (firstArm) {
+      camera.getWorldDirection(clipDir);
+      camera.getWorldPosition(clipPos).addScaledVector(clipDir, 0.12);
+      firstClip.setFromNormalAndCoplanarPoint(clipDir, clipPos);
+      firstArm.root.visible = rig.view === 'first' && views.first.showHands && !gun.visible;
+      firstArm.update(dt, 0, interaction.working !== null);
+    } else
+      bareHand.visible =
+        rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';

@@ -75,3 +75,9 @@
 - Les autres joueurs utilisent le même mannequin, teinté par joueur, animé d'après leur vitesse de déplacement ; avant le chargement (ou sans fichier), la capsule sert de secours.
 - Le mannequin du fichier regarde vers -z : il est tourné d'un demi-tour (Tour 148) ; ses côtés gauche et droit sont donc inversés par rapport au fichier (`BONES`).
 - Limites : le mannequin n'a pas de visage (le casque et la lampe indiquent l'avant), pas d'animation de repos ni de saut, et les mouvements des genoux et coudes sont simples.
+
+## Bras en vue subjective, eau et gisements texturés (Tour 149)
+- **Main à la 1re personne** : la boîte couleur peau est remplacée par le vrai bras du personnage (une seconde instance du mannequin, `firstPerson`, accrochée à la caméra, réduite à 80 %). Tout ce qui est derrière la caméra (tête, torse) est découpé par un plan de coupe mis à jour à chaque image ; le bras se tend devant soi et le piolet est fixé à sa main. Les couleurs sont maintenant propres à chaque instance : peau et pantalon ne sont plus teintés par la combinaison.
+- **Eau** (`src/render/groundTextures.ts`) : texture de vagues dessinée par le code (somme de sinus à fréquences entières, donc sans raccord visible), en coordonnées du monde (3 m par répétition), qui coule doucement (`tickWater`, décalage de la texture).
+- **Gisements** : atlas de 8 vignettes de 128 px dessinées par le code (fer, cuivre, charbon, zinc, bauxite, sable, pétrole, uraninite : éclats, paillettes, grains). Chaque case pose sa vignette tournée ou retournée au hasard, éclairée selon la richesse ; les flancs prennent la couleur moyenne de la vignette. Pas de fichier image ni de licence à gérer ; les couleurs d'origine servent de repli sans navigateur.
+- Idées suivantes : texture de l'herbe et du sol par biome, normales pour donner du relief.
