@@ -52,11 +52,14 @@ export function loadMiner(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<b
 const BONES = {
   spine: 'Bone',
   head: 'Bone002',
-  /** Côté +x du fichier = gauche du personnage (qui regarde vers +z). */
-  armL: ['Bone005', 'Bone006', 'Bone007'],
-  armR: ['Bone004', 'Bone008', 'Bone009'],
-  legL: ['Bone013', 'Bone014', 'Bone016'],
-  legR: ['Bone011', 'Bone012', 'Bone015'],
+  /**
+   * Le mannequin du fichier regarde vers -z : on le tourne d'un demi-tour pour qu'il regarde vers +z comme le jeu. Son
+   * côté -x devient alors le côté +x du monde, c'est-à-dire la gauche du personnage.
+   */
+  armL: ['Bone004', 'Bone008', 'Bone009'],
+  armR: ['Bone005', 'Bone006', 'Bone007'],
+  legL: ['Bone011', 'Bone012', 'Bone015'],
+  legR: ['Bone013', 'Bone014', 'Bone016'],
 } as const;
 
 interface Joint {
@@ -85,6 +88,7 @@ export class Miner {
   constructor(height: number, color: number) {
     if (!source) throw new Error('Mineur non chargé');
     const model = cloneSkinned(source) as THREE.Group;
+    model.rotation.y = Math.PI;
     model.updateMatrixWorld(true);
     const bones = new Map<string, THREE.Bone>();
     model.traverse((o) => {

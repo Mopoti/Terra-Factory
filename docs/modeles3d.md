@@ -59,7 +59,8 @@
 - `public/models/nature/tree.obj` + `tree.png` : un seul conifère extrait de la scène (objet `default_54`, 1050 sommets, 1264 triangles). Le feuillage est fait de cartes à transparence, donc il garde la texture (matériau `foliageMaterial`, `alphaTest`, double face) au lieu des couleurs par sommet. Ramené à 5,5 m × l'échelle de l'arbre, tourné au hasard ; le tronc bloque toujours une seule case.
 - `public/models/nature/pebbles.gltf` + `pebbles.bin` : tas de cailloux, cuit en couleurs par sommet et fusionné au décor ; remplace les deux octaèdres des rochers.
 - `src/render/nature.ts` charge le tout en arrière-plan ; les chunks déjà construits sont refaits quand c'est prêt. Sans fichier, les anciennes formes simples servent de secours. L'aura de transparence du décor s'applique aussi au feuillage.
-- Non utilisés pour l'instant : les autres objets de la scène (autres conifères, buissons, herbes, tas de feuilles).
+- **Plantes (Tour 148)** : `plant1.obj` à `plant4.obj` + `plants.png` (herbe, buisson fleuri, fougère, autre texture de la même archive) remplacent les touffes de cônes des buissons de fibres, une forme au hasard par buisson, ~1,1 m de large (`plantMaterial`, même découpe de transparence que les arbres).
+- Non utilisés pour l'instant : les autres conifères, les autres herbes et les tas de feuilles de la scène.
 
 ## Pioche : piolet (Tour 146)
 - **Source** (fournie par le PO) : « Ice climbing pick » (FBX, 3 438 sommets, textures PBR). **Licence non précisée** : à vérifier comme pour les arbres.
@@ -72,4 +73,5 @@
 - `src/render/minerModel.ts` : couleurs par région calculées d'après la hauteur des sommets (tête et mains = peau, jambes = pantalon, torse et bras = combinaison, teintée par joueur), casque jaune avec lampe émissive posé sur le modèle, animations calculées en tournant les os (marche proportionnelle à la vitesse, bras abaissés le long du corps, geste de frappe bras levé puis abattu pendant une récolte).
 - Le piolet de la main droite est fixé à l'os de la main (il suit le bras). En 1re personne, rien ne change (le personnage est masqué).
 - Les autres joueurs utilisent le même mannequin, teinté par joueur, animé d'après leur vitesse de déplacement ; avant le chargement (ou sans fichier), la capsule sert de secours.
+- Le mannequin du fichier regarde vers -z : il est tourné d'un demi-tour (Tour 148) ; ses côtés gauche et droit sont donc inversés par rapport au fichier (`BONES`).
 - Limites : le mannequin n'a pas de visage (le casque et la lampe indiquent l'avant), pas d'animation de repos ni de saut, et les mouvements des genoux et coudes sont simples.

@@ -15,13 +15,18 @@ export interface TreeModel {
   /** Position (x, z) de la base du tronc et hauteur totale, dans le repère du fichier. */
   base: { x: number; z: number; minY: number };
   height: number;
+  /** Plus grande largeur horizontale. */
+  width: number;
 }
 
 let tree: TreeModel | null = null;
+const plants: TreeModel[] = [];
 /** Hauteur d'un conifère moyen dans le jeu (m) : le fichier d'origine en fait presque 18. */
 export const TREE_MODEL_HEIGHT_M = 5.5;
 
 export const treeModel = (): TreeModel | null => tree;
+/** Plantes basses (herbes, buissons fleuris, fougères) : plusieurs formes, à choisir au hasard. */
+export const plantModels = (): readonly TreeModel[] => plants;
 export const rockModel = (): BakedModel | null => bakedModel('pebbles');
 
 /** Matériau du feuillage : texture peinte, les zones transparentes sont découpées. */
@@ -78,6 +83,16 @@ export function parseTree(text: string): TreeModel {
     minY = Math.min(minY, v[i]);
     maxY = Math.max(maxY, v[i]);
   }
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < v.length; i += 3) {
+    minX = Math.min(minX, v[i]);
+    maxX = Math.max(maxX, v[i]);
+    minZ = Math.min(minZ, v[i + 2]);
+    maxZ = Math.max(maxZ, v[i + 2]);
+  }
   let bx = 0;
   let bz = 0;
   let count = 0;
@@ -94,8 +109,16 @@ export function parseTree(text: string): TreeModel {
     index: new Uint32Array(idx),
     base: { x: bx / (count || 1), z: bz / (count || 1), minY },
     height: maxY - minY,
+    width: Math.max(maxX - minX, maxZ - minZ),
   };
 }
+
+/** Matériau des plantes : autre texture peinte, même découpe de la transparence. */
+export const plantMaterial = new THREE.MeshStandardMaterial({
+  alphaTest: 0.5,
+  side: THREE.DoubleSide,
+  roughness: 1,
+});
 
 let loading: Promise<void> | null = null;
 
@@ -124,6 +147,31 @@ export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
         }),
     )
     .catch(() => undefined);
+  const plantsLoad = Promise.all(
+    [1, 2, 3, 4].map((n) =>
+      fetch(`${dir}plant${n}.obj`)
+        .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+        .then((text) => parseTree(text)),
+    ),
+  )
+    .then(
+      (models) =>
+        new Promise<void>((resolve) => {
+          new THREE.TextureLoader().load(
+            `${dir}plants.png`,
+            (texture) => {
+              texture.colorSpace = THREE.SRGBColorSpace;
+              plantMaterial.map = texture;
+              plantMaterial.needsUpdate = true;
+              plants.push(...models);
+              resolve();
+            },
+            undefined,
+            () => resolve(),
+          );
+        }),
+    )
+    .catch(() => undefined);
   const rocksLoad = new Promise<void>((resolve) => {
     new GLTFLoader().load(
       `${dir}pebbles.gltf`,
@@ -136,6 +184,6 @@ export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
       () => resolve(),
     );
   });
-  loading = Promise.all([treeLoad, rocksLoad]).then(() => undefined);
+  loading = Promise.all([treeLoad, plantsLoad, rocksLoad]).then(() => undefined);
   return loading;
 }

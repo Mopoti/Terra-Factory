@@ -6,7 +6,14 @@ import { hash01 } from '../core/world/rng';
 import { BIOME_COLORS, type BiomeId } from '../core/world/biomes';
 import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
-import { TREE_MODEL_HEIGHT_M, foliageMaterial, rockModel, treeModel } from './nature';
+import {
+  TREE_MODEL_HEIGHT_M,
+  foliageMaterial,
+  plantMaterial,
+  plantModels,
+  rockModel,
+  treeModel,
+} from './nature';
 
 const GROUND_COLORS = Object.fromEntries(
   Object.entries(BIOME_COLORS).map(([id, hex]) => [id, hexToRgb(hex)]),
@@ -81,6 +88,7 @@ if (uGhostOn > 0.5 && vGhostY > 0.45 && -vViewPosition.z < uGhostDepth - 0.35) {
 };
 propsMaterial.onBeforeCompile = ghostShader;
 foliageMaterial.onBeforeCompile = ghostShader;
+plantMaterial.onBeforeCompile = ghostShader;
 
 function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry {
   const n = CHUNK_CELLS;
@@ -134,16 +142,37 @@ interface Foliage {
   index: number[];
 }
 
-/** Ajoute un conifère du modèle : base du tronc en (x, z), tourné de `angle`, ramené à ~5,5 m × `scale`. */
-function addTree(
+const emptyFoliage = (): Foliage => ({ positions: [], normals: [], uvs: [], index: [] });
+
+/** Fabrique le maillage texturé d'un feuillage (rien s'il est vide) et l'ajoute au groupe. */
+function foliageMesh(
+  group: THREE.Group,
+  f: Foliage,
+  material: THREE.Material,
+): THREE.BufferGeometry | null {
+  if (f.positions.length === 0) return null;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(f.positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(f.normals, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(f.uvs, 2));
+  geometry.setIndex(f.index);
+  geometry.computeBoundingSphere();
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return geometry;
+}
+
+/** Ajoute un modèle texturé : pied en (x, z), tourné de `angle`, multiplié par `k` (m par unité du fichier). */
+function addFoliage(
   f: Foliage,
   m: NonNullable<ReturnType<typeof treeModel>>,
   x: number,
   z: number,
   angle: number,
-  scale: number,
+  k: number,
 ): void {
-  const k = (TREE_MODEL_HEIGHT_M / m.height) * scale;
   const c = Math.cos(angle);
   const s = Math.sin(angle);
   const first = f.positions.length / 3;
@@ -167,11 +196,12 @@ function buildProps(
   data: ChunkData,
   blocked: string[],
   tall: [string, number][],
-  foliage: Foliage,
+  foliage: { tree: Foliage; plant: Foliage },
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
   const treeMesh = treeModel();
   const rockMesh = rockModel();
+  const plants = plantModels();
   const ox = data.cx * CHUNK_SIZE_M;
   const oz = data.cz * CHUNK_SIZE_M;
   const markBlocked = (gx: number, gz: number, cells: number): void => {
@@ -203,15 +233,30 @@ function buildProps(
       const x = cxm + Math.cos(o.rotation) * 0.2;
       const z = czm + Math.sin(o.rotation) * 0.2;
       // Tronc haut et fin (le personnage de 1,70 m passe dessous), feuillage au-dessus de 2 m.
-      if (treeMesh) addTree(foliage, treeMesh, x, z, o.rotation, o.scale);
+      if (treeMesh)
+        addFoliage(
+          foliage.tree,
+          treeMesh,
+          x,
+          z,
+          o.rotation,
+          (TREE_MODEL_HEIGHT_M / treeMesh.height) * o.scale,
+        );
       else {
         b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
         const green = shade(base, jitter);
         b.cone(x, 2.0 * o.scale, z, 0.95 * o.scale, 1.7 * o.scale, 8, green);
         b.cone(x, 2.9 * o.scale, z, 0.65 * o.scale, 1.4 * o.scale, 8, shade(green, 1.12));
       }
+    } else if (o.id === 'fiber_bush' && plants.length > 0) {
+      // Herbe, buisson fleuri ou fougère du modèle : environ 1 m de large.
+      const x = cxm + Math.cos(o.rotation) * 0.1;
+      const z = czm + Math.sin(o.rotation) * 0.1;
+      const model = plants[Math.floor(hash01(2, o.gx, o.gz, 9) * plants.length)];
+      const width = Math.max(model.width, 1e-3);
+      addFoliage(foliage.plant, model, x, z, o.rotation, (1.1 / width) * o.scale);
     } else if (o.id === 'fiber_bush') {
-      // Touffe de brins clairs.
+      // Touffe de brins clairs (secours).
       const x = cxm + Math.cos(o.rotation) * 0.1;
       const z = czm + Math.sin(o.rotation) * 0.1;
       for (let i = 0; i < 6; i++) {
@@ -322,7 +367,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   ground.receiveShadow = true;
   group.add(ground);
 
-  const foliage: Foliage = { positions: [], normals: [], uvs: [], index: [] };
+  const foliage = { tree: emptyFoliage(), plant: emptyFoliage() };
   const propsGeometry = buildProps(data, blocked, tall, foliage);
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
@@ -330,22 +375,10 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
     props.receiveShadow = true;
     group.add(props);
   }
-  let foliageGeometry: THREE.BufferGeometry | null = null;
-  if (foliage.positions.length > 0) {
-    foliageGeometry = new THREE.BufferGeometry();
-    foliageGeometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(foliage.positions, 3),
-    );
-    foliageGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(foliage.normals, 3));
-    foliageGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(foliage.uvs, 2));
-    foliageGeometry.setIndex(foliage.index);
-    foliageGeometry.computeBoundingSphere();
-    const leaves = new THREE.Mesh(foliageGeometry, foliageMaterial);
-    leaves.castShadow = true;
-    leaves.receiveShadow = true;
-    group.add(leaves);
-  }
+  const foliageGeometries = [
+    foliageMesh(group, foliage.tree, foliageMaterial),
+    foliageMesh(group, foliage.plant, plantMaterial),
+  ];
   return {
     group,
     blocked,
@@ -353,7 +386,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
     dispose: () => {
       groundGeometry.dispose();
       propsGeometry?.dispose();
-      foliageGeometry?.dispose();
+      for (const g of foliageGeometries) g?.dispose();
     },
   };
 }
