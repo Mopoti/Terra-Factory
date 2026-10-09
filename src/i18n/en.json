@@ -1075,5 +1075,7 @@
   "tech.turret_3": "Laser turret",
   "tech.armor_4a": "Heavy-plated armor (helmet, chestplate)",
   "tech.armor_4b": "Heavy-plated armor (legs, boots)",
-  "tech.turret_4": "Plasma turret"
+  "tech.turret_4": "Plasma turret",
+  "display.contextLost": "The browser dropped the 3D display (graphics memory full). Close other tabs or lower the view distance and quality in the settings.",
+  "display.contextRestored": "The 3D display is back."
 }

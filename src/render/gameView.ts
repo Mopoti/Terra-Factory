@@ -206,6 +206,15 @@ export function startGameView(
   const initial = getSettings().display;
   const renderer = new THREE.WebGLRenderer({ antialias: initial.quality !== 'low' });
   container.appendChild(renderer.domElement);
+  // Mémoire graphique saturée (ou pilote qui plante) : le navigateur retire l'affichage 3D et l'écran devient blanc.
+  // On empêche l'abandon définitif pour que three.js recrée tout au retour, et on le dit au joueur.
+  renderer.domElement.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    options.onMessage?.(t('display.contextLost'));
+  });
+  renderer.domElement.addEventListener('webglcontextrestored', () =>
+    options.onMessage?.(t('display.contextRestored')),
+  );
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SKY);

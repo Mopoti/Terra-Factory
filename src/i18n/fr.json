@@ -1075,5 +1075,7 @@
   "tech.turret_3": "Tourelle laser",
   "tech.armor_4a": "Armure à blindage lourd (casque, plastron)",
   "tech.armor_4b": "Armure à blindage lourd (jambes, bottes)",
-  "tech.turret_4": "Tourelle à plasma"
+  "tech.turret_4": "Tourelle à plasma",
+  "display.contextLost": "L'affichage 3D a été coupé par le navigateur (mémoire graphique pleine). Ferme d'autres onglets ou baisse la distance d'affichage et la qualité dans les réglages.",
+  "display.contextRestored": "L'affichage 3D est revenu."
 }
