@@ -1104,5 +1104,6 @@
   "tech.effect.research_1": "Effect: labs consume a T1 pack in 4 s (instead of 5 s)",
   "tech.effect.research_2": "Effect: T1 packs in 3 s, T2 packs in 4 s",
   "tech.effect.research_3": "Effect: T1 packs in 2 s, T2 in 3 s, T3 in 4 s",
-  "tech.effect.research_4": "Effect: T1 packs in 1 s, T2 in 2 s, T3 in 3 s, T4 in 4 s"
+  "tech.effect.research_4": "Effect: T1 packs in 1 s, T2 in 2 s, T3 in 3 s, T4 in 4 s",
+  "machine.fuelBurn": "Fuel currently burning"
 }

@@ -1774,6 +1774,9 @@
   gap: 8px;
   font-size: 13px;
 }
+.fuel-bar > div {
+  background: #e0892b;
+}
 .craft-bar {
   height: 8px;
   border-radius: 4px;

@@ -197,6 +197,8 @@ export interface GameViewHandle {
   mountedMachineId(): number | null;
   /** Les autres joueurs de la partie (position et cap), pour la carte ; vide hors multijoueur. */
   otherPlayers(): PlayerInfo[];
+  /** Cap du corps du personnage (même convention que la caméra) : la caméra seule ne dit pas où il regarde. */
+  bodyYaw(): number;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -3294,6 +3296,7 @@ export function startGameView(
     setHost: (session) => {
       hostSession = session;
     },
+    bodyYaw: () => (rig.view === 'first' ? rig.yaw : facing + Math.PI),
     otherPlayers: () =>
       guest
         ? guest.client.players.filter((p) => p.id !== guest.client.you.id)

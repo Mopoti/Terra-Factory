@@ -79,16 +79,16 @@ describe('foreuse', () => {
     expect(d.stock).toBeNull();
     expect(f.status(d)).toBe('noFuel');
   });
-  it('mine 1 minerai par seconde, brûle du combustible et épuise vraiment les cases', () => {
+  it('mine 1 minerai toutes les 2 s, brûle du combustible et épuise vraiment les cases', () => {
     const { world, left } = makeWorld();
     const d = emptyMachine(1, 'drill', 0, 0, 0);
     d.fuel = { item: 'coal', count: 1 }; // 100 s
     const f = new Factory([d], world);
     expect(f.oreUnder(d).total).toBe(45);
     run(f, 20);
-    expect(d.stock).toEqual({ item: 'iron_ore', count: 20 });
-    expect(f.oreUnder(d).total).toBe(25);
-    expect([...left.values()].reduce((a, b) => a + b, 0)).toBe(25);
+    expect(d.stock).toEqual({ item: 'iron_ore', count: 10 });
+    expect(f.oreUnder(d).total).toBe(35);
+    expect([...left.values()].reduce((a, b) => a + b, 0)).toBe(35);
     expect(d.fuel).toBeNull();
     expect(f.fuelSecondsLeft(d)).toBeCloseTo(80, 0);
   });
@@ -1390,14 +1390,14 @@ describe('point 5a : tapis et foreuses par palier', () => {
     return new Factory([gen, pole, ...ms], rich);
   };
 
-  it('cadences : T1 1/s (combustible), T2 4/s, T3 10/s (et 25 % d’électricité en moins)', () => {
+  it('cadences : T1 0,5/s (combustible), T2 4/s, T3 10/s (et 25 % d’électricité en moins)', () => {
     const t1 = emptyMachine(1, 'drill', 0, 0, 0);
     t1.fuel = { item: 'coal', count: 3 };
     const t2 = emptyMachine(2, 'drill_electric', 0, 5, 0);
     const t3 = emptyMachine(3, 'drill_eco', 5, 5, 0);
     const f = grid(t1, t2, t3);
     run(f, 10);
-    expect(t1.stock?.count).toBe(10);
+    expect(t1.stock?.count).toBe(5);
     expect(t2.stock?.count).toBe(40);
     expect(t3.stock?.count).toBe(100);
     expect(machineDef('drill_eco').consumesKw).toBe(

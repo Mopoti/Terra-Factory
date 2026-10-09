@@ -106,6 +106,7 @@ export function mountMachineWindow(
     status?: HTMLElement;
     cycle?: HTMLElement;
     fuel?: HTMLElement;
+    fuelBar?: HTMLElement;
     ore?: HTMLElement;
     counts: Map<SlotName, HTMLElement>;
     chest: HTMLElement[];
@@ -770,6 +771,7 @@ export function mountMachineWindow(
     }
     setCycleBar(live.cycle, factory.cycleFraction(m));
     if (live.fuel) live.fuel.textContent = fuelText(m);
+    setCycleBar(live.fuelBar, factory.fuelFraction(m));
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
     m.slots.forEach((stack, i) => {
       const node = live.chest[i];
@@ -900,7 +902,14 @@ export function mountMachineWindow(
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));
       live.fuel = fuelInfo;
-      rows.append(fuelInfo);
+      const fuelBar = el('div', 'cycle-bar fuel-bar');
+      fuelBar.setAttribute('role', 'progressbar');
+      fuelBar.setAttribute('aria-label', t('machine.fuelBurn'));
+      const fuelFill = el('div');
+      fuelBar.append(fuelFill);
+      live.fuelBar = fuelFill;
+      setCycleBar(fuelFill, factory.fuelFraction(m));
+      rows.append(fuelInfo, fuelBar);
     }
     if (isAssembler(m.type)) rows.append(...assemblerRows(m));
     if (m.filters.length > 0) rows.append(...filterRows(m));

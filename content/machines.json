@@ -8,7 +8,7 @@
       "item": "machine_drill",
       "color": "#c98a2d",
       "fuel": true,
-      "mineSeconds": 1,
+      "mineSeconds": 2,
       "burnKw": 90,
       "stockMax": 100,
       "height": 1.5,

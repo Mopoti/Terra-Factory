@@ -300,7 +300,7 @@ function startGame(
     threat: view.threat,
     player: () => {
       const p = view.getState();
-      return { x: p.x, z: p.z, yaw: p.yaw };
+      return { x: p.x, z: p.z, yaw: view.bodyYaw() };
     },
     others: () => view.otherPlayers(),
     onOpenChange: syncPaused,

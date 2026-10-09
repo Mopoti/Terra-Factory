@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terra Factory — arbre des technologies</title>
+<style>
+  :root { --bg:#10151b; --fg:#e6edf3; --muted:#8b98a5; --card:#1a222b; }
+  @media (prefers-color-scheme: light) { :root { --bg:#f4f6f8; --fg:#1b2530; --muted:#5b6875; --card:#ffffff; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px system-ui,sans-serif; }
+  header { padding:14px 20px; position:sticky; left:0; }
+  h1 { margin:0 0 4px; font-size:20px; }
+  p { margin:2px 0; color:var(--muted); max-width:900px; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .wrap { overflow:auto; padding-bottom:30px; }
+  svg { display:block; min-width:4010px; }
+  .edge { fill:none; stroke:var(--muted); stroke-width:1.6; opacity:.55; }
+  .edge.soft { stroke-dasharray:5 4; opacity:0; }
+  .edge.soft.hl { opacity:1; }
+  .lane { fill:var(--c); opacity:.07; }
+  .lane-t { font:700 13px system-ui,sans-serif; text-transform:uppercase; letter-spacing:.06em; }
+  .node rect { fill:var(--card); stroke:var(--c); stroke-width:2; }
+  .node .n { font-weight:700; font-size:13.5px; fill:var(--fg); }
+  .node .s { font-size:11px; fill:var(--muted); }
+  .node .u { font-size:11px; fill:var(--fg); opacity:.85; }
+  .dim { opacity:.12 !important; }
+  .hl.edge { stroke:var(--fg); opacity:1; stroke-width:2.4; }
+  .node { cursor:default; }
+</style></head><body>
+<header>
+  <h1>Arbre des technologies</h1>
+  <p>Chaque colonne est un niveau de dépendance (la gauche se recherche en premier). Trait plein : technologie requise. Trait pointillé (visible au survol) : la recherche de la technologie fait apparaître l'autre dans la fenêtre. Survolez une carte pour surligner ses prérequis et ce qu'elle ouvre.</p>
+  <p>Généré par <code>node scripts/arbre-technologies.mjs</code> d'après <code>content/techs.json</code>.</p>
+  <div class="legend"><span><i style="background:#d65c5c"></i>combat</span><span><i style="background:#d9a441"></i>logistique</span><span><i style="background:#5aa9e6"></i>energie</span><span><i style="background:#b57edc"></i>recherche</span><span><i style="background:#e58fb0"></i>textile</span><span><i style="background:#6fbf8a"></i>industrie</span></div>
+</header>
+<div class="wrap"><svg width="4010" height="1780" viewBox="0 0 4010 1780">
+<rect class="lane" x="0" y="20" width="4010" height="378" style="--c:#d65c5c"/><text class="lane-t" x="20" y="37" style="fill:#d65c5c">combat</text>
+<rect class="lane" x="0" y="398" width="4010" height="290" style="--c:#d9a441"/><text class="lane-t" x="20" y="415" style="fill:#d9a441">logistique</text>
+<rect class="lane" x="0" y="688" width="4010" height="378" style="--c:#5aa9e6"/><text class="lane-t" x="20" y="705" style="fill:#5aa9e6">energie</text>
+<rect class="lane" x="0" y="1066" width="4010" height="114" style="--c:#b57edc"/><text class="lane-t" x="20" y="1083" style="fill:#b57edc">recherche</text>
+<rect class="lane" x="0" y="1180" width="4010" height="290" style="--c:#e58fb0"/><text class="lane-t" x="20" y="1197" style="fill:#e58fb0">textile</text>
+<rect class="lane" x="0" y="1470" width="4010" height="290" style="--c:#6fbf8a"/><text class="lane-t" x="20" y="1487" style="fill:#6fbf8a">industrie</text>
+<path class="edge" data-from="logistics" data-to="handling" d="M270,461 C300,461 300,461 330,461"/>
+<path class="edge" data-from="metallurgy" data-to="metallurgy_2" d="M270,1533 C455,1533 455,1533 640,1533"/>
+<path class="edge" data-from="laboratory" data-to="metallurgy_2" d="M580,839 C610,839 610,1533 640,1533"/>
+<path class="edge" data-from="metallurgy_2" data-to="construction_2" d="M890,1533 C920,1533 920,1533 950,1533"/>
+<path class="edge soft" data-from="handling" data-to="construction_2" d="M580,461 C765,461 765,1533 950,1533"/>
+<path class="edge" data-from="metallurgy_2" data-to="manufacturing_2" d="M890,1533 C920,1533 920,1621 950,1621"/>
+<path class="edge soft" data-from="automation" data-to="manufacturing_2" d="M580,549 C765,549 765,1621 950,1621"/>
+<path class="edge" data-from="manufacturing_2" data-to="fluids_2" d="M1200,1621 C1230,1621 1230,1621 1260,1621"/>
+<path class="edge soft" data-from="steam" data-to="fluids_2" d="M580,927 C920,927 920,1621 1260,1621"/>
+<path class="edge" data-from="manufacturing_2" data-to="washing_2" d="M1200,1621 C1230,1621 1230,1709 1260,1709"/>
+<path class="edge soft" data-from="metallurgy" data-to="washing_2" d="M270,1533 C765,1533 765,1709 1260,1709"/>
+<path class="edge" data-from="manufacturing_2" data-to="heavy_press_3" d="M1200,1621 C1230,1621 1230,1533 1260,1533"/>
+<path class="edge" data-from="construction_2" data-to="heavy_press_3" d="M1200,1533 C1230,1533 1230,1533 1260,1533"/>
+<path class="edge soft" data-from="metallurgy_2" data-to="heavy_press_3" d="M890,1533 C1075,1533 1075,1533 1260,1533"/>
+<path class="edge" data-from="heavy_press_3" data-to="silicon_3" d="M1510,1533 C1540,1533 1540,1709 1570,1709"/>
+<path class="edge soft" data-from="manufacturing_2" data-to="silicon_3" d="M1200,1621 C1385,1621 1385,1709 1570,1709"/>
+<path class="edge" data-from="barrels_3" data-to="oil_3" d="M1820,1533 C1850,1533 1850,1533 1880,1533"/>
+<path class="edge" data-from="heavy_press_3" data-to="oil_3" d="M1510,1533 C1695,1533 1695,1533 1880,1533"/>
+<path class="edge soft" data-from="fluids_2" data-to="oil_3" d="M1510,1621 C1695,1621 1695,1533 1880,1533"/>
+<path class="edge" data-from="oil_3" data-to="plastic_3" d="M2130,1533 C2160,1533 2160,1533 2190,1533"/>
+<path class="edge" data-from="silicon_3" data-to="plastic_3" d="M1820,1709 C2005,1709 2005,1533 2190,1533"/>
+<path class="edge soft" data-from="fluids_2" data-to="plastic_3" d="M1510,1621 C1850,1621 1850,1533 2190,1533"/>
+<path class="edge" data-from="plastic_3" data-to="fission_4" d="M2440,1533 C2470,1533 2470,751 2500,751"/>
+<path class="edge soft" data-from="heavy_press_3" data-to="fission_4" d="M1510,1533 C2005,1533 2005,751 2500,751"/>
+<path class="edge" data-from="fission_4" data-to="reactor_4" d="M2750,751 C2780,751 2780,751 2810,751"/>
+<path class="edge soft" data-from="silicon_3" data-to="reactor_4" d="M1820,1709 C2315,1709 2315,751 2810,751"/>
+<path class="edge" data-from="reactor_4" data-to="waste_4" d="M3060,751 C3090,751 3090,751 3120,751"/>
+<path class="edge soft" data-from="extraction_3" data-to="waste_4" d="M1820,1621 C2470,1621 2470,751 3120,751"/>
+<path class="edge" data-from="plastic_3" data-to="storage_3" d="M2440,1533 C2470,1533 2470,839 2500,839"/>
+<path class="edge soft" data-from="construction_2" data-to="storage_3" d="M1200,1533 C1850,1533 1850,839 2500,839"/>
+<path class="edge" data-from="waste_4" data-to="fusion_5" d="M3370,751 C3400,751 3400,751 3430,751"/>
+<path class="edge" data-from="storage_3" data-to="fusion_5" d="M2750,839 C3090,839 3090,751 3430,751"/>
+<path class="edge soft" data-from="fission_4" data-to="fusion_5" d="M2750,751 C3090,751 3090,751 3430,751"/>
+<path class="edge" data-from="fusion_5" data-to="beacon_5" d="M3680,751 C3710,751 3710,751 3740,751"/>
+<path class="edge soft" data-from="reactor_4" data-to="beacon_5" d="M3060,751 C3400,751 3400,751 3740,751"/>
+<path class="edge" data-from="logistics" data-to="logistics_2" d="M270,461 C610,461 610,461 950,461"/>
+<path class="edge" data-from="metallurgy_2" data-to="logistics_2" d="M890,1533 C920,1533 920,461 950,461"/>
+<path class="edge" data-from="logistics_2" data-to="logistics_3" d="M1200,461 C1230,461 1230,461 1260,461"/>
+<path class="edge" data-from="logistics_3" data-to="sorting_3" d="M1510,461 C1540,461 1540,461 1570,461"/>
+<path class="edge soft" data-from="logistics_2" data-to="sorting_3" d="M1200,461 C1385,461 1385,461 1570,461"/>
+<path class="edge" data-from="metallurgy_2" data-to="extraction_3" d="M890,1533 C1230,1533 1230,1621 1570,1621"/>
+<path class="edge" data-from="power_generation" data-to="extraction_3" d="M580,751 C1075,751 1075,1621 1570,1621"/>
+<path class="edge soft" data-from="washing_2" data-to="extraction_3" d="M1510,1709 C1540,1709 1540,1621 1570,1621"/>
+<path class="edge" data-from="textile" data-to="clothing" d="M270,1243 C300,1243 300,1243 330,1243"/>
+<path class="edge" data-from="textile" data-to="handwear" d="M270,1243 C300,1243 300,1331 330,1331"/>
+<path class="edge" data-from="textile" data-to="bedding" d="M270,1243 C300,1243 300,1419 330,1419"/>
+<path class="edge" data-from="electricity" data-to="power_generation" d="M270,751 C300,751 300,751 330,751"/>
+<path class="edge" data-from="electricity" data-to="laboratory" d="M270,751 C300,751 300,839 330,839"/>
+<path class="edge" data-from="electricity" data-to="automation" d="M270,751 C300,751 300,549 330,549"/>
+<path class="edge" data-from="logistics" data-to="automation" d="M270,461 C300,461 300,549 330,549"/>
+<path class="edge" data-from="electricity" data-to="steam" d="M270,751 C300,751 300,927 330,927"/>
+<path class="edge" data-from="steam" data-to="steam_power" d="M580,927 C610,927 610,839 640,839"/>
+<path class="edge" data-from="steam" data-to="barrels_3" d="M580,927 C1075,927 1075,1533 1570,1533"/>
+<path class="edge" data-from="logistics_3" data-to="barrels_3" d="M1510,461 C1540,461 1540,1533 1570,1533"/>
+<path class="edge soft" data-from="fluids_2" data-to="barrels_3" d="M1510,1621 C1540,1621 1540,1533 1570,1533"/>
+<path class="edge" data-from="logistics" data-to="defense" d="M270,461 C300,461 300,347 330,347"/>
+<path class="edge" data-from="weapons_1" data-to="weapons_2" d="M270,83 C300,83 300,83 330,83"/>
+<path class="edge" data-from="armor_1a" data-to="armor_2a" d="M270,171 C300,171 300,171 330,171"/>
+<path class="edge" data-from="armor_1b" data-to="armor_2b" d="M270,259 C300,259 300,259 330,259"/>
+<path class="edge" data-from="defense" data-to="turret_2" d="M580,347 C610,347 610,259 640,259"/>
+<path class="edge" data-from="turret_2" data-to="turret_3" d="M890,259 C920,259 920,83 950,83"/>
+<path class="edge" data-from="armor_2a" data-to="armor_4a" d="M580,171 C610,171 610,83 640,83"/>
+<path class="edge" data-from="armor_2b" data-to="armor_4b" d="M580,259 C610,259 610,171 640,171"/>
+<path class="edge" data-from="turret_3" data-to="turret_4" d="M1200,83 C1230,83 1230,83 1260,83"/>
+<path class="edge" data-from="logistics" data-to="routing" d="M270,461 C300,461 300,637 330,637"/>
+<path class="edge" data-from="electricity" data-to="electricity_2" d="M270,751 C300,751 300,1015 330,1015"/>
+<path class="edge" data-from="power_generation" data-to="power_generation_2" d="M580,751 C610,751 610,751 640,751"/>
+<path class="edge" data-from="laboratory" data-to="research_1" d="M580,839 C610,839 610,1129 640,1129"/>
+<path class="edge" data-from="research_1" data-to="research_2" d="M890,1129 C920,1129 920,1129 950,1129"/>
+<path class="edge" data-from="research_2" data-to="research_3" d="M1200,1129 C1230,1129 1230,1129 1260,1129"/>
+<path class="edge" data-from="research_3" data-to="research_4" d="M1510,1129 C1540,1129 1540,1129 1570,1129"/>
+<g class="node" data-id="logistics" transform="translate(20,424)">
+  <title>Automatisation — palier 1
+Coût : 10 paquet
+Débloque : Tapis roulant, Bras robotique</title>
+  <clipPath id="c-logistics"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-logistics)">
+  <text x="10" y="20" class="n">Automatisation</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Tapis roulant, Bras robotique</text></g>
+</g>
+<g class="node" data-id="handling" transform="translate(330,424)">
+  <title>Manutention — palier 1
+Coût : 10 paquet
+Débloque : Coffre en fer, Balise</title>
+  <clipPath id="c-handling"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-handling)">
+  <text x="10" y="20" class="n">Manutention</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Coffre en fer, Balise</text></g>
+</g>
+<g class="node" data-id="metallurgy" transform="translate(20,1496)">
+  <title>Métallurgie — palier 1
+Coût : 20 fer + 10 Pierre
+Débloque : Estampeuse, Concasseur</title>
+  <clipPath id="c-metallurgy"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-metallurgy)">
+  <text x="10" y="20" class="n">Métallurgie</text>
+  <text x="10" y="38" class="s">T1 · 20 fer + 10 Pierre</text>
+  <text x="10" y="55" class="u">Estampeuse, Concasseur</text></g>
+</g>
+<g class="node" data-id="metallurgy_2" transform="translate(640,1496)">
+  <title>Métallurgie T2 — palier 2
+Coût : 30 paquet
+Débloque : Lingot de zinc, Convertisseur Bessemer, Plaque d'acier</title>
+  <clipPath id="c-metallurgy_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-metallurgy_2)">
+  <text x="10" y="20" class="n">Métallurgie T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Lingot de zinc, Convertisseur Bessemer, Plaque d'acier</text></g>
+</g>
+<g class="node" data-id="construction_2" transform="translate(950,1496)">
+  <title>Construction T2 — palier 2
+Coût : 30 paquet
+Débloque : Bétonnière, Bloc de béton</title>
+  <clipPath id="c-construction_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-construction_2)">
+  <text x="10" y="20" class="n">Construction T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Bétonnière, Bloc de béton</text></g>
+</g>
+<g class="node" data-id="manufacturing_2" transform="translate(950,1584)">
+  <title>Fabrication T2 — palier 2
+Coût : 40 paquet
+Débloque : Constructeur (T2), Tuyau de laiton (T2), Paquet de science T2</title>
+  <clipPath id="c-manufacturing_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-manufacturing_2)">
+  <text x="10" y="20" class="n">Fabrication T2</text>
+  <text x="10" y="38" class="s">T2 · 40 paquet</text>
+  <text x="10" y="55" class="u">Constructeur (T2), Tuyau de laiton (T2), Paquet de science T2</text></g>
+</g>
+<g class="node" data-id="fluids_2" transform="translate(1260,1584)">
+  <title>Fluides T2 — palier 2
+Coût : 40 paquet
+Débloque : Surpresseur (T2), Tour de refroidissement (T2)</title>
+  <clipPath id="c-fluids_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-fluids_2)">
+  <text x="10" y="20" class="n">Fluides T2</text>
+  <text x="10" y="38" class="s">T2 · 40 paquet</text>
+  <text x="10" y="55" class="u">Surpresseur (T2), Tour de refroidissement (T2)</text></g>
+</g>
+<g class="node" data-id="washing_2" transform="translate(1260,1672)">
+  <title>Métallurgie : lavage T2 — palier 2
+Coût : 40 paquet
+Débloque : Station de lavage (T2), Minerai de fer purifié, Minerai de cuivre purifié, Minerai de zinc purifié</title>
+  <clipPath id="c-washing_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-washing_2)">
+  <text x="10" y="20" class="n">Métallurgie : lavage T2</text>
+  <text x="10" y="38" class="s">T2 · 40 paquet</text>
+  <text x="10" y="55" class="u">Station de lavage (T2), Minerai de fer purifié, Minerai de cuivre purifié, Minerai de zinc purifié</text></g>
+</g>
+<g class="node" data-id="heavy_press_3" transform="translate(1260,1496)">
+  <title>Presse lourde T3 — palier 3
+Coût : 100 paquet T2
+Débloque : Presse hydraulique lourde (T3), Tuyau d'acier (T3)</title>
+  <clipPath id="c-heavy_press_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-heavy_press_3)">
+  <text x="10" y="20" class="n">Presse lourde T3</text>
+  <text x="10" y="38" class="s">T3 · 100 paquet T2</text>
+  <text x="10" y="55" class="u">Presse hydraulique lourde (T3), Tuyau d'acier (T3)</text></g>
+</g>
+<g class="node" data-id="silicon_3" transform="translate(1570,1672)">
+  <title>Silicium T3 — palier 3
+Coût : 120 paquet T2
+Débloque : Four électrique (T3), Silicium brut, Puce en silicium</title>
+  <clipPath id="c-silicon_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-silicon_3)">
+  <text x="10" y="20" class="n">Silicium T3</text>
+  <text x="10" y="38" class="s">T3 · 120 paquet T2</text>
+  <text x="10" y="55" class="u">Four électrique (T3), Silicium brut, Puce en silicium</text></g>
+</g>
+<g class="node" data-id="oil_3" transform="translate(1880,1496)">
+  <title>Pétrole T3 — palier 3
+Coût : 140 paquet T2
+Débloque : Chevalet de pompage (T3), Baril de pétrole (100 L)</title>
+  <clipPath id="c-oil_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-oil_3)">
+  <text x="10" y="20" class="n">Pétrole T3</text>
+  <text x="10" y="38" class="s">T3 · 140 paquet T2</text>
+  <text x="10" y="55" class="u">Chevalet de pompage (T3), Baril de pétrole (100 L)</text></g>
+</g>
+<g class="node" data-id="plastic_3" transform="translate(2190,1496)">
+  <title>Plastique T3 — palier 3
+Coût : 160 paquet T2
+Débloque : Raffinerie (T3), Presse à plastique (T3), Isolant en plastique, Câble isolé, Paquet de science T3</title>
+  <clipPath id="c-plastic_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-plastic_3)">
+  <text x="10" y="20" class="n">Plastique T3</text>
+  <text x="10" y="38" class="s">T3 · 160 paquet T2</text>
+  <text x="10" y="55" class="u">Raffinerie (T3), Presse à plastique (T3), Isolant en plastique, Câble isolé, Paquet de science T3</text></g>
+</g>
+<g class="node" data-id="fission_4" transform="translate(2500,714)">
+  <title>Fission T4 — palier 4
+Coût : 200 paquet T3
+Débloque : Centrifugeuse (T4), Lingot d'aluminium, Lingot de zamak, Uranium enrichi, Uranium appauvri (déchet), Barre d'uranium</title>
+  <clipPath id="c-fission_4"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-fission_4)">
+  <text x="10" y="20" class="n">Fission T4</text>
+  <text x="10" y="38" class="s">T4 · 200 paquet T3</text>
+  <text x="10" y="55" class="u">Centrifugeuse (T4), Lingot d'aluminium, Lingot de zamak, Uranium enrichi, Uranium appauvri (déchet), Barre d'uranium</text></g>
+</g>
+<g class="node" data-id="reactor_4" transform="translate(2810,714)">
+  <title>Réacteur T4 — palier 4
+Coût : 300 paquet T3
+Débloque : Réacteur à fission (T4), Paquet de science T4</title>
+  <clipPath id="c-reactor_4"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-reactor_4)">
+  <text x="10" y="20" class="n">Réacteur T4</text>
+  <text x="10" y="38" class="s">T4 · 300 paquet T3</text>
+  <text x="10" y="55" class="u">Réacteur à fission (T4), Paquet de science T4</text></g>
+</g>
+<g class="node" data-id="waste_4" transform="translate(3120,714)">
+  <title>Déchets T4 — palier 4
+Coût : 250 paquet T3
+Débloque : Tour d'évaporation (T4), Station de vitrification (T4), Cylindre de verre contaminé</title>
+  <clipPath id="c-waste_4"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-waste_4)">
+  <text x="10" y="20" class="n">Déchets T4</text>
+  <text x="10" y="38" class="s">T4 · 250 paquet T3</text>
+  <text x="10" y="55" class="u">Tour d'évaporation (T4), Station de vitrification (T4), Cylindre de verre contaminé</text></g>
+</g>
+<g class="node" data-id="storage_3" transform="translate(2500,802)">
+  <title>Stockage T3 — palier 3
+Coût : 120 paquet T2
+Débloque : Accumulateur (T3)</title>
+  <clipPath id="c-storage_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-storage_3)">
+  <text x="10" y="20" class="n">Stockage T3</text>
+  <text x="10" y="38" class="s">T3 · 120 paquet T2</text>
+  <text x="10" y="55" class="u">Accumulateur (T3)</text></g>
+</g>
+<g class="node" data-id="fusion_5" transform="translate(3430,714)">
+  <title>Fusion — palier 5
+Coût : 200 paquet T4 + 100 paquet T3
+Débloque : Réacteur à fusion magnétique</title>
+  <clipPath id="c-fusion_5"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-fusion_5)">
+  <text x="10" y="20" class="n">Fusion</text>
+  <text x="10" y="38" class="s">T5 · 200 paquet T4 + 100 paquet T3</text>
+  <text x="10" y="55" class="u">Réacteur à fusion magnétique</text></g>
+</g>
+<g class="node" data-id="beacon_5" transform="translate(3740,714)">
+  <title>Balise hyperfréquence — palier 5
+Coût : 300 paquet T4 + 150 paquet T3
+Débloque : Relais émetteur hyperfréquence, Antenne d'alignement quantique</title>
+  <clipPath id="c-beacon_5"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-beacon_5)">
+  <text x="10" y="20" class="n">Balise hyperfréquence</text>
+  <text x="10" y="38" class="s">T5 · 300 paquet T4 + 150 paquet T3</text>
+  <text x="10" y="55" class="u">Relais émetteur hyperfréquence, Antenne d'alignement quantique</text></g>
+</g>
+<g class="node" data-id="logistics_2" transform="translate(950,424)">
+  <title>Logistique T2 — palier 2
+Coût : 40 paquet
+Débloque : Tapis rapide (T2)</title>
+  <clipPath id="c-logistics_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-logistics_2)">
+  <text x="10" y="20" class="n">Logistique T2</text>
+  <text x="10" y="38" class="s">T2 · 40 paquet</text>
+  <text x="10" y="55" class="u">Tapis rapide (T2)</text></g>
+</g>
+<g class="node" data-id="logistics_3" transform="translate(1260,424)">
+  <title>Logistique T3 — palier 3
+Coût : 100 paquet T2
+Débloque : Tapis express (T3), Bras filtrant (T3)</title>
+  <clipPath id="c-logistics_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-logistics_3)">
+  <text x="10" y="20" class="n">Logistique T3</text>
+  <text x="10" y="38" class="s">T3 · 100 paquet T2</text>
+  <text x="10" y="55" class="u">Tapis express (T3), Bras filtrant (T3)</text></g>
+</g>
+<g class="node" data-id="sorting_3" transform="translate(1570,424)">
+  <title>Logistique : tri T3 — palier 3
+Coût : 120 paquet T2
+Débloque : Trieur (T3)</title>
+  <clipPath id="c-sorting_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-sorting_3)">
+  <text x="10" y="20" class="n">Logistique : tri T3</text>
+  <text x="10" y="38" class="s">T3 · 120 paquet T2</text>
+  <text x="10" y="55" class="u">Trieur (T3)</text></g>
+</g>
+<g class="node" data-id="extraction_3" transform="translate(1570,1584)">
+  <title>Extraction T3 — palier 3
+Coût : 60 paquet T2
+Débloque : Foreuse économe (T3)</title>
+  <clipPath id="c-extraction_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-extraction_3)">
+  <text x="10" y="20" class="n">Extraction T3</text>
+  <text x="10" y="38" class="s">T3 · 60 paquet T2</text>
+  <text x="10" y="55" class="u">Foreuse économe (T3)</text></g>
+</g>
+<g class="node" data-id="textile" transform="translate(20,1206)">
+  <title>Textile — palier 1
+Coût : 10 paquet
+Débloque : Tissu, Sac à dos, Capuche</title>
+  <clipPath id="c-textile"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#e58fb0"/>
+  <g clip-path="url(#c-textile)">
+  <text x="10" y="20" class="n">Textile</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Tissu, Sac à dos, Capuche</text></g>
+</g>
+<g class="node" data-id="clothing" transform="translate(330,1206)">
+  <title>Vêtements — palier 1
+Coût : 10 paquet
+Débloque : Pantalon, Bottes</title>
+  <clipPath id="c-clothing"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#e58fb0"/>
+  <g clip-path="url(#c-clothing)">
+  <text x="10" y="20" class="n">Vêtements</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Pantalon, Bottes</text></g>
+</g>
+<g class="node" data-id="handwear" transform="translate(330,1294)">
+  <title>Gants — palier 1
+Coût : 10 paquet
+Débloque : Gants</title>
+  <clipPath id="c-handwear"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#e58fb0"/>
+  <g clip-path="url(#c-handwear)">
+  <text x="10" y="20" class="n">Gants</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Gants</text></g>
+</g>
+<g class="node" data-id="bedding" transform="translate(330,1382)">
+  <title>Couchage — palier 1
+Coût : 10 paquet
+Débloque : Duvet d'exploration, Lit</title>
+  <clipPath id="c-bedding"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#e58fb0"/>
+  <g clip-path="url(#c-bedding)">
+  <text x="10" y="20" class="n">Couchage</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Duvet d'exploration, Lit</text></g>
+</g>
+<g class="node" data-id="electricity" transform="translate(20,714)">
+  <title>Électricité — palier 1
+Coût : 15 fer + 10 cuivre
+Débloque : Poteau électrique, Manivelle de réamorçage</title>
+  <clipPath id="c-electricity"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-electricity)">
+  <text x="10" y="20" class="n">Électricité</text>
+  <text x="10" y="38" class="s">T1 · 15 fer + 10 cuivre</text>
+  <text x="10" y="55" class="u">Poteau électrique, Manivelle de réamorçage</text></g>
+</g>
+<g class="node" data-id="power_generation" transform="translate(330,714)">
+  <title>Production d'énergie — palier 1
+Coût : 15 paquet
+Débloque : Outil en fer</title>
+  <clipPath id="c-power_generation"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-power_generation)">
+  <text x="10" y="20" class="n">Production d'énergie</text>
+  <text x="10" y="38" class="s">T1 · 15 paquet</text>
+  <text x="10" y="55" class="u">Outil en fer</text></g>
+</g>
+<g class="node" data-id="laboratory" transform="translate(330,802)">
+  <title>Laboratoire — palier 1
+Coût : 10 fer + 10 cuivre
+Débloque : Laboratoire, Paquet de science</title>
+  <clipPath id="c-laboratory"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-laboratory)">
+  <text x="10" y="20" class="n">Laboratoire</text>
+  <text x="10" y="38" class="s">T1 · 10 fer + 10 cuivre</text>
+  <text x="10" y="55" class="u">Laboratoire, Paquet de science</text></g>
+</g>
+<g class="node" data-id="automation" transform="translate(330,512)">
+  <title>Automatisation T2 — palier 2
+Coût : 30 paquet
+Débloque : Bras robotique électrique, Assembleur</title>
+  <clipPath id="c-automation"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-automation)">
+  <text x="10" y="20" class="n">Automatisation T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Bras robotique électrique, Assembleur</text></g>
+</g>
+<g class="node" data-id="steam" transform="translate(330,890)">
+  <title>Vapeur — palier 1
+Coût : 15 paquet
+Débloque : Tuyau en cuivre, Pompe à eau électrique</title>
+  <clipPath id="c-steam"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-steam)">
+  <text x="10" y="20" class="n">Vapeur</text>
+  <text x="10" y="38" class="s">T1 · 15 paquet</text>
+  <text x="10" y="55" class="u">Tuyau en cuivre, Pompe à eau électrique</text></g>
+</g>
+<g class="node" data-id="steam_power" transform="translate(640,802)">
+  <title>Vapeur : chaudière et turbine — palier 1
+Coût : 15 paquet
+Débloque : Chaudière, Turbine à vapeur</title>
+  <clipPath id="c-steam_power"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-steam_power)">
+  <text x="10" y="20" class="n">Vapeur : chaudière et turbine</text>
+  <text x="10" y="38" class="s">T1 · 15 paquet</text>
+  <text x="10" y="55" class="u">Chaudière, Turbine à vapeur</text></g>
+</g>
+<g class="node" data-id="barrels_3" transform="translate(1570,1496)">
+  <title>Logistique : barils T3 — palier 3
+Coût : 80 paquet T2
+Débloque : Remplisseuse / videuse de barils (T3), Baril vide</title>
+  <clipPath id="c-barrels_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#6fbf8a"/>
+  <g clip-path="url(#c-barrels_3)">
+  <text x="10" y="20" class="n">Logistique : barils T3</text>
+  <text x="10" y="38" class="s">T3 · 80 paquet T2</text>
+  <text x="10" y="55" class="u">Remplisseuse / videuse de barils (T3), Baril vide</text></g>
+</g>
+<g class="node" data-id="navigation" transform="translate(20,1294)">
+  <title>Navigation — palier 1
+Coût : 5 paquet
+Débloque : Boussole</title>
+  <clipPath id="c-navigation"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#e58fb0"/>
+  <g clip-path="url(#c-navigation)">
+  <text x="10" y="20" class="n">Navigation</text>
+  <text x="10" y="38" class="s">T1 · 5 paquet</text>
+  <text x="10" y="55" class="u">Boussole</text></g>
+</g>
+<g class="node" data-id="defense" transform="translate(330,310)">
+  <title>Tourelle légère — palier 1
+Coût : 10 plaque fer
+Débloque : Tourelle légère</title>
+  <clipPath id="c-defense"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-defense)">
+  <text x="10" y="20" class="n">Tourelle légère</text>
+  <text x="10" y="38" class="s">T1 · 10 plaque fer</text>
+  <text x="10" y="55" class="u">Tourelle légère</text></g>
+</g>
+<g class="node" data-id="weapons_1" transform="translate(20,46)">
+  <title>Pistolet — palier 1
+Coût : 10 plaque fer
+Débloque : Pistolet, Chargeur (12 balles)</title>
+  <clipPath id="c-weapons_1"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-weapons_1)">
+  <text x="10" y="20" class="n">Pistolet</text>
+  <text x="10" y="38" class="s">T1 · 10 plaque fer</text>
+  <text x="10" y="55" class="u">Pistolet, Chargeur (12 balles)</text></g>
+</g>
+<g class="node" data-id="armor_1a" transform="translate(20,134)">
+  <title>Armure renforcée (casque, plastron) — palier 1
+Coût : 10 plaque fer
+Débloque : Casque renforcé, Plastron renforcé</title>
+  <clipPath id="c-armor_1a"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_1a)">
+  <text x="10" y="20" class="n">Armure renforcée (casque, plastron)</text>
+  <text x="10" y="38" class="s">T1 · 10 plaque fer</text>
+  <text x="10" y="55" class="u">Casque renforcé, Plastron renforcé</text></g>
+</g>
+<g class="node" data-id="armor_1b" transform="translate(20,222)">
+  <title>Armure renforcée (jambes, bottes) — palier 1
+Coût : 10 plaque fer
+Débloque : Jambières renforcées, Bottes renforcées</title>
+  <clipPath id="c-armor_1b"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_1b)">
+  <text x="10" y="20" class="n">Armure renforcée (jambes, bottes)</text>
+  <text x="10" y="38" class="s">T1 · 10 plaque fer</text>
+  <text x="10" y="55" class="u">Jambières renforcées, Bottes renforcées</text></g>
+</g>
+<g class="node" data-id="weapons_2" transform="translate(330,46)">
+  <title>Fusil automatique — palier 2
+Coût : 5 Paquet de combat
+Débloque : Fusil automatique, Chargeur de fusil (30 balles)</title>
+  <clipPath id="c-weapons_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-weapons_2)">
+  <text x="10" y="20" class="n">Fusil automatique</text>
+  <text x="10" y="38" class="s">T2 · 5 Paquet de combat</text>
+  <text x="10" y="55" class="u">Fusil automatique, Chargeur de fusil (30 balles)</text></g>
+</g>
+<g class="node" data-id="armor_2a" transform="translate(330,134)">
+  <title>Armure blindée (casque, plastron) — palier 2
+Coût : 5 Paquet de combat
+Débloque : Casque blindé, Plastron blindé</title>
+  <clipPath id="c-armor_2a"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_2a)">
+  <text x="10" y="20" class="n">Armure blindée (casque, plastron)</text>
+  <text x="10" y="38" class="s">T2 · 5 Paquet de combat</text>
+  <text x="10" y="55" class="u">Casque blindé, Plastron blindé</text></g>
+</g>
+<g class="node" data-id="armor_2b" transform="translate(330,222)">
+  <title>Armure blindée (jambes, bottes) — palier 2
+Coût : 5 Paquet de combat
+Débloque : Jambières blindées, Bottes blindées</title>
+  <clipPath id="c-armor_2b"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_2b)">
+  <text x="10" y="20" class="n">Armure blindée (jambes, bottes)</text>
+  <text x="10" y="38" class="s">T2 · 5 Paquet de combat</text>
+  <text x="10" y="55" class="u">Jambières blindées, Bottes blindées</text></g>
+</g>
+<g class="node" data-id="turret_2" transform="translate(640,222)">
+  <title>Tourelle lourde — palier 2
+Coût : 5 Paquet de combat
+Débloque : Tourelle lourde</title>
+  <clipPath id="c-turret_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-turret_2)">
+  <text x="10" y="20" class="n">Tourelle lourde</text>
+  <text x="10" y="38" class="s">T2 · 5 Paquet de combat</text>
+  <text x="10" y="55" class="u">Tourelle lourde</text></g>
+</g>
+<g class="node" data-id="turret_3" transform="translate(950,46)">
+  <title>Tourelle laser — palier 3
+Coût : 10 Paquet de combat
+Débloque : Tourelle laser</title>
+  <clipPath id="c-turret_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-turret_3)">
+  <text x="10" y="20" class="n">Tourelle laser</text>
+  <text x="10" y="38" class="s">T3 · 10 Paquet de combat</text>
+  <text x="10" y="55" class="u">Tourelle laser</text></g>
+</g>
+<g class="node" data-id="armor_4a" transform="translate(640,46)">
+  <title>Armure à blindage lourd (casque, plastron) — palier 4
+Coût : 20 Paquet de combat
+Débloque : Casque à blindage lourd, Plastron à blindage lourd</title>
+  <clipPath id="c-armor_4a"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_4a)">
+  <text x="10" y="20" class="n">Armure à blindage lourd (casque, plastron)</text>
+  <text x="10" y="38" class="s">T4 · 20 Paquet de combat</text>
+  <text x="10" y="55" class="u">Casque à blindage lourd, Plastron à blindage lourd</text></g>
+</g>
+<g class="node" data-id="armor_4b" transform="translate(640,134)">
+  <title>Armure à blindage lourd (jambes, bottes) — palier 4
+Coût : 20 Paquet de combat
+Débloque : Jambières à blindage lourd, Bottes à blindage lourd</title>
+  <clipPath id="c-armor_4b"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-armor_4b)">
+  <text x="10" y="20" class="n">Armure à blindage lourd (jambes, bottes)</text>
+  <text x="10" y="38" class="s">T4 · 20 Paquet de combat</text>
+  <text x="10" y="55" class="u">Jambières à blindage lourd, Bottes à blindage lourd</text></g>
+</g>
+<g class="node" data-id="turret_4" transform="translate(1260,46)">
+  <title>Tourelle à plasma — palier 4
+Coût : 20 Paquet de combat
+Débloque : Tourelle à plasma</title>
+  <clipPath id="c-turret_4"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d65c5c"/>
+  <g clip-path="url(#c-turret_4)">
+  <text x="10" y="20" class="n">Tourelle à plasma</text>
+  <text x="10" y="38" class="s">T4 · 20 Paquet de combat</text>
+  <text x="10" y="55" class="u">Tourelle à plasma</text></g>
+</g>
+<g class="node" data-id="routing" transform="translate(330,600)">
+  <title>Aiguillage — palier 1
+Coût : 10 paquet
+Débloque : Séparateur, Groupeur</title>
+  <clipPath id="c-routing"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#d9a441"/>
+  <g clip-path="url(#c-routing)">
+  <text x="10" y="20" class="n">Aiguillage</text>
+  <text x="10" y="38" class="s">T1 · 10 paquet</text>
+  <text x="10" y="55" class="u">Séparateur, Groupeur</text></g>
+</g>
+<g class="node" data-id="electricity_2" transform="translate(330,978)">
+  <title>Électricité T2 — palier 2
+Coût : 30 paquet
+Débloque : Générateur à combustible</title>
+  <clipPath id="c-electricity_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-electricity_2)">
+  <text x="10" y="20" class="n">Électricité T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Générateur à combustible</text></g>
+</g>
+<g class="node" data-id="power_generation_2" transform="translate(640,714)">
+  <title>Production d'énergie T2 — palier 2
+Coût : 30 paquet
+Débloque : Foreuse électrique</title>
+  <clipPath id="c-power_generation_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-power_generation_2)">
+  <text x="10" y="20" class="n">Production d'énergie T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Foreuse électrique</text></g>
+</g>
+<g class="node" data-id="waterwheel" transform="translate(20,802)">
+  <title>Roue à aubes — palier 1
+Coût : 10 plaque cuivre
+Débloque : Roue à aubes</title>
+  <clipPath id="c-waterwheel"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#5aa9e6"/>
+  <g clip-path="url(#c-waterwheel)">
+  <text x="10" y="20" class="n">Roue à aubes</text>
+  <text x="10" y="38" class="s">T1 · 10 plaque cuivre</text>
+  <text x="10" y="55" class="u">Roue à aubes</text></g>
+</g>
+<g class="node" data-id="research_1" transform="translate(640,1092)">
+  <title>Recherche T1 — palier 1
+Coût : 20 fer + 20 cuivre
+Débloque : Effet spécial (voir le jeu)</title>
+  <clipPath id="c-research_1"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#b57edc"/>
+  <g clip-path="url(#c-research_1)">
+  <text x="10" y="20" class="n">Recherche T1</text>
+  <text x="10" y="38" class="s">T1 · 20 fer + 20 cuivre</text>
+  <text x="10" y="55" class="u">Effet spécial (voir le jeu)</text></g>
+</g>
+<g class="node" data-id="research_2" transform="translate(950,1092)">
+  <title>Recherche T2 — palier 2
+Coût : 30 paquet
+Débloque : Effet spécial (voir le jeu)</title>
+  <clipPath id="c-research_2"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#b57edc"/>
+  <g clip-path="url(#c-research_2)">
+  <text x="10" y="20" class="n">Recherche T2</text>
+  <text x="10" y="38" class="s">T2 · 30 paquet</text>
+  <text x="10" y="55" class="u">Effet spécial (voir le jeu)</text></g>
+</g>
+<g class="node" data-id="research_3" transform="translate(1260,1092)">
+  <title>Recherche T3 — palier 3
+Coût : 80 paquet T2
+Débloque : Effet spécial (voir le jeu)</title>
+  <clipPath id="c-research_3"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#b57edc"/>
+  <g clip-path="url(#c-research_3)">
+  <text x="10" y="20" class="n">Recherche T3</text>
+  <text x="10" y="38" class="s">T3 · 80 paquet T2</text>
+  <text x="10" y="55" class="u">Effet spécial (voir le jeu)</text></g>
+</g>
+<g class="node" data-id="research_4" transform="translate(1570,1092)">
+  <title>Recherche T4 — palier 4
+Coût : 150 paquet T3
+Débloque : Effet spécial (voir le jeu)</title>
+  <clipPath id="c-research_4"><rect width="242" height="74"/></clipPath>
+  <rect width="250" height="74" rx="8" style="--c:#b57edc"/>
+  <g clip-path="url(#c-research_4)">
+  <text x="10" y="20" class="n">Recherche T4</text>
+  <text x="10" y="38" class="s">T4 · 150 paquet T3</text>
+  <text x="10" y="55" class="u">Effet spécial (voir le jeu)</text></g>
+</g>
+</svg></div>
+<script>
+  const nodes = [...document.querySelectorAll('.node')], edges = [...document.querySelectorAll('.edge')];
+  const rel = (id, dir, set) => { set.add(id); edges.forEach(e => { if (e.dataset[dir === 'up' ? 'to' : 'from'] === id) rel(e.dataset[dir === 'up' ? 'from' : 'to'], dir, set); }); return set; };
+  nodes.forEach(n => {
+    n.addEventListener('mouseenter', () => {
+      const keep = new Set([...rel(n.dataset.id, 'up', new Set()), ...rel(n.dataset.id, 'down', new Set())]);
+      nodes.forEach(x => x.classList.toggle('dim', !keep.has(x.dataset.id)));
+      edges.forEach(e => { const on = keep.has(e.dataset.from) && keep.has(e.dataset.to); e.classList.toggle('dim', !on); e.classList.toggle('hl', on); });
+    });
+    n.addEventListener('mouseleave', () => document.querySelectorAll('.dim,.hl').forEach(x => x.classList.remove('dim', 'hl')));
+  });
+</script>
+</body></html>

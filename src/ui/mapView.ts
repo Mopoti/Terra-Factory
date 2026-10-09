@@ -24,7 +24,7 @@ export interface MapOptions {
   state: GameState;
   factory: Factory;
   threat: Threat;
-  /** Position et cap du joueur (x, z en mètres ; yaw comme la caméra). */
+  /** Position et cap du joueur (x, z en mètres ; yaw comme la caméra mais celui du corps du personnage). */
   player(): { x: number; z: number; yaw: number };
   /** Les autres joueurs (multijoueur) : un point coloré avec leur nom. */
   others?(): { id: string; name: string; x: number; z: number; yaw: number }[];

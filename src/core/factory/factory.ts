@@ -1122,6 +1122,12 @@ export class Factory {
     return (m.fuelLeft + stack) / (machineDef(m.type).burnKw || 1);
   }
 
+  /** Part (0 à 1) restante de l'objet combustible en train de brûler ; `null` si rien ne brûle. */
+  fuelFraction(m: Machine): number | null {
+    if (m.fuelLeft <= 0) return null;
+    return Math.min(1, m.fuelLeft / energyKJ(m.fuel?.item ?? 'coal'));
+  }
+
   /**
    * Avancement (0 à 1) du cycle de travail en cours, pour la barre de progression ; `null` si la machine ne travaille
    * pas par cycles (tapis, tuyau, coffre…) ou n'a rien en cours. Les foreuses très rapides n'ont pas de barre.
