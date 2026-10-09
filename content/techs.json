@@ -8,7 +8,7 @@
         "science_pack": 10
       },
       "requires": [],
-      "unlocks": ["machine_conveyor"]
+      "unlocks": ["machine_conveyor", "machine_arm"]
     },
     {
       "id": "handling",
@@ -17,7 +17,7 @@
         "science_pack": 10
       },
       "requires": ["logistics"],
-      "unlocks": ["machine_chest_iron", "machine_arm", "waypoint"]
+      "unlocks": ["machine_chest_iron", "waypoint"]
     },
     {
       "id": "metallurgy",
@@ -287,7 +287,7 @@
         "science_pack": 15
       },
       "requires": ["electricity"],
-      "unlocks": ["machine_generator", "machine_drill_electric"]
+      "unlocks": ["tool_iron"]
     },
     {
       "id": "laboratory",
@@ -301,11 +301,12 @@
     },
     {
       "id": "automation",
-      "tier": 1,
+      "tier": 2,
       "cost": {
-        "science_pack": 20
+        "science_pack": 30
       },
       "requires": ["electricity", "logistics"],
+      "reveal": ["logistics"],
       "unlocks": ["machine_arm_electric", "machine_assembler"]
     },
     {
@@ -469,6 +470,35 @@
       },
       "requires": ["logistics"],
       "unlocks": ["machine_splitter", "machine_merger"]
+    },
+    {
+      "id": "electricity_2",
+      "tier": 2,
+      "cost": {
+        "science_pack": 30
+      },
+      "requires": ["electricity"],
+      "reveal": ["electricity"],
+      "unlocks": ["machine_generator"]
+    },
+    {
+      "id": "power_generation_2",
+      "tier": 2,
+      "cost": {
+        "science_pack": 30
+      },
+      "requires": ["power_generation"],
+      "reveal": ["power_generation"],
+      "unlocks": ["machine_drill_electric"]
+    },
+    {
+      "id": "waterwheel",
+      "tier": 1,
+      "cost": {
+        "copper_plate": 10
+      },
+      "requires": [],
+      "unlocks": ["machine_waterwheel"]
     }
   ]
 }

@@ -62,9 +62,16 @@ export const scienceCost = (tech: TechDef): number =>
  */
 export const LEGACY_TECH_SPLITS: Record<string, string[]> = {
   logistics: ['handling', 'routing'],
+  power_generation: ['electricity_2', 'power_generation_2'],
   electricity: ['power_generation', 'laboratory'],
   steam: ['steam_power'],
   textile: ['clothing', 'handwear', 'bedding'],
+};
+
+/** Technologies connues parmi `ids` (sans rien ajouter). */
+export const knownTechs = (ids: readonly unknown[]): string[] => {
+  const have = new Set(ids);
+  return TECHS.map((t) => t.id).filter((id) => have.has(id));
 };
 
 /** Technologies connues parmi `ids`, avec celles qui remplacent une ancienne technologie découpée. */

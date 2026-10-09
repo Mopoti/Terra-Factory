@@ -4,13 +4,18 @@ import { aimBuild, aimExisting, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
 import { BAG_LIMITS, itemById } from '../data/items';
-import { DISCOVERIES } from '../data/discoveries';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
 import { add, maxAddable, normalizeInventory, remove, totals } from './inventory';
 import { distanceToFootprint, isWithinReach } from './reach';
 import { GameState } from './state';
-import { applyChanges, cellKey, emptyChanges, normalizeChanges } from './worldChanges';
+import {
+  TECH_VERSION,
+  applyChanges,
+  cellKey,
+  emptyChanges,
+  normalizeChanges,
+} from './worldChanges';
 
 describe('objets et sac', () => {
   it('le sac de départ fait 50 kg et 60 L', () => {
@@ -689,7 +694,7 @@ describe('technologies', () => {
     s.changes.unlocked.push('logistics');
     expect(s.research('electricity')).toBe('ok');
     expect(s.study('automation')).toBe('ok');
-    s.addStudy({ science_pack: 20 });
+    s.addStudy({ science_pack: 30 });
     expect(s.research('textile')).toBe('lab');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
@@ -702,11 +707,11 @@ describe('technologies', () => {
     expect(s.studyRemaining()).toBe(0);
     expect(s.study('metallurgy')).toBe('notLab');
     expect(s.study('automation')).toBe('ok');
-    expect(s.studyRemaining()).toBe(20);
+    expect(s.studyRemaining()).toBe(30);
     s.addStudy({ science_pack: 8 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.researching).toBe('automation');
-    expect(copy.studyRemaining()).toBe(12);
+    expect(copy.studyRemaining()).toBe(22);
     copy.addStudy({ science_pack: 30 });
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
     expect(copy.changes.researching).toBeNull();
@@ -961,29 +966,58 @@ describe('mort, corps à récupérer, duvet et lit', () => {
   });
 });
 
-describe('découvertes : la roue à aubes se débloque en fabriquant 10 plaques de cuivre', () => {
-  it('compte les fabrications et débloque l’objet au seuil, une seule fois', () => {
-    const s = new GameState();
-    const seen: string[] = [];
-    s.onChange((e) => {
-      if (e.type === 'discovery') seen.push(e.id);
-    });
+describe('roue à aubes : une technologie comme les autres', () => {
+  it('se recherche avec 10 plaques de cuivre du sac, consommées au clic', () => {
+    const s = new GameState({ inventory: { copper_plate: 9 } });
     expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    s.countProduced('copper_plate', 6);
-    expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    s.countProduced('iron_plate', 50); // une autre plaque ne compte pas
-    s.harvest('1,1', 100, 'copper_ore', 50); // récolter ne compte pas : il faut fabriquer
-    expect(s.isUnlocked('machine_waterwheel')).toBe(false);
-    expect(s.discoveryProgress(DISCOVERIES[0])).toBe(6);
-    s.countProduced('copper_plate', 4);
+    expect(s.research('waterwheel')).toBe('missing');
+    s.inventory = { copper_plate: 12 };
+    expect(s.research('waterwheel')).toBe('ok');
+    expect(s.inventory.copper_plate).toBe(2);
     expect(s.isUnlocked('machine_waterwheel')).toBe(true);
-    s.countProduced('copper_plate', 4);
-    expect(seen).toEqual(['waterwheel']);
-    expect(s.discoveryProgress(DISCOVERIES[0])).toBe(10); // plafonné
-    // enregistré avec la partie
-    const back = new GameState(s.snapshot());
-    expect(back.isUnlocked('machine_waterwheel')).toBe(true);
-    expect(back.changes.produced.copper_plate).toBe(14);
+    expect(s.changes.log.at(-1)).toMatchObject({ kind: 'research', id: 'waterwheel' });
+  });
+
+  it('une ancienne sauvegarde qui avait la découverte garde la roue', () => {
+    const c = normalizeChanges({ unlocked: [], discovered: ['waterwheel'] });
+    expect(c.unlocked).toContain('waterwheel');
+  });
+});
+
+describe('versions du découpage des technologies et journal', () => {
+  it('une sauvegarde d’avant reçoit ce que ses anciennes technologies débloquaient, et le journal le dit', () => {
+    const c = normalizeChanges({ unlocked: ['electricity'] });
+    expect(c.unlocked).toEqual(expect.arrayContaining(['power_generation', 'laboratory']));
+    expect(
+      c.log
+        .filter((e) => e.kind === 'legacy')
+        .map((e) => e.id)
+        .sort(),
+    ).toEqual(['laboratory', 'power_generation']);
+    expect(c.techVersion).toBe(TECH_VERSION);
+  });
+
+  it('une sauvegarde à jour ne reçoit plus rien : Électricité payée à la main ne redonne pas Production', () => {
+    const c = normalizeChanges({ unlocked: ['electricity'], techVersion: TECH_VERSION });
+    expect(c.unlocked).toEqual(['electricity']);
+    expect(c.log).toEqual([]);
+    // et le rechargement d'une sauvegarde déjà à jour reste identique
+    expect(normalizeChanges(JSON.parse(JSON.stringify(c))).unlocked).toEqual(['electricity']);
+  });
+
+  it('recherche à la main, étude en laboratoire et Créatif s’inscrivent au journal', () => {
+    const s = new GameState({ inventory: { iron_ingot: 50, copper_ingot: 50 } });
+    s.research('electricity');
+    s.changes.unlocked.push('logistics');
+    s.study('automation');
+    s.addStudy({ science_pack: 30 });
+    expect(s.changes.log.map((e) => [e.kind, e.id])).toEqual([
+      ['research', 'electricity'],
+      ['study', 'automation'],
+    ]);
+    s.creative = true;
+    s.research('metallurgy');
+    expect(s.changes.log.at(-1)).toMatchObject({ kind: 'creative', id: 'metallurgy' });
   });
 });
 

@@ -49,9 +49,11 @@ import {
   type Inventory,
 } from './inventory';
 import {
+  MAX_LOG,
   emptyChanges,
   normalizeChanges,
   type Corpse,
+  type LogEntry,
   type DroppedStack,
   type SpawnPoint,
   type Vehicle,
@@ -530,6 +532,7 @@ export class GameState {
       if (d.goal.kind !== kind || this.changes.discovered.includes(d.id)) continue;
       if (this.discoveryProgress(d) < d.goal.count) continue;
       this.changes.discovered.push(d.id);
+      this.addLog('discovery', d.id);
       this.emit({ type: 'discovery', id: d.id });
     }
   }
@@ -766,8 +769,16 @@ export class GameState {
       for (const [item, n] of Object.entries(tech.cost))
         this.inventory = remove(this.inventory, item, n).inventory;
     this.changes.unlocked.push(id);
+    this.addLog(this.creative ? 'creative' : 'research', id);
     this.emit({ type: 'inventory' });
     return 'ok';
+  }
+
+  /** Ajoute une ligne au journal de la partie (les plus anciennes sont oubliées au-delà de `MAX_LOG`). */
+  addLog(kind: LogEntry['kind'], id: string): void {
+    this.changes.log.push({ t: Date.now(), kind, id });
+    if (this.changes.log.length > MAX_LOG)
+      this.changes.log.splice(0, this.changes.log.length - MAX_LOG);
   }
 
   /** Choisit (ou, avec null, arrête) la technologie étudiée par les laboratoires. */
@@ -843,6 +854,7 @@ export class GameState {
     this.changes.progress[id] = Object.values(done).reduce((x, y) => x + y, 0);
     if (Object.entries(wanted).every(([pack, n]) => (done[pack] ?? 0) >= n)) {
       this.changes.unlocked.push(id);
+      this.addLog('study', id);
       this.changes.researching = null;
     }
     this.emit({ type: 'inventory' });

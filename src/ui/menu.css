@@ -1419,19 +1419,51 @@
 #tech .panel {
   position: relative;
   width: min(900px, calc(100vw - 32px));
-  max-height: 90vh;
+  max-height: calc(100vh - 110px);
   overflow-y: auto;
 }
 .tech-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.tech-section {
+  margin: 14px 0 6px;
+  font-size: 15px;
+  opacity: 0.85;
+}
+.tech-journal-btn {
+  position: absolute;
+  top: 14px;
+  right: 56px;
+  min-width: 0;
+  padding: 6px 12px;
+}
+.game-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.game-log-row {
+  padding: 6px 8px;
+  border-left: 3px solid #5d8a8a;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 4px;
+}
+.game-log-row.legacy {
+  border-left-color: #d9a441;
+}
+.game-log-row time {
+  display: block;
+  font-size: 11px;
+  opacity: 0.6;
 }
 .tech-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
+  gap: 4px;
+  padding: 8px;
   border: 1px solid #2c3640;
   border-left: 4px solid var(--item, #888);
   border-radius: 8px;
@@ -1443,11 +1475,17 @@
 .tech-card.blocked {
   opacity: 0.5;
 }
+.tech-card .menu-btn {
+  padding: 4px 8px;
+  font-size: 13px;
+  min-height: 0;
+}
 .tech-card h3 {
   margin: 0;
+  font-size: 15px;
 }
 .tech-line {
-  font-size: 13px;
+  font-size: 12px;
 }
 .tech-line.sub {
   opacity: 0.8;

@@ -32,6 +32,7 @@ export function mountTech(
 ): TechWindow {
   let isOpenNow = false;
   let message = '';
+  let showLog = false;
   let stopWatching: () => void = () => {};
 
   function card(tech: TechDef): HTMLElement {
@@ -113,12 +114,6 @@ export function mountTech(
       render();
     });
     box.append(button);
-    if (science > 0 && !done) {
-      const hint = document.createElement('small');
-      hint.className = 'help';
-      hint.textContent = t('tech.labHint');
-      box.append(hint);
-    }
     // Objets débloqués : couleur d'accent.
     box.style.setProperty('--item', itemById(tech.unlocks[0]).color);
     return box;
@@ -152,23 +147,84 @@ export function mountTech(
     return box;
   }
 
+  /** Nom lisible de ce qu'une ligne du journal désigne (technologie ou découverte). */
+  function logName(kind: string, id: string): string {
+    if (kind === 'discovery') {
+      const d = DISCOVERIES.find((x) => x.id === id);
+      return d ? itemName(d.unlocks[0]) : id;
+    }
+    return t(`tech.${id}` as TranslationKey);
+  }
+
+  /** Journal de la partie : ce qui a été débloqué, quand et comment (les plus récents d'abord). */
+  function journal(): HTMLElement {
+    const list = document.createElement('div');
+    list.className = 'game-log';
+    const entries = [...state.changes.log].reverse();
+    if (entries.length === 0) {
+      list.append(t('tech.journal.empty'));
+      return list;
+    }
+    for (const e of entries) {
+      const row = document.createElement('div');
+      row.className = `game-log-row ${e.kind}`;
+      const when = document.createElement('time');
+      when.textContent = new Date(e.t).toLocaleString();
+      row.append(when, t(`log.${e.kind}` as TranslationKey, { name: logName(e.kind, e.id) }));
+      list.append(row);
+    }
+    return list;
+  }
+
+  function section(title: string, cards: HTMLElement[]): HTMLElement[] {
+    if (cards.length === 0) return [];
+    const head = document.createElement('h3');
+    head.className = 'tech-section';
+    head.textContent = `${title} (${cards.length})`;
+    const grid = document.createElement('div');
+    grid.className = 'tech-grid';
+    grid.append(...cards);
+    return [head, grid];
+  }
+
   function render(): void {
     const panel = document.createElement('div');
     panel.className = 'panel tech-panel';
     panel.setAttribute('role', 'dialog');
     const title = document.createElement('h2');
-    title.textContent = t('tech.title');
-    const grid = document.createElement('div');
-    grid.className = 'tech-grid';
-    for (const d of DISCOVERIES) grid.append(discoveryCard(d));
-    for (const tech of TECHS)
-      if (isTechVisible(tech, state.changes.unlocked, state.creative)) grid.append(card(tech));
+    title.textContent = showLog ? t('tech.journal.title') : t('tech.title');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'menu-btn tech-journal-btn';
+    toggle.textContent = showLog ? t('tech.journal.back') : t('tech.journal');
+    toggle.addEventListener('click', () => {
+      showLog = !showLog;
+      render();
+    });
+    const body: HTMLElement[] = [];
+    if (showLog) body.push(journal());
+    else {
+      const visible = TECHS.filter((tech) =>
+        isTechVisible(tech, state.changes.unlocked, state.creative),
+      );
+      const isDone = (id: string): boolean => state.changes.unlocked.includes(id);
+      body.push(
+        ...section(t('tech.section.todo'), [
+          ...DISCOVERIES.filter((d) => !state.changes.discovered.includes(d.id)).map(discoveryCard),
+          ...visible.filter((tech) => !isDone(tech.id)).map(card),
+        ]),
+        ...section(t('tech.section.done'), [
+          ...DISCOVERIES.filter((d) => state.changes.discovered.includes(d.id)).map(discoveryCard),
+          ...visible.filter((tech) => isDone(tech.id)).map(card),
+        ]),
+      );
+    }
     const msg = document.createElement('div');
     msg.className = 'inv-message';
     msg.textContent = message;
     const help = document.createElement('small');
     help.className = 'help';
-    help.textContent = t('tech.help');
+    help.textContent = showLog ? '' : t('tech.help');
     const x = document.createElement('button');
     x.type = 'button';
     x.className = 'panel-close';
@@ -176,7 +232,7 @@ export function mountTech(
     x.title = t('inv.close');
     x.setAttribute('aria-label', t('inv.close'));
     x.addEventListener('click', closeWindow);
-    panel.append(title, grid, msg, help, x);
+    panel.append(title, toggle, ...body, msg, help, x);
     root.replaceChildren(panel);
   }
 
@@ -184,6 +240,7 @@ export function mountTech(
     if (isOpenNow) return;
     isOpenNow = true;
     message = '';
+    showLog = false;
     root.hidden = false;
     // Les compteurs avancent pendant que la fenêtre est ouverte.
     stopWatching = state.onChange((e) => {

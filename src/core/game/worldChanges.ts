@@ -8,9 +8,21 @@ import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
 import { WEAPONS, isWeapon } from '../data/weapons';
-import { TECHS, expandLegacyTechs, isSciencePack } from '../data/techs';
+import { TECHS, expandLegacyTechs, isSciencePack, knownTechs } from '../data/techs';
 import { TUTORIAL_STEPS } from './tutorial';
 import type { ChunkData, PlacedObject } from '../world/worldgen';
+
+/** Version actuelle du découpage des technologies (voir `LEGACY_TECH_SPLITS`). */
+export const TECH_VERSION = 3;
+export const MAX_LOG = 300;
+
+/** Une ligne du journal : quand, quoi (`kind`, texte `log.<kind>`), et la technologie ou l'objet concerné. */
+export interface LogEntry {
+  t: number;
+  kind: 'research' | 'study' | 'creative' | 'legacy' | 'discovery';
+  id: string;
+}
+const LOG_KINDS: readonly string[] = ['research', 'study', 'creative', 'legacy', 'discovery'];
 
 /** Nid créé pendant la partie : case d'ancrage et côté (cases). */
 export interface ExtraNest {
@@ -102,6 +114,10 @@ export interface WorldChanges {
   produced: Record<string, number>;
   /** Découvertes faites (voir `content/discoveries.json`). */
   discovered: string[];
+  /** Version du découpage des technologies : une sauvegarde plus ancienne reçoit ce que ses anciennes technologies débloquaient. */
+  techVersion: number;
+  /** Journal de la partie (recherches, découvertes…), les plus anciennes entrées d'abord. */
+  log: LogEntry[];
   /** Corps laissés là où le joueur est tombé, avec ses affaires (affichés dans le monde et sur la carte). */
   corpses: Corpse[];
   nextCorpseId: number;
@@ -168,6 +184,8 @@ export function emptyChanges(): WorldChanges {
     harvested: {},
     produced: {},
     discovered: [],
+    techVersion: TECH_VERSION,
+    log: [],
     corpses: [],
     nextCorpseId: 1,
     spawns: [],
@@ -330,9 +348,36 @@ export function normalizeChanges(raw: unknown): WorldChanges {
     });
   }
   result.nextSpawnId = result.spawns.reduce((m, s) => Math.max(m, s.id), 0) + 1;
+  // Le découpage des anciennes technologies n'est appliqué qu'aux sauvegardes d'avant : sinon une technologie payée à
+  // la main (Électricité…) redonnerait à chaque chargement celles qui demandent maintenant des paquets de science.
+  const olderSave = r.techVersion !== TECH_VERSION;
   result.unlocked = Array.isArray(r.unlocked)
-    ? expandLegacyTechs(r.unlocked as unknown[])
+    ? olderSave
+      ? expandLegacyTechs(r.unlocked as unknown[])
+      : knownTechs(r.unlocked as unknown[])
     : TECHS.map((t) => t.id);
+  if (
+    olderSave &&
+    Array.isArray(r.discovered) &&
+    (r.discovered as unknown[]).includes('waterwheel')
+  )
+    if (!result.unlocked.includes('waterwheel')) result.unlocked.push('waterwheel');
+  result.log = (Array.isArray(r.log) ? r.log : [])
+    .filter(
+      (e): e is LogEntry =>
+        typeof e === 'object' &&
+        e !== null &&
+        isNum((e as LogEntry).t) &&
+        LOG_KINDS.includes((e as LogEntry).kind) &&
+        typeof (e as LogEntry).id === 'string',
+    )
+    .slice(-MAX_LOG);
+  if (olderSave && Array.isArray(r.unlocked)) {
+    const had = new Set(r.unlocked as unknown[]);
+    for (const id of result.unlocked)
+      if (!had.has(id)) result.log.push({ t: Date.now(), kind: 'legacy', id });
+  }
+  result.techVersion = TECH_VERSION;
   if (typeof r.progress === 'object' && r.progress !== null) {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];
