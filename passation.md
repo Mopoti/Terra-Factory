@@ -42,6 +42,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
+- **Décision PO (après Tour 162)** : priorité à la **jouabilité smartphone** (commandes tactiles déjà en place depuis le Tour 115, à éprouver sur un vrai téléphone) ; Steam, Switch et autres consoles seront traités avec la **version Unity**, pas avec la version navigateur.
 - **Tour 162** : info de visée des ressources en une ligne « [icône] Nom : reste » (icône = pastille de la couleur de l'objet, pas encore de vraies icônes) ; nom « Gisement de pierre » ajouté (`target.stone_ore`) et test i18n étendu aux gisements.
 - **Tour 161** : gisements de pierre (`stone_ore`, ressource `ores` qui donne de la pierre, minable à la foreuse ; couleur ardoise, tuile d'atlas, légende de la carte) ; légende du pétrole corrigée ; 576 tests.
 - **Tour 160** : flèche du joueur sur la carte = cap du corps (`bodyYaw`) et non de la caméra ; foreuse à combustible ralentie (1 minerai / 2 s, comme dans le GDD) ; barre de combustion dans les fenêtres de machines (`fuelFraction`) ; arbre des technologies : `node scripts/arbre-technologies.mjs` → `docs/arbre-technologies.html` (couloirs par famille, survol = prérequis et suites) ; 575 tests.
