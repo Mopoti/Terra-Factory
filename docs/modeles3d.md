@@ -92,3 +92,7 @@
 ## Buissons du pack (Tour 151)
 - Les buissons de fibres utilisent maintenant les herbes et plantes du pack « Low Poly Nature » (couleur par sommet, comme les arbres), par biome : prairie (Grass007, 005, 011, 003), forêt (004, 012, 005, 008), désert (006, 011, 010), toundra (012, 006, 003, givrées). Hauteur moyenne 0,6 m, largeur limitée à 0,95 m.
 - Le système de plantes à cartes texturées du Tour 148 est supprimé (`plant1-4.obj`, `plants.png`, `plantMaterial`) : `lowpoly.json` contient maintenant 36 modèles.
+
+## Modèles faits maison (Blender)
+
+Dossier `blender/` (un `.blend` par famille, scripts, outils), `export/` (un `.glb` par modèle, noms en minuscules : `foreuse_t1.glb`). Échelle : 1 unité Blender = 1 case (50 cm) ; l'export divise par deux pour avoir des mètres. Le jeu charge `public/models/terra/` (copié par `node scripts/sync-modeles.mjs`) et ces modèles passent avant ceux du kit (`TERRA_MODELS`). Détails et règles : `blender/README.md`. Premier modèle : `foreuse_t1`.

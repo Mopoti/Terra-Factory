@@ -46,6 +46,14 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
   chest_iron: 'box-large',
 };
 
+/**
+ * Modèles faits pour le jeu (Blender, dossier `blender/` ; fichiers `.glb` dans `export/`, copiés dans
+ * `public/models/terra/` par `node scripts/sync-modeles.mjs`). Ils passent avant ceux du kit.
+ */
+export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
+  drill: 'foreuse_t1',
+};
+
 /** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */
 export type BeltShape = 'straight' | 'corner';
 const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
@@ -55,6 +63,7 @@ const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
 export const beltModel = (shape: BeltShape, tier: number): BakedModel | null =>
   baked.get(BELT_MODELS[shape][Math.max(0, Math.min(2, tier - 1))]) ?? null;
 
+const TERRA_NAMES = [...new Set(Object.values(TERRA_MODELS))] as string[];
 const NAMES = [
   ...new Set([...Object.values(MACHINE_MODELS), ...Object.values(BELT_MODELS).flat()]),
 ] as string[];
@@ -62,7 +71,7 @@ const baked = new Map<string, BakedModel>();
 let loading: Promise<void> | null = null;
 
 export const modelFor = (type: MachineType): BakedModel | null => {
-  const name = MACHINE_MODELS[type];
+  const name = TERRA_MODELS[type] ?? MACHINE_MODELS[type];
   return name ? (baked.get(name) ?? null) : null;
 };
 
@@ -164,11 +173,14 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
   if (loading) return loading;
   const loader = new GLTFLoader();
   loading = Promise.all(
-    NAMES.map(
-      (name) =>
+    [
+      ...NAMES.map((name) => ({ name, folder: 'kenney' })),
+      ...TERRA_NAMES.map((name) => ({ name, folder: 'terra' })),
+    ].map(
+      ({ name, folder }) =>
         new Promise<void>((resolve) => {
           loader.load(
-            `${baseUrl}models/kenney/${name}.glb`,
+            `${baseUrl}models/${folder}/${name}.glb`,
             (gltf) => {
               const model = bake(gltf.scene);
               if (model) baked.set(name, model);
