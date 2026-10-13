@@ -95,4 +95,4 @@
 
 ## Modèles faits maison (Blender)
 
-Dossier `blender/` (un `.blend` par famille, scripts, outils), `export/` (un `.glb` par modèle, noms en minuscules : `foreuse_t1.glb`). Échelle : 1 unité Blender = 1 case (50 cm) ; l'export divise par deux pour avoir des mètres. Le jeu charge `public/models/terra/` (copié par `node scripts/sync-modeles.mjs`) et ces modèles passent avant ceux du kit (`TERRA_MODELS`). Détails et règles : `blender/README.md`. Premier modèle : `foreuse_t1`.
+Dossier `blender/` (un `.blend` par famille, **non versionné** : seuls les `.glb` et les scripts sont dans Git ; scripts, outils), `export/` (un `.glb` par modèle, noms en minuscules : `foreuse_t1.glb`). Échelle : 1 unité Blender = 1 case (50 cm) ; l'export divise par deux pour avoir des mètres. Le jeu charge `public/models/terra/` (copié par `node scripts/sync-modeles.mjs`) et ces modèles passent avant ceux du kit (`TERRA_MODELS`). Détails et règles : `blender/README.md`. Premier modèle : `foreuse_t1`.
