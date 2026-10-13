@@ -46,6 +46,20 @@ const COAL_ARROW: Rgb = hexToRgb('#2b2b2b');
 
 const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 
+/** Flammes d'une machine : couleurs de sommet sans éclairage (elles brillent), vues des deux côtés. */
+const flameMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+
+interface FlameInstance {
+  m: Machine;
+  mesh: THREE.Mesh;
+  /** Sommets au repos (repère de la machine) ; le maillage reçoit les sommets mis à l'échelle autour du pied de chaque flamme. */
+  base: Float32Array;
+  colors: Float32Array;
+  groups: { first: number; count: number; px: number; py: number; pz: number }[];
+  /** Intensité lissée : 1 pleine, 0,2 braises, 0 éteinte. */
+  level: number;
+}
+
 function geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(mb.positions, 3));
@@ -217,7 +231,15 @@ export class FactoryView {
     this.bodies.castShadow = true;
     this.items.castShadow = false;
     this.smoke.frustumCulled = false;
-    this.root.add(this.bodies, this.items, this.wires, this.smoke, this.movers, this.flags);
+    this.root.add(
+      this.bodies,
+      this.items,
+      this.wires,
+      this.smoke,
+      this.movers,
+      this.flames,
+      this.flags,
+    );
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
@@ -266,6 +288,7 @@ export class FactoryView {
           !!parts,
         );
         if (parts) this.addMover(m, parts);
+        this.addFlames(m);
         if (!modelFor(m.type)) growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
@@ -364,7 +387,115 @@ export class FactoryView {
       a.mesh.geometry.dispose();
     }
     this.moverList = [];
+    for (const f of this.flameList) {
+      this.flames.remove(f.mesh);
+      f.mesh.geometry.dispose();
+    }
+    this.flameList = [];
   }
+
+  /** Flammes animées des modèles qui en ont (maillages `flamme_*` / `coeur_*`) : un seul objet par machine. */
+  private readonly flames = new THREE.Group();
+  private flameList: FlameInstance[] = [];
+
+  /** Pose les flammes d'une machine comme son corps (même échelle, même orientation), dans un objet à part. */
+  private addFlames(m: Machine): void {
+    const model = modelFor(m.type);
+    const parts = model?.flames;
+    if (!model || !parts) return;
+    const def = machineDef(m.type);
+    const { w, d } = dims(m.type, m.rot);
+    const odd = m.rot % 2 === 1;
+    const sizeX = odd ? model.size.z : model.size.x;
+    const sizeZ = odd ? model.size.x : model.size.z;
+    const scale = Math.min(
+      (w * CELL_SIZE_M - 0.06) / sizeX,
+      (d * CELL_SIZE_M - 0.06) / sizeZ,
+      (def.height * 1.3) / model.size.y,
+    );
+    const a = (MODEL_TURNS[m.rot % 4] * Math.PI) / 2;
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    const cx = model.min.x + model.size.x / 2;
+    const cz = model.min.z + model.size.z / 2;
+    // Même transformation que `MeshBuilder.model` : recentrage, échelle, quarts de tour autour de la verticale.
+    const place = (x: number, y: number, z: number): [number, number, number] => {
+      const px = (x - cx) * scale;
+      const pz = (z - cz) * scale;
+      return [px * cos + pz * sin, (y - model.min.y) * scale, -px * sin + pz * cos];
+    };
+    const base = new Float32Array(parts.positions.length);
+    for (let i = 0; i < base.length; i += 3) {
+      const p = place(parts.positions[i], parts.positions[i + 1], parts.positions[i + 2]);
+      base.set(p, i);
+    }
+    const groups = parts.groups.map((g) => {
+      const p = place(g.px, g.py, g.pz);
+      return { first: g.first, count: g.count, px: p[0], py: p[1], pz: p[2] };
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(parts.colors.slice(), 3));
+    geometry.setIndex(new THREE.BufferAttribute(parts.index, 1));
+    geometry.computeBoundingSphere();
+    // Les flammes bougent peu : on agrandit la sphère pour qu'elles ne disparaissent pas au bord de l'écran.
+    if (geometry.boundingSphere) geometry.boundingSphere.radius += 0.3;
+    const mesh = new THREE.Mesh(geometry, flameMaterial);
+    mesh.position.set((m.gx + w / 2) * CELL_SIZE_M, levelY(m.lift), (m.gz + d / 2) * CELL_SIZE_M);
+    mesh.visible = false;
+    this.flames.add(mesh);
+    this.flameList.push({
+      m,
+      mesh,
+      base,
+      colors: parts.colors,
+      groups,
+      level: 0,
+    });
+  }
+
+  /**
+   * Fait vaciller les flammes (appelée à chaque image, `time` en secondes) : pleines quand la machine travaille, réduites à
+   * 20 % (braises) si elle a du combustible mais ne travaille pas, cachées sans combustible. Seules les machines à moins
+   * de `range` mètres de `near` sont mises à jour ; on ne réécrit que les sommets des flammes.
+   */
+  updateFlames(time: number, near?: { x: number; z: number }, range = 70): void {
+    const dt = Math.min(0.1, Math.max(0, time - this.flameTime));
+    this.flameTime = time;
+    for (const f of this.flameList) {
+      const mesh = f.mesh;
+      if (near && Math.hypot(mesh.position.x - near.x, mesh.position.z - near.z) > range) continue;
+      const running = this.factory.status(f.m) === 'running';
+      const target = running ? 1 : f.m.fuelLeft > 0 || (f.m.fuel?.count ?? 0) > 0 ? 0.2 : 0;
+      f.level += (target - f.level) * Math.min(1, dt * 5);
+      mesh.visible = f.level > 0.03;
+      if (!mesh.visible) continue;
+      const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const col = mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
+      const arr = pos.array as Float32Array;
+      const carr = col.array as Float32Array;
+      f.groups.forEach((g, k) => {
+        // Deux sinus de fréquences différentes et un déphasage propre à chaque machine et à chaque flamme.
+        const ph = f.m.id * 1.7 + k * 2.3;
+        const wave = 0.5 * Math.sin(time * 9 + ph) + 0.5 * Math.sin(time * 14.3 + ph * 1.9);
+        const sy = f.level * (0.975 + 0.175 * wave);
+        const sxz = f.level * (1 + 0.06 * Math.sin(time * 11 + ph * 1.3));
+        const light = 1 + 0.12 * wave;
+        for (let i = g.first; i < g.first + g.count; i++) {
+          const o = i * 3;
+          arr[o] = g.px + (f.base[o] - g.px) * sxz;
+          arr[o + 1] = g.py + (f.base[o + 1] - g.py) * sy;
+          arr[o + 2] = g.pz + (f.base[o + 2] - g.pz) * sxz;
+          carr[o] = f.colors[o] * light;
+          carr[o + 1] = f.colors[o + 1] * light;
+          carr[o + 2] = f.colors[o + 2] * light;
+        }
+      });
+      pos.needsUpdate = true;
+      col.needsUpdate = true;
+    }
+  }
+  private flameTime = 0;
 
   /** Crée l'objet mobile (partie haute) d'une machine articulée, posé à l'emplacement de la machine. */
   private addMover(

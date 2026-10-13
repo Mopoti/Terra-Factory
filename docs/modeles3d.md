@@ -96,3 +96,9 @@
 ## Modèles faits maison (Blender)
 
 Dossier `blender/` (un `.blend` par famille, **non versionné** : seuls les `.glb` et les scripts sont dans Git ; scripts, outils), `export/` (un `.glb` par modèle, noms en minuscules : `foreuse_t1.glb`). Échelle : 1 unité Blender = 1 case (50 cm) ; l'export divise par deux pour avoir des mètres. Le jeu charge `public/models/terra/` (copié par `node scripts/sync-modeles.mjs`) et ces modèles passent avant ceux du kit (`TERRA_MODELS`). Détails et règles : `blender/README.md`. Premier modèle : `foreuse_t1`.
+
+### Parties animées d'un modèle maison : `flamme_*` et `coeur_*`
+
+Convention : dans un `.glb` maison, tout maillage dont le **nom** (ou celui d'un de ses parents) commence par un préfixe de `ANIMATED_MESHES` (`src/render/models.ts`) est retiré du corps fixe et animé à part. Pour le fourneau : `flamme_*` (cônes orange) et `coeur_*` (cœurs jaunes). `bake()` les range dans `BakedModel.flames` (sommets propres, un groupe par maillage avec son pied) ; l'enveloppe du modèle les inclut, l'échelle dans le jeu reste donc celle voulue par l'auteur.
+
+`FactoryView.updateFlames` fait vaciller chaque flamme autour de son pied (échelle verticale ≈ 0,8 à 1,15, léger élargissement, deux sinus + déphasage par machine et par flamme, luminosité ±12 %). Pleines quand la machine travaille, 20 % (braises) si elle a du combustible sans travailler, cachées sans combustible. Un seul objet par machine, seuls les sommets des flammes sont réécrits, et seulement à moins de 70 m du joueur. Pour animer d'autres parties d'une autre machine : ajouter ses préfixes à `ANIMATED_MESHES`.
