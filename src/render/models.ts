@@ -52,6 +52,7 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
  */
 export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   drill: 'foreuse_t1',
+  furnace: 'fourneau_t1',
 };
 
 /** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */

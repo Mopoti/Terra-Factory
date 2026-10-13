@@ -3,3 +3,6 @@ dist
 .vite
 *.log
 *.blend1
+*.blend
+__pycache__/
+*.pyc

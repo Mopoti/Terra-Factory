@@ -11,6 +11,7 @@ Conventions (voir blender/README.md) :
 
 import math
 import os
+import random
 
 import bpy  # doit venir avant bmesh quand bpy est installé comme module Python
 import bmesh
@@ -32,6 +33,14 @@ PALETTE = {
     'blanc': '#dfe3e8',
     'noir': '#18191c',
     'brique': '#8c4a38',
+    'brique_claire': '#a85d42',
+    'brique_sombre': '#6a372b',
+    'pierre': '#6e6862',
+    'pierre_claire': '#8a837b',
+    'pierre_sombre': '#4e4a46',
+    'bois_sombre': '#5e4630',
+    'braise': '#f0701e',
+    'flamme': '#ffc93c',
     'verre': '#7fb7d4',
     'bois': '#8a6a45',
 }
@@ -57,7 +66,8 @@ def material(name: str) -> bpy.types.Material:
     r, g, b = (int(hexa[i : i + 2], 16) / 255 for i in (0, 2, 4))
     m = bpy.data.materials.new(name)
     m.use_nodes = True
-    bsdf = m.node_tree.nodes['Principled BSDF']
+    # Par type, pas par nom : le nom du nœud est traduit selon la langue de Blender (« BSDF guidée » en français).
+    bsdf = next(n for n in m.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
     bsdf.inputs['Base Color'].default_value = (_linear(r), _linear(g), _linear(b), 1.0)
     bsdf.inputs['Roughness'].default_value = 0.75
     bsdf.inputs['Metallic'].default_value = 0.0
@@ -82,13 +92,75 @@ def _object(coll: bpy.types.Collection, name: str, bm: bmesh.types.BMesh, mat: s
     return obj
 
 
+def _cube(bm, size, loc, bevel=0.0, rot=None):
+    """Ajoute à `bm` un cube de `size` centré en `loc`, arêtes biseautées de `bevel` (style low poly), tourné par `rot`."""
+    tmp = bmesh.new()
+    bmesh.ops.create_cube(tmp, size=1.0)
+    bmesh.ops.scale(tmp, vec=Vector(size), verts=tmp.verts)
+    if bevel > 0:
+        bevel = min(bevel, min(size) * 0.45)
+        bmesh.ops.bevel(tmp, geom=list(tmp.edges), offset=bevel, segments=1, profile=0.5, affect='EDGES', clamp_overlap=True)
+    if rot is not None:
+        bmesh.ops.rotate(tmp, cent=Vector((0, 0, 0)), matrix=rot, verts=tmp.verts)
+    bmesh.ops.translate(tmp, vec=Vector(loc), verts=tmp.verts)
+    mesh = bpy.data.meshes.new('_tmp')
+    tmp.to_mesh(mesh)
+    tmp.free()
+    bm.from_mesh(mesh)
+    bpy.data.meshes.remove(mesh)
+
+
 def box(coll, name, size, loc, mat, bevel=0.0):
-    """Boîte de `size` (x, y, z) dont le CENTRE est en `loc`."""
+    """Boîte de `size` (x, y, z) dont le CENTRE est en `loc` ; `bevel` > 0 biseaute les arêtes."""
     bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    bmesh.ops.scale(bm, vec=Vector(size), verts=bm.verts)
-    bmesh.ops.translate(bm, vec=Vector(loc), verts=bm.verts)
+    _cube(bm, size, loc, bevel)
     return _object(coll, name, bm, mat)
+
+
+class Lot:
+    """Regroupe beaucoup de petites pièces par teinte : un objet par teinte au lieu d'un objet par pièce."""
+
+    def __init__(self, coll, name):
+        self.coll, self.name, self.bms = coll, name, {}
+
+    def cube(self, mat, size, loc, bevel=0.0, rot=None):
+        _cube(self.bms.setdefault(mat, bmesh.new()), size, loc, bevel, rot)
+
+    def finir(self):
+        for mat, bm in self.bms.items():
+            _object(self.coll, f'{self.name}_{mat}', bm, mat)
+        self.bms = {}
+
+
+BRIQUES = (('brique', 5), ('brique_claire', 3), ('brique_sombre', 3), ('pierre', 1))
+PIERRES = (('pierre', 4), ('pierre_claire', 2), ('pierre_sombre', 3))
+
+
+def parement(lot, faces, rangs, seed=1, densite=0.65, teintes=BRIQUES, long=(0.32, 0.44), haut=(0.14, 0.17), bevel=0.012):
+    """Briques ou pierres en relief, en quinconce et de teintes variées, posées sur des faces verticales.
+
+    `faces` : liste de (axe, position, debut, fin, sens). axe 'x' = face perpendiculaire à X placée en x = position,
+    les pièces allant de `debut` à `fin` le long de Y (axe 'y' : l'inverse) ; `sens` = +1 ou -1 (côté où elles dépassent).
+    `rangs` : hauteurs (centres) des rangées. Reproductible grâce à `seed`.
+    """
+    rnd = random.Random(seed)
+    noms, poids = zip(*teintes)
+    for axe, pos, debut, fin, sens in faces:
+        for r, z in enumerate(rangs):
+            u = debut + (0.0 if r % 2 == 0 else (long[0] + long[1]) / 4)
+            while u < fin - 0.12:
+                ln = min(rnd.uniform(*long), fin - u)
+                if rnd.random() < densite:
+                    h = rnd.uniform(*haut)
+                    ep = rnd.uniform(0.03, 0.06)
+                    a, zc = u + ln / 2, z + rnd.uniform(-0.01, 0.01)
+                    if axe == 'x':
+                        taille, centre, ax = (ep, ln - 0.04, h), (pos + sens * ep / 2, a, zc), 'X'
+                    else:
+                        taille, centre, ax = (ln - 0.04, ep, h), (a, pos + sens * ep / 2, zc), 'Y'
+                    rot = Matrix.Rotation(rnd.uniform(-0.05, 0.05), 3, ax)
+                    lot.cube(rnd.choices(noms, poids)[0], taille, centre, bevel, rot)
+                u += ln
 
 
 def cylinder(coll, name, radius, height, loc, mat, segments=12, radius_top=None):
@@ -118,20 +190,23 @@ def _export_copy(coll):
     bpy.context.scene.collection.children.link(temp)
     for obj in coll.objects:
         mesh = obj.data.copy()
-        mesh.transform(Matrix.Scale(CELL_M, 4) @ obj.matrix_world)
+        # matrix_basis plutôt que matrix_world : juste même si la collection est masquée (pas encore recalculée).
+        monde = obj.matrix_basis if obj.parent is None else obj.matrix_world
+        mesh.transform(Matrix.Scale(CELL_M, 4) @ monde)
         copy = bpy.data.objects.new(obj.name, mesh)
         temp.objects.link(copy)
     return temp
 
 
-def export_glb(coll, folder) -> str:
-    """Exporte la collection en `folder/<nom>.glb` (mètres, Y haut)."""
+def export_glb(coll, folder, name=None) -> str:
+    """Exporte la collection en `folder/<name>.glb` (mètres, Y haut) ; `name` = nom de la collection par défaut."""
     temp = _export_copy(coll)
     for o in bpy.context.view_layer.objects:
         o.select_set(False)
     for o in temp.objects:
         o.select_set(True)
-    path = os.path.join(folder, coll.name + '.glb')
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, (name or coll.name) + '.glb')
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format='GLB',
