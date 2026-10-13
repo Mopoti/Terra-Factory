@@ -41,6 +41,7 @@ PALETTE = {
     'bois_sombre': '#5e4630',
     'braise': '#f0701e',
     'flamme': '#ffc93c',
+    'beton': '#9a958c',
     'verre': '#7fb7d4',
     'bois': '#8a6a45',
 }
@@ -117,6 +118,15 @@ def box(coll, name, size, loc, mat, bevel=0.0):
     return _object(coll, name, bm, mat)
 
 
+def _verse(tmp, bm):
+    """Ajoute le contenu du bmesh `tmp` dans `bm`, puis libère `tmp`."""
+    mesh = bpy.data.meshes.new('_tmp')
+    tmp.to_mesh(mesh)
+    tmp.free()
+    bm.from_mesh(mesh)
+    bpy.data.meshes.remove(mesh)
+
+
 class Lot:
     """Regroupe beaucoup de petites pièces par teinte : un objet par teinte au lieu d'un objet par pièce."""
 
@@ -125,6 +135,30 @@ class Lot:
 
     def cube(self, mat, size, loc, bevel=0.0, rot=None):
         _cube(self.bms.setdefault(mat, bmesh.new()), size, loc, bevel, rot)
+
+    def tube(self, mat, a, b, r, seg=8):
+        """Tube rond de rayon `r` du point `a` au point `b` (tuyaux)."""
+        a, b = Vector(a), Vector(b)
+        d = b - a
+        tmp = bmesh.new()
+        bmesh.ops.create_cone(tmp, cap_ends=True, segments=seg, radius1=r, radius2=r, depth=d.length)
+        bmesh.ops.rotate(tmp, cent=Vector((0, 0, 0)), matrix=Vector((0, 0, 1)).rotation_difference(d).to_matrix(), verts=tmp.verts)
+        bmesh.ops.translate(tmp, vec=(a + b) / 2, verts=tmp.verts)
+        _verse(tmp, self.bms.setdefault(mat, bmesh.new()))
+
+    def boule(self, mat, p, r):
+        """Petite sphère à facettes (coudes de tuyaux, rotules)."""
+        tmp = bmesh.new()
+        bmesh.ops.create_icosphere(tmp, subdivisions=1, radius=r)
+        bmesh.ops.translate(tmp, vec=Vector(p), verts=tmp.verts)
+        _verse(tmp, self.bms.setdefault(mat, bmesh.new()))
+
+    def barre(self, mat, a, b, ep, bevel=0.0):
+        """Pièce droite de section carrée `ep` allant du point `a` au point `b` (câble, tuyau, poutre)."""
+        a, b = Vector(a), Vector(b)
+        d = b - a
+        rot = Vector((1, 0, 0)).rotation_difference(d).to_matrix()
+        self.cube(mat, (d.length, ep, ep), (a + b) / 2, bevel, rot)
 
     def finir(self):
         for mat, bm in self.bms.items():
@@ -176,6 +210,47 @@ def cylinder(coll, name, radius, height, loc, mat, segments=12, radius_top=None)
     )
     bmesh.ops.translate(bm, vec=Vector(loc), verts=bm.verts)
     return _object(coll, name, bm, mat)
+
+
+def carre_arrondi(demi, rayon, z, n_coin=4):
+    """Points (x, y, z) d'un carré arrondi : demi-largeur `demi`, coins de rayon `rayon`, `n_coin` segments par coin."""
+    rayon = min(rayon, demi)
+    pts = []
+    for k, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
+        cx, cy = sx * (demi - rayon), sy * (demi - rayon)
+        for i in range(n_coin + 1):
+            a = math.radians(90 * k + 90 * i / n_coin)
+            pts.append((cx + rayon * math.cos(a), cy + rayon * math.sin(a), z))
+    return pts
+
+
+def lissage(coll, name, anneaux, mat, fond=False, dessus=True, n_coin=4):
+    """Forme lissée : empile des carrés arrondis `anneaux` = [(demi, rayon, z), ...] (de bas en haut) et les relie.
+
+    Sert aux dômes, cloches, socles aux angles arrondis. `fond` / `dessus` ferment le bas / le haut.
+    """
+    bm = bmesh.new()
+    rings = [[bm.verts.new(p) for p in carre_arrondi(d, r, z, n_coin)] for d, r, z in anneaux]
+    n = len(rings[0])
+    for a, b in zip(rings, rings[1:]):
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    if dessus:
+        bm.faces.new(rings[-1])
+    if fond:
+        bm.faces.new(list(reversed(rings[0])))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
+def cylinder_at(coll, name, radius, height, loc, mat, segments=12, radius_top=None, x=0.0, y=0.0, z=0.0):
+    """Cylindre tourné de (x, y, z) degrés autour de son propre centre, puis placé en `loc`."""
+    obj = cylinder(coll, name, radius, height, (0, 0, 0), mat, segments, radius_top)
+    rotate(obj, x, y, z)
+    obj.location = loc
+    return obj
 
 
 def rotate(obj, x=0.0, y=0.0, z=0.0):
