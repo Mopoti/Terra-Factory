@@ -16,6 +16,26 @@ export interface BakedModel {
   /** Dimensions (m) et position du plus bas coin avant mise à l'échelle. */
   size: { x: number; y: number; z: number };
   min: { x: number; y: number; z: number };
+  /** Parties animées à part (maillages dont le nom commence par un préfixe de `ANIMATED_MESHES`), absentes des tableaux ci-dessus. */
+  flames?: FlameParts;
+}
+
+/** Un maillage animé (une flamme) : plage de sommets dans `FlameParts` et son pied (point autour duquel il vacille). */
+export interface FlameGroup {
+  first: number;
+  count: number;
+  px: number;
+  py: number;
+  pz: number;
+}
+
+/** Maillages animés d'un modèle, dans le repère du modèle (mêmes unités et même origine que `BakedModel`). */
+export interface FlameParts {
+  positions: Float32Array;
+  colors: Float32Array;
+  /** Triangles, indices dans `positions` (sommets propres à cette partie). */
+  index: Uint32Array;
+  groups: FlameGroup[];
 }
 
 /** Modèle choisi pour chaque machine (les autres gardent leurs formes simples). */
@@ -55,6 +75,21 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   furnace: 'fourneau_t1',
 };
 
+/**
+ * Convention : dans un modèle maison, les maillages dont le NOM (ou celui d'un de leurs parents) commence par l'un de ces
+ * préfixes sont animés à part par le jeu (voir `FlameParts`) et ne font pas partie du corps fixe de la machine.
+ * Fourneau : `flamme_*` (cônes orange) et `coeur_*` (cœurs jaunes).
+ */
+export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = {
+  furnace: ['flamme', 'coeur'],
+};
+
+/** Préfixes animés du modèle de ce nom (machines qui l'utilisent dans `TERRA_MODELS`). */
+const prefixesOf = (name: string): string[] =>
+  (Object.keys(TERRA_MODELS) as MachineType[])
+    .filter((t) => TERRA_MODELS[t] === name)
+    .flatMap((t) => ANIMATED_MESHES[t] ?? []);
+
 /** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */
 export type BeltShape = 'straight' | 'corner';
 const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
@@ -72,8 +107,10 @@ const baked = new Map<string, BakedModel>();
 let loading: Promise<void> | null = null;
 
 export const modelFor = (type: MachineType): BakedModel | null => {
-  const name = TERRA_MODELS[type] ?? MACHINE_MODELS[type];
-  return name ? (baked.get(name) ?? null) : null;
+  // Le modèle maison s'il est chargé, sinon celui du kit (un .glb absent ou en échec ne laisse pas la machine nue).
+  const own = TERRA_MODELS[type];
+  const kit = MACHINE_MODELS[type];
+  return (own ? baked.get(own) : undefined) ?? (kit ? (baked.get(kit) ?? null) : null);
 };
 
 /** Enregistre un modèle déjà préparé (tests, ou modèle fabriqué ailleurs). */
@@ -104,15 +141,29 @@ function paletteOf(
   };
 }
 
-export function bake(root: THREE.Object3D): BakedModel | null {
+/** Le maillage ou l'un de ses parents porte-t-il un nom commençant par un des préfixes ? */
+function hasAnimatedName(obj: THREE.Object3D, prefixes: readonly string[]): boolean {
+  for (let o: THREE.Object3D | null = obj; o; o = o.parent) {
+    const n = o.name.toLowerCase();
+    if (n && prefixes.some((p) => n.startsWith(p))) return true;
+  }
+  return false;
+}
+
+export function bake(root: THREE.Object3D, animated: readonly string[] = []): BakedModel | null {
   const pos: number[] = [];
   const nor: number[] = [];
   const col: number[] = [];
   const idx: number[] = [];
+  const fPos: number[] = [];
+  const fCol: number[] = [];
+  const fIdx: number[] = [];
+  const groups: FlameGroup[] = [];
   root.updateMatrixWorld(true);
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
+    const flame = animated.length > 0 && hasAnimatedName(mesh, animated);
     const g = mesh.geometry as THREE.BufferGeometry;
     const p = g.getAttribute('position');
     const n = g.getAttribute('normal');
@@ -121,45 +172,69 @@ export function bake(root: THREE.Object3D): BakedModel | null {
       Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
     ) as THREE.MeshStandardMaterial;
     const palette = paletteOf(material.map);
-    const base = pos.length / 3;
+    const tPos = flame ? fPos : pos;
+    const tCol = flame ? fCol : col;
+    const tIdx = flame ? fIdx : idx;
+    const base = tPos.length / 3;
     const v = new THREE.Vector3();
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
     for (let i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i).applyMatrix4(mesh.matrixWorld);
-      pos.push(v.x, v.y, v.z);
-      if (n) {
-        v.fromBufferAttribute(n, i).applyMatrix3(normalMatrix).normalize();
-        nor.push(v.x, v.y, v.z);
-      } else nor.push(0, 1, 0);
+      tPos.push(v.x, v.y, v.z);
+      if (!flame) {
+        if (n) {
+          v.fromBufferAttribute(n, i).applyMatrix3(normalMatrix).normalize();
+          nor.push(v.x, v.y, v.z);
+        } else nor.push(0, 1, 0);
+      }
       if (palette && uv) {
         const x = Math.min(palette.w - 1, Math.max(0, Math.floor(uv.getX(i) * palette.w)));
         const y = Math.min(palette.h - 1, Math.max(0, Math.floor(uv.getY(i) * palette.h)));
         const k = (y * palette.w + x) * 4;
         // La palette est en sRGB ; les couleurs de sommet sont lues comme linéaires : on convertit pour garder les teintes.
-        col.push(
+        tCol.push(
           (palette.data[k] / 255) ** 2.2,
           (palette.data[k + 1] / 255) ** 2.2,
           (palette.data[k + 2] / 255) ** 2.2,
         );
-      } else if (material.color) col.push(material.color.r, material.color.g, material.color.b);
-      else col.push(0.6, 0.6, 0.7);
+      } else if (material.color) tCol.push(material.color.r, material.color.g, material.color.b);
+      else tCol.push(0.6, 0.6, 0.7);
     }
     const ix = g.getIndex();
-    if (ix) for (let i = 0; i < ix.count; i++) idx.push(base + ix.getX(i));
-    else for (let i = 0; i < p.count; i++) idx.push(base + i);
+    if (ix) for (let i = 0; i < ix.count; i++) tIdx.push(base + ix.getX(i));
+    else for (let i = 0; i < p.count; i++) tIdx.push(base + i);
+    if (flame) {
+      // Pied de la flamme : centre de son emprise, au plus bas.
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let z0 = Infinity;
+      let z1 = -Infinity;
+      let y0 = Infinity;
+      for (let i = base; i < base + p.count; i++) {
+        x0 = Math.min(x0, fPos[i * 3]);
+        x1 = Math.max(x1, fPos[i * 3]);
+        y0 = Math.min(y0, fPos[i * 3 + 1]);
+        z0 = Math.min(z0, fPos[i * 3 + 2]);
+        z1 = Math.max(z1, fPos[i * 3 + 2]);
+      }
+      groups.push({ first: base, count: p.count, px: (x0 + x1) / 2, py: y0, pz: (z0 + z1) / 2 });
+    }
   });
-  if (pos.length === 0) return null;
+  if (pos.length === 0 && fPos.length === 0) return null;
+  // L'enveloppe couvre tout le modèle, flammes comprises : l'échelle dans le jeu reste celle voulue par l'auteur.
   const min = { x: Infinity, y: Infinity, z: Infinity };
   const max = { x: -Infinity, y: -Infinity, z: -Infinity };
-  for (let i = 0; i < pos.length; i += 3) {
-    min.x = Math.min(min.x, pos[i]);
-    max.x = Math.max(max.x, pos[i]);
-    min.y = Math.min(min.y, pos[i + 1]);
-    max.y = Math.max(max.y, pos[i + 1]);
-    min.z = Math.min(min.z, pos[i + 2]);
-    max.z = Math.max(max.z, pos[i + 2]);
+  for (const list of [pos, fPos]) {
+    for (let i = 0; i < list.length; i += 3) {
+      min.x = Math.min(min.x, list[i]);
+      max.x = Math.max(max.x, list[i]);
+      min.y = Math.min(min.y, list[i + 1]);
+      max.y = Math.max(max.y, list[i + 1]);
+      min.z = Math.min(min.z, list[i + 2]);
+      max.z = Math.max(max.z, list[i + 2]);
+    }
   }
-  return {
+  const model: BakedModel = {
     positions: new Float32Array(pos),
     normals: new Float32Array(nor),
     colors: new Float32Array(col),
@@ -167,6 +242,14 @@ export function bake(root: THREE.Object3D): BakedModel | null {
     size: { x: max.x - min.x, y: max.y - min.y, z: max.z - min.z },
     min,
   };
+  if (groups.length > 0)
+    model.flames = {
+      positions: new Float32Array(fPos),
+      colors: new Float32Array(fCol),
+      index: new Uint32Array(fIdx),
+      groups,
+    };
+  return model;
 }
 
 /** Charge (une seule fois) les modèles utilisés ; les échecs sont ignorés : la machine garde sa forme simple. */
@@ -183,7 +266,7 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
           loader.load(
             `${baseUrl}models/${folder}/${name}.glb`,
             (gltf) => {
-              const model = bake(gltf.scene);
+              const model = bake(gltf.scene, prefixesOf(name));
               if (model) baked.set(name, model);
               resolve();
             },

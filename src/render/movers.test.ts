@@ -57,4 +57,49 @@ describe('modèles articulés', () => {
     expect(Math.abs(armMover.mesh.rotation.y)).toBeLessThan(0.01);
     view.dispose();
   });
+
+  it('les flammes du fourneau vacillent quand il brûle, se réduisent à l’arrêt et se cachent sans combustible', () => {
+    const model = block();
+    model.flames = {
+      positions: new Float32Array([0.4, 0, 0.4, 0.6, 0, 0.4, 0.5, 0.6, 0.4]),
+      colors: new Float32Array(9).fill(1),
+      index: new Uint32Array([0, 1, 2]),
+      groups: [{ first: 0, count: 3, px: 0.5, py: 0, pz: 0.4 }],
+    };
+    registerModel(MACHINE_MODELS.furnace as string, model);
+    const f = emptyMachine(1, 'furnace', 0, 0, 0);
+    f.recipe = 'copper';
+    f.fuel = { item: 'wood', count: 5 };
+    f.slots.push({ item: 'copper_ore', count: 5 });
+    const factory = new Factory([f], world);
+    const view = new FactoryView(new THREE.Scene(), factory);
+    const flames = (view as unknown as { flameList: { mesh: THREE.Mesh; level: number }[] })
+      .flameList;
+    expect(flames).toHaveLength(1);
+    const tops: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      factory.tick(0.05);
+      view.updateFlames(i * 0.05);
+      const pos = flames[0].mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      tops.push(pos.getY(2));
+    }
+    expect(flames[0].mesh.visible).toBe(true);
+    expect(Math.max(...tops) - Math.min(...tops)).toBeGreaterThan(0.02); // ça vacille
+    // Sans combustible ni travail : cachées.
+    f.fuel = null;
+    f.fuelLeft = 0;
+    f.slots.length = 0;
+    for (let i = 0; i < 80; i++) view.updateFlames(3 + i * 0.05);
+    expect(flames[0].mesh.visible).toBe(false);
+    // Loin du joueur : pas de mise à jour.
+    f.fuel = { item: 'wood', count: 5 };
+    const before = (
+      flames[0].mesh.geometry.getAttribute('position') as THREE.BufferAttribute
+    ).array.slice();
+    view.updateFlames(10, { x: 500, z: 500 });
+    expect(Array.from(flames[0].mesh.geometry.getAttribute('position').array)).toEqual(
+      Array.from(before),
+    );
+    view.dispose();
+  });
 });

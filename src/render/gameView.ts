@@ -3205,6 +3205,7 @@ export function startGameView(
     else threat.deaths.length = 0;
     factoryView.updateSmoke(now / 1000);
     factoryView.updateMovers(now / 1000);
+    factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
     enemyView.update(
       threat.enemies,
       (e) => {
