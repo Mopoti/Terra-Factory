@@ -115,3 +115,49 @@ describe('parties animées (flamme_*, coeur_*)', () => {
     }
   });
 });
+
+describe('groupes mobiles (pivot_*)', () => {
+  const named = (name: string, y = 0): THREE.Mesh => {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.2, 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x888888 }),
+    );
+    m.name = name;
+    m.position.y = y;
+    return m;
+  };
+  const scene = (): THREE.Group => {
+    const g = new THREE.Group();
+    g.add(named('socle', 0.1));
+    g.add(named('foret_mandrin003', 0.5));
+    g.add(named('foret_pointe', 0.3));
+    g.add(named('foretage', 0.2)); // ressemble, mais n'est pas du groupe
+    g.add(named('poulie_boite', 0.9));
+    const pivot = new THREE.Object3D();
+    pivot.name = 'pivot_foret002';
+    pivot.position.set(0.1, 0.4, 0.2);
+    pivot.rotation.z = Math.PI / 2; // son axe Y local pointe alors vers −X
+    g.add(pivot);
+    return g;
+  };
+
+  it('sort les groupes du corps fixe et lit leur pivot et leur axe', () => {
+    const model = bake(scene(), [], ['foret', 'poulie_boite']) as BakedModel;
+    expect(Object.keys(model.groups ?? {}).sort()).toEqual(['foret', 'poulie_boite']);
+    const foret = model.groups?.foret;
+    expect(foret?.index.length).toBe(2 * 36); // deux boîtes de 12 triangles x 3
+    expect(foret?.pivot).toMatchObject({ x: 0.1, y: 0.4, z: 0.2 });
+    expect(foret?.axis.x).toBeCloseTo(-1, 5);
+    // Le corps garde le socle et « foretage », rien d'autre.
+    expect(model.index.length / 3).toBe(2 * 12);
+    // Sans nœud pivot : centre des pièces, axe vertical.
+    expect(model.groups?.poulie_boite.axis).toMatchObject({ x: 0, y: 1, z: 0 });
+    expect(model.groups?.poulie_boite.pivot.y).toBeCloseTo(0.9, 5);
+  });
+
+  it('sans noms de groupes, le modèle est inchangé', () => {
+    const a = bake(scene()) as BakedModel;
+    expect(a.groups).toBeUndefined();
+    expect(a.index.length / 3).toBe(5 * 12);
+  });
+});

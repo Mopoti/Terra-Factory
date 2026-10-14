@@ -1,4 +1,19 @@
-import { animatedParts, beltModel, modelFor, type AnimKind, type BeltShape } from './models';
+import {
+  animatedParts,
+  beltModel,
+  modelFor,
+  type AnimKind,
+  type BakedModel,
+  type BeltShape,
+} from './models';
+import {
+  MOTIONS,
+  poseOf,
+  ROCKER_DEFAULT,
+  rockerPose,
+  type Motion,
+  type RockerGeometry,
+} from './partMotions';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
@@ -58,6 +73,74 @@ interface FlameInstance {
   groups: { first: number; count: number; px: number; py: number; pz: number }[];
   /** Intensité lissée : 1 pleine, 0,2 braises, 0 éteinte. */
   level: number;
+}
+
+/**
+ * Place un modèle comme `addMachineBody` : recentré, mis à l'échelle de l'emprise et de la hauteur de la machine, tourné
+ * de quarts de tour. `place` transforme un point du modèle, `turn` une direction, `scale` est l'échelle du modèle.
+ */
+function placementOf(
+  m: Machine,
+  model: BakedModel,
+): {
+  w: number;
+  d: number;
+  scale: number;
+  place: (x: number, y: number, z: number) => [number, number, number];
+  turn: (x: number, y: number, z: number) => [number, number, number];
+} {
+  const def = machineDef(m.type);
+  const { w, d } = dims(m.type, m.rot);
+  const odd = m.rot % 2 === 1;
+  const sizeX = odd ? model.size.z : model.size.x;
+  const sizeZ = odd ? model.size.x : model.size.z;
+  const scale = Math.min(
+    (w * CELL_SIZE_M - 0.06) / sizeX,
+    (d * CELL_SIZE_M - 0.06) / sizeZ,
+    (def.height * 1.3) / model.size.y,
+  );
+  const a = (MODEL_TURNS[m.rot % 4] * Math.PI) / 2;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  const cx = model.min.x + model.size.x / 2;
+  const cz = model.min.z + model.size.z / 2;
+  // Même transformation que `MeshBuilder.model` : recentrage, échelle, quarts de tour autour de la verticale.
+  const place = (x: number, y: number, z: number): [number, number, number] => {
+    const px = (x - cx) * scale;
+    const pz = (z - cz) * scale;
+    return [px * cos + pz * sin, (y - model.min.y) * scale, -px * sin + pz * cos];
+  };
+  const turn = (x: number, y: number, z: number): [number, number, number] => [
+    x * cos + z * sin,
+    y,
+    -x * sin + z * cos,
+  ];
+  return { w, d, scale, place, turn };
+}
+
+interface PartItem {
+  name: string;
+  mesh: THREE.Mesh;
+  motion: Motion;
+  parent?: string;
+  /** Pivot et axe dans le repère du jeu (déjà tournés et mis à l'échelle), et axe dans le repère du modèle. */
+  pivot: THREE.Vector3;
+  axis: THREE.Vector3;
+  modelAxis: { x: number; y: number; z: number };
+  spin: number;
+}
+
+interface PartMachine {
+  m: Machine;
+  items: PartItem[];
+  scale: number;
+  turn: (x: number, y: number, z: number) => [number, number, number];
+  /** Intensité lissée (0 à 1) et secondes de marche cumulées. */
+  level: number;
+  phase: number;
+  crank: number;
+  rocker: number;
+  rockerGeometry?: RockerGeometry;
 }
 
 function geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
@@ -238,6 +321,7 @@ export class FactoryView {
       this.smoke,
       this.movers,
       this.flames,
+      this.parts,
       this.flags,
     );
     scene.add(this.root, this.ghost);
@@ -289,6 +373,7 @@ export class FactoryView {
         );
         if (parts) this.addMover(m, parts);
         this.addFlames(m);
+        this.addParts(m);
         if (!modelFor(m.type)) growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
@@ -392,6 +477,12 @@ export class FactoryView {
       f.mesh.geometry.dispose();
     }
     this.flameList = [];
+    for (const p of this.partList)
+      for (const i of p.items) {
+        this.parts.remove(i.mesh);
+        i.mesh.geometry.dispose();
+      }
+    this.partList = [];
   }
 
   /** Flammes animées des modèles qui en ont (maillages `flamme_*` / `coeur_*`) : un seul objet par machine. */
@@ -403,27 +494,7 @@ export class FactoryView {
     const model = modelFor(m.type);
     const parts = model?.flames;
     if (!model || !parts) return;
-    const def = machineDef(m.type);
-    const { w, d } = dims(m.type, m.rot);
-    const odd = m.rot % 2 === 1;
-    const sizeX = odd ? model.size.z : model.size.x;
-    const sizeZ = odd ? model.size.x : model.size.z;
-    const scale = Math.min(
-      (w * CELL_SIZE_M - 0.06) / sizeX,
-      (d * CELL_SIZE_M - 0.06) / sizeZ,
-      (def.height * 1.3) / model.size.y,
-    );
-    const a = (MODEL_TURNS[m.rot % 4] * Math.PI) / 2;
-    const cos = Math.cos(a);
-    const sin = Math.sin(a);
-    const cx = model.min.x + model.size.x / 2;
-    const cz = model.min.z + model.size.z / 2;
-    // Même transformation que `MeshBuilder.model` : recentrage, échelle, quarts de tour autour de la verticale.
-    const place = (x: number, y: number, z: number): [number, number, number] => {
-      const px = (x - cx) * scale;
-      const pz = (z - cz) * scale;
-      return [px * cos + pz * sin, (y - model.min.y) * scale, -px * sin + pz * cos];
-    };
+    const { w, d, place } = placementOf(m, model);
     const base = new Float32Array(parts.positions.length);
     for (let i = 0; i < base.length; i += 3) {
       const p = place(parts.positions[i], parts.positions[i + 1], parts.positions[i + 2]);
@@ -496,6 +567,160 @@ export class FactoryView {
     }
   }
   private flameTime = 0;
+
+  /** Pièces mobiles des modèles maison (voir `partMotions.ts`) : un objet par groupe et par machine. */
+  private readonly parts = new THREE.Group();
+  private partList: PartMachine[] = [];
+  private partTime = 0;
+
+  /** Sort du corps fixe les groupes mobiles d'une machine et les pose, chacun dans son objet, autour de son pivot. */
+  private addParts(m: Machine): void {
+    const model = modelFor(m.type);
+    const motions = MOTIONS[m.type];
+    if (!model?.groups || !motions) return;
+    const { w, d, scale, place, turn } = placementOf(m, model);
+    const tint = hexToRgb(machineDef(m.type).color);
+    const origin: [number, number, number] = [
+      (m.gx + w / 2) * CELL_SIZE_M,
+      levelY(m.lift),
+      (m.gz + d / 2) * CELL_SIZE_M,
+    ];
+    const machine: PartMachine = {
+      m,
+      items: [],
+      scale,
+      turn,
+      level: 0,
+      phase: 0,
+      crank: 0,
+      rocker: 0,
+    };
+    for (const [name, group] of Object.entries(model.groups)) {
+      const motion = motions[name];
+      if (!motion) continue;
+      const pivot = place(group.pivot.x, group.pivot.y, group.pivot.z);
+      const pos = new Float32Array(group.positions.length);
+      const nor = new Float32Array(group.normals.length);
+      const col = new Float32Array(group.colors.length);
+      for (let i = 0; i < pos.length; i += 3) {
+        const p = place(group.positions[i], group.positions[i + 1], group.positions[i + 2]);
+        pos[i] = p[0] - pivot[0];
+        pos[i + 1] = p[1] - pivot[1];
+        pos[i + 2] = p[2] - pivot[2];
+        nor.set(turn(group.normals[i], group.normals[i + 1], group.normals[i + 2]), i);
+        // Même teinte légère que le corps de la machine.
+        col[i] = group.colors[i] + (tint.r - group.colors[i]) * 0.12;
+        col[i + 1] = group.colors[i + 1] + (tint.g - group.colors[i + 1]) * 0.12;
+        col[i + 2] = group.colors[i + 2] + (tint.b - group.colors[i + 2]) * 0.12;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geometry.setIndex(new THREE.BufferAttribute(group.index, 1));
+      const mesh = new THREE.Mesh(geometry, propsMaterial);
+      mesh.castShadow = true;
+      mesh.position.set(origin[0] + pivot[0], origin[1] + pivot[1], origin[2] + pivot[2]);
+      this.parts.add(mesh);
+      const axis = turn(group.axis.x, group.axis.y, group.axis.z);
+      machine.items.push({
+        name,
+        mesh,
+        motion,
+        parent: motion.parent,
+        pivot: new THREE.Vector3(origin[0] + pivot[0], origin[1] + pivot[1], origin[2] + pivot[2]),
+        axis: new THREE.Vector3(...axis).normalize(),
+        modelAxis: group.axis,
+        spin: 0,
+      });
+    }
+    if (machine.items.length === 0) return;
+    // Les pièces portées passent après celles qui les portent.
+    const depth = (i: PartItem): number =>
+      i.parent ? 1 + depth(machine.items.find((x) => x.name === i.parent) ?? i) : 0;
+    machine.items.sort((a, b) => depth(a) - depth(b));
+    const g = model.groups;
+    if (g.balancier && g.manivelle && g.bielle && g.tige) {
+      // Chevalet : plan (u = devant, v = haut) relevé sur les pivots du modèle, origine au palier du balancier.
+      const b = g.balancier.pivot;
+      // Bas des bielles = maneton au repos : moyenne des sommets les plus bas du groupe.
+      const bp = g.bielle.positions;
+      let low = Infinity;
+      for (let i = 1; i < bp.length; i += 3) low = Math.min(low, bp[i]);
+      let pz = 0;
+      let py = 0;
+      let n = 0;
+      for (let i = 0; i < bp.length; i += 3)
+        if (bp[i + 1] < low + 0.03) {
+          pz += bp[i + 2];
+          py += bp[i + 1];
+          n++;
+        }
+      const pin = { u: pz / n - b.z, v: py / n - b.y };
+      const crank = { u: g.manivelle.pivot.z - b.z, v: g.manivelle.pivot.y - b.y };
+      machine.rockerGeometry = {
+        ...ROCKER_DEFAULT,
+        radius: Math.hypot(pin.u - crank.u, pin.v - crank.v),
+        beta0: Math.atan2(pin.v - crank.v, pin.u - crank.u),
+        crank,
+        top: { u: g.bielle.pivot.z - b.z, v: g.bielle.pivot.y - b.y },
+        cable: Math.abs(g.tige.pivot.z - b.z),
+      };
+    }
+    this.partList.push(machine);
+  }
+
+  /**
+   * Anime les pièces mobiles (appelée à chaque image, `time` en secondes) : elles bougent tant que la machine travaille et
+   * s'arrêtent en douceur sinon. Seules les matrices des objets changent ; machines à plus de `range` m de `near` ignorées.
+   */
+  updateParts(time: number, near?: { x: number; z: number }, range = 70): void {
+    const dt = Math.min(0.1, Math.max(0, time - this.partTime));
+    this.partTime = time;
+    for (const p of this.partList) {
+      const first = p.items[0].mesh;
+      if (near && Math.hypot(first.position.x - near.x, first.position.z - near.z) > range)
+        continue;
+      const running = this.factory.status(p.m) === 'running';
+      p.level += ((running ? 1 : 0) - p.level) * Math.min(1, dt * 4);
+      p.phase += dt * p.level;
+      const cycle = this.factory.cycleFraction(p.m);
+      const offsets = new Map<string, THREE.Vector3>();
+      let rocker: ReturnType<typeof rockerPose> | undefined;
+      if (p.rockerGeometry) {
+        p.crank += dt * p.level * 1.3;
+        rocker = rockerPose(p.rockerGeometry, p.crank, p.rocker);
+        p.rocker = rocker.rocker;
+      }
+      for (const i of p.items) {
+        const motion = i.motion;
+        let angle = 0;
+        let off = new THREE.Vector3();
+        if (motion.kind === 'rocker' && rocker) {
+          // Le modèle se lit en (x, y haut, z devant) ; la cinématique en (u = devant, v = haut).
+          if (motion.role === 'manivelle') angle = rocker.crank;
+          else if (motion.role === 'balancier') angle = rocker.rocker;
+          else if (motion.role === 'tige') off = new THREE.Vector3(...p.turn(0, -rocker.rod, 0));
+          else {
+            angle = rocker.link;
+            off = new THREE.Vector3(...p.turn(0, rocker.topV, rocker.topU));
+          }
+        } else {
+          if (motion.kind === 'spin') i.spin += motion.speed * dt * p.level;
+          const pose = poseOf(motion, p.phase, i.spin, cycle, i.modelAxis);
+          angle = pose.angle;
+          off = new THREE.Vector3(...p.turn(pose.dx, pose.dy, pose.dz));
+        }
+        off.multiplyScalar(p.scale);
+        // Une pièce portée par une autre (chariot sur portique…) suit son déplacement total.
+        const carried = i.parent ? offsets.get(i.parent) : undefined;
+        if (carried) off.add(carried);
+        offsets.set(i.name, off);
+        i.mesh.position.copy(i.pivot).add(off);
+        i.mesh.quaternion.setFromAxisAngle(i.axis, angle);
+      }
+    }
+  }
 
   /** Crée l'objet mobile (partie haute) d'une machine articulée, posé à l'emplacement de la machine. */
   private addMover(

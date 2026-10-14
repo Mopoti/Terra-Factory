@@ -102,4 +102,46 @@ describe('modèles articulés', () => {
     );
     view.dispose();
   });
+
+  it('les pièces mobiles d’un modèle maison tournent en marche et s’arrêtent en douceur', () => {
+    const model = block();
+    model.groups = {
+      foret: {
+        positions: new Float32Array([0.4, 0, 0.4, 0.6, 0, 0.4, 0.5, 0.6, 0.4]),
+        normals: new Float32Array(9).fill(0.5),
+        colors: new Float32Array(9).fill(0.5),
+        index: new Uint32Array([0, 1, 2]),
+        pivot: { x: 0.5, y: 0, z: 0.5 },
+        axis: { x: 0, y: 1, z: 0 },
+      },
+    };
+    registerModel('foreuse_t1', model);
+    const drill = emptyMachine(1, 'drill', 0, 0, 0);
+    const factory = new Factory([drill], world);
+    let state: 'running' | 'idle' = 'running';
+    factory.status = () => state;
+    const view = new FactoryView(new THREE.Scene(), factory);
+    const parts = (
+      view as unknown as { partList: { items: { mesh: THREE.Mesh }[]; level: number }[] }
+    ).partList;
+    expect(parts).toHaveLength(1);
+    const mesh = parts[0].items[0].mesh;
+    const angleOf = (): number => 2 * Math.acos(Math.min(1, Math.abs(mesh.quaternion.w)));
+    for (let i = 0; i < 40; i++) view.updateParts(i * 0.05);
+    const turned = angleOf();
+    expect(parts[0].level).toBeGreaterThan(0.9);
+    // L'angle accumulé (en rad) a bien grandi : 2 s à pleine vitesse = plus d'un demi-tour.
+    expect(turned).toBeGreaterThan(0);
+    state = 'idle';
+    for (let i = 0; i < 200; i++) view.updateParts(2 + i * 0.05);
+    const stopped = angleOf();
+    for (let i = 0; i < 20; i++) view.updateParts(12 + i * 0.05);
+    expect(angleOf()).toBeCloseTo(stopped, 6); // à l'arrêt, plus de mouvement
+    // Loin du joueur : pas de mise à jour.
+    state = 'running';
+    const before = mesh.quaternion.clone();
+    view.updateParts(20, { x: 900, z: 900 });
+    expect(mesh.quaternion.equals(before)).toBe(true);
+    view.dispose();
+  });
 });

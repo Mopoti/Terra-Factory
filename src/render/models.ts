@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { MachineType } from '../core/data/machines';
+import { motionGroups } from './partMotions';
 
 export interface BakedModel {
   positions: Float32Array;
@@ -18,6 +19,19 @@ export interface BakedModel {
   min: { x: number; y: number; z: number };
   /** Parties animées à part (maillages dont le nom commence par un préfixe de `ANIMATED_MESHES`), absentes des tableaux ci-dessus. */
   flames?: FlameParts;
+  /** Groupes de pièces mobiles (`MOTIONS` dans `partMotions.ts`), absents des tableaux ci-dessus, par nom de groupe. */
+  groups?: Record<string, PartGroup>;
+}
+
+/** Pièces d'un groupe mobile : maillage propre (repère du modèle) et pivot lu dans le nœud `pivot_<groupe>` du `.glb`. */
+export interface PartGroup {
+  positions: Float32Array;
+  normals: Float32Array;
+  colors: Float32Array;
+  index: Uint32Array;
+  pivot: { x: number; y: number; z: number };
+  /** Axe de rotation (ou de glissement) : l'axe Y local du nœud pivot. */
+  axis: { x: number; y: number; z: number };
 }
 
 /** Un maillage animé (une flamme) : plage de sommets dans `FlameParts` et son pied (point autour duquel il vacille). */
@@ -77,6 +91,9 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   furnace: 'fourneau_t1',
   furnace_electric: 'fourneau_electrique_t2',
   pumpjack: 'chevalet_t2',
+  arm: 'bras_t1',
+  arm_electric: 'bras_t2',
+  arm_filter: 'bras_t3',
   stamper: 'estampeuse_t1',
   assembler: 'assembleur_t2',
   crusher: 'concasseur_t1',
@@ -98,6 +115,7 @@ export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = 
   furnace: ['flamme', 'coeur'],
   bessemer: ['flamme', 'coeur'],
   refinery: ['flamme', 'coeur'],
+  washer: ['jet', 'ruissellement'],
 };
 
 /** Préfixes animés du modèle de ce nom (machines qui l'utilisent dans `TERRA_MODELS`). */
@@ -105,6 +123,12 @@ const prefixesOf = (name: string): string[] =>
   (Object.keys(TERRA_MODELS) as MachineType[])
     .filter((t) => TERRA_MODELS[t] === name)
     .flatMap((t) => ANIMATED_MESHES[t] ?? []);
+
+/** Groupes mobiles du modèle de ce nom (voir `MOTIONS`). */
+const groupsOf = (name: string): string[] =>
+  (Object.keys(TERRA_MODELS) as MachineType[])
+    .filter((t) => TERRA_MODELS[t] === name)
+    .flatMap((t) => motionGroups(t));
 
 /**
  * Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). Le coude existe
@@ -122,11 +146,12 @@ const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
  * celui du kit. Mêmes conventions que le kit : tuile de 1 m, dessus à `BELT_H` (20 cm), le droit circule vers +x, le
  * coude relie les côtés −x et +z. Leurs lames en flèche montrent le sens du tapis.
  */
-const TERRA_BELT_MODELS: Record<BeltShape, readonly [string | null, string | null, string | null]> = {
-  straight: ['convoyeur_t1', null, null],
-  corner: ['convoyeur_virage_t1', null, null],
-  cornerBack: ['convoyeur_virage_inverse_t1', null, null],
-};
+const TERRA_BELT_MODELS: Record<BeltShape, readonly [string | null, string | null, string | null]> =
+  {
+    straight: ['convoyeur_t1', null, null],
+    corner: ['convoyeur_virage_t1', null, null],
+    cornerBack: ['convoyeur_virage_inverse_t1', null, null],
+  };
 export const beltModel = (shape: BeltShape, tier: number): BakedModel | null => {
   const t = Math.max(0, Math.min(2, tier - 1));
   const own = TERRA_BELT_MODELS[shape][t];
@@ -191,7 +216,19 @@ function hasAnimatedName(obj: THREE.Object3D, prefixes: readonly string[]): bool
   return false;
 }
 
-export function bake(root: THREE.Object3D, animated: readonly string[] = []): BakedModel | null {
+/** Le maillage appartient-il à ce groupe ? (`foret`, `foret_mandrin`, `foret_mandrin003`… ; pas `foretage`) */
+function inGroup(name: string, group: string): boolean {
+  const n = name.toLowerCase();
+  if (!n.startsWith(group)) return false;
+  const rest = n.slice(group.length);
+  return rest === '' || rest[0] === '_' || /^\d+$/.test(rest);
+}
+
+export function bake(
+  root: THREE.Object3D,
+  animated: readonly string[] = [],
+  groupNames: readonly string[] = [],
+): BakedModel | null {
   const pos: number[] = [];
   const nor: number[] = [];
   const col: number[] = [];
@@ -201,10 +238,31 @@ export function bake(root: THREE.Object3D, animated: readonly string[] = []): Ba
   const fIdx: number[] = [];
   const groups: FlameGroup[] = [];
   root.updateMatrixWorld(true);
+  // Pivots : nœuds `pivot_<groupe>` (le chargeur retire les points des noms, l'exporteur ajoute parfois « 002 »).
+  const pivots = new Map<string, { pivot: THREE.Vector3; axis: THREE.Vector3 }>();
+  root.traverse((o) => {
+    if (!o.name.toLowerCase().startsWith('pivot_')) return;
+    const key = o.name
+      .toLowerCase()
+      .slice(6)
+      .replace(/\d{3}$/, '');
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    o.matrixWorld.decompose(p, q, new THREE.Vector3());
+    pivots.set(key, { pivot: p, axis: new THREE.Vector3(0, 1, 0).applyQuaternion(q) });
+  });
+  const byLength = [...groupNames].sort((a, b) => b.length - a.length);
+  const parts = new Map<string, { pos: number[]; nor: number[]; col: number[]; idx: number[] }>();
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const flame = animated.length > 0 && hasAnimatedName(mesh, animated);
+    const group = flame ? undefined : byLength.find((g) => inGroup(mesh.name, g));
+    let part = group ? parts.get(group) : undefined;
+    if (group && !part) {
+      part = { pos: [], nor: [], col: [], idx: [] };
+      parts.set(group, part);
+    }
     const g = mesh.geometry as THREE.BufferGeometry;
     const p = g.getAttribute('position');
     const n = g.getAttribute('normal');
@@ -213,9 +271,10 @@ export function bake(root: THREE.Object3D, animated: readonly string[] = []): Ba
       Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
     ) as THREE.MeshStandardMaterial;
     const palette = paletteOf(material.map);
-    const tPos = flame ? fPos : pos;
-    const tCol = flame ? fCol : col;
-    const tIdx = flame ? fIdx : idx;
+    const tPos = flame ? fPos : (part?.pos ?? pos);
+    const tCol = flame ? fCol : (part?.col ?? col);
+    const tIdx = flame ? fIdx : (part?.idx ?? idx);
+    const tNor = part?.nor ?? nor;
     const base = tPos.length / 3;
     const v = new THREE.Vector3();
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
@@ -225,8 +284,8 @@ export function bake(root: THREE.Object3D, animated: readonly string[] = []): Ba
       if (!flame) {
         if (n) {
           v.fromBufferAttribute(n, i).applyMatrix3(normalMatrix).normalize();
-          nor.push(v.x, v.y, v.z);
-        } else nor.push(0, 1, 0);
+          tNor.push(v.x, v.y, v.z);
+        } else tNor.push(0, 1, 0);
       }
       if (palette && uv) {
         const x = Math.min(palette.w - 1, Math.max(0, Math.floor(uv.getX(i) * palette.w)));
@@ -261,11 +320,11 @@ export function bake(root: THREE.Object3D, animated: readonly string[] = []): Ba
       groups.push({ first: base, count: p.count, px: (x0 + x1) / 2, py: y0, pz: (z0 + z1) / 2 });
     }
   });
-  if (pos.length === 0 && fPos.length === 0) return null;
+  if (pos.length === 0 && fPos.length === 0 && parts.size === 0) return null;
   // L'enveloppe couvre tout le modèle, flammes comprises : l'échelle dans le jeu reste celle voulue par l'auteur.
   const min = { x: Infinity, y: Infinity, z: Infinity };
   const max = { x: -Infinity, y: -Infinity, z: -Infinity };
-  for (const list of [pos, fPos]) {
+  for (const list of [pos, fPos, ...[...parts.values()].map((x) => x.pos)]) {
     for (let i = 0; i < list.length; i += 3) {
       min.x = Math.min(min.x, list[i]);
       max.x = Math.max(max.x, list[i]);
@@ -283,6 +342,30 @@ export function bake(root: THREE.Object3D, animated: readonly string[] = []): Ba
     size: { x: max.x - min.x, y: max.y - min.y, z: max.z - min.z },
     min,
   };
+  if (parts.size > 0) {
+    model.groups = {};
+    for (const [name, g] of parts) {
+      // Sans nœud pivot, le groupe tourne autour du centre de ses pièces, axe vertical.
+      let found = pivots.get(name);
+      if (!found) {
+        const c = new THREE.Vector3();
+        for (let i = 0; i < g.pos.length; i += 3)
+          c.add(new THREE.Vector3(g.pos[i], g.pos[i + 1], g.pos[i + 2]));
+        found = {
+          pivot: c.multiplyScalar(3 / Math.max(1, g.pos.length)),
+          axis: new THREE.Vector3(0, 1, 0),
+        };
+      }
+      model.groups[name] = {
+        positions: new Float32Array(g.pos),
+        normals: new Float32Array(g.nor),
+        colors: new Float32Array(g.col),
+        index: new Uint32Array(g.idx),
+        pivot: { x: found.pivot.x, y: found.pivot.y, z: found.pivot.z },
+        axis: { x: found.axis.x, y: found.axis.y, z: found.axis.z },
+      };
+    }
+  }
   if (groups.length > 0)
     model.flames = {
       positions: new Float32Array(fPos),
@@ -307,7 +390,7 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
           loader.load(
             `${baseUrl}models/${folder}/${name}.glb`,
             (gltf) => {
-              const model = bake(gltf.scene, prefixesOf(name));
+              const model = bake(gltf.scene, prefixesOf(name), groupsOf(name));
               if (model) baked.set(name, model);
               resolve();
             },
