@@ -387,7 +387,7 @@
     },
     {
       "id": "pumpjack",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_pumpjack",
       "color": "#3a3f47",
@@ -396,7 +396,7 @@
       "fluidCap": 200,
       "startBar": 4,
       "pumpRate": 1,
-      "height": 2.0
+      "height": 3.0
     },
     {
       "id": "refinery",

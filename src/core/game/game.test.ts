@@ -756,7 +756,7 @@ describe('anciennes parties : emprises des machines', () => {
     // une partie déjà à la nouvelle version n'est pas touchée
     const t = new GameState({
       inventory: {},
-      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 4 },
+      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 5 },
     });
     expect(t.changes.machines[0]).toMatchObject({ gx: 5, gz: 7 });
   });

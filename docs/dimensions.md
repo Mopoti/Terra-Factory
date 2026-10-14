@@ -53,3 +53,8 @@ Une « case » = 50 cm (`content/machines.json`, `w` × `d` en cases ; `d` = pro
 - **+1 case en largeur ET en hauteur (des deux côtés), l'emprise reste carrée** : assembleur, constructeur, presse hydraulique lourde, raffinerie, centrifugeuse (3 × 3 → 4 × 4).
 
 Anciennes parties (`footprintVersion` < 4) : chaque machine garde son coin ; une machine qui chevauche maintenant une machine agrandie (par id croissant) est retirée et posée au sol, comme lors de la migration précédente.
+
+## Mise à jour Tour 168 — modèles agrandis
+
+- Pour que les modèles maison remplissent leur emprise, certaines hauteurs dessinées augmentent : foreuses 2,0 m ; chevalet 3,0 m ; assembleur, presse lourde, centrifugeuse 1,5 m ; raffinerie 3,0 m ; bras T1 à T3 1,0 m.
+- **Chevalet de pompage : 4 × 4 cases** (au lieu de 3 × 4), modèle élargi et rehaussé (×1,33). Anciennes parties : `footprintVersion` passe à 5 (même migration que les précédentes).

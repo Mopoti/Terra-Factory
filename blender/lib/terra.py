@@ -522,6 +522,20 @@ def agrandir(coll, k, demi_x, demi_y=None):
     return poser_au_sol(coll, demi_x, demi_y)
 
 
+def etirer(coll, kx, ky, kz, demi_x, demi_y=None):
+    """Étire le modèle de kx, ky, kz selon chaque axe (autour de l'origine au sol, pivots compris), puis remet les repères
+    d'emprise. Contrairement à `agrandir`, les proportions changent (pièces rondes légèrement ovales)."""
+    for o in list(coll.objects):
+        if o.name.startswith('repere_emprise'):
+            bpy.data.objects.remove(o, do_unlink=True)
+    m = Matrix.Diagonal((kx, ky, kz, 1.0))
+    for o in coll.objects:
+        if o.type == 'MESH':
+            o.data.transform(m)
+        o.location = Vector((o.location.x * kx, o.location.y * ky, o.location.z * kz))
+    return poser_au_sol(coll, demi_x, demi_y)
+
+
 def agrandir_auto(coll, demi_x, demi_y, recentrer=False):
     """Agrandit le modèle (mêmes proportions) juste assez pour remplir l'emprise ± demi_x, ± demi_y : le facteur est le
     plus grand qui garde toutes les pièces dans l'emprise. `recentrer` décale d'abord le modèle pour centrer ses pièces

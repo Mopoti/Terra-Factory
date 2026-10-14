@@ -147,11 +147,11 @@ export interface WorldChanges {
   rifleAmmo: number;
   /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
   energyVersion: number;
-  /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case ; 3-4 = emprises rectangulaires (+1 case de profondeur) et grosses machines 4 × 4). */
+  /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case ; 3-4 = emprises rectangulaires (+1 case de profondeur) et grosses machines 4 × 4 ; 5 = chevalet de pompage 4 × 4). */
   footprintVersion: number;
 }
 
-export const FOOTPRINT_VERSION = 4;
+export const FOOTPRINT_VERSION = 5;
 
 /** Balles d'un chargeur. */
 export const MAGAZINE_ROUNDS = 12;

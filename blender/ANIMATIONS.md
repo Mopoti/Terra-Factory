@@ -26,7 +26,7 @@ l'agrandissement, sauf pour les foreuses** : multiplier X, Y et Z par le facteur
 | Modèle | Emprise | Facteur |
 |---|---|---|
 | foreuses T1, T2, T3 | 4 × 5 | ×1,22 (pivots déjà à jour) |
-| `chevalet_t2` | 3 × 4 | ×1,35 (recentré en X avant l'agrandissement) |
+| `chevalet_t2` | 4 × 4 | ×1,35 (recentré en X), puis élargi et rehaussé de ×1,33 (X et Z seulement) |
 | `assembleur_t2`, `constructeur_t2`, `presse_lourde_t3`, `raffinerie_t3`, `centrifugeuse_t4` | 4 × 4 | ×1,33 environ |
 | `bras_t1`, `bras_t2`, `bras_t3` | 2 × 3 | ×1,53 (T1) et ×1,57 (T2, T3) environ |
 

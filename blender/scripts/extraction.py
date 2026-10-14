@@ -617,7 +617,6 @@ MODELES = {'foreuse_t1': foreuse_t1, 'foreuse_electrique_t2': foreuse_electrique
 # Emprises agrandies dans le jeu (content/machines.json) : ces modèles, dessinés pour l'ancienne emprise, sont agrandis
 # (mêmes proportions) juste assez pour remplir la nouvelle (± demi-largeur en X, ± demi-profondeur en Y).
 EMPRISES = {
-    'chevalet_t2': (1.5, 2.0, True),
 }
 
 
@@ -628,7 +627,16 @@ def _dans_emprise(fabrique, demi_x, demi_y, recentrer):
     return f
 
 
+def _chevalet_large(coll, leger=True):
+    """Chevalet dans son emprise 4 x 4 : agrandi (mêmes proportions) pour 3 x 4, puis élargi et rehaussé de x1,33
+    (la profondeur ne change pas), comme validé sur l'aperçu."""
+    chevalet_t2(coll, leger)
+    T.agrandir_auto(coll, 1.5, 2.0, recentrer=True)
+    T.etirer(coll, 1.33, 1.0, 1.33, 2.0, 2.0)
+
+
 MODELES = {nom: (_dans_emprise(fab, *EMPRISES[nom]) if nom in EMPRISES else fab) for nom, fab in MODELES.items()}
+MODELES['chevalet_t2'] = _chevalet_large
 
 def construire():
     """Crée, pour chaque modèle, la collection web (légère) et la collection Unity (détaillée)."""
