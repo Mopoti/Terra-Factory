@@ -50,6 +50,13 @@ PALETTE = {
     'vert_fonce': '#3f5a45',  # fonte peinte des machines à vapeur
     'eau': '#4f97c0',
     'boue': '#6d5a44',
+    'rive_t1': '#f5d21e',     # rives des convoyeurs T1 (jaune franc)
+    'rive_t2': '#f39200',     # rives des convoyeurs rapides T2 (orange franc)
+    'rive_t3': '#c9302c',     # rives des convoyeurs express T3 (rouge)
+    'separateur': '#5b7fa6',  # séparateur (bleu acier)
+    'groupeur': '#8a6aa0',    # groupeur (mauve)
+    'trieur': '#2a8f8a',      # trieur (sarcelle : couleur du tri, comme le bras filtrant)
+    'bras_t3': '#22a397',     # bras filtrant T3 (sarcelle)
 }
 
 
