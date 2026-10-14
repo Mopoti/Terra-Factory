@@ -4,79 +4,79 @@
     {
       "id": "drill",
       "w": 4,
-      "d": 4,
+      "d": 5,
       "item": "machine_drill",
       "color": "#c98a2d",
       "fuel": true,
       "mineSeconds": 2,
       "burnKw": 90,
       "stockMax": 100,
-      "height": 2.0,
+      "height": 1.5,
       "pollution": 0.6,
       "pollutionKind": "ground"
     },
     {
       "id": "furnace",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_furnace",
       "color": "#7a6a63",
       "fuel": true,
       "burnKw": 90,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.5,
       "pollutionKind": "air"
     },
     {
       "id": "stamper",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_stamper",
       "color": "#7a5a44",
       "fuel": true,
       "burnKw": 60,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.3,
       "pollutionKind": "ground"
     },
     {
       "id": "crusher",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_crusher",
       "color": "#6e6a64",
       "fuel": true,
       "burnKw": 60,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.4,
       "pollutionKind": "ground"
     },
     {
       "id": "bessemer",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_bessemer",
       "color": "#7b4a3a",
       "fuel": false,
       "consumesKw": 90,
       "stockMax": 100,
-      "height": 2.0,
+      "height": 1.5,
       "pollution": 0.8,
       "pollutionKind": "air"
     },
     {
       "id": "mixer",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_mixer",
       "color": "#7c7f82",
       "fuel": false,
       "consumesKw": 30,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.2,
       "pollutionKind": "ground"
     },
@@ -151,10 +151,10 @@
     {
       "id": "drill_electric",
       "w": 4,
-      "d": 4,
+      "d": 5,
       "item": "machine_drill_electric",
       "color": "#4a86a8",
-      "height": 2.0,
+      "height": 1.5,
       "fuel": false,
       "mineSeconds": 0.25,
       "stockMax": 100,
@@ -165,14 +165,14 @@
     {
       "id": "drill_eco",
       "w": 4,
-      "d": 4,
+      "d": 5,
       "item": "machine_drill_eco",
       "color": "#d7dde2",
       "fuel": false,
       "consumesKw": 67.5,
       "mineSeconds": 0.1,
       "stockMax": 100,
-      "height": 2.0,
+      "height": 1.5,
       "pollution": 0.15,
       "pollutionKind": "ground"
     },
@@ -197,36 +197,36 @@
     {
       "id": "arm",
       "w": 2,
-      "d": 2,
+      "d": 3,
       "item": "machine_arm",
       "color": "#c0813a",
       "fuel": true,
       "burnKw": 20,
       "stockMax": 10,
-      "height": 1.0,
+      "height": 0.5,
       "swingSeconds": 0.9
     },
     {
       "id": "arm_electric",
       "w": 2,
-      "d": 2,
+      "d": 3,
       "item": "machine_arm_electric",
       "color": "#4a7fb5",
       "fuel": false,
       "consumesKw": 20,
       "swingSeconds": 0.45,
-      "height": 1.0
+      "height": 0.5
     },
     {
       "id": "arm_filter",
       "w": 2,
-      "d": 2,
+      "d": 3,
       "item": "machine_arm_filter",
       "color": "#2f6f8f",
       "fuel": false,
       "consumesKw": 30,
       "swingSeconds": 0.3,
-      "height": 1.0
+      "height": 0.5
     },
     {
       "id": "sorter",
@@ -248,7 +248,7 @@
       "consumesKw": 60,
       "craftSeconds": 3,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.2,
       "pollutionKind": "ground"
     },
@@ -319,7 +319,7 @@
       "startBar": 2,
       "coolBoost": 0.5,
       "coolLitersPerS": 4,
-      "height": 1.5
+      "height": 1.0
     },
     {
       "id": "heavy_press",
@@ -330,19 +330,19 @@
       "fuel": false,
       "consumesKw": 150,
       "stockMax": 100,
-      "height": 1.5
+      "height": 1.0
     },
     {
       "id": "washer",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_washer",
       "color": "#4a7f9f",
       "fuel": false,
       "consumesKw": 25,
       "stockMax": 100,
       "fluidCap": 200,
-      "height": 1.5
+      "height": 1.0
     },
     {
       "id": "booster",
@@ -371,7 +371,7 @@
     {
       "id": "furnace_electric",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_furnace_electric",
       "color": "#8a5f4a",
       "fuel": false,
@@ -381,14 +381,14 @@
       "startBar": 2,
       "coolBoost": 0.5,
       "coolLitersPerS": 4,
-      "height": 1.5,
+      "height": 1.0,
       "pollution": 0.5,
       "pollutionKind": "air"
     },
     {
       "id": "pumpjack",
       "w": 3,
-      "d": 3,
+      "d": 4,
       "item": "machine_pumpjack",
       "color": "#3a3f47",
       "fuel": false,
@@ -396,7 +396,7 @@
       "fluidCap": 200,
       "startBar": 4,
       "pumpRate": 1,
-      "height": 2.0
+      "height": 1.5
     },
     {
       "id": "refinery",
@@ -411,7 +411,7 @@
       "pumpRate": 10,
       "pollution": 0.8,
       "pollutionKind": "air",
-      "height": 2.5
+      "height": 2.0
     },
     {
       "id": "plastic_press",
@@ -434,7 +434,7 @@
       "fuel": false,
       "consumesKw": 120,
       "stockMax": 100,
-      "height": 1.5
+      "height": 1.0
     },
     {
       "id": "fission_reactor",

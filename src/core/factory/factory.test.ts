@@ -50,13 +50,13 @@ const secs = (id: string): number => RECIPES.find((r) => r.id === id)?.seconds ?
 const cycle = (id: string): number => secs(id) + Factory.CYCLE_REST_S;
 
 describe('emprise et sorties', () => {
-  it('une foreuse fait 4 x 4 cases, la sortie est au milieu du côté choisi', () => {
-    expect(footprint('drill', 0, 0, 0)).toHaveLength(16);
-    expect(outputCell('drill', 0, 0, 0)).toEqual({ gx: 2, gz: 4 });
-    expect(outputCell('drill', 0, 0, 1)).toEqual({ gx: 4, gz: 2 });
+  it('une foreuse fait 4 x 5 cases (4 de large, 5 de profondeur), la sortie est au milieu du côté choisi', () => {
+    expect(footprint('drill', 0, 0, 0)).toHaveLength(20);
+    expect(outputCell('drill', 0, 0, 0)).toEqual({ gx: 2, gz: 5 });
+    expect(outputCell('drill', 0, 0, 1)).toEqual({ gx: 5, gz: 2 });
     expect(outputCell('drill', 0, 0, 2)).toEqual({ gx: 2, gz: -1 });
     expect(outputCell('drill', 0, 0, 3)).toEqual({ gx: -1, gz: 2 });
-    expect(footprint('furnace', 2, 2, 1)).toHaveLength(9);
+    expect(footprint('furnace', 2, 2, 1)).toHaveLength(12);
     // Un tapis occupe une tuile de 2 x 2 cases.
     expect(footprint('conveyor', 4, 6, 0)).toHaveLength(4);
   });
@@ -468,7 +468,7 @@ describe('bras robotique', () => {
     const src = chestWith(1, 10, 9, 'coal', 20);
     const arm = emptyMachine(2, 'arm', 10, 10, 0);
     arm.fuelLeft = 100; // 100 kJ à 20 kW : 5 s de combustion restantes
-    const target = emptyMachine(3, 'chest_wood', 10, 11, 0);
+    const target = emptyMachine(3, 'chest_wood', 10, 12, 0);
     const f = new Factory([src, arm, target], makeWorld().world);
     run(f, 1.5);
     expect(arm.fuel?.item).toBe('coal');
@@ -491,7 +491,7 @@ describe('bras robotique', () => {
     const back = chestWith(1, 10, 9, 'iron_ore', 2);
     const left = chestWith(3, 11, 10, 'copper_ore', 2);
     const right = chestWith(4, 9, 10, 'iron_ore', 2);
-    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const out = emptyMachine(5, 'chest_wood', 10, 12, 0);
     const f = new Factory([arm, back, left, right, out], makeWorld().world);
     run(f, 8);
     const total = out.slots.reduce((n, x) => n + x.count, 0);
@@ -504,7 +504,7 @@ describe('bras robotique', () => {
     arm.fuel = { item: 'coal', count: 5 };
     const belt = emptyMachine(1, 'conveyor', 11, 10, 0);
     belt.belt.push({ item: 'iron_ore', pos: 0.3 });
-    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const out = emptyMachine(5, 'chest_wood', 10, 12, 0);
     const f = new Factory([arm, belt, out], makeWorld().world);
     run(f, 2);
     expect(out.slots[0]?.count).toBe(1);
@@ -513,7 +513,7 @@ describe('bras robotique', () => {
   it('le bras électrique est deux fois plus rapide et ne marche qu’avec du courant', () => {
     const src = chestWith(1, 10, 9, 'iron_ore', 20);
     const arm = emptyMachine(2, 'arm_electric', 10, 10, 0);
-    const out = emptyMachine(5, 'chest_wood', 10, 11, 0);
+    const out = emptyMachine(5, 'chest_wood', 10, 12, 0);
     const f = new Factory([src, arm, out], makeWorld().world);
     run(f, 3);
     expect(f.status(arm)).toBe('noPower');
