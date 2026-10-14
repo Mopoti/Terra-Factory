@@ -8,7 +8,7 @@ les flammes du fourneau T1 bougent, via `ANIMATED_MESHES` dans `src/render/model
 
 - **Groupe** : toutes les pièces dont le nom commence par `<groupe>_` bougent ensemble (ex. `balancier_poutre`,
   `balancier_tete`, `balancier_jaune`…). Tout le reste est fixe.
-- **Pivot** : un objet vide `pivot_<groupe>` (dans le `.glb`, son nom peut finir par `.002`, etc. : chercher le nœud dont le nom **commence** par `pivot_<groupe>`) (sans maillage, ignoré par `bake()`), exporté comme nœud du `.glb`.
+- **Pivot** : un objet vide `pivot_<groupe>` (sans maillage, ignoré par `bake()`), exporté comme nœud du `.glb`.
   Sa **position** est le centre de rotation ; son **axe Z local dans Blender** est l'axe de rotation (dans le `.glb`,
   axe **Y local** du nœud, à cause du passage en Y haut).
 - **Repères** : coordonnées ci-dessous en unités Blender, modèle posé au sol (après `T.poser_au_sol`) (1 = 1 case = 50 cm, Z haut, avant = −Y). Dans le `.glb` / three.js :
@@ -60,29 +60,6 @@ Données utiles pour le calcul (unités Blender, plan Y-Z) :
 | `assembleur_t2` | `bras2_` (bras droit, symétrique) | idem, en décalé avec le bras gauche | `pivot_bras2` (0,72 ; −0,78 ; 0,92), axe vertical |
 | `assembleur_t2` | `plateau_` (plateau tournant, gabarit, plaque, engrenage) | **tourne** par quarts de tour entre deux passes des bras | `pivot_plateau` (0 ; −0,72 ; 0,9), axe vertical |
 | `assembleur_t2` | `ventilateur_` (pales, moyeu) | **tourne** en continu en marche | `pivot_ventilateur` (−0,6 ; 0,75 ; 2,19), axe vertical |
-| `concasseur_t1` | `volant_` (rouleau denté arrière, son engrenage, poulie à droite, arbre) | **tourne** en continu en marche | `pivot_volant` (0,2 ; 0,3 ; 2,07), axe X |
-| `concasseur_t1` | `rouleau_` (rouleau denté avant et son engrenage) | **tourne en sens contraire** de `volant_`, même vitesse (les deux rouleaux broient la pierre entre eux) | `pivot_rouleau` (0,2 ; −0,2 ; 2,07), axe X |
-| `concasseur_t1` | `moteur_` (poulie motrice, plateau de manivelle, bielle de la machine à vapeur) | **tourne** environ 2,6 fois plus vite que le volant (rapport des poulies) | `pivot_moteur` (1,4 ; 1,08 ; 1,42), axe X |
-| `concasseur_t1` | `vis_` (hélice et arbre de la vis sans fin qui monte le charbon du bac au foyer) | **tourne** en continu en marche, autour de son axe incliné | `pivot_vis` (−1,18 ; 1,05 ; 0,16), axe (0 ; −0,68 ; 0,74) = le long de la vis |
-| `betonniere_t2` | `tambour_` (tambour orange, bandages, couronne dentée, bandes en spirale) | **tourne** en continu en marche, autour de son axe incliné | `pivot_tambour` (0 ; −0,55 ; 1,05) = centre de la bouche, axe (0 ; 0,97 ; 0,25) = le long du tambour |
-| `betonniere_t2` | `pignon_` (pignon et son arbre) | **tourne en sens contraire** du tambour, environ 5 fois plus vite (rapport 0,81 / 0,15) | `pivot_pignon` (0,84 ; 0,365 ; 0,785), même axe que le tambour |
-| `betonniere_t2` | `tiroir_` (tiroir d'alimentation, plein de béton) | **avance tout droit vers −Y** (≈ 0,25) jusqu'au-dessus du moule, puis revient sous la petite trémie | `pivot_tiroir` (0 ; −0,7 ; 0,49) = dessous du tiroir |
-| `betonniere_t2` | `presse_` (tige, tête et poinçons de la presse à blocs) | **descend et remonte tout droit** (≈ 0,3) dans le moule, une fois le tiroir revenu | `pivot_presse` (0 ; −0,95 ; 0,72) = dessous des poinçons |
-| `betonniere_t2` | `blocs_` (deux blocs de béton) | **apparaissent** en sortie de presse et **glissent vers −Y** jusqu'au bout du convoyeur (≈ 0,15), puis disparaissent (pris par le bras de sortie) | `pivot_blocs` (0 ; −1,3 ; 0,38) = dessous des blocs |
-| `station_lavage_t2` | `tambour_` (trommel : crible perforé devant, débourbeur fermé derrière, bandages) | **tourne** en continu en marche, autour de son axe presque horizontal | `pivot_tambour` (0 ; −0,8 ; 0,85) = centre de la sortie, axe (0 ; 0,996 ; 0,091) = le long du tambour |
-| `station_lavage_t2` | `galets_` (deux galets moteurs à droite et leur arbre) | **tournent en sens contraire** du tambour, environ 6,5 fois plus vite (rapport 0,58 / 0,09) : entraînement par friction | `pivot_galets` (0,448 ; −0,456 ; 0,381), même axe que le tambour |
-| `station_lavage_t2` | `bande_` (tasseaux et minerai brut sur la bande du convoyeur) | **avance** le long de la montée, du bord arrière jusqu'au centre de l'entrée du trommel : glisser le long de l'axe et revenir d'un pas de tasseau (≈ 0,13) en boucle | `pivot_bande` (0 ; 1,401 ; 0,402), axe (0 ; −0,65 ; 0,76) = sens de la montée |
-| `station_lavage_t2` | `sortie_` (minerai lavé sur le convoyeur de sortie, qui part de l'intérieur du crible) | **avance** le long du convoyeur vers l'avant (−Y), en boucle | `pivot_sortie` (0 ; −0,668 ; 0,695), axe (0 ; −0,94 ; −0,35) = sens de la bande |
-| `station_lavage_t2` | `jet_` (jets d'eau en éventail : `jet_0`…`jet_5` sous la rampe du haut, `jet_cote_*` des rampes des côtés), `ruissellement_` (filets d'eau sous le crible) | **vacillent** en marche (comme les flammes), invisibles à l'arrêt | — |
-| `constructeur_t2` | `portique_` (portique jaune, patins, chaîne porte-câbles) | **va-et-vient** tout droit en Y sur ses rails (≈ ±0,6) | `pivot_portique` (0 ; 0,15 ; 0,78), axe Y |
-| `constructeur_t2` | `chariot_` (chariot et moteur de broche), **porté par le portique** | **va-et-vient** en X le long de la poutre (≈ ±0,6) | `pivot_chariot` (0,1 ; −0,02 ; 1,42), axe X |
-| `constructeur_t2` | `outil_` (broche, porte-outil, torche, étincelles), **porté par le chariot** | **descend et remonte** (≈ 0,1) au-dessus de la pièce ; les étincelles peuvent vaciller | `pivot_outil` (0,1 ; −0,02 ; 0,9), axe Z |
-| `constructeur_t2` | `ventilateur_` (pales et moyeu du groupe de refroidissement) | **tourne** en continu en marche | `pivot_ventilateur` (1,465 ; 0,15 ; 0,5), axe X |
-| `constructeur_t2` | `entree_` (lingots de cuivre et de zinc) / `sortie_` (tubes en laiton) | **avancent** le long des convoyeurs, en boucle | `pivot_entree` (0 ; 1,444 ; 0,376) axe (0 ; −0,96 ; 0,29) ; `pivot_sortie` (0 ; −0,709 ; 0,46) axe (0 ; −0,99 ; −0,11) |
-| `presse_lourde_t3` | `coulisseau_` (tige du vérin, coulisseau, outil du haut) | **descend et remonte tout droit** : course de **0,22** jusqu'à l'outil du bas (frappe en fin de cycle, comme `press`) | `pivot_coulisseau` (0 ; 0 ; 1,08) = dessous de l'outil du haut, coulisseau en haut |
-| `presse_lourde_t3` | `ventilateur_` (refroidisseur d'huile de la centrale hydraulique) | **tourne** en continu en marche | `pivot_ventilateur` (1,2 ; 1,245 ; 0,37), axe Y |
-| `presse_lourde_t3` | `entree_` (lingots d'acier) / `sortie_` (tubes d'acier) | **avancent** le long des convoyeurs, en boucle | `pivot_entree` (0 ; 1,463 ; 0,368) axe (0 ; −0,85 ; 0,53) ; `pivot_sortie` (0 ; −0,653 ; 0,878) axe (0 ; −0,85 ; −0,53) |
-| `raffinerie_t3` | `flamme_` / `coeur_` (flamme de la torchère, flammes des deux brûleurs du four) | **vacillent** en marche | **fait** dans le jeu (`ANIMATED_MESHES.refinery`) |
 
 Depuis la correction de `animatedParts` (`models.ts`), un modèle maison n'est plus coupé à mi-hauteur comme ceux du kit :
 l'estampeuse est fixe en jeu tant que le mouvement du groupe `marteau_` n'est pas codé.
@@ -93,27 +70,3 @@ l'estampeuse est fixe en jeu tant que le mouvement du groupe `marteau_` n'est pa
 |---|---|---|---|
 | `fourneau_t1` | `flamme_`, `coeur_` | vacillent | **fait** dans le jeu (`ANIMATED_MESHES.furnace`) |
 | `fourneau_electrique_t2` | — | rien ne bouge | — |
-| `convertisseur_t2` (Bessemer) | `flamme_`, `coeur_` (gerbe de flammes et étincelles au-dessus de la gueule) | vacillent | **fait** dans le jeu (`ANIMATED_MESHES.bessemer`) |
-
-### Convertisseur Bessemer (`convertisseur_t2`) : coulée et démoulage
-
-La cornue est **fixe** (la couronne dentée et la crémaillère ne bougent pas : basculement d'entretien, pour le décor).
-
-| Groupe | Pièces | Mouvement | Pivot (Blender) |
-|---|---|---|---|
-| `trappe_` | trappe du trou de coulée, axe de charnière, levier | **pivote** autour de sa charnière : fermée = horizontale sous la busette ; **dessinée ouverte** (rabattue de 75° vers le bas). S'ouvre quand la lingotière est dessous, se referme quand elle est pleine | `pivot_trappe` (0,08 ; −0,78 ; 0,905), axe Y |
-| `coulee_` | filet de métal en fusion, de la busette à la lingotière | **visible seulement trappe ouverte** (à masquer sinon) | — |
-| `moule_` | lingotière (métal en fusion dessus) | **avance tout droit vers −Y** sur le convoyeur, de sous la busette jusque sous le portique (≈ 0,32), puis revient vide | `pivot_moule` (0 ; −0,78 ; 0,42) = dessous de la lingotière |
-| `poincon_` | tige et tête du poinçon du portique | **descend et remonte tout droit** (≈ 0,15) quand la lingotière est dessous : il chasse le lingot | `pivot_poincon` (0 ; −1,1 ; 0,805) = dessous de la tête |
-| `lingot_` | lingot sorti du portique | **apparaît** sous le portique et **glisse vers −Y** jusqu'au bout du convoyeur (≈ 0,22), puis disparaît (pris par le bras de sortie) | `pivot_lingot` (0 ; −1,32 ; 0,42) = dessous du lingot |
-
-Cycle conseillé : la trappe s'ouvre et le métal coule → la trappe se ferme → la lingotière avance sous le portique → le poinçon frappe → le lingot sort.
-
-## Nucléaire
-
-| Modèle | Groupe | Mouvement | Pivot (Blender) |
-|---|---|---|---|
-| `centrifugeuse_t4` | `rotor_` (volant d'inertie à repères jaunes et noirs, arbre, au sommet de la centrifugeuse) | **tourne vite** en continu en marche | `pivot_rotor` (0 ; −0,05 ; 1,93), axe Z |
-| `centrifugeuse_t4` | `voyant_` (anneau lumineux cyan et six hublots du carter) | **pulsent** en marche (émissif), éteints à l'arrêt | — |
-| `centrifugeuse_t4` | `ventilateur_` (pales et moyeu du groupe froid, derrière à droite) | **tourne** en continu en marche | `pivot_ventilateur` (1,05 ; 0,95 ; 0,88), axe Z |
-| `centrifugeuse_t4` | `entree_` (tasseaux et blocs de minerai sur le convoyeur qui monte dans la bouche d'alimentation, au dos du carter) / `sortie_` (capsule verte d'uranium enrichi, conteneur gris d'uranium appauvri, partis de sous la goulotte) | **avancent** le long des convoyeurs, en boucle | `pivot_entree` (0 ; 1,46 ; 0,35) axe (0 ; −0,77 ; 0,63) ; `pivot_sortie` (0 ; 0,07 ; 0,4) axe (0 ; −1 ; −0,03) |

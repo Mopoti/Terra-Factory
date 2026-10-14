@@ -1,4 +1,4 @@
-import { animatedParts, beltModel, modelFor, type AnimKind } from './models';
+import { animatedParts, beltModel, modelFor, type AnimKind, type BeltShape } from './models';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { RISE_DIR } from '../core/data/buildings';
@@ -878,7 +878,17 @@ function addBeltModel(
   height: number,
   color: Rgb,
 ): boolean {
-  const model = beltModel(entry.curved ? 'corner' : 'straight', m.tier);
+  let turns = (m.rot + BELT_TURN_OFFSET) % 4;
+  let shape: BeltShape = 'straight';
+  if (entry.curved) {
+    // Coude : relie la sortie à un côté voisin ; le modèle (côtés −x et +z) est tourné pour couvrir cette paire.
+    // `first === m.rot` : les objets entrent par le côté +z du modèle et sortent par −x (coude « inverse »).
+    const entrySide = RISE_DIR.findIndex(([ex, ez]) => ex === entry.ex && ez === entry.ez);
+    const first = entrySide === (m.rot + 1) % 4 ? m.rot : (m.rot + 3) % 4;
+    turns = (first + 1) % 4;
+    shape = first === m.rot ? 'cornerBack' : 'corner';
+  }
+  const model = beltModel(shape, m.tier);
   if (!model) return false;
   const [dx, dz] = RISE_DIR[m.rot];
   const x = (m.gx + 1) * CELL_SIZE_M;
@@ -887,13 +897,6 @@ function addBeltModel(
   const scaleY = BELT_H / model.size.y;
   const tint = m.broken ? hexToRgb('#7a2e2a') : color;
   const mix = m.broken ? 0.7 : 0.1;
-  let turns = (m.rot + BELT_TURN_OFFSET) % 4;
-  if (entry.curved) {
-    // Coude : relie la sortie à un côté voisin ; le modèle (côtés −x et +z) est tourné pour couvrir cette paire.
-    const entrySide = RISE_DIR.findIndex(([ex, ez]) => ex === entry.ex && ez === entry.ez);
-    const first = entrySide === (m.rot + 1) % 4 ? m.rot : (m.rot + 3) % 4;
-    turns = (first + 1) % 4;
-  }
   mb.model(model, x, height, z, turns, TILE_M / model.size.x, tint, mix, false, scaleY);
   // Flèche de sens, claire, sur le dessus.
   const top = height + BELT_H + 0.012;

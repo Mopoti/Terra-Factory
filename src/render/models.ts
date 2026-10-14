@@ -106,16 +106,41 @@ const prefixesOf = (name: string): string[] =>
     .filter((t) => TERRA_MODELS[t] === name)
     .flatMap((t) => ANIMATED_MESHES[t] ?? []);
 
-/** Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). */
-export type BeltShape = 'straight' | 'corner';
+/**
+ * Modèles de tapis : droit et coude, pour chacun des 3 paliers (les pentes gardent leurs formes simples). Le coude existe
+ * dans les deux sens (`corner` : entrée côté −x, sortie côté +z ; `cornerBack` : l'inverse), car les modèles maison
+ * portent des flèches ; ceux du kit sont les mêmes dans les deux sens.
+ */
+export type BeltShape = 'straight' | 'corner' | 'cornerBack';
 const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
   straight: ['conveyor-sides', 'conveyor-sides', 'conveyor-stripe-sides'],
   corner: ['conveyor-corner', 'conveyor-corner', 'conveyor-stripe-corner'],
+  cornerBack: ['conveyor-corner', 'conveyor-corner', 'conveyor-stripe-corner'],
 };
-export const beltModel = (shape: BeltShape, tier: number): BakedModel | null =>
-  baked.get(BELT_MODELS[shape][Math.max(0, Math.min(2, tier - 1))]) ?? null;
+/**
+ * Tapis maison (Blender, `blender/scripts/logistique.py`), par forme et palier : `null` = pas encore fait, on garde
+ * celui du kit. Mêmes conventions que le kit : tuile de 1 m, dessus à `BELT_H` (20 cm), le droit circule vers +x, le
+ * coude relie les côtés −x et +z. Leurs lames en flèche montrent le sens du tapis.
+ */
+const TERRA_BELT_MODELS: Record<BeltShape, readonly [string | null, string | null, string | null]> = {
+  straight: ['convoyeur_t1', null, null],
+  corner: ['convoyeur_virage_t1', null, null],
+  cornerBack: ['convoyeur_virage_inverse_t1', null, null],
+};
+export const beltModel = (shape: BeltShape, tier: number): BakedModel | null => {
+  const t = Math.max(0, Math.min(2, tier - 1));
+  const own = TERRA_BELT_MODELS[shape][t];
+  return (own ? baked.get(own) : undefined) ?? baked.get(BELT_MODELS[shape][t]) ?? null;
+};
 
-const TERRA_NAMES = [...new Set(Object.values(TERRA_MODELS))] as string[];
+const TERRA_NAMES = [
+  ...new Set([
+    ...Object.values(TERRA_MODELS),
+    ...Object.values(TERRA_BELT_MODELS)
+      .flat()
+      .filter((n): n is string => n !== null),
+  ]),
+] as string[];
 const NAMES = [
   ...new Set([...Object.values(MACHINE_MODELS), ...Object.values(BELT_MODELS).flat()]),
 ] as string[];

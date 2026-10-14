@@ -4,7 +4,7 @@ Pour le PC avec Blender (testé avec les scripts sous bpy 4.2 ; prévus pour 5.x
 
 ## Organisation
 
-- `blender/*.blend` : **un fichier par petite famille** (`extraction.blend`, `fonderie.blend`, `transformation.blend`, `chimie.blend`, `nucleaire.blend`, plus tard `energie.blend`…). Chaque modèle y est une **collection** nommée comme son fichier exporté. **Les `.blend` ne sont pas dans Git** (`.gitignore`) : seuls les `.glb` d'`export/` et les scripts y sont. Chacun garde ses `.blend` en local.
+- `blender/*.blend` : **un fichier par petite famille** (`extraction.blend`, `fonderie.blend`, `transformation.blend`, `chimie.blend`, `nucleaire.blend`, `logistique.blend`, plus tard `energie.blend`…). Chaque modèle y est une **collection** nommée comme son fichier exporté. **Les `.blend` ne sont pas dans Git** (`.gitignore`) : seuls les `.glb` d'`export/` et les scripts y sont. Chacun garde ses `.blend` en local.
 - `blender/scripts/<famille>.py` : le script qui fabrique la famille (modèles, matériaux, export). Les `.blend` sont régénérables ; on peut aussi les retoucher à la main, mais alors **ne relancez plus le script** de cette famille (il écraserait vos retouches).
 - `blender/lib/terra.py` : outils communs (palette, boîtes, cylindres, export).
 - `export/` : **un `.glb` par modèle**, nom simple en minuscules sans accents : `foreuse_t1.glb`, `fourneau_t1.glb`…
