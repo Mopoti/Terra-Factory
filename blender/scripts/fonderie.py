@@ -1,4 +1,4 @@
-"""Famille « fonderie » : fourneau, fourneau électrique (et plus tard convertisseur Bessemer).
+"""Famille « fonderie » : fourneau, fourneau électrique, convertisseur Bessemer.
 
 Style low poly stylisé (voir blender/README.md) : relief et variations de teinte, pas d'image de texture.
 
@@ -275,7 +275,256 @@ def fourneau_electrique_t2(coll, leger=True):
     lot.finir()
     T.poser_au_sol(coll, 1.5)
 
-MODELES = {'fourneau_t1': fourneau_t1, 'fourneau_electrique_t2': fourneau_electrique_t2}
+
+def convertisseur_t2(coll, leger=True):
+    """Convertisseur Bessemer (électrique) : 3 x 3 cases, 3,9 unités max (1,95 m = 1,3 x 1,5). Sortie devant (-Y).
+
+    Grande cornue en forme d'œuf en tôle rivetée, au nez recourbé vers l'avant, posée sur deux tourillons entre deux
+    piliers d'acier : ceinture des tourillons, cerclages, boîte à vent sous le fond, conduite d'air qui descend du
+    tourillon gauche jusqu'à la boîte à vent. Gerbe de flammes et d'étincelles qui sort de la gueule. Couronne dentée sur le
+    tourillon droit et crémaillère à vérin (basculement d'entretien, fixes en jeu). Devant, en bas de la cornue : trou de
+    coulée avec une trappe qui s'ouvre au-dessus de la lingotière et laisse couler le métal en fusion. Soufflante
+    électrique (volute et moteur) à l'arrière gauche, qui envoie l'air dans le tourillon gauche par un joint tournant ;
+    armoire électrique à l'arrière droite. Devant (sortie) : convoyeur ; la cornue verse dans une lingotière qui
+    passe sous un petit portique de démoulage (poinçon, arrosage) et en ressort en un lingot.
+    La cornue est fixe. Pièces mobiles : `trappe_` (trappe du trou de coulée, dessinée ouverte) ; `coulee_` (filet de
+    métal en fusion, visible quand la trappe est ouverte) ; `moule_`
+    (lingotière) avance sous le portique ; `poincon_` descend chasser le lingot ; `lingot_` sort ; flammes
+    `flamme_` / `coeur_` (vacillent, comme celles du fourneau). Pivots `pivot_trappe`, `pivot_moule`, `pivot_poincon`, `pivot_lingot`.
+    Tout reste dans l'emprise 3 x 3 (de -1,5 à 1,5) et entre Z = 0 et Z = 3,9.
+    """
+    rnd = random.Random(41)
+    bv = 0.0 if leger else 1.0
+    seg = 16 if leger else 32
+    sg = 8 if leger else 14
+    lot = T.Lot(coll, 'pieces')
+    cor = T.Lot(coll, 'cornue')
+    zt = 1.9  # axe des tourillons
+    xp = 1.06  # piliers
+
+    # --- Socle en béton avec la fosse sous la cornue (z 0 -> 0,22).
+    T.box(coll, 'socle', (2.6, 1.9, 0.22), (0, 0.2, 0.11), 'pierre_sombre', bevel=0.03)
+    T.box(coll, 'fosse', (1.0, 1.0, 0.01), (0, 0.1, 0.222), 'noir')
+    for s in (-1, 1):
+        lot.cube('fonte', (1.12, 0.06, 0.03), (0, 0.1 + s * 0.53, 0.235), 0)
+        lot.cube('fonte', (0.06, 1.12, 0.03), (s * 0.53, 0.1, 0.235), 0)
+
+    # --- Piliers d'acier, paliers des tourillons, contreventements.
+    for s in (-1, 1):
+        x = s * xp
+        lot.cube('fonte', (0.4, 0.7, 0.04), (x, 0, 0.24), 0.01)  # semelle
+        lot.cube('acier', (0.2, 0.18, zt - 0.38), (x, 0, 0.22 + (zt - 0.38) / 2), 0.01 * bv)  # âme
+        for dy in (-1, 1):
+            lot.cube('acier', (0.26, 0.04, zt - 0.38), (x, dy * 0.11, 0.22 + (zt - 0.38) / 2), 0)  # ailes
+            lot.barre('acier', (x, dy * 0.32, 0.26), (x, dy * 0.1, 1.15), 0.08, 0)  # jambes de force
+        lot.cube('fonte', (0.3, 0.4, 0.26), (x, 0, zt - 0.08), 0.02)  # palier
+        lot.cube('acier', (0.32, 0.3, 0.08), (x, 0, zt + 0.1), 0.015)  # chapeau
+        for dy in (-0.13, 0.13):
+            lot.cube('acier', (0.05, 0.05, 0.06), (x, dy, zt + 0.17), 0)  # écrous
+        lot.tube('cuivre', (x, 0, zt + 0.14), (x, 0, zt + 0.22), 0.025, 6)  # graisseur
+    # --- Cornue (groupe `cornue_`) : œuf en tôle, nez recourbé vers l'avant (-Y).
+    prof = [(0.42, 0.62), (0.6, 0.72), (0.74, 0.95), (0.8, 1.3), (0.8, 2.0), (0.74, 2.35), (0.6, 2.7), (0.45, 2.98),
+            (0.35, 3.16)]
+    z_nez, k_nez = 2.35, 0.55
+
+    def rayon(z):
+        for (r0, z0), (r1, z1) in zip(prof, prof[1:]):
+            if z0 <= z <= z1:
+                return r0 + (r1 - r0) * (z - z0) / (z1 - z0)
+        return prof[-1][0]
+
+    def nez(z):  # décalage vers l'avant du nez recourbé
+        return -k_nez * max(z - z_nez, 0) ** 2
+
+    def courber(o):
+        for v in o.data.vertices:
+            v.co.y += nez(v.co.z)
+
+    courber(T.tour(coll, 'cornue_corps', prof, 'fonte', seg, fond=True, dessus=False))
+    courber(T.tour(coll, 'cornue_levre', [(0.38, 3.1), (0.38, 3.2), (0.3, 3.2)], 'fonte', seg, fond=False, dessus=False))
+    courber(T.tour(coll, 'cornue_gueule', [(0.3, 3.19), (0.3, 3.195)], 'noir', seg, fond=False))
+    courber(T.tour(coll, 'cornue_bain', [(0.2, 3.195), (0.2, 3.2)], 'braise', seg, fond=False))
+    for z in (0.95, 1.45, 2.3, 2.75):  # cerclages
+        r = rayon(z) + 0.02
+        courber(T.tour(coll, f'cornue_cercle_{z}', [(r, z - 0.03), (r, z + 0.03)], 'acier_sombre', seg))
+        if not leger:
+            for i in range(20):  # rivets
+                a = 2 * math.pi * i / 20
+                cor.cube('acier', (0.03, 0.03, 0.03), (r * math.cos(a), r * math.sin(a) + nez(z), z), 0,
+                         Matrix.Rotation(a, 3, 'Z'))
+    T.tour(coll, 'cornue_ceinture', [(0.86, zt - 0.15), (0.86, zt + 0.15)], 'rouge', seg)
+    for dz in (-0.15, 0.15):
+        T.tour(coll, f'cornue_ceinture_bord_{dz}', [(0.89, zt + dz - 0.025), (0.89, zt + dz + 0.025)], 'fonte', seg)
+    cor.tube('acier', (-1.24, 0, zt), (1.26, 0, zt), 0.1, sg)  # tourillons
+    for s in (-1, 1):
+        cor.tube('fonte', (s * 0.86, 0, zt), (s * 0.94, 0, zt), 0.17, sg)  # moyeux des tourillons
+    # Boîte à vent sous le fond, boulonnée.
+    T.tour(coll, 'cornue_boite', [(0.36, 0.48), (0.36, 0.63)], 'acier_sombre', seg)
+    T.tour(coll, 'cornue_fond', [(0.42, 0.45), (0.42, 0.5)], 'fonte', seg)
+    for i in range(8):
+        a = 2 * math.pi * (i + 0.5) / 8
+        cor.cube('acier', (0.04, 0.04, 0.03), (0.39 * math.cos(a), 0.39 * math.sin(a), 0.515), 0)
+    # Conduite d'air : du tourillon gauche (creux) jusqu'à la boîte à vent.
+    pts = [Vector((-0.94, 0, zt - 0.16)), Vector((-0.92, 0, 1.12)), Vector((-0.62, 0, 0.62)), Vector((-0.36, 0, 0.56))]
+    for a, b in zip(pts, pts[1:]):
+        cor.tube('fonte', a, b, 0.07, sg)
+    for p in pts[1:3]:
+        cor.boule('fonte', p, 0.08)
+    cor.cube('fonte', (0.2, 0.22, 0.08), (-0.94, 0, zt - 0.16), 0.01)  # coude sur le tourillon
+    # Couronne dentée sur le tourillon droit.
+    rg = 0.4
+    cor.tube('rouge', (1.2, 0, zt), (1.28, 0, zt), rg, seg)
+    cor.tube('acier_sombre', (1.18, 0, zt), (1.36, 0, zt), 0.16, sg)  # moyeu (couvre le bout du tourillon)
+    cor.tube('acier', (1.36, 0, zt), (1.39, 0, zt), 0.09, sg)  # chapeau du moyeu
+    for k in range(4):  # bras, du moyeu à la jante, plaqués sur la face extérieure
+        a = math.pi / 4 + k * math.pi / 2
+        d = Matrix.Rotation(a, 3, 'X') @ Vector((0, 0, 1))
+        m = (0.16 + rg - 0.04) / 2
+        cor.cube('acier_sombre', (0.05, 0.06, rg - 0.2), (1.305, d.y * m, zt + d.z * m), 0, Matrix.Rotation(a, 3, 'X'))
+    n_d = 18 if leger else 28
+    for k in range(n_d):
+        a = 2 * math.pi * k / n_d
+        cor.cube('acier', (0.08, 0.06, 0.06), (1.24, (rg + 0.02) * math.cos(a), zt + (rg + 0.02) * math.sin(a)), 0,
+                 Matrix.Rotation(a - math.pi / 2, 3, 'X'))
+
+    # --- Crémaillère verticale derrière la couronne, sur un vérin (basculement d'entretien : fixe en jeu).
+    xr, yr = 1.24, rg + 0.08
+    lot.cube('acier_sombre', (0.08, 0.08, 1.25), (xr, yr, 1.88), 0.01 * bv)
+    for k in range(17):
+        lot.cube('acier', (0.07, 0.04, 0.03), (xr, yr - 0.055, 1.32 + k * 0.07), 0)
+    lot.tube('acier', (xr, yr, 0.95), (xr, yr, 1.27), 0.035, sg)  # tige du vérin
+    lot.tube('acier', (xr, yr, 0.26), (xr, yr, 0.98), 0.09, sg)  # corps du vérin
+    lot.tube('acier_sombre', (xr, yr, 0.94), (xr, yr, 1.0), 0.11, sg)
+    lot.tube('acier_sombre', (xr, yr, 0.24), (xr, yr, 0.3), 0.11, sg)
+    lot.cube('fonte', (0.26, 0.26, 0.04), (xr, yr, 0.24), 0.01)
+    for z in (1.55, 2.25):  # guides fixés au pilier
+        lot.cube('fonte', (0.14, 0.04, 0.1), (xr, yr + 0.06, z), 0)
+        lot.barre('fonte', (xp + 0.06, 0.11, z), (xr, yr + 0.06, z), 0.05, 0)
+    lot.tube('noir', (xr, yr + 0.09, 0.4), (xr, 1.2, 0.4), 0.025, 6)  # flexible vers l'armoire
+
+    # --- Soufflante électrique (arrière gauche) et conduite d'air vers le tourillon gauche (joint tournant).
+    yv = 1.12
+    T.cylinder_at(coll, 'soufflante_volute', 0.34, 0.26, (-0.95, yv, 0.62), 'acier_sombre', segments=seg, y=90)
+    T.cylinder_at(coll, 'soufflante_flasque', 0.2, 0.3, (-0.95, yv, 0.62), 'fonte', segments=sg, y=90)
+    lot.cube('fonte', (0.46, 0.5, 0.06), (-0.85, yv, 0.25), 0.01)  # semelle
+    lot.cube('acier_sombre', (0.2, 0.3, 0.26), (-0.95, yv, 0.36), 0.01)  # pied de la volute
+    T.cylinder_at(coll, 'moteur', 0.17, 0.34, (-0.6, yv, 0.5), 'bleu', segments=sg, y=90)
+    for k in range(6 if leger else 10):  # ailettes
+        a = 2 * math.pi * k / (6 if leger else 10)
+        lot.cube('acier_sombre', (0.3, 0.025, 0.04), (-0.6, yv + 0.18 * math.cos(a), 0.5 + 0.18 * math.sin(a)), 0,
+                 Matrix.Rotation(a - math.pi / 2, 3, 'X'))
+    lot.cube('bleu', (0.3, 0.3, 0.16), (-0.6, yv, 0.33), 0.01)  # pattes du moteur
+    lot.cube('acier_sombre', (0.1, 0.12, 0.08), (-0.6, yv, 0.71), 0)  # boîte à bornes
+    lot.tube('acier', (-0.82, yv, 0.62), (-0.77, yv, 0.62), 0.05, sg)  # accouplement
+    air = [Vector((-1.08, yv, 0.62)), Vector((-1.32, yv, 0.62)), Vector((-1.32, yv, zt)), Vector((-1.32, 0, zt)),
+           Vector((-1.24, 0, zt))]
+    for a, b in zip(air, air[1:]):
+        lot.tube('acier', a, b, 0.08, sg)
+    for p in air[1:4]:
+        lot.boule('acier', p, 0.095)
+    lot.tube('fonte', (-1.3, 0, zt), (-1.2, 0, zt), 0.14, sg)  # joint tournant
+    lot.tube('fonte', (-1.32, yv, 1.2), (-1.32, yv, 1.26), 0.11, sg)  # bride
+    lot.barre('acier_sombre', (-1.32, yv - 0.09, 1.5), (-xp, 0.11, 1.5), 0.05, 0)  # collier fixé au pilier
+
+    # --- Armoire électrique (arrière droite) : portes, voyants, levier, câble vers la soufflante.
+    T.box(coll, 'armoire', (0.56, 0.3, 0.86), (0.62, 1.28, 0.65), 'acier', bevel=0.02)
+    T.box(coll, 'armoire_toit', (0.62, 0.36, 0.05), (0.62, 1.28, 1.105), 'acier_sombre', bevel=0.01)
+    lot.cube('acier_sombre', (0.01, 0.01, 0.74), (0.62, 1.12, 0.65), 0)  # joint des portes
+    for i, c in enumerate(('vert', 'jaune', 'rouge')):
+        lot.cube(c, (0.05, 0.02, 0.05), (0.44 + i * 0.08, 1.125, 0.95), 0)
+    lot.cube('noir', (0.03, 0.06, 0.2), (0.82, 1.1, 0.68), 0, Matrix.Rotation(0.4, 3, 'X'))  # levier
+    lot.cube('jaune', (0.14, 0.01, 0.12), (0.62, 1.123, 0.8), 0)  # plaque « danger »
+    lot.barre('noir', (0.34, 1.24, 0.26), (-0.42, yv, 0.26), 0.04, 0)  # câble vers le moteur
+
+    # --- Devant (sortie, -Y) : convoyeur ; la cornue verse dans une lingotière (groupe `moule_`), qui passe
+    # sous un petit portique (démoulage : un poinçon, groupe `poincon_`, chasse le lingot) et en ressort en lingot.
+    xt, zr = 0.3, 0.42  # demi-largeur (pieds, portique), dessus de la bande
+    y0, y1 = -0.55, -1.47
+    T.convoyeur(lot, (0, y0 - 0.05, zr - 0.09), (0, y1 + 0.05, zr - 0.09), 0.5, 0.08, rouleaux=3, sg=sg)  # convoyeur commun
+    for sx in (-1, 1):
+        for y in (-0.66, -1.38):
+            lot.cube('acier_sombre', (0.05, 0.05, zr - 0.2), (sx * 0.31, y, (zr - 0.2) / 2), 0)  # pieds
+            lot.cube('fonte', (0.1, 0.1, 0.02), (sx * 0.31, y, 0.01), 0)
+    # Lingotière pleine de métal en fusion, sous le bec de la cornue.
+    mo = T.Lot(coll, 'moule')
+    ym = -0.78
+    mo.cube('fonte', (0.4, 0.34, 0.26), (0, ym, zr + 0.13), 0.02 * bv)
+    for dy in (-0.19, 0.19):
+        mo.cube('fonte', (0.46, 0.04, 0.06), (0, ym + dy, zr + 0.2), 0)  # oreilles
+    mo.cube('noir', (0.3, 0.24, 0.01), (0, ym, zr + 0.262), 0)
+    mo.cube('braise', (0.26, 0.2, 0.01), (0, ym, zr + 0.266), 0)
+    T.pivot(coll, 'pivot_moule', (0, ym, zr), (0, 1, 0))
+    # Petit portique de démoulage, poinçon et rampe d'arrosage.
+    yq, zq = -1.1, 1.0
+    for sx in (-1, 1):
+        lot.cube('acier', (0.08, 0.1, zq - 0.02), (sx * (xt + 0.08), yq, (zq - 0.02) / 2), 0.01 * bv)
+        lot.cube('fonte', (0.16, 0.18, 0.03), (sx * (xt + 0.08), yq, 0.015), 0)
+    lot.cube('acier', (2 * xt + 0.32, 0.14, 0.12), (0, yq, zq), 0.015)  # traverse
+    for k in range(5):
+        lot.cube('jaune' if k % 2 == 0 else 'noir', (0.1, 0.142, 0.08), (-0.2 + k * 0.1, yq, zq), 0)
+    lot.cube('acier_sombre', (0.24, 0.18, 0.16), (0, yq, zq + 0.14), 0.015)  # vérin du poinçon
+    lot.tube('acier_sombre', (0, yq, zq - 0.06), (0, yq, zq - 0.12), 0.07, sg)
+    po = T.Lot(coll, 'poincon')
+    po.tube('acier', (0, yq, zq - 0.12), (0, yq, zr + 0.44), 0.035, sg)  # tige
+    po.cube('acier_sombre', (0.26, 0.2, 0.05), (0, yq, zr + 0.41), 0.01)  # tête du poinçon
+    T.pivot(coll, 'pivot_poincon', (0, yq, zr + 0.385), (0, 0, 1))
+    lot.tube('bleu', (-xt - 0.08, yq + 0.09, zq - 0.08), (xt + 0.08, yq + 0.09, zq - 0.08), 0.025, 6)  # arrosage
+    for x in (-0.15, 0.0, 0.15):
+        lot.cube('acier_sombre', (0.03, 0.03, 0.04), (x, yq + 0.09, zq - 0.12), 0)  # buses
+    lot.barre('bleu', (xt + 0.08, yq + 0.09, zq - 0.08), (xt + 0.08, yq + 0.09, 0.05), 0.04, 0)
+    # Lingot qui sort du portique.
+    li = T.Lot(coll, 'lingot')
+    yl = -1.32
+    li.cube('acier', (0.3, 0.2, 0.12), (0, yl, zr + 0.06), 0.02 * bv)
+    li.cube('acier', (0.24, 0.14, 0.04), (0, yl, zr + 0.13), 0.01 * bv)
+    li.cube('braise', (0.2, 0.01, 0.06), (0, yl - 0.101, zr + 0.06), 0)  # encore chaud au cœur
+    T.pivot(coll, 'pivot_lingot', (0, yl, zr), (0, 1, 0))
+
+    # --- Trou de coulée en bas de la cornue, côté sortie : boîtier boulonné, busette, trappe (groupe `trappe_`, dessinée
+    # ouverte) et filet de métal en fusion (groupe `coulee_`) qui tombe dans la lingotière.
+    yc, zc = ym, 0.92  # axe de la busette (au-dessus du centre de la lingotière), bas de la busette
+    lot.cube('acier_sombre', (0.28, 0.16, 0.22), (0, yc - 0.02, 1.08), 0.015)  # boîtier contre la cornue
+    lot.cube('fonte', (0.36, 0.04, 0.3), (0, yc + 0.03, 1.08), 0.01)  # bride
+    for dx in (-0.13, 0.13):
+        for dz in (-0.1, 0.1):
+            lot.cube('acier', (0.035, 0.03, 0.035), (dx, yc + 0.005, 1.08 + dz), 0)
+    lot.tube('fonte', (0, yc, 0.97), (0, yc, zc), 0.065, sg)  # busette
+    lot.tube('braise', (0, yc, zc + 0.002), (0, yc, zc - 0.001), 0.04, sg)
+    tr = T.Lot(coll, 'trappe')
+    xh, ang = 0.08, math.radians(-75)  # charnière côté +X ; trappe ouverte, rabattue vers le bas
+    ouv = Matrix.Rotation(ang, 3, 'Y')
+    pl = Vector((xh, yc, zc - 0.015)) + ouv @ Vector((-0.08, 0, 0))
+    tr.cube('acier', (0.16, 0.16, 0.025), tuple(pl), 0, ouv)
+    tr.tube('acier_sombre', (xh, yc - 0.1, zc - 0.015), (xh, yc + 0.09, zc - 0.015), 0.02, 6)  # axe de la charnière
+    bl = Vector((xh, yc - 0.1, zc - 0.015)) + ouv @ Vector((0.1, 0, 0))
+    tr.barre('acier_sombre', (xh, yc - 0.1, zc - 0.015), tuple(bl), 0.03, 0)  # levier
+    T.pivot(coll, 'pivot_trappe', (xh, yc, zc - 0.015), (0, 1, 0))
+    lot.tube('acier', (0.2, yc - 0.1, 1.1), (0.2, yc - 0.1, 1.0), 0.03, sg)  # petit vérin de la trappe
+    lot.tube('acier_sombre', (0.2, yc - 0.1, 1.0), tuple(bl), 0.014, 6)
+    cl = T.Lot(coll, 'coulee')
+    cl.tube('braise', (0, yc, zc - 0.005), (0, yc, zr + 0.27), 0.03, sg)
+    cl.tube('flamme', (0, yc, zc - 0.04), (0, yc, zr + 0.3), 0.016, 6)
+
+    # --- Gerbe de flammes et d'étincelles au-dessus de la gueule.
+    zg, yg = 3.2, nez(3.2)
+    for x, y, h, r in ((0.0, 0.0, 0.5, 0.22), (-0.1, 0.06, 0.36, 0.13), (0.11, -0.05, 0.4, 0.14)):
+        T.cylinder(coll, f'flamme_{x}', r, h, (x, yg + y, zg + h / 2), 'braise', segments=6, radius_top=0.0)
+        T.cylinder(coll, f'coeur_{x}', r * 0.55, h * 0.65, (x, yg + y, zg + h * 0.33), 'flamme', segments=6,
+                   radius_top=0.0)
+    et = T.Lot(coll, 'flamme_etincelles')
+    for _ in range(10 if leger else 22):
+        a, d = rnd.uniform(0, 2 * math.pi), rnd.uniform(0.15, 0.5)
+        t = rnd.uniform(0.025, 0.045)
+        et.cube(rnd.choice(('flamme', 'braise')), (t, t, t), (d * math.cos(a), yg + d * math.sin(a), zg + rnd.uniform(0.2, 0.62)),
+                0, Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
+
+    for l in (lot, cor, et, mo, po, li, tr, cl):
+        l.finir()
+    T.poser_au_sol(coll, 1.5)
+
+
+MODELES = {'fourneau_t1': fourneau_t1, 'fourneau_electrique_t2': fourneau_electrique_t2,
+           'convertisseur_t2': convertisseur_t2}
 
 
 def construire():

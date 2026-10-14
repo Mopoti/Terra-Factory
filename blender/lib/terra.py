@@ -48,6 +48,8 @@ PALETTE = {
     'verre': '#7fb7d4',
     'bois': '#8a6a45',
     'vert_fonce': '#3f5a45',  # fonte peinte des machines à vapeur
+    'eau': '#4f97c0',
+    'boue': '#6d5a44',
 }
 
 
@@ -245,6 +247,95 @@ def lissage(coll, name, anneaux, mat, fond=False, dessus=True, n_coin=4):
     if fond:
         bm.faces.new(list(reversed(rings[0])))
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
+def convoyeur(lot, a, b, largeur=0.36, rp=0.08, rouleaux=2, sg=8, tambours=True):
+    """Convoyeur à bande COMMUN à tous les modèles, de l'axe du tambour `a` à celui du tambour `b` (pente libre).
+
+    Provisoire : il sera remplacé par le modèle commun du convoyeur du jeu. Tout convoyeur d'un modèle doit passer par
+    cette fonction (même aspect partout, un seul endroit à changer). Pose dans `lot` : brin porteur et brin de retour
+    (noir), longerons (acier sombre), rives jaunes, `rouleaux` rouleaux porteurs, tambours aux deux bouts.
+    Retourne (d, w, n, rot) : direction de la bande, côté, normale (vers le haut) et rotation des pièces
+    (X local = sens de la bande, Y = largeur, Z = normale), pour poser tasseaux et marchandises dessus.
+    """
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    w = d.cross(Vector((0, 0, 1)))
+    w = w.normalized() if w.length > 1e-6 else Vector((1, 0, 0))
+    n = w.cross(d).normalized()
+    if n.z < 0:
+        n, w = -n, -w
+    rot = Matrix((d, w, n)).transposed()
+    lg = (b - a).length
+    m = (a + b) / 2
+    lot.cube('noir', (lg, largeur, 0.02), tuple(m + n * rp), 0, rot)  # brin porteur
+    lot.cube('noir', (lg, largeur, 0.02), tuple(m - n * rp), 0, rot)  # brin de retour
+    for s in (-1, 1):
+        c = m + w * (s * (largeur / 2 + 0.05))
+        lot.cube('acier_sombre', (lg + 0.1, 0.04, 0.12), tuple(c), 0, rot)  # longerons
+        lot.cube('jaune', (lg - 0.1, 0.045, 0.03), tuple(c + n * 0.07), 0, rot)  # rives
+    for k in range(rouleaux):  # rouleaux porteurs
+        p = a + d * (0.2 + (lg - 0.4) * (k + 0.5) / rouleaux) + n * (rp - 0.035)
+        lot.tube('acier', p - w * (largeur / 2), p + w * (largeur / 2), 0.03, 6)
+    if tambours:
+        for c in (a, b):
+            lot.tube('acier_sombre', c - w * (largeur / 2 + 0.02), c + w * (largeur / 2 + 0.02), rp, sg)
+            lot.tube('acier', c - w * (largeur / 2 + 0.06), c + w * (largeur / 2 + 0.06), 0.025, 6)
+    return d, w, n, rot
+
+
+def poteau_electrique(lot, pied, niveau=2, hauteur=2.3, sg=8):
+    """Poteau électrique (« antenne ») COMMUN à tous les modèles, posé au point `pied` (x, y, z du sol).
+
+    Provisoire : il sera remplacé par le vrai modèle des poteaux T1 / T2 du jeu. Toute machine qui montre son
+    raccordement électrique doit passer par cette fonction (même aspect partout, un seul endroit à changer).
+    `niveau` 1 = poteau en bois à une traverse ; 2 = mât en acier, traverse, isolateurs et feu cyan au sommet.
+    Pose les pièces dans `lot` et retourne la liste des points d'accroche des câbles (haut des isolateurs).
+    """
+    x, y, z = pied
+    h = hauteur
+    if niveau <= 1:
+        lot.cube('bois', (0.1, 0.1, h), (x, y, z + h / 2))
+        lot.cube('bois', (0.5, 0.07, 0.07), (x, y, z + h - 0.15))
+        for dx in (-0.2, 0.2):
+            lot.tube('blanc', (dx + x, y, z + h - 0.115), (dx + x, y, z + h - 0.04), 0.025, sg)
+        return [Vector((x + dx, y, z + h - 0.04)) for dx in (-0.2, 0.2)]
+    lot.cube('acier_sombre', (0.24, 0.24, 0.04), (x, y, z + 0.02))  # platine
+    lot.cube('acier', (0.09, 0.09, h - 0.04), (x, y, z + 0.04 + (h - 0.04) / 2))  # mât
+    for k in range(4):  # goussets
+        a = math.pi / 2 * k
+        lot.cube('acier', (0.07, 0.015, 0.12), (x + 0.07 * math.cos(a), y + 0.07 * math.sin(a), z + 0.1), 0.0,
+                 Matrix.Rotation(a, 3, 'Z'))
+    lot.cube('jaune', (0.095, 0.095, 0.3), (x, y, z + 0.6))  # bande de repérage
+    zt = z + h - 0.25
+    yt = y - 0.08  # traverse fixée devant le mât (côté -Y)
+    lot.cube('acier_sombre', (0.6, 0.07, 0.06), (x, yt, zt))
+    lot.cube('acier_sombre', (0.04, 0.04, 0.07), (x, y - 0.05, zt))  # attache
+    for dx in (-0.25, 0.0, 0.25):  # isolateurs empilés
+        for k in range(3):
+            lot.tube('blanc', (x + dx, yt, zt + 0.03 + k * 0.035), (x + dx, yt, zt + 0.05 + k * 0.035), 0.03, sg)
+    lot.tube('acier_sombre', (x, y, z + h - 0.04), (x, y, z + h), 0.05, sg)
+    lot.boule('cyan', (x, y, z + h + 0.03), 0.045)  # feu du niveau 2
+    return [Vector((x + dx, yt, zt + 0.12)) for dx in (-0.25, 0.0, 0.25)]
+
+
+def tour(coll, name, profil, mat, segments=16, centre=(0.0, 0.0), fond=True, dessus=True):
+    """Pièce de révolution autour d'un axe vertical (cornue, poche de coulée, bagues) : `profil` = [(rayon, z), ...] de
+    bas en haut. `fond` / `dessus` ferment le bas / le haut."""
+    bm = bmesh.new()
+    rings = [[bm.verts.new((centre[0] + r * math.cos(2 * math.pi * i / segments),
+                            centre[1] + r * math.sin(2 * math.pi * i / segments), z)) for i in range(segments)]
+             for r, z in profil]
+    for a, b in zip(rings, rings[1:]):
+        for i in range(segments):
+            j = (i + 1) % segments
+            bm.faces.new((a[i], a[j], b[j], b[i]))
+    if dessus:
+        bm.faces.new(rings[-1])
+    if fond:
+        bm.faces.new(list(reversed(rings[0])))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return _object(coll, name, bm, mat)
 

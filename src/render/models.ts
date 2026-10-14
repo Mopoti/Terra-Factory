@@ -79,6 +79,14 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   pumpjack: 'chevalet_t2',
   stamper: 'estampeuse_t1',
   assembler: 'assembleur_t2',
+  crusher: 'concasseur_t1',
+  bessemer: 'convertisseur_t2',
+  mixer: 'betonniere_t2',
+  washer: 'station_lavage_t2',
+  builder: 'constructeur_t2',
+  heavy_press: 'presse_lourde_t3',
+  refinery: 'raffinerie_t3',
+  centrifuge: 'centrifugeuse_t4',
 };
 
 /**
@@ -88,6 +96,8 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
  */
 export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = {
   furnace: ['flamme', 'coeur'],
+  bessemer: ['flamme', 'coeur'],
+  refinery: ['flamme', 'coeur'],
 };
 
 /** Préfixes animés du modèle de ce nom (machines qui l'utilisent dans `TERRA_MODELS`). */
