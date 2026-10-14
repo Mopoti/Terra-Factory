@@ -153,7 +153,11 @@ const TERRA_BELT_MODELS: Record<BeltShape, readonly [string | null, string | nul
   {
     straight: ['convoyeur_t1', 'convoyeur_t2', 'convoyeur_t3'],
     corner: ['convoyeur_virage_t1', 'convoyeur_virage_t2', 'convoyeur_virage_t3'],
-    cornerBack: ['convoyeur_virage_inverse_t1', 'convoyeur_virage_inverse_t2', 'convoyeur_virage_inverse_t3'],
+    cornerBack: [
+      'convoyeur_virage_inverse_t1',
+      'convoyeur_virage_inverse_t2',
+      'convoyeur_virage_inverse_t3',
+    ],
   };
 export const beltModel = (shape: BeltShape, tier: number): BakedModel | null => {
   const t = Math.max(0, Math.min(2, tier - 1));

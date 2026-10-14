@@ -30,7 +30,7 @@
     },
     {
       "id": "stamper",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_stamper",
       "color": "#7a5a44",
@@ -43,7 +43,7 @@
     },
     {
       "id": "crusher",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_crusher",
       "color": "#6e6a64",
@@ -56,7 +56,7 @@
     },
     {
       "id": "bessemer",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_bessemer",
       "color": "#7b4a3a",
@@ -69,7 +69,7 @@
     },
     {
       "id": "mixer",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_mixer",
       "color": "#7c7f82",
@@ -334,7 +334,7 @@
     },
     {
       "id": "washer",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_washer",
       "color": "#4a7f9f",
@@ -370,7 +370,7 @@
     },
     {
       "id": "furnace_electric",
-      "w": 3,
+      "w": 4,
       "d": 4,
       "item": "machine_furnace_electric",
       "color": "#8a5f4a",

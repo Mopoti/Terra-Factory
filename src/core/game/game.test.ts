@@ -756,7 +756,7 @@ describe('anciennes parties : emprises des machines', () => {
     // une partie déjà à la nouvelle version n'est pas touchée
     const t = new GameState({
       inventory: {},
-      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 5 },
+      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 6 },
     });
     expect(t.changes.machines[0]).toMatchObject({ gx: 5, gz: 7 });
   });
@@ -771,6 +771,17 @@ describe('anciennes parties : emprises des machines', () => {
     expect(s.changes.machines.map((m) => m.id)).toEqual([1]);
     expect(s.changes.drops).toHaveLength(1);
     expect(s.changes.drops[0].item).toBe('machine_chest_wood');
+  });
+
+  it('version 5 → 6 : l’estampeuse passe à 4 x 4 (une case de plus en largeur)', () => {
+    const stamper = { id: 1, type: 'stamper', gx: 20, gz: 20, rot: 0, belt: [], slots: [] };
+    const chest = { id: 2, type: 'chest_wood', gx: 23, gz: 21, rot: 0, belt: [], slots: [] };
+    const s = new GameState({
+      inventory: {},
+      changes: { machines: [stamper, chest], footprintVersion: 5 },
+    });
+    expect(s.changes.machines.map((m) => m.id)).toEqual([1]);
+    expect(s.changes.drops).toHaveLength(1);
   });
 
   it('version 3 → 4 : le fourneau passe à 3 x 4 (une case de plus en profondeur)', () => {

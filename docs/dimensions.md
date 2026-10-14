@@ -58,3 +58,7 @@ Anciennes parties (`footprintVersion` < 4) : chaque machine garde son coin ; une
 
 - Pour que les modèles maison remplissent leur emprise, certaines hauteurs dessinées augmentent : foreuses 2,0 m ; chevalet 3,0 m ; assembleur, presse lourde, centrifugeuse 1,5 m ; raffinerie 3,0 m ; bras T1 à T3 1,0 m.
 - **Chevalet de pompage : 4 × 4 cases** (au lieu de 3 × 4), modèle élargi et rehaussé (×1,33). Anciennes parties : `footprintVersion` passe à 5 (même migration que les précédentes).
+
+## Mise à jour Tour 169 — un carré de largeur en plus
+
+**Four électrique, estampeuse, concasseur, convertisseur Bessemer, bétonnière, station de lavage : 3 × 4 → 4 × 4** (+1 case en largeur ; hauteurs inchangées). Le fourneau à combustible reste 3 × 4. Anciennes parties : `footprintVersion` passe à 6 (même migration : le coin est gardé, une machine qui chevauche est posée au sol).
