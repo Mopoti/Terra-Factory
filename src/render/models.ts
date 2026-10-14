@@ -94,6 +94,9 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   arm: 'bras_t1',
   arm_electric: 'bras_t2',
   arm_filter: 'bras_t3',
+  splitter: 'separateur',
+  merger: 'groupeur',
+  sorter: 'trieur',
   stamper: 'estampeuse_t1',
   assembler: 'assembleur_t2',
   crusher: 'concasseur_t1',
@@ -148,9 +151,9 @@ const BELT_MODELS: Record<BeltShape, readonly [string, string, string]> = {
  */
 const TERRA_BELT_MODELS: Record<BeltShape, readonly [string | null, string | null, string | null]> =
   {
-    straight: ['convoyeur_t1', null, null],
-    corner: ['convoyeur_virage_t1', null, null],
-    cornerBack: ['convoyeur_virage_inverse_t1', null, null],
+    straight: ['convoyeur_t1', 'convoyeur_t2', 'convoyeur_t3'],
+    corner: ['convoyeur_virage_t1', 'convoyeur_virage_t2', 'convoyeur_virage_t3'],
+    cornerBack: ['convoyeur_virage_inverse_t1', 'convoyeur_virage_inverse_t2', 'convoyeur_virage_inverse_t3'],
   };
 export const beltModel = (shape: BeltShape, tier: number): BakedModel | null => {
   const t = Math.max(0, Math.min(2, tier - 1));

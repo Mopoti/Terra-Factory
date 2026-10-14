@@ -508,6 +508,20 @@ def poser_au_sol(coll, demi_x, demi_y=None):
     return _object(coll, 'repere_emprise', bm, 'noir')
 
 
+def agrandir(coll, k, demi_x, demi_y=None):
+    """Agrandit tout le modèle d'un facteur `k` (mêmes proportions, autour de l'origine au sol : pièces, pivots), puis
+    remet les repères d'emprise aux coins (± demi_x, ± demi_y). Sert quand l'emprise d'une machine grandit dans le jeu."""
+    for o in list(coll.objects):
+        if o.name.startswith('repere_emprise'):
+            bpy.data.objects.remove(o, do_unlink=True)
+    m = Matrix.Scale(k, 4)
+    for o in coll.objects:
+        if o.type == 'MESH':
+            o.data.transform(m)
+        o.location = o.location * k
+    return poser_au_sol(coll, demi_x, demi_y)
+
+
 def pivot(coll, name, loc, axe=(0, 0, 1)):
     """Pivot d'animation : objet vide nommé `pivot_<groupe>` (voir blender/ANIMATIONS.md), placé en `loc`.
 

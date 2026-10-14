@@ -21,15 +21,17 @@ les flammes du fourneau T1 bougent, via `ANIMATED_MESHES` dans `src/render/model
 
 | Modèle | Groupe | Mouvement | Pivot (Blender) | Axe |
 |---|---|---|---|---|
-| `foreuse_t1` | `foret_` (foret, mandrin, table rotative) | tourne en continu | `pivot_foret` (0 ; −0,35 ; 0,8) | vertical |
-| `foreuse_t1` | `volant_` (jante, moyeu, rayons) | tourne en continu | `pivot_volant` (−1,5 ; 1,2 ; 0,85) | X |
-| `foreuse_t1` | `poulie_boite` (poulie de la courroie) | tourne, plus vite que le volant (rapport ≈ 3) | `pivot_poulie_boite` (−1,5 ; −0,35 ; 1,86) | X |
-| `foreuse_t1` | `poulie_tete` (poulie en haut de la tour) | tourne lentement | `pivot_poulie_tete` (0 ; −0,35 ; 3,44) | X |
-| `foreuse_electrique_t2` | `foret_` (arbre, mandrin, foret) | tourne en continu | `pivot_foret` (0 ; 0 ; 1,38) | vertical |
-| `foreuse_eco_t3` | `foret_` (arbre, mandrin, foret) | tourne en continu | `pivot_foret` (0 ; 0 ; 1,38) | vertical |
-| `foreuse_eco_t3` | `gyrophare` | tourne (ou clignote) en marche | `pivot_gyrophare` (0,42 ; −0,42 ; 2,85) | vertical |
+| `foreuse_t1` | `foret_` (foret, mandrin, table rotative) | tourne en continu | `pivot_foret` (0 ; −0,43 ; 0,98) | vertical |
+| `foreuse_t1` | `volant_` (jante, moyeu, rayons) | tourne en continu | `pivot_volant` (−1,83 ; 1,46 ; 1,04) | X |
+| `foreuse_t1` | `poulie_boite` (poulie de la courroie) | tourne, plus vite que le volant (rapport ≈ 3) | `pivot_poulie_boite` (−1,83 ; −0,43 ; 2,27) | X |
+| `foreuse_t1` | `poulie_tete` (poulie en haut de la tour) | tourne lentement | `pivot_poulie_tete` (0 ; −0,43 ; 4,2) | X |
+| `foreuse_electrique_t2` | `foret_` (arbre, mandrin, foret) | tourne en continu | `pivot_foret` (0 ; 0 ; 1,68) | vertical |
+| `foreuse_eco_t3` | `foret_` (arbre, mandrin, foret) | tourne en continu | `pivot_foret` (0 ; 0 ; 1,68) | vertical |
+| `foreuse_eco_t3` | `gyrophare` | tourne (ou clignote) en marche | `pivot_gyrophare` (0,51 ; −0,51 ; 3,48) | vertical |
 
 La courroie de la T1 reste fixe (une courroie qui défile ne se voit pas en low poly).
+
+Les foreuses sont agrandies de ×1,22 (emprise 4 × 5 cases) : les pivots ci-dessus tiennent compte de cet agrandissement.
 
 ## Chevalet de pompage (`chevalet_t2`)
 

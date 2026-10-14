@@ -24,6 +24,11 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
 
+# Emprise des foreuses dans le jeu : 4 x 5 cases (2 m de large, 2,5 m de profondeur). Les modèles sont dessinés pour
+# 4 x 4 puis agrandis de ce facteur (mêmes proportions) : ils remplissent la largeur et la profondeur (de -2 à 2 en X,
+# de -2,5 à 2,5 en Y) et montent jusqu’à 4,6 unités (2,3 m), ce qui demande une hauteur de 2 m dans machines.json.
+ECHELLE_FOREUSE = 1.22
+
 def foreuse_t1(coll, leger=True):
     """Foreuse à combustible : 4 x 4 cases, 3,9 unités max (1,95 m = 1,3 x 1,5 m). Sortie devant (-Y), combustible derrière.
 
@@ -167,6 +172,7 @@ def foreuse_t1(coll, leger=True):
 
     lot.finir()
     T.poser_au_sol(coll, 2.0)
+    T.agrandir(coll, ECHELLE_FOREUSE, 2.0, 2.5)  # emprise 4 x 5 cases
 
 
 def foreuse_electrique_t2(coll, leger=True):
@@ -272,6 +278,7 @@ def foreuse_electrique_t2(coll, leger=True):
 
     lot.finir()
     T.poser_au_sol(coll, 2.0)
+    T.agrandir(coll, ECHELLE_FOREUSE, 2.0, 2.5)  # emprise 4 x 5 cases
 
 
 def foreuse_eco_t3(coll, leger=True):
@@ -406,6 +413,7 @@ def foreuse_eco_t3(coll, leger=True):
 
     lot.finir()
     T.poser_au_sol(coll, 2.0)
+    T.agrandir(coll, ECHELLE_FOREUSE, 2.0, 2.5)  # emprise 4 x 5 cases
 
 def chevalet_t2(coll, leger=True):
     """Chevalet de pompage électrique (pétrole) : 3 x 3 cases, 3,9 unités max (1,95 m), aussi haut que permis. Sortie du fluide devant (-Y).
