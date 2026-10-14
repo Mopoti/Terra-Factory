@@ -42,8 +42,12 @@ PALETTE = {
     'braise': '#f0701e',
     'flamme': '#ffc93c',
     'beton': '#9a958c',
+    'gris_clair': '#b4bcc6',
+    'cyan': '#46d9e0',
+    'panneau': '#243a5e',
     'verre': '#7fb7d4',
     'bois': '#8a6a45',
+    'vert_fonce': '#3f5a45',  # fonte peinte des machines à vapeur
 }
 
 
@@ -245,11 +249,180 @@ def lissage(coll, name, anneaux, mat, fond=False, dessus=True, n_coin=4):
     return _object(coll, name, bm, mat)
 
 
+def helice(coll, name, centre, z0, z1, r_in, r_out, tours, ep, mat, pas_par_tour=16, phase=0.0):
+    """Spirale (vis, foret, tarière) : ruban hélicoïdal d'épaisseur `ep` autour de l'axe vertical passant par `centre`
+    (x, y), du rayon `r_in` au rayon `r_out`, de z0 à z1, en `tours` tours. `phase` (radians) décale le départ
+    (deux hélices décalées d'un demi-tour = foret de perceuse)."""
+    bm = bmesh.new()
+    n = max(2, int(tours * pas_par_tour))
+    cx, cy = centre
+    prev = None
+    for i in range(n + 1):
+        t = i / n
+        a = 2 * math.pi * tours * t + phase
+        z = z0 + (z1 - z0) * t
+        c, s = math.cos(a), math.sin(a)
+        cur = (bm.verts.new((cx + r_in * c, cy + r_in * s, z)), bm.verts.new((cx + r_out * c, cy + r_out * s, z)))
+        if prev:
+            bm.faces.new((prev[0], prev[1], cur[1], cur[0]))
+        prev = cur
+    bmesh.ops.solidify(bm, geom=list(bm.faces), thickness=ep)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
+def foret(coll, name, centre, z0, z1, rayon, profondeur, tours, mat, n_angle=16, n_z=12, pointe=0.0):
+    """Foret de perceuse : un seul bloc torsadé. Sa coupe = deux parties pleines (listels) séparées par deux rainures de
+    `profondeur` ; la coupe tourne de `tours` tours entre z0 et z1. `pointe` > 0 ajoute une pointe conique sous z0."""
+    bm = bmesh.new()
+    cx, cy = centre
+    rings = []
+    for j in range(n_z + 1):
+        t = j / n_z
+        z = z0 + (z1 - z0) * t
+        tw = 2 * math.pi * tours * t
+        ring = []
+        for i in range(n_angle):
+            a = 2 * math.pi * i / n_angle
+            rainure = max(0.0, -math.cos(2 * a)) ** 0.7  # deux rainures (vers 90° et 270°)
+            r = rayon - profondeur * rainure
+            ring.append(bm.verts.new((cx + r * math.cos(a + tw), cy + r * math.sin(a + tw), z)))
+        rings.append(ring)
+    for a, b in zip(rings, rings[1:]):
+        for i in range(n_angle):
+            k = (i + 1) % n_angle
+            bm.faces.new((a[i], a[k], b[k], b[i]))
+    bm.faces.new(rings[-1])
+    if pointe > 0:
+        bout = bm.verts.new((cx, cy, z0 - pointe))
+        for i in range(n_angle):
+            bm.faces.new((rings[0][(i + 1) % n_angle], rings[0][i], bout))
+    else:
+        bm.faces.new(list(reversed(rings[0])))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
+def courroie(coll, name, x, c1, r1, c2, r2, largeur, ep, mat, n1=16, n2=8):
+    """Courroie fermée dans le plan vertical X = `x` : s'enroule sur la roue (centre c1 = (y, z), rayon r1) et sur la
+    poulie (c2, r2), avec ses deux brins droits tangents. `largeur` le long de X, `ep` = épaisseur (vers l'intérieur)."""
+    c1, c2 = Vector(c1), Vector(c2)
+    d = c2 - c1
+    D = d.length
+    phi = math.atan2(d.y, d.x)
+    alpha = math.acos(max(-1.0, min(1.0, (r1 - r2) / D)))
+
+    def pt(c, r, a):
+        return Vector((c.x + r * math.cos(a), c.y + r * math.sin(a)))
+
+    chemin = []
+    # Arc sur la poulie (côté roue opposé), de phi + alpha à phi - alpha en passant par phi.
+    for i in range(n2 + 1):
+        chemin.append(pt(c2, r2, phi + alpha - 2 * alpha * i / n2))
+    # Arc sur la roue, de phi - alpha à phi + alpha - 2 pi en passant par phi + pi.
+    for i in range(n1 + 1):
+        chemin.append(pt(c1, r1, phi - alpha - (2 * math.pi - 2 * alpha) * i / n1))
+    centre = sum(chemin, Vector((0, 0))) / len(chemin)
+    bm = bmesh.new()
+    rings = []
+    n = len(chemin)
+    for i, p in enumerate(chemin):
+        t = chemin[(i + 1) % n] - chemin[i - 1]
+        nrm = Vector((t.y, -t.x)).normalized()
+        if nrm.dot(p - centre) < 0:
+            nrm = -nrm
+        q = p - nrm * ep
+        rings.append([bm.verts.new((x - largeur / 2, p.x, p.y)), bm.verts.new((x + largeur / 2, p.x, p.y)),
+                      bm.verts.new((x + largeur / 2, q.x, q.y)), bm.verts.new((x - largeur / 2, q.x, q.y))])
+    for i in range(n):
+        a, b = rings[i], rings[(i + 1) % n]
+        for k in range(4):
+            bm.faces.new((a[k], a[(k + 1) % 4], b[(k + 1) % 4], b[k]))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
+def percer(obj, rayon, z0, z1, centre=(0.0, 0.0), segments=24):
+    """Perce un trou cylindrique vertical (rayon `rayon`, de z0 à z1) dans `obj` (booléen « différence » appliqué).
+    L'objet doit être fermé (ex. `lissage(..., fond=True)`)."""
+    cut = cylinder(obj.users_collection[0], obj.name + '_trou', rayon, z1 - z0,
+                   (centre[0], centre[1], (z0 + z1) / 2), obj.data.materials[0].name, segments)
+    mod = obj.modifiers.new('trou', 'BOOLEAN')
+    mod.operation = 'DIFFERENCE'
+    mod.solver = 'EXACT'
+    mod.object = cut
+    dg = bpy.context.evaluated_depsgraph_get()
+    neuf = bpy.data.meshes.new_from_object(obj.evaluated_get(dg))
+    ancien = obj.data
+    obj.modifiers.remove(mod)
+    obj.data = neuf
+    bpy.data.meshes.remove(ancien)
+    m = cut.data
+    bpy.data.objects.remove(cut)
+    bpy.data.meshes.remove(m)
+    return obj
+
+
+def extrusion(coll, name, profil, x0, x1, mat):
+    """Extrude le long de X (de x0 à x1) un profil convexe donné dans le plan (y, z) : liste de points (y, z) dans l'ordre
+    du contour. Sert aux formes courbes vues de côté (tête de cheval d'un chevalet de pompage, cames…)."""
+    bm = bmesh.new()
+    a = [bm.verts.new((x0, y, z)) for y, z in profil]
+    b = [bm.verts.new((x1, y, z)) for y, z in profil]
+    n = len(profil)
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((a[i], b[i], b[j], a[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _object(coll, name, bm, mat)
+
+
 def cylinder_at(coll, name, radius, height, loc, mat, segments=12, radius_top=None, x=0.0, y=0.0, z=0.0):
     """Cylindre tourné de (x, y, z) degrés autour de son propre centre, puis placé en `loc`."""
     obj = cylinder(coll, name, radius, height, (0, 0, 0), mat, segments, radius_top)
     rotate(obj, x, y, z)
     obj.location = loc
+    return obj
+
+
+def poser_au_sol(coll, demi_x, demi_y=None):
+    """Modèle sans sol : le descend pour que sa pièce la plus basse touche Z = 0 (pivots compris), puis ajoute aux
+    4 coins de l'emprise (± demi_x, ± demi_y) des repères minuscules (triangles de 4 mm, invisibles en jeu).
+
+    Le jeu cadre chaque modèle sur son enveloppe (il le centre et l'agrandit jusqu'à remplir les cases) : sans ces
+    repères, un modèle sans dalle serait agrandi et décalé. Avec eux, il garde l'échelle et la place voulues ici.
+    """
+    demi_y = demi_x if demi_y is None else demi_y
+    zmin = min((o.matrix_basis @ v.co).z for o in coll.objects if o.type == 'MESH' for v in o.data.vertices)
+    for o in coll.objects:
+        o.location.z -= zmin
+    bm = bmesh.new()
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x, y = sx * demi_x, sy * demi_y
+            a = bm.verts.new((x, y, 0))
+            b = bm.verts.new((x - sx * 0.004, y, 0))
+            c = bm.verts.new((x, y - sy * 0.004, 0))
+            bm.faces.new((a, b, c) if sx * sy > 0 else (a, c, b))
+    return _object(coll, 'repere_emprise', bm, 'noir')
+
+
+def pivot(coll, name, loc, axe=(0, 0, 1)):
+    """Pivot d'animation : objet vide nommé `pivot_<groupe>` (voir blender/ANIMATIONS.md), placé en `loc`.
+
+    Il n'a pas de forme (le jeu l'ignore au rendu) : il donne au code du jeu le point autour duquel tournent (ou à partir
+    duquel bougent) les pièces du groupe, et son axe Z local suit `axe` (axe de rotation, dans le repère Blender).
+    """
+    obj = bpy.data.objects.new(name, None)
+    obj.empty_display_type = 'ARROWS'
+    obj.empty_display_size = 0.3
+    obj.location = loc
+    obj.rotation_mode = 'QUATERNION'
+    obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(Vector(axe))
+    coll.objects.link(obj)
     return obj
 
 
@@ -264,11 +437,19 @@ def _export_copy(coll):
     temp = bpy.data.collections.new(coll.name + '_export')
     bpy.context.scene.collection.children.link(temp)
     for obj in coll.objects:
-        mesh = obj.data.copy()
         # matrix_basis plutôt que matrix_world : juste même si la collection est masquée (pas encore recalculée).
         monde = obj.matrix_basis if obj.parent is None else obj.matrix_world
-        mesh.transform(Matrix.Scale(CELL_M, 4) @ monde)
-        copy = bpy.data.objects.new(obj.name, mesh)
+        if obj.type == 'EMPTY':
+            # Pivot d'animation : un nœud vide placé (en mètres) et orienté comme dans Blender, sans maillage.
+            copy = bpy.data.objects.new(obj.name, None)
+            loc, rot, _ = monde.decompose()
+            copy.location = loc * CELL_M
+            copy.rotation_mode = 'QUATERNION'
+            copy.rotation_quaternion = rot
+        else:
+            mesh = obj.data.copy()
+            mesh.transform(Matrix.Scale(CELL_M, 4) @ monde)
+            copy = bpy.data.objects.new(obj.name, mesh)
         temp.objects.link(copy)
     return temp
 

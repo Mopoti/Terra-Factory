@@ -15,6 +15,7 @@ Pour le PC avec Blender (testé avec les scripts sous bpy 4.2 ; prévus pour 5.x
 
 - **Échelle** : 1 unité Blender = 1 case du jeu = 50 cm × 50 cm. Une foreuse de 4 × 4 cases mesure 4 × 4 unités.
 - **Axes** : Z en haut ; modèle centré sur (0, 0) et posé sur Z = 0 ; tout reste dans l'emprise de la machine (le jeu cadre le modèle sur son enveloppe : une pièce qui dépasse le réduit).
+- **Pas de sol** : pas de dalle ni de dallage sous les machines, elles sont posées directement sur le terrain du jeu. Chaque modèle finit par `T.poser_au_sol(coll, demi_emprise)` : il descend le modèle à Z = 0 et ajoute aux 4 coins de l'emprise des repères minuscules (`repere_emprise`, invisibles en jeu). Ils sont indispensables : le jeu centre le modèle sur son enveloppe et l'agrandit jusqu'à remplir les cases ; sans eux, une machine sans dalle serait agrandie et décalée.
 - **Hauteur** : le jeu accepte un modèle jusqu'à **1,3 × la hauteur** de la machine dans `content/machines.json` (`height`, en mètres) sans le réduire (`factoryView.ts`). Ex. fourneau : `height` 1,0 m → modèle jusqu'à 1,3 m = 2,6 unités Blender.
 - **Avant** : la sortie de la machine est du côté **−Y** (vue de face, touche 1). À l'export (Y haut) c'est +Z = orientation 0 du jeu.
 - **Style : low poly stylisé** (*stylized low-poly*) : formes simples et un peu irrégulières, arêtes biseautées, facettes visibles (ombrage plat), **couleurs unies de la palette** (`PALETTE` dans `terra.py`). Le côté « vrai » vient du **relief et des variations de teinte**, pas d'images : pierres et briques en relief de plusieurs teintes (`parement`), dalles au sol, rivets, planches, braises… Référence : un fourneau en pierres et briques, chaleureux, aux formes un peu massives.
@@ -32,3 +33,10 @@ Ajouter la machine dans `TERRA_MODELS` (`src/render/models.ts`) : `drill: 'foreu
 ## Nommage
 
 `<objet>_<palier>` : `foreuse_t1`, `foreuse_electrique_t2`, `tapis_t1`… Mots séparés par `_`, sans accents ni majuscules.
+
+## Pièces animées
+
+Les pièces qui bougent sont des objets **à part**, nommés `<groupe>_…` (ex. `balancier_tete`, `foret_corps`), et chaque groupe a
+son **pivot** : un objet vide `pivot_<groupe>` (`T.pivot()` dans `terra.py`) placé au centre de rotation, axe Z local =
+axe de rotation. Ne pas fusionner ces pièces avec le reste (utiliser un `T.Lot` à part, nommé comme le groupe).
+La liste de ce qui doit bouger, modèle par modèle, est dans **`blender/ANIMATIONS.md`**.

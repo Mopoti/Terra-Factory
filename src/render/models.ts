@@ -72,8 +72,12 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
  */
 export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   drill: 'foreuse_t1',
+  drill_electric: 'foreuse_electrique_t2',
+  drill_eco: 'foreuse_eco_t3',
   furnace: 'fourneau_t1',
   furnace_electric: 'fourneau_electrique_t2',
+  pumpjack: 'chevalet_t2',
+  stamper: 'estampeuse_t1',
 };
 
 /**

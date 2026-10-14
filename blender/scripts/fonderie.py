@@ -49,27 +49,18 @@ def fourneau_t1(coll, leger=True):
     """Fourneau à combustible : 3 x 3 cases, 2,6 unités de haut (1,3 m = 1,3 x la hauteur de machines.json, le maximum
     accepté par le jeu sans réduire le modèle). Sortie devant (-Y), combustible derrière (+Y).
 
-    Corps en briques sur un dallage de pierre, chaînages d'angle en pierre, gueule du foyer en arc avec flammes,
+    Corps en briques posé sur le terrain (pas de sol), chaînages d'angle en pierre, gueule du foyer en arc avec flammes,
     réserve de bûches en dessous, corniche, hotte en pyramide et cheminée ; trappe en planches et charbon derrière ;
     entrée de la matière brute sur chaque côté X.
     Tout reste dans l'emprise 3 x 3 (de -1,5 à 1,5) et entre Z = 0 et Z = 2,6.
-    `leger` (version web) : briques moins nombreuses et sans biseau, dallage plus simple, moins de charbon ;
+    `leger` (version web) : briques moins nombreuses et sans biseau, moins de charbon ;
     la version détaillée (leger=False) est gardée pour Unity.
     """
     rnd = random.Random(3)
     bv = 0.0 if leger else 1.0  # biseau des petites pièces : aucun en version légère
     lot = T.Lot(coll, 'pieces')
 
-    # --- Sol : dalle sombre + dallage irrégulier (z 0 -> 0,2).
-    T.box(coll, 'dalle', (3, 3, 0.12), (0, 0, 0.06), 'pierre_sombre', bevel=0.03)
-    n = 3 if leger else 4
-    pas = 3.0 / n
-    for i in range(n):
-        for j in range(n):
-            sx, sy = rnd.uniform(pas - 0.15, pas - 0.05), rnd.uniform(pas - 0.15, pas - 0.05)
-            lot.cube(rnd.choice(('pierre', 'pierre_claire', 'pierre')), (sx, sy, rnd.uniform(0.06, 0.08)),
-                     (-1.5 + pas * (i + 0.5) + rnd.uniform(-0.03, 0.03), -1.5 + pas * (j + 0.5) + rnd.uniform(-0.03, 0.03), 0.155),
-                     bevel=0.025 * bv, rot=Matrix.Rotation(rnd.uniform(-0.04, 0.04), 3, 'Z'))
+    # Pas de sol : la machine est posée sur le terrain du jeu (voir T.poser_au_sol à la fin).
 
     # --- Corps en briques (x ±1,3 ; y -1,1 -> 1,3 ; z 0,2 -> 1,68) et soubassement de pierre.
     T.box(coll, 'corps', (2.6, 2.4, 1.48), (0, 0.1, 0.94), 'brique', bevel=0.02)
@@ -152,6 +143,7 @@ def fourneau_t1(coll, leger=True):
                  bevel=0.02 * bv, rot=Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
 
     lot.finir()
+    T.poser_au_sol(coll, 1.5)
 
 
 def fourneau_electrique_t2(coll, leger=True):
@@ -182,11 +174,7 @@ def fourneau_electrique_t2(coll, leger=True):
     def demi_pyr(z):
         return d_pyr0 + (d_pyr1 - d_pyr0) * (z - z_pyr0) / (z_pyr1 - z_pyr0)
 
-    # --- Dalle et bandes de sécurité devant.
-    T.box(coll, 'dalle', (3, 3, 0.12), (0, 0, 0.06), 'beton', bevel=0.03)
-    for k in range(6):
-        for s in (-1, 1):
-            lot.cube('jaune' if k % 2 == 0 else 'noir', (0.16, 0.1, 0.02), (s * (0.45 + 0.16 * k + 0.08), -1.42, 0.125), 0)
+    # Pas de sol : la machine est posée sur le terrain du jeu (voir T.poser_au_sol à la fin).
 
     # --- Socle aux angles arrondis (demi 1,3 ; z 0,12 -> 0,62) : entrées, sortie, écran.
     T.lissage(coll, 'socle', [(1.3, 0.22, 0.12), (1.3, 0.22, 0.56)], 'acier_sombre', n_coin=nc)
@@ -285,6 +273,7 @@ def fourneau_electrique_t2(coll, leger=True):
     lot.barre('noir', (-1.05, 1.24, 2.48), (-0.5, demi_pyr(1.85) + 0.03, 1.85), 0.035, 0)
 
     lot.finir()
+    T.poser_au_sol(coll, 1.5)
 
 MODELES = {'fourneau_t1': fourneau_t1, 'fourneau_electrique_t2': fourneau_electrique_t2}
 
