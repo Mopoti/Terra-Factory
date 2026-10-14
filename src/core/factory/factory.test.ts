@@ -567,7 +567,7 @@ describe('assembleur', () => {
     const asm = emptyMachine(1, 'assembler', 10, 10, 0);
     asm.recipe = 'machine_conveyor';
     asm.slots.push({ item: 'iron_ingot', count: 6 });
-    const out = emptyMachine(2, 'chest_wood', 11, 12, 0);
+    const out = emptyMachine(2, 'chest_wood', 11, 14, 0); // juste devant l'assembleur (4 x 4 cases)
     const f = powered(asm, [out]);
     run(f, (machineDef('assembler').craftSeconds ?? 2) * 3 + Factory.CYCLE_REST_S * 3 + 0.2);
     expect(out.slots[0]).toEqual({ item: 'machine_conveyor', count: 3 });

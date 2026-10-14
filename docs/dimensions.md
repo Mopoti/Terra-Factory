@@ -44,3 +44,18 @@ Arbre 4,2 m (tronc seul bloquant), rocher 0,8 m, buisson de fibres 0,6 m, minera
 - Niveaux de tapis : sol 0, **niveau 1 = 1 m**, **niveau 2 = 2 m** (`LEVEL_HEIGHTS = [0, 1, 2]`). Toutes les rampes font 1 m de dénivelé sur 1 tuile : **45° partout** (fini la rampe haute plus raide que la basse). Le joueur (1,7 m) passe sous le niveau 2.
 - Machines à l'étage : posées sur la dalle à la face 4 (2 m).
 - Murs : 1 bloc = 50 cm ; un étage = 5 blocs = 2,5 m ; on peut empiler jusqu'à 50 blocs (25 m) et 10 étages.
+
+## Mise à jour Tour 166 — machines plus hautes et plus grosses (demande du PO, pour les modèles maison)
+
+Une « case » = 50 cm (`content/machines.json`, `height` en mètres, `w` × `d` en cases).
+
+| Machine                                                                                 | Avant            | Maintenant       |
+| --------------------------------------------------------------------------------------- | ---------------- | ---------------- |
+| Foreuses T1 / T2 / T3, chevalet de pompage                                              | h 1,5            | **h 2,0**        |
+| Fourneau, four électrique, estampeuse, concasseur, bétonnière, station de lavage        | h 1,0            | **h 1,5**        |
+| Convertisseur Bessemer                                                                  | h 1,5            | **h 2,0**        |
+| Bras robotiques T1 / T2 / T3                                                            | h 0,5            | **h 1,0**        |
+| Assembleur, constructeur, presse hydraulique lourde, centrifugeuse                      | 3 × 3, h 1,0     | **4 × 4, h 1,5** |
+| Raffinerie                                                                              | 3 × 3, h 2,0     | **4 × 4, h 2,5** |
+
+« Une case de largeur » est lu comme **+1 case sur les deux côtés** de l'emprise (carrée) : 3 × 3 devient 4 × 4. Les anciennes parties (`footprintVersion` 2 → 3) gardent le coin de chaque machine ; une machine qui chevauche maintenant une grosse machine (par id croissant) est retirée et posée au sol, comme lors de la migration précédente.

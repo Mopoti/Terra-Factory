@@ -11,7 +11,7 @@
       "mineSeconds": 2,
       "burnKw": 90,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 2.0,
       "pollution": 0.6,
       "pollutionKind": "ground"
     },
@@ -24,7 +24,7 @@
       "fuel": true,
       "burnKw": 90,
       "stockMax": 100,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.5,
       "pollutionKind": "air"
     },
@@ -37,7 +37,7 @@
       "fuel": true,
       "burnKw": 60,
       "stockMax": 100,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.3,
       "pollutionKind": "ground"
     },
@@ -50,7 +50,7 @@
       "fuel": true,
       "burnKw": 60,
       "stockMax": 100,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.4,
       "pollutionKind": "ground"
     },
@@ -63,7 +63,7 @@
       "fuel": false,
       "consumesKw": 90,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 2.0,
       "pollution": 0.8,
       "pollutionKind": "air"
     },
@@ -76,7 +76,7 @@
       "fuel": false,
       "consumesKw": 30,
       "stockMax": 100,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.2,
       "pollutionKind": "ground"
     },
@@ -154,7 +154,7 @@
       "d": 4,
       "item": "machine_drill_electric",
       "color": "#4a86a8",
-      "height": 1.5,
+      "height": 2.0,
       "fuel": false,
       "mineSeconds": 0.25,
       "stockMax": 100,
@@ -172,7 +172,7 @@
       "consumesKw": 67.5,
       "mineSeconds": 0.1,
       "stockMax": 100,
-      "height": 1.5,
+      "height": 2.0,
       "pollution": 0.15,
       "pollutionKind": "ground"
     },
@@ -203,7 +203,7 @@
       "fuel": true,
       "burnKw": 20,
       "stockMax": 10,
-      "height": 0.5,
+      "height": 1.0,
       "swingSeconds": 0.9
     },
     {
@@ -215,7 +215,7 @@
       "fuel": false,
       "consumesKw": 20,
       "swingSeconds": 0.45,
-      "height": 0.5
+      "height": 1.0
     },
     {
       "id": "arm_filter",
@@ -226,7 +226,7 @@
       "fuel": false,
       "consumesKw": 30,
       "swingSeconds": 0.3,
-      "height": 0.5
+      "height": 1.0
     },
     {
       "id": "sorter",
@@ -240,15 +240,15 @@
     },
     {
       "id": "assembler",
-      "w": 3,
-      "d": 3,
+      "w": 4,
+      "d": 4,
       "item": "machine_assembler",
       "color": "#6d7f95",
       "fuel": false,
       "consumesKw": 60,
       "craftSeconds": 3,
       "stockMax": 100,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.2,
       "pollutionKind": "ground"
     },
@@ -308,8 +308,8 @@
     },
     {
       "id": "builder",
-      "w": 3,
-      "d": 3,
+      "w": 4,
+      "d": 4,
       "item": "machine_builder",
       "color": "#7a8fa5",
       "fuel": false,
@@ -319,18 +319,18 @@
       "startBar": 2,
       "coolBoost": 0.5,
       "coolLitersPerS": 4,
-      "height": 1.0
+      "height": 1.5
     },
     {
       "id": "heavy_press",
-      "w": 3,
-      "d": 3,
+      "w": 4,
+      "d": 4,
       "item": "machine_heavy_press",
       "color": "#5a5f66",
       "fuel": false,
       "consumesKw": 150,
       "stockMax": 100,
-      "height": 1.0
+      "height": 1.5
     },
     {
       "id": "washer",
@@ -342,7 +342,7 @@
       "consumesKw": 25,
       "stockMax": 100,
       "fluidCap": 200,
-      "height": 1.0
+      "height": 1.5
     },
     {
       "id": "booster",
@@ -381,7 +381,7 @@
       "startBar": 2,
       "coolBoost": 0.5,
       "coolLitersPerS": 4,
-      "height": 1.0,
+      "height": 1.5,
       "pollution": 0.5,
       "pollutionKind": "air"
     },
@@ -396,12 +396,12 @@
       "fluidCap": 200,
       "startBar": 4,
       "pumpRate": 1,
-      "height": 1.5
+      "height": 2.0
     },
     {
       "id": "refinery",
-      "w": 3,
-      "d": 3,
+      "w": 4,
+      "d": 4,
       "item": "machine_refinery",
       "color": "#6a7a86",
       "fuel": false,
@@ -411,7 +411,7 @@
       "pumpRate": 10,
       "pollution": 0.8,
       "pollutionKind": "air",
-      "height": 2.0
+      "height": 2.5
     },
     {
       "id": "plastic_press",
@@ -427,14 +427,14 @@
     },
     {
       "id": "centrifuge",
-      "w": 3,
-      "d": 3,
+      "w": 4,
+      "d": 4,
       "item": "machine_centrifuge",
       "color": "#6a7a70",
       "fuel": false,
       "consumesKw": 120,
       "stockMax": 100,
-      "height": 1.0
+      "height": 1.5
     },
     {
       "id": "fission_reactor",

@@ -756,9 +756,21 @@ describe('anciennes parties : emprises des machines', () => {
     // une partie déjà à la nouvelle version n'est pas touchée
     const t = new GameState({
       inventory: {},
-      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 2 },
+      changes: { machines: [{ ...machines[0], gx: 5, gz: 7 }], footprintVersion: 3 },
     });
     expect(t.changes.machines[0]).toMatchObject({ gx: 5, gz: 7 });
+  });
+
+  it('version 2 → 3 : l’assembleur passe à 4 x 4 cases, ce qui gêne un coffre posé contre lui', () => {
+    const asm = { id: 1, type: 'assembler', gx: 20, gz: 20, rot: 0, belt: [], slots: [] };
+    const chest = { id: 2, type: 'chest_wood', gx: 23, gz: 21, rot: 0, belt: [], slots: [] };
+    const s = new GameState({
+      inventory: {},
+      changes: { machines: [asm, chest], footprintVersion: 2 },
+    });
+    expect(s.changes.machines.map((m) => m.id)).toEqual([1]);
+    expect(s.changes.drops).toHaveLength(1);
+    expect(s.changes.drops[0].item).toBe('machine_chest_wood');
   });
 });
 
