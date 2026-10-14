@@ -78,6 +78,7 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   furnace_electric: 'fourneau_electrique_t2',
   pumpjack: 'chevalet_t2',
   stamper: 'estampeuse_t1',
+  assembler: 'assembleur_t2',
 };
 
 /**
@@ -327,6 +328,11 @@ export function animatedParts(
   const name = MACHINE_MODELS[type];
   const model = modelFor(type);
   if (!anim || !name || !model) return null;
+  // Seul le modèle du kit est coupé à mi-hauteur. Un modèle maison (`TERRA_MODELS`) garde ses pièces entières : ses
+  // pièces mobiles sont des groupes à part (voir blender/ANIMATIONS.md). Sans ce test, la découpe du modèle maison
+  // était aussi mise en cache sous le nom du kit, partagé par d'autres machines (l'estampeuse prêtait son modèle à la
+  // presse lourde, à la mauvaise échelle).
+  if (model !== baked.get(name)) return null;
   let parts = splits.get(name + anim.split);
   if (!parts) {
     parts = splitModel(model, anim.split);

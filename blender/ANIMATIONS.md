@@ -55,11 +55,12 @@ Données utiles pour le calcul (unités Blender, plan Y-Z) :
 
 | Modèle | Groupe | Mouvement | Pivot (Blender) |
 |---|---|---|---|
-| `estampeuse_t1` | `marteau_` (masse, plaque rivetée, matrice haute, crosse, tige du piston) | **descend et remonte tout droit** : course de **0,2** vers le bas jusqu'à la matrice basse (frappe en fin de cycle, comme `press`) | `pivot_marteau` (0 ; −0,15 ; 0,96) = bas de la matrice haute, marteau en haut |
+| `estampeuse_t1` | `marteau_` (masse, plaque rivetée, matrice haute, crosse, tige du piston) | **descend et remonte tout droit** : course de **0,2** vers le bas jusqu'à la matrice basse (frappe en fin de cycle, comme `press`) | `pivot_marteau` (0 ; −0,1 ; 1,07) = bas de la matrice haute, marteau en haut |
+| `assembleur_t2` | `bras_` (tourelle, bras, avant-bras, poignet, pince, câble) | **pivote** autour de l'axe vertical de sa tourelle (va-et-vient entre la pièce et les plaques, comme `swing`) tant que la machine tourne | `pivot_bras` (−0,62 ; −0,75 ; 0,92), axe vertical |
+| `assembleur_t2` | `ventilateur_` (pales, moyeu) | **tourne** en continu en marche | `pivot_ventilateur` (−0,55 ; 0,5 ; 1,86), axe vertical |
 
-Attention : l'estampeuse a encore l'animation `press` du kit (`MACHINE_ANIM.stamper` dans `models.ts`), qui coupe le
-modèle à mi-hauteur et fait descendre toute la moitié haute (traverse, cylindre, cheminée…). À remplacer par le
-mouvement du seul groupe `marteau_`.
+Depuis la correction de `animatedParts` (`models.ts`), un modèle maison n'est plus coupé à mi-hauteur comme ceux du kit :
+l'estampeuse est fixe en jeu tant que le mouvement du groupe `marteau_` n'est pas codé.
 
 ## Fonderie
 
