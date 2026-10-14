@@ -17,6 +17,21 @@ les flammes du fourneau T1 bougent, via `ANIMATED_MESHES` dans `src/render/model
   chargement, puis faire tourner / déplacer chaque groupe autour de son pivot quand la machine est en marche
   (`factory.status(m) === 'running'`), en tenant compte de la rotation et de l'échelle de la machine.
 
+## Modèles agrandis pour les nouvelles emprises (octobre 2026)
+
+Les machines dont l'emprise a grandi ont été agrandies dans Blender en gardant leurs proportions (`T.agrandir` /
+`T.agrandir_auto`, tables `EMPRISES` des scripts). **Les pivots des tableaux ci-dessous sont ceux d'avant
+l'agrandissement, sauf pour les foreuses** : multiplier X, Y et Z par le facteur (le jeu, lui, lit les pivots dans le `.glb`).
+
+| Modèle | Emprise | Facteur |
+|---|---|---|
+| foreuses T1, T2, T3 | 4 × 5 | ×1,22 (pivots déjà à jour) |
+| `chevalet_t2` | 3 × 4 | ×1,35 (recentré en X avant l'agrandissement) |
+| `assembleur_t2`, `constructeur_t2`, `presse_lourde_t3`, `raffinerie_t3`, `centrifugeuse_t4` | 4 × 4 | ×1,33 environ |
+| `bras_t1`, `bras_t2`, `bras_t3` | 2 × 3 | ×1,53 (T1) et ×1,57 (T2, T3) environ |
+
+Les courses en mètres de `src/render/partMotions.ts` (constructeur, presse lourde, centrifugeuse) ont été multipliées par 1,33.
+
 ## Foreuses
 
 | Modèle | Groupe | Mouvement | Pivot (Blender) | Axe |

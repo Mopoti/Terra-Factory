@@ -50,6 +50,7 @@ const loop = (amount: number, period: number, dir: 'axis' | 'front' | 'back' = '
 });
 
 /** Mouvements par machine (clé : type de machine ; sous-clé : nom du groupe dans le modèle). */
+// Constructeur, presse lourde et centrifugeuse : modèles agrandis de ×1,33 pour l'emprise 4 × 4 (courses ×1,33).
 export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
   drill: {
     foret: spin(7),
@@ -111,7 +112,7 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     portique: {
       kind: 'slide',
       dir: 'front',
-      amount: 0.3,
+      amount: 0.4,
       period: 7,
       shape: 'pulse',
       from: 0,
@@ -120,7 +121,7 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     chariot: {
       kind: 'slide',
       dir: 'right',
-      amount: 0.3,
+      amount: 0.4,
       period: 4.3,
       shape: 'pulse',
       from: 0,
@@ -130,7 +131,7 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     outil: {
       kind: 'slide',
       dir: 'down',
-      amount: 0.05,
+      amount: 0.067,
       period: 2.1,
       shape: 'pulse',
       from: 0,
@@ -138,20 +139,20 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
       parent: 'chariot',
     },
     ventilateur: spin(14),
-    entree: loop(0.1, 1.5),
-    sortie: loop(0.1, 1.5),
+    entree: loop(0.133, 1.5),
+    sortie: loop(0.133, 1.5),
   },
   heavy_press: {
-    coulisseau: { kind: 'press', depth: 0.11 },
+    coulisseau: { kind: 'press', depth: 0.146 },
     ventilateur: spin(14),
-    entree: loop(0.1, 1.5),
-    sortie: loop(0.1, 1.5),
+    entree: loop(0.133, 1.5),
+    sortie: loop(0.133, 1.5),
   },
   centrifuge: {
     rotor: spin(25),
     ventilateur: spin(14),
-    entree: loop(0.1, 1.5),
-    sortie: loop(0.1, 1.5),
+    entree: loop(0.133, 1.5),
+    sortie: loop(0.133, 1.5),
   },
   bessemer: {
     trappe: { kind: 'swing', angle: 1.3, period: 8, oneSided: true },

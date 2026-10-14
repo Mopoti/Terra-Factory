@@ -522,6 +522,25 @@ def agrandir(coll, k, demi_x, demi_y=None):
     return poser_au_sol(coll, demi_x, demi_y)
 
 
+def agrandir_auto(coll, demi_x, demi_y, recentrer=False):
+    """Agrandit le modèle (mêmes proportions) juste assez pour remplir l'emprise ± demi_x, ± demi_y : le facteur est le
+    plus grand qui garde toutes les pièces dans l'emprise. `recentrer` décale d'abord le modèle pour centrer ses pièces
+    (modèle dessiné de travers dans son ancienne emprise). Renvoie le facteur appliqué."""
+    pts = [o.matrix_world @ v.co for o in coll.objects if o.type == 'MESH' and not o.name.startswith('repere_emprise')
+           for v in o.data.vertices]
+    x0, x1 = min(p.x for p in pts), max(p.x for p in pts)
+    y0, y1 = min(p.y for p in pts), max(p.y for p in pts)
+    dx, dy = (-(x0 + x1) / 2, -(y0 + y1) / 2) if recentrer else (0.0, 0.0)
+    if recentrer:
+        for o in coll.objects:
+            o.location.x += dx
+            o.location.y += dy
+    k = min(demi_x / max(abs(x0 + dx), abs(x1 + dx)), demi_y / max(abs(y0 + dy), abs(y1 + dy)))
+    k = math.floor(k * 100) / 100  # arrondi au centième inférieur : rien ne dépasse
+    agrandir(coll, k, demi_x, demi_y)
+    return k
+
+
 def pivot(coll, name, loc, axe=(0, 0, 1)):
     """Pivot d'animation : objet vide nommé `pivot_<groupe>` (voir blender/ANIMATIONS.md), placé en `loc`.
 
