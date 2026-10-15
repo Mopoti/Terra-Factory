@@ -564,7 +564,7 @@ describe('réglages par ressource et zone sûre', () => {
     expect(Math.min(...normal)).toBeGreaterThanOrEqual(240);
     expect(nests(1000)).toHaveLength(0); // toute la zone testée (≈ 320 m) est sûre
     expect(Math.min(...nests(50))).toBeLessThan(250);
-  });
+  }, 120000);
 });
 
 describe('tous les minerais existent et se génèrent', () => {

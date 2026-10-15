@@ -2,8 +2,11 @@ import type { SaveLibrary } from '../core/save/library';
 import { hashPassword } from '../core/net/password';
 import {
   DEFAULT_GAME_OPTIONS,
+  DIFFICULTY_MAX,
+  DIFFICULTY_MIN,
   GAME_MODES,
   REALISM_LEVELS,
+  type Difficulty,
   type GameMode,
   MAX_PLAYERS,
   type GameOptions,
@@ -11,16 +14,18 @@ import {
   type Realism,
 } from '../core/save/saveIndex';
 import { MIN_SHARE, SEASON_IDS, type TimeSettings } from '../core/game/seasons';
-import { FAMILY_IDS, RESOURCES, type FamilyId } from '../core/data/resources';
+import { RESOURCES, resourceById, type DepositResource } from '../core/data/resources';
 import { BIOME_COLORS, BIOME_IDS } from '../core/world/biomes';
 import { PreviewRenderer } from '../core/world/preview';
 import {
+  DEFAULT_SAFE_ZONE_M,
   MULTIPLIER_MAX,
   MULTIPLIER_MIN,
+  SAFE_ZONE_MAX_M,
+  SAFE_ZONE_MIN_M,
   WorldGenerator,
   defaultWorldParams,
-  type FamilyParams,
-  type WorldFamilies,
+  type ResourceParams,
 } from '../core/world/worldgen';
 import { getLocale, t, type TranslationKey } from '../i18n';
 
@@ -30,6 +35,12 @@ type Criterion = (typeof CRITERIA)[number];
 /** Icône « mélanger » (deux flèches qui se croisent). */
 const SHUFFLE_ICON =
   '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>';
+const MODE_ICONS: Record<GameMode, string> = {
+  survival:
+    '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 7.8 8 9 4.6-1.2 8-4.5 8-9V6z"/></svg>',
+  creative:
+    '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16v4M17 18h4"/></svg>',
+};
 
 const SEED_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /** Seed aléatoire lisible (sans caractères ambigus). Le hasard est permis ici : c'est de l'interface, pas du monde. */
@@ -65,6 +76,9 @@ function button(label: string, onClick: () => void, className = 'menu-btn'): HTM
   return b;
 }
 
+const times = (v: number): string =>
+  `×${v.toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export interface GameEditor {
   element: HTMLElement;
   /** Arrête les calculs de l'aperçu (à appeler quand l'écran est quitté). */
@@ -78,22 +92,39 @@ export interface GameEditorContext {
   onBack(): void;
 }
 
-/** Écran d'édition d'une nouvelle partie : seed, ressources, ennemis, physique, avec aperçu en direct. */
-export function buildGameEditor(ctx: GameEditorContext): GameEditor {
-  const families: WorldFamilies = defaultWorldParams('').families;
-  const options: GameOptions = structuredClone(DEFAULT_GAME_OPTIONS);
-  let distanceRatio = 1;
-  let disposed = false;
+/** Ressources du tableau « Minerais » : les gisements, les plus proches du départ d'abord. */
+const ORE_IDS = RESOURCES.filter((r): r is DepositResource => r.kind === 'deposit')
+  .sort((a, b) => (a.minDistanceM ?? 0) - (b.minDistanceM ?? 0))
+  .map((r) => r.id);
+/** Ressources du tableau « Environnement ». */
+const ENV_IDS = ['tree', 'fiber_bush', 'rock', 'water', 'nest'];
 
-  const panel = el('div', 'panel editor');
+/** Rayon d'aperçu (chunks de 8 m) et son côté en mètres, pour le texte d'aide. */
+const PREVIEW_SIZE_M = 512;
+
+/** Écran d'édition d'une nouvelle partie : monde, trois onglets de réglages (minerais, environnement, jouabilité), aperçu. */
+export function buildGameEditor(ctx: GameEditorContext): GameEditor {
+  const base = defaultWorldParams('');
+  const resources: ResourceParams = structuredClone(base.resources ?? {});
+  const options: GameOptions = structuredClone(DEFAULT_GAME_OPTIONS);
+  options.time = structuredClone(options.time);
+  let distanceRatio = 1;
+  let safeZoneM = DEFAULT_SAFE_ZONE_M;
+  let disposed = false;
+  /** Remises à zéro des commandes (bouton « Réinitialiser »). */
+  const syncs: (() => void)[] = [];
+
+  const panel = el('div', 'panel editor ng');
   panel.append(el('h2', undefined, t('screen.newGame.title')));
-  const layout = el('div', 'editor-layout');
-  const form = el('div', 'editor-form');
-  const side = el('div', 'editor-side');
-  layout.append(form, side);
+  const layout = el('div', 'ng-layout');
+  const main = el('div', 'ng-main');
+  const side = el('div', 'ng-side');
+  layout.append(main, side);
   panel.append(layout);
 
-  // --- Nom et seed ---------------------------------------------------------------------------
+  // --- Le monde : nom, seed, mode, accès --------------------------------------------------------
+  const world = el('section', 'ng-card');
+  world.append(el('h3', undefined, t('editor.section.world')));
   const nameField = el('label', 'field');
   nameField.append(el('span', undefined, t('screen.newGame.name')));
   const nameInput = el('input');
@@ -124,264 +155,474 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
   seedInput.addEventListener('input', schedulePreview);
   seedRow.append(seedInput, shuffle);
   seedField.append(seedLabel, seedRow, el('small', 'help', t('screen.newGame.seedHelp')));
-  form.append(nameField, seedField);
+  const nameSeed = el('div', 'ng-two');
+  nameSeed.append(nameField, seedField);
+  world.append(nameSeed);
 
-  // --- Ressources ------------------------------------------------------------------------------
-  const sliderSyncs: (() => void)[] = [];
-  form.append(el('h3', undefined, t('editor.resources')));
-
-  function slider(family: FamilyId, criterion: Criterion): HTMLElement {
-    const row = el('div', 'row');
-    const label = t(`editor.criteria.${criterion}` as TranslationKey);
-    row.append(el('span', 'row-label', label));
-    const control = el('div', 'row-control');
-    const input = el('input');
-    input.type = 'range';
-    input.min = String(MULTIPLIER_MIN);
-    input.max = String(MULTIPLIER_MAX);
-    input.step = '0.05';
-    input.setAttribute(
-      'aria-label',
-      `${t(`editor.family.${family}` as TranslationKey)} — ${label}`,
-    );
-    const value = el('span', 'row-value');
-    const word = el('span', 'level');
-    const sync = (): void => {
-      const v = families[family][criterion];
-      input.value = String(v);
-      value.textContent = `×${v.toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      word.textContent = t(`editor.level.${levelOf(v)}` as TranslationKey);
-    };
-    input.addEventListener('input', () => {
-      const f: FamilyParams = families[family];
-      f[criterion] = Math.round(Number(input.value) * 100) / 100;
-      sync();
-      schedulePreview();
-    });
-    sliderSyncs.push(sync);
-    sync();
-    control.append(input, value, word);
-    row.append(control);
-    return row;
-  }
-
-  for (const family of FAMILY_IDS) {
-    const section = el('section', 'family');
-    section.append(
-      el('h4', undefined, t(`editor.family.${family}` as TranslationKey)),
-      el('small', 'help', t(`editor.hint.${family}` as TranslationKey)),
-    );
-    for (const criterion of CRITERIA) section.append(slider(family, criterion));
-    if (family === 'enemies') {
-      section.append(
-        checkbox(
-          t('editor.enemies.aggressive'),
-          t('editor.enemies.aggressive.help'),
-          options.enemies.aggressive,
-          (v) => (options.enemies.aggressive = v),
-        ),
-        checkbox(
-          t('editor.enemies.expand'),
-          t('editor.enemies.expand.help'),
-          options.enemies.expand,
-          (v) => (options.enemies.expand = v),
-        ),
-      );
-    }
-    form.append(section);
-  }
-
-  // --- Ratio de distance des ressources ----------------------------------------------------------
-  const distRow = el('div', 'row');
-  distRow.append(el('span', 'row-label', t('editor.distance')));
-  const distControl = el('div', 'row-control');
-  const distInput = el('input');
-  distInput.type = 'range';
-  distInput.min = String(MULTIPLIER_MIN);
-  distInput.max = String(MULTIPLIER_MAX);
-  distInput.step = '0.05';
-  distInput.setAttribute('aria-label', t('editor.distance'));
-  const distValue = el('span', 'row-value');
-  const syncDistance = (): void => {
-    distInput.value = String(distanceRatio);
-    distValue.textContent = `×${distanceRatio.toLocaleString(getLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Mode de jeu : deux cartes.
+  const modePick = el('div', 'ng-pick');
+  modePick.append(el('span', 'ng-pick-title', t('editor.mode')));
+  const modeCards = el('div', 'ng-cards');
+  const modeButtons = new Map<GameMode, HTMLButtonElement>();
+  const syncMode = (): void => {
+    for (const [m, b] of modeButtons) b.setAttribute('aria-pressed', String(options.mode === m));
   };
-  distInput.addEventListener('input', () => {
-    distanceRatio = Math.round(Number(distInput.value) * 100) / 100;
-    syncDistance();
-    schedulePreview();
-  });
-  sliderSyncs.push(syncDistance);
-  syncDistance();
-  distControl.append(distInput, distValue);
-  distRow.append(distControl);
-  form.append(distRow, el('small', 'help', t('editor.distance.help')));
-
-  function checkbox(
-    label: string,
-    help: string,
-    initial: boolean,
-    onChange: (value: boolean) => void,
-  ): HTMLElement {
-    const row = el('label', 'check');
-    const input = el('input');
-    input.type = 'checkbox';
-    input.checked = initial;
-    input.addEventListener('change', () => onChange(input.checked));
-    const text = el('span');
-    text.append(el('span', undefined, label), el('small', 'help', help));
-    row.append(input, text);
-    return row;
-  }
-
-  // --- Physique --------------------------------------------------------------------------------
-  form.append(el('h3', undefined, t('editor.section.rules')));
-  const realismRow = el('div', 'row');
-  realismRow.append(el('span', 'row-label', t('editor.realism')));
-  const realismControl = el('div', 'row-control');
-  const realism = el('select');
-  realism.setAttribute('aria-label', t('editor.realism'));
-  for (const level of REALISM_LEVELS) {
-    const option = el('option', undefined, t(`editor.realism.${level}` as TranslationKey));
-    option.value = level;
-    realism.append(option);
-  }
-  realism.value = options.realism;
-  realism.addEventListener('change', () => (options.realism = realism.value as Realism));
-  realismControl.append(realism);
-  realismRow.append(realismControl);
-  form.append(realismRow, el('small', 'help', t('editor.realism.help')));
-  const modeRow = el('div', 'row');
-  modeRow.append(el('span', 'row-label', t('editor.mode')));
-  const modeControl = el('div', 'row-control');
-  const mode = el('select');
-  mode.setAttribute('aria-label', t('editor.mode'));
   for (const m of GAME_MODES) {
-    const option = el('option', undefined, t(`editor.mode.${m}` as TranslationKey));
-    option.value = m;
-    mode.append(option);
+    const card = el('button', 'ng-card-btn');
+    card.type = 'button';
+    const icon = el('span', 'ng-card-icon');
+    icon.innerHTML = MODE_ICONS[m];
+    const text = el('span', 'ng-card-text');
+    text.append(
+      el('strong', undefined, t(`editor.mode.${m}` as TranslationKey)),
+      el('small', undefined, t(`editor.mode.${m}.help` as TranslationKey)),
+    );
+    card.append(icon, text);
+    card.addEventListener('click', () => {
+      options.mode = m;
+      syncMode();
+    });
+    modeButtons.set(m, card);
+    modeCards.append(card);
   }
-  mode.value = options.mode;
-  mode.addEventListener('change', () => (options.mode = mode.value as GameMode));
-  modeControl.append(mode);
-  modeRow.append(modeControl);
-  form.append(modeRow, el('small', 'help', t('editor.mode.help')));
-  form.append(
-    checkbox(
-      t('editor.tutorial'),
-      t('editor.tutorial.help'),
-      options.tutorial,
-      (v) => (options.tutorial = v),
-    ),
-  );
+  syncMode();
+  syncs.push(syncMode);
+  modePick.append(modeCards);
 
-  // --- Multijoueur (réglages seulement : le réseau viendra ensuite, voir docs/multijoueur.md) ---------
-  form.append(
-    el('h3', undefined, t('editor.mp.title')),
-    el('small', 'help', t('editor.mp.help', { n: String(MAX_PLAYERS) })),
-  );
+  // Accès : privée ou publique (avec mot de passe), et le multijoueur lui-même.
   const mp = options.multiplayer;
-  const mpBox = el('div', 'mp-box');
-  const syncMp = (): void => {
-    mpBox.hidden = !mp.enabled;
-  };
-  form.append(
-    checkbox(t('editor.mp.enable'), t('editor.mp.enable.help'), mp.enabled, (v) => {
-      mp.enabled = v;
-      syncMp();
-    }),
-    mpBox,
-  );
-  const visRow = el('div', 'row');
-  visRow.append(el('span', 'row-label', t('editor.mp.visibility')));
-  const visControl = el('div', 'row-control');
-  const vis = el('select');
-  vis.setAttribute('aria-label', t('editor.mp.visibility'));
-  for (const v of ['private', 'public'] as const) {
-    const option = el('option', undefined, t(`editor.mp.visibility.${v}` as TranslationKey));
-    option.value = v;
-    vis.append(option);
-  }
-  vis.value = mp.visibility;
+  const accessPick = el('div', 'ng-pick');
+  accessPick.append(el('span', 'ng-pick-title', t('editor.mp.visibility')));
+  const seg = el('div', 'ng-segment');
+  const segButtons = new Map<'private' | 'public', HTMLButtonElement>();
   const pass = el('input');
   pass.type = 'text';
   pass.maxLength = 40;
   pass.placeholder = t('editor.mp.password');
   pass.setAttribute('aria-label', t('editor.mp.password'));
   pass.value = mp.password;
-  pass.hidden = mp.visibility !== 'public';
-  vis.addEventListener('change', () => {
-    mp.visibility = vis.value as 'private' | 'public';
-    pass.hidden = mp.visibility !== 'public';
-  });
   pass.addEventListener('input', () => (mp.password = pass.value));
-  visControl.append(vis, pass);
-  visRow.append(visControl);
-  const visHelp = el('small', 'help', t('editor.mp.visibility.help'));
-  mpBox.append(visRow, visHelp, el('h4', undefined, t('editor.mp.share')));
-  for (const key of ['research', 'credits'] as const) {
-    const row = checkbox(
-      t(`editor.mp.share.${key}` as TranslationKey),
-      '',
-      mp.share[key],
-      (v) => (mp.share[key] = v),
-    );
-    mpBox.append(row);
+  const syncAccess = (): void => {
+    for (const [v, b] of segButtons) b.setAttribute('aria-pressed', String(mp.visibility === v));
+    pass.hidden = mp.visibility !== 'public';
+  };
+  for (const v of ['private', 'public'] as const) {
+    const b = el('button', undefined, t(`editor.mp.visibility.${v}` as TranslationKey));
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      mp.visibility = v;
+      syncAccess();
+    });
+    segButtons.set(v, b);
+    seg.append(b);
   }
-  syncMp();
+  syncAccess();
+  accessPick.append(seg, pass, el('small', 'help', t('editor.mp.visibility.help')));
+  const picks = el('div', 'ng-two');
+  picks.append(modePick, accessPick);
+  world.append(picks);
+  main.append(world);
 
-  // --- Temps : jour, nuit, saisons (trois réglages indépendants) ------------------------------------
-  form.append(
+  // --- Onglets ---------------------------------------------------------------------------------------
+  const TABS = ['ores', 'environment', 'gameplay'] as const;
+  type Tab = (typeof TABS)[number];
+  const tablist = el('div', 'ng-tabs');
+  tablist.setAttribute('role', 'tablist');
+  const panes = new Map<Tab, HTMLElement>();
+  const tabButtons = new Map<Tab, HTMLButtonElement>();
+  let current: Tab = 'ores';
+  const showTab = (tab: Tab): void => {
+    current = tab;
+    for (const id of TABS) {
+      tabButtons.get(id)?.setAttribute('aria-selected', String(id === tab));
+      const pane = panes.get(id);
+      if (pane) pane.hidden = id !== tab;
+    }
+  };
+  for (const id of TABS) {
+    const b = el('button', 'ng-tab', t(`editor.tab.${id}` as TranslationKey));
+    b.type = 'button';
+    b.setAttribute('role', 'tab');
+    b.addEventListener('click', () => showTab(id));
+    b.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const next =
+        TABS[
+          (TABS.indexOf(current) + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length
+        ];
+      showTab(next);
+      tabButtons.get(next)?.focus();
+    });
+    tabButtons.set(id, b);
+    tablist.append(b);
+    const pane = el('div', 'ng-pane');
+    pane.setAttribute('role', 'tabpanel');
+    panes.set(id, pane);
+  }
+  main.append(tablist, ...TABS.map((id) => panes.get(id) as HTMLElement));
+
+  /** Un curseur avec sa valeur, branché sur `get` / `set` ; `onChange` relance l'aperçu si besoin. */
+  function slider(
+    label: string,
+    min: number,
+    max: number,
+    step: number,
+    get: () => number,
+    set: (v: number) => void,
+    format: (v: number) => string,
+    preview = true,
+  ): HTMLElement {
+    const box = el('div', 'ng-slider');
+    const input = el('input');
+    input.type = 'range';
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.setAttribute('aria-label', label);
+    const value = el('span', 'ng-value');
+    const sync = (): void => {
+      input.value = String(get());
+      value.textContent = format(get());
+    };
+    input.addEventListener('input', () => {
+      set(Math.round(Number(input.value) * 100) / 100);
+      sync();
+      if (preview) schedulePreview();
+    });
+    syncs.push(sync);
+    sync();
+    box.append(input, value);
+    return box;
+  }
+
+  /** Tableau de proportions : une ligne par ressource, un curseur par critère. */
+  function resourceTable(ids: string[], withAppears: boolean): HTMLElement {
+    const wrap = el('div', 'ng-table-wrap');
+    const table = el('table', 'ng-table');
+    const head = el('tr');
+    head.append(el('th', undefined, t('editor.col.resource')));
+    for (const c of CRITERIA) {
+      const th = el('th', undefined, t(`editor.criteria.${c}` as TranslationKey));
+      th.title = t(`editor.col.${c}.help` as TranslationKey);
+      head.append(th);
+    }
+    if (withAppears) head.append(el('th', undefined, t('editor.col.appears')));
+    const thead = el('thead');
+    thead.append(head);
+    table.append(thead);
+    const body = el('tbody');
+    for (const id of ids) {
+      const res = resourceById(id);
+      const row = el('tr');
+      const name = el('th');
+      name.scope = 'row';
+      const chip = el('span', 'chip');
+      chip.style.background = res.color;
+      name.append(chip, t(`res.${id}` as TranslationKey));
+      row.append(name);
+      for (const c of CRITERIA) {
+        const cell = el('td');
+        const label = `${t(`res.${id}` as TranslationKey)} — ${t(`editor.criteria.${c}` as TranslationKey)}`;
+        cell.append(
+          slider(
+            label,
+            MULTIPLIER_MIN,
+            MULTIPLIER_MAX,
+            0.05,
+            () => resources[id][c as Criterion],
+            (v) => (resources[id][c as Criterion] = v),
+            times,
+          ),
+        );
+        row.append(cell);
+      }
+      if (withAppears) {
+        const min = res.kind === 'deposit' ? (res.minDistanceM ?? 0) : 0;
+        row.append(
+          el(
+            'td',
+            'ng-appears',
+            min > 0 ? t('editor.ores.from', { m: String(min) }) : t('editor.ores.fromStart'),
+          ),
+        );
+      }
+      body.append(row);
+    }
+    table.append(body);
+    wrap.append(table);
+    return wrap;
+  }
+
+  // --- Onglet Minerais ---------------------------------------------------------------------------
+  const ores = panes.get('ores') as HTMLElement;
+  ores.append(
+    el('h3', undefined, t('editor.ores.title')),
+    el('small', 'help', t('editor.ores.help')),
+    resourceTable(ORE_IDS, true),
+    el('small', 'help ng-note', t('editor.ores.far')),
+  );
+  const distRow = el('div', 'ng-line');
+  distRow.append(el('span', 'ng-line-label', t('editor.distance')));
+  distRow.append(
+    slider(
+      t('editor.distance'),
+      MULTIPLIER_MIN,
+      MULTIPLIER_MAX,
+      0.05,
+      () => distanceRatio,
+      (v) => (distanceRatio = v),
+      times,
+    ),
+  );
+  ores.append(distRow, el('small', 'help', t('editor.distance.help')));
+
+  // --- Onglet Environnement ----------------------------------------------------------------------
+  const env = panes.get('environment') as HTMLElement;
+  env.append(
+    el('h3', undefined, t('editor.env.nature')),
+    el('small', 'help', t('editor.env.help')),
+    resourceTable(ENV_IDS, false),
+    el('h3', undefined, t('editor.env.enemies')),
+  );
+  const checkbox = (
+    label: string,
+    help: string,
+    initial: () => boolean,
+    onChange: (value: boolean) => void,
+  ): HTMLElement => {
+    const row = el('label', 'check');
+    const input = el('input');
+    input.type = 'checkbox';
+    input.checked = initial();
+    input.addEventListener('change', () => onChange(input.checked));
+    syncs.push(() => (input.checked = initial()));
+    const text = el('span');
+    text.append(el('span', undefined, label));
+    if (help) text.append(el('small', 'help', help));
+    row.append(input, text);
+    return row;
+  };
+  const line = (label: string, help: string, control: HTMLElement): HTMLElement => {
+    const box = el('div', 'ng-line');
+    const text = el('span', 'ng-line-label', label);
+    if (help) text.append(el('small', 'help', help));
+    box.append(text, control);
+    return box;
+  };
+  const en = options.enemies;
+  env.append(
+    checkbox(
+      t('editor.enemies.aggressive'),
+      t('editor.enemies.aggressive.help'),
+      () => en.aggressive,
+      (v) => (en.aggressive = v),
+    ),
+    checkbox(
+      t('editor.enemies.expand'),
+      t('editor.enemies.expand.help'),
+      () => en.expand,
+      (v) => (en.expand = v),
+    ),
+    line(
+      t('editor.enemies.expansionSpeed'),
+      t('editor.enemies.expansionSpeed.help'),
+      slider(
+        t('editor.enemies.expansionSpeed'),
+        0.25,
+        4,
+        0.05,
+        () => en.expansionSpeed,
+        (v) => (en.expansionSpeed = v),
+        times,
+        false,
+      ),
+    ),
+    line(
+      t('editor.enemies.pollution'),
+      t('editor.enemies.pollution.help'),
+      slider(
+        t('editor.enemies.pollution'),
+        0.25,
+        4,
+        0.05,
+        () => en.pollutionSensitivity,
+        (v) => (en.pollutionSensitivity = v),
+        times,
+        false,
+      ),
+    ),
+    line(
+      t('editor.enemies.max'),
+      t('editor.enemies.max.help'),
+      slider(
+        t('editor.enemies.max'),
+        0,
+        100,
+        1,
+        () => en.maxEnemies,
+        (v) => (en.maxEnemies = Math.round(v)),
+        (v) => String(v),
+        false,
+      ),
+    ),
+    line(
+      t('editor.enemies.guards'),
+      t('editor.enemies.guards.help'),
+      slider(
+        t('editor.enemies.guards'),
+        0,
+        8,
+        1,
+        () => en.guardsPerNest,
+        (v) => (en.guardsPerNest = Math.round(v)),
+        (v) => String(v),
+        false,
+      ),
+    ),
+  );
+
+  // --- Onglet Jouabilité -------------------------------------------------------------------------
+  const play = panes.get('gameplay') as HTMLElement;
+  play.append(
+    el('h3', undefined, t('editor.play.costs')),
+    el('small', 'help', t('editor.play.costs.help')),
+  );
+  const costRows: [keyof Difficulty, TranslationKey][] = [
+    ['researchPacks', 'editor.cost.researchPacks'],
+    ['researchItems', 'editor.cost.researchItems'],
+    ['crafting', 'editor.cost.crafting'],
+  ];
+  for (const [key, label] of costRows)
+    play.append(
+      line(
+        t(label),
+        '',
+        slider(
+          t(label),
+          DIFFICULTY_MIN,
+          DIFFICULTY_MAX,
+          0.05,
+          () => options.difficulty[key],
+          (v) => (options.difficulty[key] = v),
+          times,
+          false,
+        ),
+      ),
+    );
+  play.append(
+    el('h3', undefined, t('editor.play.world')),
+    line(
+      t('editor.safe'),
+      t('editor.safe.help'),
+      slider(
+        t('editor.safe'),
+        SAFE_ZONE_MIN_M,
+        SAFE_ZONE_MAX_M,
+        10,
+        () => safeZoneM,
+        (v) => (safeZoneM = v),
+        (v) => `${v} m`,
+      ),
+    ),
+  );
+  const realismControl = el('select');
+  realismControl.setAttribute('aria-label', t('editor.realism'));
+  for (const level of REALISM_LEVELS) {
+    const option = el('option', undefined, t(`editor.realism.${level}` as TranslationKey));
+    option.value = level;
+    realismControl.append(option);
+  }
+  realismControl.value = options.realism;
+  realismControl.addEventListener(
+    'change',
+    () => (options.realism = realismControl.value as Realism),
+  );
+  syncs.push(() => (realismControl.value = options.realism));
+  play.append(line(t('editor.realism'), t('editor.realism.help'), realismControl));
+
+  // Temps : jour, nuit, saisons.
+  play.append(
     el('h3', undefined, t('editor.time.title')),
     el('small', 'help', t('editor.time.help')),
   );
-  options.time = structuredClone(options.time);
   const timeRow = (
     key: 'dayMinutes' | 'nightMinutes' | 'seasonDays',
     label: string,
     unit: string,
     min: number,
     max: number,
-  ): HTMLElement => {
-    const row = el('div', 'row');
-    row.append(el('span', 'row-label', label));
-    const control = el('div', 'row-control');
-    const input = el('input');
-    input.type = 'range';
-    input.min = String(min);
-    input.max = String(max);
-    input.step = '1';
-    input.value = String(options.time[key]);
-    input.setAttribute('aria-label', label);
-    const value = el('span', 'row-value');
-    const sync = (): void => {
-      value.textContent = `${options.time[key]} ${unit}`;
-    };
-    input.addEventListener('input', () => {
-      options.time[key] = Number(input.value);
-      sync();
-    });
-    sync();
-    control.append(input, value);
-    row.append(control);
-    return row;
-  };
-  form.append(
+  ): HTMLElement =>
+    line(
+      label,
+      '',
+      slider(
+        label,
+        min,
+        max,
+        1,
+        () => options.time[key],
+        (v) => (options.time[key] = Math.round(v)),
+        (v) => `${v} ${unit}`,
+        false,
+      ),
+    );
+  play.append(
     timeRow('dayMinutes', t('editor.time.day'), t('editor.time.minutes'), 1, 60),
     timeRow('nightMinutes', t('editor.time.night'), t('editor.time.minutes'), 1, 60),
     timeRow('seasonDays', t('editor.time.seasonDays'), t('editor.time.days'), 1, 60),
     seasonPie(options.time),
   );
 
-  // --- Actions -----------------------------------------------------------------------------------
+  // Tutoriel et multijoueur.
+  play.append(
+    el('h3', undefined, t('editor.mp.title')),
+    el('small', 'help', t('editor.mp.help', { n: String(MAX_PLAYERS) })),
+    checkbox(
+      t('editor.tutorial'),
+      t('editor.tutorial.help'),
+      () => options.tutorial,
+      (v) => (options.tutorial = v),
+    ),
+  );
+  const mpBox = el('div', 'mp-box');
+  const syncMp = (): void => {
+    mpBox.hidden = !mp.enabled;
+  };
+  play.append(
+    checkbox(
+      t('editor.mp.enable'),
+      t('editor.mp.enable.help'),
+      () => mp.enabled,
+      (v) => {
+        mp.enabled = v;
+        syncMp();
+      },
+    ),
+    mpBox,
+  );
+  mpBox.append(el('h4', undefined, t('editor.mp.share')));
+  for (const key of ['research', 'credits'] as const)
+    mpBox.append(
+      checkbox(
+        t(`editor.mp.share.${key}` as TranslationKey),
+        '',
+        () => mp.share[key],
+        (v) => (mp.share[key] = v),
+      ),
+    );
+  syncMp();
+  showTab('ores');
+
+  // --- Colonne de droite : aperçu, légende, boutons ----------------------------------------------------
   const launch = (): void => {
     const name = nameInput.value.trim() || t('screen.newGame.defaultName', { n: '1' });
     const seed = seedInput.value.trim() || randomSeed();
     dispose();
     ctx.onLaunch(
       ctx.saves.create(name, seed, {
-        families: structuredClone(families),
         distanceRatio,
+        resources: structuredClone(resources),
+        safeZoneM,
         // Le mot de passe est rangé sous forme d'empreinte, jamais en clair.
         options: {
           ...options,
@@ -400,13 +641,25 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
       launch();
     });
   }
-  const actions = el('div', 'editor-actions');
+
+  side.append(el('h3', undefined, t('editor.preview.title')));
+  const frame = el('div', 'preview-frame');
+  const canvas = el('canvas', 'preview-canvas');
+  const status = el('div', 'preview-status');
+  const tip = el('div', 'preview-tip');
+  tip.hidden = true;
+  frame.append(canvas, status, tip);
+  const actions = el('div', 'ng-actions');
   actions.append(
     button(t('screen.newGame.launch'), launch, 'menu-btn primary'),
     button(t('editor.resetWorld'), () => {
-      for (const id of FAMILY_IDS) families[id] = { frequency: 1, size: 1, density: 1 };
+      for (const id of Object.keys(resources))
+        resources[id] = { frequency: 1, size: 1, density: 1 };
       distanceRatio = 1;
-      sliderSyncs.forEach((sync) => sync());
+      safeZoneM = DEFAULT_SAFE_ZONE_M;
+      Object.assign(options.enemies, DEFAULT_GAME_OPTIONS.enemies);
+      Object.assign(options.difficulty, DEFAULT_GAME_OPTIONS.difficulty);
+      syncs.forEach((sync) => sync());
       schedulePreview();
     }),
     button(t('common.back'), () => {
@@ -414,18 +667,12 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
       ctx.onBack();
     }),
   );
-  form.append(actions);
-
-  // --- Aperçu du monde ---------------------------------------------------------------------------
-  side.append(el('h3', undefined, t('editor.preview.title')));
-  const frame = el('div', 'preview-frame');
-  const canvas = el('canvas', 'preview-canvas');
-  const status = el('div', 'preview-status');
-  frame.append(canvas, status);
-  side.append(frame, legend(), el('small', 'help', t('editor.preview.note')));
+  const note = el('small', 'help');
+  side.append(frame, actions, legend(), note);
 
   let timer = 0;
   let running = 0;
+  let renderer: PreviewRenderer | null = null;
   function schedulePreview(): void {
     window.clearTimeout(timer);
     timer = window.setTimeout(startPreview, 180);
@@ -435,19 +682,28 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
     if (disposed) return;
     const token = ++running;
     const seed = seedInput.value.trim() || ' ';
-    const renderer = new PreviewRenderer(
-      new WorldGenerator({ seed, families: structuredClone(families), distanceRatio }),
-    );
-    canvas.width = renderer.width;
-    canvas.height = renderer.width;
+    const params = {
+      ...defaultWorldParams(seed),
+      resources: structuredClone(resources),
+      distanceRatio,
+      safeZoneM,
+    };
+    const r = new PreviewRenderer(new WorldGenerator(params));
+    renderer = r;
+    note.textContent = t('editor.preview.note', {
+      size: String(PREVIEW_SIZE_M),
+      safe: String(safeZoneM),
+    });
+    canvas.width = r.width;
+    canvas.height = r.width;
     const ctx2d = canvas.getContext('2d');
     if (!ctx2d) return;
-    const image = new ImageData(renderer.pixels, renderer.width, renderer.width);
+    const image = new ImageData(r.pixels, r.width, r.width);
     const tick = (): void => {
       if (disposed || token !== running) return;
       const started = performance.now();
       let done = false;
-      while (!done && performance.now() - started < 12) done = renderer.step();
+      while (!done && performance.now() - started < 12) done = r.step();
       ctx2d.putImageData(image, 0, 0);
       if (done) {
         status.hidden = true;
@@ -455,12 +711,32 @@ export function buildGameEditor(ctx: GameEditorContext): GameEditor {
       }
       status.hidden = false;
       status.textContent = t('editor.preview.loading', {
-        pct: String(Math.round(renderer.progress * 100)),
+        pct: String(Math.round(r.progress * 100)),
       });
       window.setTimeout(tick, 0);
     };
     tick();
   }
+
+  // Info-bulle : la ressource sous le curseur (pas les arbres, trop nombreux).
+  canvas.addEventListener('mousemove', (e) => {
+    if (!renderer) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = ((e.clientX - rect.left) / rect.width) * canvas.width;
+    const py = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    const { gx, gz } = renderer.cellOfPixel(px, py);
+    const hit = renderer.inspect(gx, gz);
+    if (!hit || hit.id === 'tree') {
+      tip.hidden = true;
+      return;
+    }
+    tip.textContent = t(`res.${hit.id}` as TranslationKey);
+    tip.hidden = false;
+    const f = frame.getBoundingClientRect();
+    tip.style.left = `${Math.min(e.clientX - f.left + 14, f.width - 130)}px`;
+    tip.style.top = `${Math.max(4, e.clientY - f.top - 30)}px`;
+  });
+  canvas.addEventListener('mouseleave', () => (tip.hidden = true));
 
   function legend(): HTMLElement {
     const box = el('ul', 'legend');
