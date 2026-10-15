@@ -2464,3 +2464,46 @@ body.touch-mode .menu-corner {
 .map-tip[hidden] {
   display: none;
 }
+/* Pas de barre de défilement horizontale dans l'écran de création. */
+.ng-side,
+.ng-main {
+  overflow-x: hidden;
+}
+.ng .preview-frame {
+  box-sizing: border-box;
+}
+.ng-table-wrap {
+  overflow-x: hidden;
+}
+.ng-table {
+  table-layout: auto;
+}
+.ng-appears,
+.ng-table tbody th {
+  white-space: normal;
+}
+.ng-table .ng-slider input[type='range'] {
+  min-width: 24px;
+}
+@media (max-width: 1180px) {
+  .ng-table .ng-value {
+    min-width: 34px;
+    font-size: 11px;
+  }
+  .ng-table th,
+  .ng-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+.ng-cards {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.ng-card-text {
+  min-width: 0;
+}
+/* Sur un écran peu haut, la carte rétrécit pour que les trois boutons restent visibles dessous. */
+.ng-side .preview-frame {
+  width: min(100%, max(240px, calc(100vh - 380px)));
+  align-self: center;
+}
