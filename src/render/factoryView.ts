@@ -1,7 +1,9 @@
 import {
   animatedParts,
   beltModel,
+  hasModelPlanned,
   modelFor,
+  modelsSettled,
   type AnimKind,
   type BakedModel,
   type BeltShape,
@@ -335,6 +337,9 @@ export class FactoryView {
     this.entries.clear();
     this.clearMovers();
     for (const m of this.factory.machines) {
+      // Les modèles se chargent en arrière-plan : on n'affiche pas d'abord la forme simple puis le modèle. Une machine
+      // qui a un modèle prévu attend la fin du chargement (puis prend le modèle maison, sinon celui du kit, sinon la forme simple).
+      if (!modelsSettled() && (m.type === 'conveyor' || hasModelPlanned(m.type))) continue;
       if (m.type === 'conveyor') {
         const entry = beltEntry(this.factory, m);
         this.entries.set(m.id, entry);
@@ -833,6 +838,11 @@ export class FactoryView {
   /** Remet les objets à leur place sur les tapis (quelques fois par seconde suffit). */
   updateItems(): void {
     const mb = new MeshBuilder();
+    if (!modelsSettled()) {
+      this.items.geometry.dispose();
+      this.items.geometry = geometryOf(mb);
+      return;
+    }
     for (const m of this.factory.machines) {
       if (m.type !== 'conveyor' || m.belt.length === 0) continue;
       const entry = this.entries.get(m.id) ?? beltEntry(this.factory, m);
@@ -1063,8 +1073,7 @@ function addBelt(
   if (shape.from !== shape.to) {
     const [y0, y1] = [levelY(shape.from), levelY(shape.to)];
     slope(mb, cxm, czm, rot, y0, y1, BELT_H, color);
-    // Flèche de sens sur la pente.
-    return void arrowOnSlope(mb, cxm, czm, rot, y0, y1, shade(color, 1.9));
+    return;
   }
   if (lift === 4 || lift === 5) {
     // Tunnel : une dalle sombre avec un portail du côté où les objets entrent (entrée : devant) ou sortent (sortie : derrière).
@@ -1080,7 +1089,6 @@ function addBelt(
       PORTAL,
       true,
     );
-    arrowOnSlope(mb, cxm, czm, rot, 0.1, 0.1, shade(color, 1.9));
     return;
   }
   const height = levelY(shape.from);
@@ -1115,7 +1123,6 @@ function addBeltModel(
   }
   const model = beltModel(shape, m.tier);
   if (!model) return false;
-  const [dx, dz] = RISE_DIR[m.rot];
   const x = (m.gx + 1) * CELL_SIZE_M;
   const z = (m.gz + 1) * CELL_SIZE_M;
   // Hauteur du dessus du modèle = hauteur où roulent les objets.
@@ -1123,44 +1130,7 @@ function addBeltModel(
   const tint = m.broken ? hexToRgb('#7a2e2a') : color;
   const mix = m.broken ? 0.7 : 0.1;
   mb.model(model, x, height, z, turns, TILE_M / model.size.x, tint, mix, false, scaleY);
-  // Flèche de sens, claire, sur le dessus.
-  const top = height + BELT_H + 0.012;
-  const px = -dz;
-  const pz = dx;
-  flatTri(
-    mb,
-    [x + dx * 0.36, z + dz * 0.36],
-    [x - dx * 0.1 + px * 0.2, z - dz * 0.1 + pz * 0.2],
-    [x - dx * 0.1 - px * 0.2, z - dz * 0.1 - pz * 0.2],
-    top,
-    shade(color, 1.9),
-  );
   return true;
-}
-
-/** Flèche de sens à plat sur une dalle (ou inclinée). */
-function arrowOnSlope(
-  mb: MeshBuilder,
-  cx: number,
-  cz: number,
-  rot: number,
-  y0: number,
-  y1: number,
-  color: Rgb,
-): void {
-  const [dx, dz] = RISE_DIR[rot];
-  const px = -dz;
-  const pz = dx;
-  const at = (along: number, across: number): [number, number, number] => {
-    const t = (along + TILE_M / 2) / TILE_M;
-    return [
-      cx + dx * along + px * across,
-      y0 + (y1 - y0) * t + BELT_H + 0.008,
-      cz + dz * along + pz * across,
-    ];
-  };
-  mb.tri(at(0.36, 0), at(-0.1, 0.2), at(-0.1, -0.2), color);
-  mb.tri(at(0.36, 0), at(-0.1, -0.2), at(-0.1, 0.2), color);
 }
 
 function addFlatBelt(
@@ -1213,20 +1183,6 @@ function addFlatBelt(
   };
   laneBox(dx, dz, -0.07, half);
   laneBox(entry.ex, entry.ez, 0.07, half);
-  // Flèche de sens, claire, sur le dessus (au milieu du tapis, là où passent les objets).
-  const light = shade(color, 1.9);
-  const tipX = cx + dx * 0.36;
-  const tipZ = cz + dz * 0.36;
-  const px = -dz;
-  const pz = dx;
-  flatTri(
-    mb,
-    [tipX, tipZ],
-    [cx - dx * 0.1 + px * 0.2, cz - dz * 0.1 + pz * 0.2],
-    [cx - dx * 0.1 - px * 0.2, cz - dz * 0.1 - pz * 0.2],
-    lift + BELT_H + 0.006,
-    light,
-  );
 }
 
 /** Hauteur à laquelle chaque forme est dessinée (avant l'alignement des fiches sur des multiples de 50 cm). */

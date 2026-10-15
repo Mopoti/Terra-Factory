@@ -187,7 +187,18 @@ export const modelFor = (type: MachineType): BakedModel | null => {
 };
 
 /** Enregistre un modèle déjà préparé (tests, ou modèle fabriqué ailleurs). */
-export const registerModel = (name: string, model: BakedModel): void => void baked.set(name, model);
+export const registerModel = (name: string, model: BakedModel): void => {
+  baked.set(name, model);
+  settled = true; // un modèle fourni à la main (tests) : plus rien à attendre
+};
+
+/** Le chargement des modèles est-il terminé (réussi ou non) ? Avant, une machine qui a un modèle n'est pas dessinée. */
+let settled = false;
+export const modelsSettled = (): boolean => settled;
+
+/** Cette machine a-t-elle un modèle prévu (maison ou kit) ? Sinon elle garde tout de suite sa forme simple. */
+export const hasModelPlanned = (type: MachineType): boolean =>
+  !!(TERRA_MODELS[type] ?? MACHINE_MODELS[type]);
 
 /** Modèle déjà préparé sous ce nom (ou null). */
 export const bakedModel = (name: string): BakedModel | null => baked.get(name) ?? null;
@@ -406,7 +417,9 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
           );
         }),
     ),
-  ).then(() => undefined);
+  ).then(() => {
+    settled = true;
+  });
   return loading;
 }
 

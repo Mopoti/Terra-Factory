@@ -910,6 +910,11 @@ export function startGameView(
   const MAX_BELT_PATH = 150;
   let machineWasDown = false;
   const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
+  /**
+   * Orientation automatique d'une machine posée : la SORTIE fait face à la caméra (l'entrée est au fond, comme on
+   * regarde une machine de face). Les tapis, tuyaux et poteaux (tracés) gardent le sens du regard.
+   */
+  const autoMachineRot = (linear: boolean): number => (linear ? autoRot() : (autoRot() + 2) % 4);
   // Un pont : une dalle de sol posée sur une case d'eau la rend praticable (marche, tapis, tuyaux, poteaux).
   const bridgeAt = (gx: number, gz: number): boolean =>
     waterCellAt(gx, gz) && !!options.state.changes.pieces[`f:0:${gx},${gz}`];
@@ -1012,7 +1017,7 @@ export function startGameView(
       Math.hypot(center(cell.gx) - player.x, center(cell.gz) - player.z) <= reach;
     // Un tapis accepté quand on le trace le reste, même si l'on s'en éloigne ensuite en marchant.
     const within = (cell: Cell): boolean => near(cell) || pathReached.has(`${cell.gx},${cell.gz}`);
-    const baseRot = buildRot ?? autoRot();
+    const baseRot = buildRot ?? autoMachineRot(isLinear(def.id));
 
     if (!isLinear(def.id)) {
       // Une pompe se pose à moitié dans l'eau : ses cases dans l'étang ne comptent pas comme bloquées.
@@ -3036,8 +3041,14 @@ export function startGameView(
         if (building) {
           if (pressed('rotate')) {
             // Depuis l'automatique, on part de l'orientation actuelle : jamais deux fois la même.
-            const base =
-              buildingMachine || buildType() === 'stairs' ? autoRot() : lastAimAxis === 'z' ? 1 : 0;
+            const machine = buildingMachine ? selectedMachine() : null;
+            const base = machine
+              ? autoMachineRot(isLinear(machine.id))
+              : buildType() === 'stairs'
+                ? autoRot()
+                : lastAimAxis === 'z'
+                  ? 1
+                  : 0;
             buildRot = ((buildRot ?? base) + 1) % 4;
             renderBuildHud();
           }
