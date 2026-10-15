@@ -153,6 +153,8 @@ Décision de cadrage : l'usine continue de tourner ; dans le navigateur, un futu
 
 ## 4. Le personnage
 
+> **Apparence et personnalisation à venir** (modèle low poly homme / femme, combinaison, réglages du corps et du visage, écran de personnalisation à l'accueil) : voir [`personnage.md`](personnage.md).
+
 ### 4.1 Caractéristiques de base ✅
 
 | Caractéristique      | Valeur                                                                                                            |

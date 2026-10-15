@@ -50,6 +50,8 @@ export interface MachineWindow {
   open(id: number): void;
   close(): void;
   isOpen(): boolean;
+  /** Machine dont la fenêtre est ouverte (null si fermée). */
+  openedId(): number | null;
   dispose(): void;
 }
 
@@ -1038,6 +1040,7 @@ export function mountMachineWindow(
     open,
     close,
     isOpen: () => current !== null,
+    openedId: () => current,
     dispose: () => {
       window.removeEventListener('keydown', onKey, true);
       window.clearInterval(timer);

@@ -2,6 +2,8 @@ import {
   animatedParts,
   beltModel,
   hasModelPlanned,
+  pipeModel,
+  pipeShape,
   modelFor,
   modelsSettled,
   type AnimKind,
@@ -13,6 +15,7 @@ import {
   poseOf,
   ROCKER_DEFAULT,
   rockerPose,
+  withStep,
   type Motion,
   type RockerGeometry,
 } from './partMotions';
@@ -27,6 +30,7 @@ import {
   isDrill,
   isTurret,
   GROW_M,
+  beltSpeed,
   machineDef,
   visualHeight,
   type MachineType,
@@ -49,6 +53,7 @@ import { t } from '../i18n';
 import { fluidPorts } from '../core/factory/fluids';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
+import { BandBuilder, bandMaterial, setBandTime } from './beltBands';
 
 const BELT_H = 0.2;
 /** Un tapis occupe une tuile de 2 × 2 cases (1 m) ; les objets passent par son milieu. */
@@ -72,7 +77,15 @@ interface FlameInstance {
   /** Sommets au repos (repère de la machine) ; le maillage reçoit les sommets mis à l'échelle autour du pied de chaque flamme. */
   base: Float32Array;
   colors: Float32Array;
-  groups: { first: number; count: number; px: number; py: number; pz: number; glow?: boolean }[];
+  groups: {
+    first: number;
+    count: number;
+    px: number;
+    py: number;
+    pz: number;
+    glow?: boolean;
+    pulse?: boolean;
+  }[];
   /** Intensité lissée : 1 pleine, 0,2 braises, 0 éteinte. */
   level: number;
 }
@@ -143,6 +156,9 @@ interface PartMachine {
   crank: number;
   rocker: number;
   rockerGeometry?: RockerGeometry;
+  /** Coffre : contenu vu à l'image précédente, et instant jusqu'auquel le couvercle reste ouvert. */
+  chestSeen?: string;
+  openUntil?: number;
 }
 
 function geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
@@ -274,6 +290,8 @@ export class FactoryView {
   private readonly root = new THREE.Group();
   private bodies = new THREE.Mesh();
   private items = new THREE.Mesh();
+  /** Lames des tapis maison, qui défilent (voir `beltBands.ts`). */
+  private bands = new THREE.Mesh();
   private readonly wires = new THREE.LineSegments(
     new THREE.BufferGeometry(),
     new THREE.LineBasicMaterial({ color: 0x1b1b1f }),
@@ -310,6 +328,7 @@ export class FactoryView {
   ) {
     this.bodies.material = propsMaterial;
     this.items.material = propsMaterial;
+    this.bands.material = bandMaterial;
     this.ghost.material = this.ghostMaterial;
     this.ghost.visible = false;
     this.ghost.renderOrder = 6;
@@ -318,6 +337,7 @@ export class FactoryView {
     this.smoke.frustumCulled = false;
     this.root.add(
       this.bodies,
+      this.bands,
       this.items,
       this.wires,
       this.smoke,
@@ -334,12 +354,17 @@ export class FactoryView {
   rebuild(): void {
     this.factory.reindex();
     const mb = new MeshBuilder();
+    const bands = new BandBuilder();
     this.entries.clear();
     this.clearMovers();
     for (const m of this.factory.machines) {
       // Les modèles se chargent en arrière-plan : on n'affiche pas d'abord la forme simple puis le modèle. Une machine
       // qui a un modèle prévu attend la fin du chargement (puis prend le modèle maison, sinon celui du kit, sinon la forme simple).
-      if (!modelsSettled() && (m.type === 'conveyor' || hasModelPlanned(m.type))) continue;
+      if (
+        !modelsSettled() &&
+        (m.type === 'conveyor' || m.type === 'pipe' || hasModelPlanned(m.type))
+      )
+        continue;
       if (m.type === 'conveyor') {
         const entry = beltEntry(this.factory, m);
         this.entries.set(m.id, entry);
@@ -353,6 +378,7 @@ export class FactoryView {
               : (machineDef('conveyor').tierColors?.[m.tier - 1] ?? machineDef('conveyor').color),
           ),
           this.factory,
+          bands,
         );
       } else {
         const start = mb.positions.length;
@@ -365,21 +391,25 @@ export class FactoryView {
               ? (m.tint ?? WAYPOINT_COLORS[0])
               : undefined;
         const parts = animatedParts(m.type);
-        addMachineBody(
-          mb,
-          m.type,
-          m.gx,
-          m.gz,
-          m.rot,
-          this.factory.fluidSides(m),
-          m.lift,
-          tint,
-          !!parts,
-        );
+        const piped =
+          m.type === 'pipe' &&
+          addPipeModel(mb, m, this.factory.fluidSides(m), tint ? hexToRgb(tint) : undefined);
+        if (!piped)
+          addMachineBody(
+            mb,
+            m.type,
+            m.gx,
+            m.gz,
+            m.rot,
+            this.factory.fluidSides(m),
+            m.lift,
+            tint,
+            !!parts,
+          );
         if (parts) this.addMover(m, parts);
         this.addFlames(m);
         this.addParts(m);
-        if (!modelFor(m.type)) growBody(mb, start, m);
+        if (!modelFor(m.type) && !piped) growBody(mb, start, m);
         fluidArrows(mb, m.type, m.gx, m.gz, m.rot);
         const io = ports(m.type, m.gx, m.gz, m.rot);
         for (const o of io.outs) flatArrow(mb, o.cell, o.dir, OUT_ARROW);
@@ -390,11 +420,23 @@ export class FactoryView {
     }
     this.bodies.geometry.dispose();
     this.bodies.geometry = geometryOf(mb);
+    this.bands.geometry.dispose();
+    this.bands.geometry = bands.geometry();
     this.rebuildFlags();
     // Fils électriques : du haut d'un poteau au poteau voisin ou à la machine raccordée.
     const pts: number[] = [];
     const top = (m: Machine): [number, number, number] => {
       const { w, d } = dims(m.type, m.rot);
+      // Le câble s'accroche à la boule de la borne (ou au haut du poteau) quand le modèle la donne.
+      const model = modelFor(m.type);
+      if (model?.anchor) {
+        const p = placementOf(m, model).place(model.anchor.x, model.anchor.y, model.anchor.z);
+        return [
+          (m.gx + w / 2) * CELL_SIZE_M + p[0],
+          levelY(m.lift) + p[1],
+          (m.gz + d / 2) * CELL_SIZE_M + p[2],
+        ];
+      }
       const h = m.type === 'pole' ? visualHeight(m.type) - 0.3 : visualHeight(m.type);
       return [(m.gx + w / 2) * CELL_SIZE_M, h + levelY(m.lift), (m.gz + d / 2) * CELL_SIZE_M];
     };
@@ -507,7 +549,15 @@ export class FactoryView {
     }
     const groups = parts.groups.map((g) => {
       const p = place(g.px, g.py, g.pz);
-      return { first: g.first, count: g.count, px: p[0], py: p[1], pz: p[2], glow: g.glow };
+      return {
+        first: g.first,
+        count: g.count,
+        px: p[0],
+        py: p[1],
+        pz: p[2],
+        glow: g.glow,
+        pulse: g.pulse,
+      };
     });
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3));
@@ -541,10 +591,11 @@ export class FactoryView {
     for (const f of this.flameList) {
       const mesh = f.mesh;
       if (near && Math.hypot(mesh.position.x - near.x, mesh.position.z - near.z) > range) continue;
-      const running = this.factory.status(f.m) === 'running';
+      const running = this.animating(f.m);
       const target = running ? 1 : f.m.fuelLeft > 0 || (f.m.fuel?.count ?? 0) > 0 ? 0.2 : 0;
       f.level += (target - f.level) * Math.min(1, dt * 5);
-      mesh.visible = f.level > 0.03;
+      // Des voyants restent visibles (ternes) à l'arrêt : sans eux, il resterait un trou dans la machine.
+      mesh.visible = f.level > 0.03 || f.groups.some((g) => g.pulse);
       if (!mesh.visible) continue;
       const pos = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
       const col = mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -553,6 +604,20 @@ export class FactoryView {
       f.groups.forEach((g, k) => {
         // Deux sinus de fréquences différentes et un déphasage propre à chaque machine et à chaque flamme.
         const ph = f.m.id * 1.7 + k * 2.3;
+        if (g.pulse) {
+          // Voyant : sa couleur, terne à l'arrêt, qui pulse doucement en marche.
+          const k = 0.35 + 0.65 * Math.min(1, f.level) * (0.75 + 0.25 * Math.sin(time * 3 + ph));
+          for (let i = g.first; i < g.first + g.count; i++) {
+            const o = i * 3;
+            arr[o] = f.base[o];
+            arr[o + 1] = f.base[o + 1];
+            arr[o + 2] = f.base[o + 2];
+            carr[o] = f.colors[o] * k;
+            carr[o + 1] = f.colors[o + 1] * k;
+            carr[o + 2] = f.colors[o + 2] * k;
+          }
+          return;
+        }
         if (g.glow) {
           // Lueur (braises d'un foyer) : forme fixe, la couleur rougeoie lentement entre un rouge sombre et un orange vif.
           const t = 0.5 + 0.25 * Math.sin(time * 2.1 + ph) + 0.25 * Math.sin(time * 3.7 + ph * 1.3);
@@ -616,8 +681,9 @@ export class FactoryView {
       rocker: 0,
     };
     for (const [name, group] of Object.entries(model.groups)) {
-      const motion = motions[name];
-      if (!motion) continue;
+      const own = motions[name];
+      if (!own) continue;
+      const motion = { ...withStep(own, group.step), parent: own.parent };
       const pivot = place(group.pivot.x, group.pivot.y, group.pivot.z);
       const pos = new Float32Array(group.positions.length);
       const nor = new Float32Array(group.normals.length);
@@ -697,11 +763,12 @@ export class FactoryView {
   updateParts(time: number, near?: { x: number; z: number }, range = 70): void {
     const dt = Math.min(0.1, Math.max(0, time - this.partTime));
     this.partTime = time;
+    setBandTime(time);
     for (const p of this.partList) {
       const first = p.items[0].mesh;
       if (near && Math.hypot(first.position.x - near.x, first.position.z - near.z) > range)
         continue;
-      const running = this.factory.status(p.m) === 'running';
+      const running = isChest(p.m.type) ? this.chestOpen(p, time) : this.animating(p.m);
       p.level += ((running ? 1 : 0) - p.level) * Math.min(1, dt * 4);
       p.phase += dt * p.level;
       const cycle = this.factory.cycleFraction(p.m);
@@ -727,7 +794,7 @@ export class FactoryView {
           }
         } else {
           if (motion.kind === 'spin') i.spin += motion.speed * dt * p.level;
-          const pose = poseOf(motion, p.phase, i.spin, cycle, i.modelAxis);
+          const pose = poseOf(motion, p.phase, i.spin, cycle, i.modelAxis, p.level);
           angle = pose.angle;
           off = new THREE.Vector3(...p.turn(pose.dx, pose.dy, pose.dz));
         }
@@ -740,6 +807,37 @@ export class FactoryView {
         i.mesh.quaternion.setFromAxisAngle(i.axis, angle);
       }
     }
+  }
+
+  /**
+   * La machine est-elle « en marche » pour ses animations ? En plus de l'état `running` : plasma du réacteur à fusion,
+   * réacteur à fission en surchauffe, relais et antenne alimentés, accumulateur raccordé, manivelle qu'on actionne.
+   */
+  private animating(m: Machine): boolean {
+    if (m.type === 'crank') return this.opened === m.id;
+    if (m.type === 'relay' || m.type === 'antenna') return this.factory.powerFactor(m) > 0;
+    if (m.type === 'accumulator') return this.factory.gridInfo(m) !== null;
+    // Tourelle : prête à tirer (munitions ou courant) = « idle » ; elle balaye alors l'horizon.
+    if (isTurret(m.type)) return this.factory.status(m) === 'idle';
+    const s = this.factory.status(m);
+    return s === 'running' || s === 'plasma' || s === 'overheat';
+  }
+
+  /** Machine dont la fenêtre est ouverte (son coffre s'ouvre), ou null. */
+  private opened: number | null = null;
+  setOpenedMachine(id: number | null): void {
+    this.opened = id;
+  }
+
+  /**
+   * Couvercle d'un coffre : ouvert tant que sa fenêtre est ouverte, et un moment quand un objet entre ou sort (bras,
+   * tapis, joueur).
+   */
+  private chestOpen(p: PartMachine, time: number): boolean {
+    const seen = p.m.slots.map((s) => `${s.item}:${s.count}`).join(',');
+    if (p.chestSeen !== undefined && seen !== p.chestSeen) p.openUntil = time + 1.6;
+    p.chestSeen = seen;
+    return this.opened === p.m.id || time < (p.openUntil ?? 0);
   }
 
   /** Crée l'objet mobile (partie haute) d'une machine articulée, posé à l'emplacement de la machine. */
@@ -1079,6 +1177,7 @@ function addBelt(
   entry: { ex: number; ez: number; curved: boolean },
   color: Rgb,
   factory: Factory,
+  bands?: BandBuilder,
 ): void {
   const { gx, gz, rot, lift } = m;
   const cxm = (gx + 1) * CELL_SIZE_M;
@@ -1108,8 +1207,32 @@ function addBelt(
   }
   const height = levelY(shape.from);
   if (height > 0) pillar(mb, m, factory, color, height);
-  if (addBeltModel(mb, m, entry, height, color)) return;
+  if (addBeltModel(mb, m, entry, height, color, bands)) return;
   addFlatBelt(mb, gx, gz, rot, entry, color, height);
+}
+
+/**
+ * Tuyau en modèle maison : forme d'après les côtés raccordés (ou tunnel), tournée pour les couvrir, à l'échelle de la
+ * tuile (les brides se touchent d'une tuile à l'autre). Renvoie faux si le modèle n'est pas chargé (forme simple).
+ */
+function addPipeModel(mb: MeshBuilder, m: Machine, sides: number[], tint?: Rgb): boolean {
+  const { form, turns } = pipeShape(sides, m.lift, m.rot);
+  const model = pipeModel(form, m.tier);
+  if (!model) return false;
+  const scale = TILE_M / model.size.x;
+  mb.model(
+    model,
+    (m.gx + 1) * CELL_SIZE_M,
+    0,
+    (m.gz + 1) * CELL_SIZE_M,
+    turns,
+    scale,
+    tint,
+    m.broken ? 0.6 : 0,
+    false,
+    scale,
+  );
+  return true;
 }
 
 /**
@@ -1118,13 +1241,17 @@ function addBelt(
  */
 const BELT_TURN_OFFSET = 3;
 
-/** Tapis plat (ou surélevé) en modèle 3D du kit ; renvoie faux si le modèle n'est pas encore chargé. */
+/**
+ * Tapis plat (ou surélevé) en modèle 3D ; renvoie faux si le modèle n'est pas encore chargé. Les lames d'un tapis maison
+ * (groupe `bande`) vont dans `bands`, qui les fait défiler ; sans `bands` (aperçu de pose), elles restent fixes.
+ */
 function addBeltModel(
   mb: MeshBuilder,
   m: Machine,
   entry: { ex: number; ez: number; curved: boolean },
   height: number,
   color: Rgb,
+  bands?: BandBuilder,
 ): boolean {
   let turns = (m.rot + BELT_TURN_OFFSET) % 4;
   let shape: BeltShape = 'straight';
@@ -1144,7 +1271,25 @@ function addBeltModel(
   const scaleY = BELT_H / model.size.y;
   const tint = m.broken ? hexToRgb('#7a2e2a') : color;
   const mix = m.broken ? 0.7 : 0.1;
-  mb.model(model, x, height, z, turns, TILE_M / model.size.x, tint, mix, false, scaleY);
+  const scale = TILE_M / model.size.x;
+  mb.model(model, x, height, z, turns, scale, tint, mix, false, scaleY);
+  const band = model.groups?.bande;
+  if (band && bands) {
+    const speed = m.broken ? 0 : beltSpeed(m.tier) * TILE_M;
+    bands.add(band, model, shape, x, height, z, turns, scale, scaleY, TILE_M / 2, speed, tint, mix);
+  } else if (band)
+    mb.model(
+      { ...band, min: model.min, size: model.size },
+      x,
+      height,
+      z,
+      turns,
+      scale,
+      tint,
+      mix,
+      false,
+      scaleY,
+    );
   return true;
 }
 

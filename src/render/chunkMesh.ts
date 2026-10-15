@@ -1,25 +1,24 @@
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
 import { resourceById } from '../core/data/resources';
-import { valueNoise } from '../core/world/noise';
 import { hash01 } from '../core/world/rng';
-import { BIOME_COLORS, type BiomeId } from '../core/world/biomes';
+import type { BiomeId } from '../core/world/biomes';
 import type { ChunkData, WorldGenerator } from '../core/world/worldgen';
 import { WATER_TILE_M, oreAtlas, oreTile, waterTexture } from './groundTextures';
+import { cellDiagonal, groundColor, groundNormal } from './groundStyle';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
 import {
   BUSH_HEIGHT_MODEL_M,
   BUSH_MAX_WIDTH_M,
   ROCK_MODEL_WIDTH_M,
   TREE_MODEL_HEIGHT_M,
+  OWN_TREE_MAX_WIDTH,
   bushModelsFor,
+  isOwnNature,
   rockModels,
   treeModelsFor,
 } from './nature';
 
-const GROUND_COLORS = Object.fromEntries(
-  Object.entries(BIOME_COLORS).map(([id, hex]) => [id, hexToRgb(hex)]),
-) as Record<BiomeId, Rgb>;
 const TRUNK = hexToRgb('#6b4a2b');
 /** Épaisseur maximale d'une case de minerai : 10 cm. */
 const ORE_MAX_HEIGHT_M = 0.1;
@@ -106,46 +105,80 @@ if (uGhostOn > 0.5 && vGhostY > 0.45 && -vViewPosition.z < uGhostDepth - 0.35) {
 };
 propsMaterial.onBeforeCompile = ghostShader;
 
+/**
+ * Sol du chunk, en facettes low poly : deux triangles par case, chacun de sa couleur (palette et motifs du biome, voir
+ * `groundStyle.ts`) avec une normale à peine penchée. Le sol reste plat (y = 0) sous les machines et les constructions.
+ */
 function buildGround(gen: WorldGenerator, data: ChunkData): THREE.BufferGeometry {
   const n = CHUNK_CELLS;
-  const side = n + 1;
-  const positions = new Float32Array(side * side * 3);
-  const colors = new Float32Array(side * side * 3);
-  const normals = new Float32Array(side * side * 3);
+  const count = n * n * 6;
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const normals = new Float32Array(count * 3);
   const gx0 = data.cx * n;
   const gz0 = data.cz * n;
-  for (let j = 0; j < side; j++) {
-    for (let i = 0; i < side; i++) {
-      const k = (j * side + i) * 3;
-      positions[k] = i * CELL_SIZE_M;
-      positions[k + 1] = 0;
-      positions[k + 2] = j * CELL_SIZE_M;
-      normals[k + 1] = 1;
-      const xM = (gx0 + i) * CELL_SIZE_M;
-      const zM = (gz0 + j) * CELL_SIZE_M;
-      const base = GROUND_COLORS[gen.biomeAt(xM, zM)];
-      const variation = 0.93 + 0.14 * valueNoise(gen.seed, xM / 1.5, zM / 1.5, 77);
-      const c = shade(base, variation);
-      colors[k] = c.r;
-      colors[k + 1] = c.g;
-      colors[k + 2] = c.b;
-    }
-  }
-  const index: number[] = [];
+  let v = 0;
+  const put = (x: number, z: number, c: Rgb, nrm: [number, number, number]): void => {
+    const k = v * 3;
+    positions[k] = x;
+    positions[k + 2] = z;
+    normals[k] = nrm[0];
+    normals[k + 1] = nrm[1];
+    normals[k + 2] = nrm[2];
+    colors[k] = c.r;
+    colors[k + 1] = c.g;
+    colors[k + 2] = c.b;
+    v++;
+  };
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
-      const a = j * side + i;
-      const b = a + 1;
-      const c = a + side;
-      const d = c + 1;
-      index.push(a, c, b, b, c, d);
+      const gx = gx0 + i;
+      const gz = gz0 + j;
+      const x0 = i * CELL_SIZE_M;
+      const z0 = j * CELL_SIZE_M;
+      const x1 = x0 + CELL_SIZE_M;
+      const z1 = z0 + CELL_SIZE_M;
+      // Deux triangles (sens antihoraire vu du dessus), coupés selon une diagonale tirée au hasard.
+      const tris: [number, number][][] = cellDiagonal(gen.seed, gx, gz)
+        ? [
+            [
+              [x0, z0],
+              [x1, z1],
+              [x1, z0],
+            ],
+            [
+              [x0, z0],
+              [x0, z1],
+              [x1, z1],
+            ],
+          ]
+        : [
+            [
+              [x0, z0],
+              [x0, z1],
+              [x1, z0],
+            ],
+            [
+              [x1, z0],
+              [x0, z1],
+              [x1, z1],
+            ],
+          ];
+      tris.forEach((tri, half) => {
+        const cxL = (tri[0][0] + tri[1][0] + tri[2][0]) / 3;
+        const czL = (tri[0][1] + tri[1][1] + tri[2][1]) / 3;
+        const xM = gx0 * CELL_SIZE_M + cxL;
+        const zM = gz0 * CELL_SIZE_M + czL;
+        const c = groundColor(gen.biomeAt(xM, zM), gen.seed, xM, zM, gx, gz, half);
+        const nrm = groundNormal(gen.seed, gx, gz, half);
+        for (const [x, z] of tri) put(x, z, c, nrm);
+      });
     }
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geometry.setIndex(index);
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -253,10 +286,14 @@ function buildProps(
       if (!trees) treeCache.set(biome, (trees = treeModelsFor(biome)));
       if (trees.length > 0) {
         const model = trees[Math.floor(hash01(4, o.gx, o.gz, 11) * trees.length)];
-        const frost = biome === 'tundra' ? { r: 0.92, g: 0.96, b: 1 } : undefined;
-        // Les feuillus larges sont ramenés à une emprise raisonnable (3 m au plus pour un arbre moyen).
+        // Les arbres maison de la toundra sont déjà enneigés ; ceux du pack sont givrés par une teinte.
+        const own = isOwnNature(model);
+        const frost = biome === 'tundra' && !own ? { r: 0.92, g: 0.96, b: 1 } : undefined;
+        // Les arbres larges sont ramenés à une emprise raisonnable (3 m au plus pour un arbre moyen du pack, 4 m
+        // pour un arbre maison).
         const wide = Math.max(model.size.x, model.size.z) / model.size.y;
-        const k = TREE_MODEL_HEIGHT_M * o.scale * Math.min(1, 0.6 / wide);
+        const k =
+          TREE_MODEL_HEIGHT_M * o.scale * Math.min(1, (own ? OWN_TREE_MAX_WIDTH : 0.6) / wide);
         b.model(model, x, 0, z, o.rotation / (Math.PI / 2), k, frost, frost ? 0.45 : 0);
       } else {
         b.cone(x, 0, z, 0.13 * o.scale, 2.3 * o.scale, 6, TRUNK, 0.09 * o.scale);
@@ -277,7 +314,8 @@ function buildProps(
         BUSH_HEIGHT_MODEL_M *
         o.scale *
         Math.min(1, BUSH_MAX_WIDTH_M / (BUSH_HEIGHT_MODEL_M * o.scale * wide));
-      const frost = biome === 'tundra' ? { r: 0.92, g: 0.96, b: 1 } : undefined;
+      const frost =
+        biome === 'tundra' && !isOwnNature(model) ? { r: 0.92, g: 0.96, b: 1 } : undefined;
       b.model(model, x, 0, z, o.rotation / (Math.PI / 2), k, frost, frost ? 0.4 : 0);
     } else if (o.id === 'fiber_bush') {
       // Touffe de brins clairs (secours).

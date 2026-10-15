@@ -183,6 +183,7 @@ def fourneau_electrique_t2(coll, leger=True):
     for s in (-1, 1):
         entree_laterale(lot, s, s * 1.3, 0.0, 0.2, rnd, bv, h=0.22, cadre='acier', goulotte='acier')
     T.box(coll, 'sortie_bouche', (0.56, 0.04, 0.22), (0, -1.32, 0.31), 'noir')
+    T.box(coll, 'lueur_bouche', (0.44, 0.006, 0.14), (0, -1.343, 0.3), 'braise')  # four chaud : rougeoie en marche
     for x in (-0.34, 0.34):
         lot.cube('acier', (0.12, 0.1, 0.32), (x, -1.35, 0.33), 0.015)
     lot.cube('acier', (0.8, 0.1, 0.08), (0, -1.35, 0.47), 0.015)
@@ -263,14 +264,9 @@ def fourneau_electrique_t2(coll, leger=True):
     tuyau([(-1.4, -0.7, 0.12), (-1.4, -0.7, 0.92), (-1.32, -0.7, 1.0), (-mur(1.0), -0.7, 1.0)], 'acier_sombre', 0.05,
           colliers=[((-1.4, -0.7, 0.36), (-1.3, -0.7, 0.36))])
 
-    # --- Antenne à isolateurs (arrière gauche) et câble vers la pyramide.
-    lot.barre('acier_sombre', (-1.24, 1.24, 0.62), (-1.24, 1.24, 2.4), 0.09, 0.015)
-    lot.cube('acier_sombre', (0.48, 0.07, 0.07), (-1.24, 1.24, 2.34), 0.01)
-    for x in (-1.43, -1.05):
-        for k in range(3):
-            T.cylinder(coll, f'isolateur_{x}_{k}', 0.055, 0.035, (x, 1.24, 2.4 + k * 0.045), 'blanc', segments=8)
-        T.cylinder(coll, f'isolateur_tete_{x}', 0.025, 0.05, (x, 1.24, 2.53), 'cuivre', segments=6)
-    lot.barre('noir', (-1.05, 1.24, 2.48), (-0.5, demi_pyr(1.85) + 0.03, 1.85), 0.035, 0)
+    # --- Borne électrique (arrière gauche, sur le socle ; le câble du jeu s'accroche à sa boule) et câble vers la pyramide.
+    T.borne_electrique(coll, lot, (-1.22, 1.22, 0.62), 1.75, seg)
+    lot.barre('noir', (-1.22, 1.22, 1.9), (-0.5, demi_pyr(1.85) + 0.03, 1.85), 0.03, 0)
 
     lot.finir()
     T.poser_au_sol(coll, 1.5)
@@ -429,6 +425,7 @@ def convertisseur_t2(coll, leger=True):
     # --- Armoire électrique (arrière droite) : portes, voyants, levier, câble vers la soufflante.
     T.box(coll, 'armoire', (0.56, 0.3, 0.86), (0.62, 1.28, 0.65), 'acier', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.62, 0.36, 0.05), (0.62, 1.28, 1.105), 'acier_sombre', bevel=0.01)
+    T.borne_electrique(coll, lot, (0.8, 1.28, 1.13), 0.4, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     lot.cube('acier_sombre', (0.01, 0.01, 0.74), (0.62, 1.12, 0.65), 0)  # joint des portes
     for i, c in enumerate(('vert', 'jaune', 'rouge')):
         lot.cube(c, (0.05, 0.02, 0.05), (0.44 + i * 0.08, 1.125, 0.95), 0)
@@ -440,7 +437,16 @@ def convertisseur_t2(coll, leger=True):
     # sous un petit portique (démoulage : un poinçon, groupe `poincon_`, chasse le lingot) et en ressort en lingot.
     xt, zr = 0.3, 0.42  # demi-largeur (pieds, portique), dessus de la bande
     y0, y1 = -0.55, -1.47
-    T.convoyeur(lot, (0, y0 - 0.05, zr - 0.09), (0, y1 + 0.05, zr - 0.09), 0.5, 0.08, rouleaux=3, sg=sg)  # convoyeur commun
+    # Convoyeur commun qui avance : lames en flèche et lingot sorti du portique (groupe `lingot_`, y = -1,32).
+    def lingot(g, k, p, d, w, n, rot):
+        if k != 3:
+            return
+        yl = p.y
+        g.cube('acier', (0.3, 0.2, 0.12), (0, yl, zr + 0.06), 0.02 * bv)
+        g.cube('acier', (0.24, 0.14, 0.04), (0, yl, zr + 0.13), 0.01 * bv)
+        g.cube('braise', (0.2, 0.01, 0.06), (0, yl - 0.101, zr + 0.06), 0)  # encore chaud au cœur
+    li, _, _ = T.convoyeur_charge(coll, 'lingot', lot, (0, y0 - 0.05, zr - 0.09), (0, y1 + 0.05, zr - 0.09), 0.5, 0.08,
+                                  0.22, lingot, debut=0.06, fin=-0.2, rouleaux=3, sg=sg)
     for sx in (-1, 1):
         for y in (-0.66, -1.38):
             lot.cube('acier_sombre', (0.05, 0.05, zr - 0.2), (sx * 0.31, y, (zr - 0.2) / 2), 0)  # pieds
@@ -472,13 +478,6 @@ def convertisseur_t2(coll, leger=True):
     for x in (-0.15, 0.0, 0.15):
         lot.cube('acier_sombre', (0.03, 0.03, 0.04), (x, yq + 0.09, zq - 0.12), 0)  # buses
     lot.barre('bleu', (xt + 0.08, yq + 0.09, zq - 0.08), (xt + 0.08, yq + 0.09, 0.05), 0.04, 0)
-    # Lingot qui sort du portique.
-    li = T.Lot(coll, 'lingot')
-    yl = -1.32
-    li.cube('acier', (0.3, 0.2, 0.12), (0, yl, zr + 0.06), 0.02 * bv)
-    li.cube('acier', (0.24, 0.14, 0.04), (0, yl, zr + 0.13), 0.01 * bv)
-    li.cube('braise', (0.2, 0.01, 0.06), (0, yl - 0.101, zr + 0.06), 0)  # encore chaud au cœur
-    T.pivot(coll, 'pivot_lingot', (0, yl, zr), (0, 1, 0))
 
     # --- Trou de coulée en bas de la cornue, côté sortie : boîtier boulonné, busette, trappe (groupe `trappe_`, dessinée
     # ouverte) et filet de métal en fusion (groupe `coulee_`) qui tombe dans la lingotière.

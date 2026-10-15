@@ -44,7 +44,13 @@ import { getSettings, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
-import { buildChunkMesh, ghostUniforms, setGroundTint, type ChunkMesh } from './chunkMesh';
+import {
+  buildChunkMesh,
+  ghostUniforms,
+  propsMaterial,
+  setGroundTint,
+  type ChunkMesh,
+} from './chunkMesh';
 import {
   STEP_UP_M,
   bodyBlocked,
@@ -118,7 +124,8 @@ import { WEAPONS, isWeapon, type WeaponSpec } from '../core/data/weapons';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import type { PlayerInfo } from '../core/net/protocol';
-import { loadModels } from './models';
+import { bakedModel, loadModels } from './models';
+import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 import { loadNature } from './nature';
 import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
@@ -179,6 +186,8 @@ export interface GameViewHandle {
   setPaused(paused: boolean): void;
   /** Une fenêtre (sac) est ouverte sans figer le jeu : la souris est libre, mais on peut continuer à marcher. */
   setUiOpen(open: boolean): void;
+  /** Machine dont la fenêtre est ouverte (un coffre ouvre alors son couvercle), ou null. */
+  setOpenedMachine(id: number | null): void;
   /** Jette des objets du sac au sol, devant le joueur. */
   dropItem(item: string, count: number): void;
   /** L'usine (machines et tapis) de la partie, pour l'interface des machines. */
@@ -2048,7 +2057,14 @@ export function startGameView(
   // --- Véhicules : buggy ------------------------------------------------------------------------
   let mounted: Vehicle | null = null;
   let buggyWarned = false;
-  const vehicleMeshes = new Map<number, THREE.Group>();
+  /** Buggy affiché : modèle maison (roues qui tournent) ou boîtes de secours, et dernière position vue. */
+  interface VehicleView {
+    group: THREE.Group;
+    own: VehicleMesh | null;
+    x: number;
+    z: number;
+  }
+  const vehicleMeshes = new Map<number, VehicleView>();
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x2b2d33 });
   const buggyMat = new THREE.MeshStandardMaterial({ color: 0xc9a227 });
   function makeBuggy(): THREE.Group {
@@ -2073,6 +2089,11 @@ export function startGameView(
       if (o instanceof THREE.Mesh) o.castShadow = true;
     });
     return g;
+  }
+  function buggyView(): VehicleView {
+    const model = bakedModel('buggy');
+    const own = model ? vehicleFromModel(model, propsMaterial) : null;
+    return { group: own ? own.group : makeBuggy(), own, x: NaN, z: NaN };
   }
   const vehicleBox = document.createElement('div');
   vehicleBox.className = 'ammo-box';
@@ -2179,18 +2200,28 @@ export function startGameView(
     const list = options.state.changes.vehicles;
     // Les modèles suivent la liste enregistrée.
     for (const v of list) {
-      let mesh = vehicleMeshes.get(v.id);
-      if (!mesh) {
-        mesh = makeBuggy();
-        scene.add(mesh);
-        vehicleMeshes.set(v.id, mesh);
+      let view = vehicleMeshes.get(v.id);
+      // Le modèle maison arrive après coup (chargement) : il remplace les boîtes de secours.
+      if (view && !view.own && bakedModel('buggy')) {
+        scene.remove(view.group);
+        view = undefined;
       }
-      mesh.position.set(v.x, 0, v.z);
-      mesh.rotation.y = v.yaw;
+      if (!view) {
+        view = buggyView();
+        scene.add(view.group);
+        vehicleMeshes.set(v.id, view);
+      }
+      // Les roues tournent de la distance parcourue vers l'avant (en arrière : dans l'autre sens).
+      if (view.own && Number.isFinite(view.x))
+        rollWheels(view.own, (v.x - view.x) * Math.sin(v.yaw) + (v.z - view.z) * Math.cos(v.yaw));
+      view.x = v.x;
+      view.z = v.z;
+      view.group.position.set(v.x, 0, v.z);
+      view.group.rotation.y = v.yaw;
     }
-    for (const [id, mesh] of vehicleMeshes) {
+    for (const [id, view] of vehicleMeshes) {
       if (!list.some((v) => v.id === id)) {
-        scene.remove(mesh);
+        scene.remove(view.group);
         vehicleMeshes.delete(id);
       }
     }
@@ -3343,6 +3374,7 @@ export function startGameView(
         requestLock();
       }
     },
+    setOpenedMachine: (id) => factoryView.setOpenedMachine(id),
     setUiOpen: (value) => {
       uiOpen = value;
       if (value) {

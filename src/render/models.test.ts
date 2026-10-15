@@ -5,6 +5,7 @@ import {
   bake,
   MACHINE_ANIM,
   MACHINE_MODELS,
+  pipeShape,
   splitModel,
   type BakedModel,
 } from './models';
@@ -155,9 +156,41 @@ describe('groupes mobiles (pivot_*)', () => {
     expect(model.groups?.poulie_boite.pivot.y).toBeCloseTo(0.9, 5);
   });
 
+  it('lit le pas d’une boucle (échelle du pivot) et l’accroche du câble', () => {
+    const g = scene();
+    const pivot = g.getObjectByName('pivot_foret002') as THREE.Object3D;
+    pivot.scale.setScalar(0.25);
+    const accroche = new THREE.Object3D();
+    accroche.name = 'accroche_cable';
+    accroche.position.set(0.3, 1.2, -0.1);
+    g.add(accroche);
+    const model = bake(g, [], ['foret', 'poulie_boite']) as BakedModel;
+    expect(model.groups?.foret.step).toBeCloseTo(0.25, 5);
+    expect(model.groups?.poulie_boite.step).toBeUndefined();
+    expect(model.anchor).toMatchObject({ x: 0.3, y: 1.2, z: -0.1 });
+    expect(bake(scene())?.anchor).toBeUndefined();
+  });
+
   it('sans noms de groupes, le modèle est inchangé', () => {
     const a = bake(scene()) as BakedModel;
     expect(a.groups).toBeUndefined();
     expect(a.index.length / 3).toBe(5 * 12);
+  });
+});
+
+describe('formes des tuyaux', () => {
+  it('choisit la forme et la tourne pour couvrir les côtés raccordés', () => {
+    expect(pipeShape([], 0, 2)).toEqual({ form: 'seul', turns: 2 });
+    expect(pipeShape([3, 1], 0, 0)).toEqual({ form: 'droit', turns: 0 });
+    expect(pipeShape([0, 2], 0, 0).form).toBe('droit');
+    expect(pipeShape([2, 0], 0, 0).turns % 2).toBe(1);
+    expect(pipeShape([3, 0], 0, 0)).toEqual({ form: 'coude', turns: 0 });
+    expect(pipeShape([0, 1], 0, 0)).toEqual({ form: 'coude', turns: 1 });
+    expect(pipeShape([1], 0, 0)).toEqual({ form: 'bout', turns: 2 });
+    expect(pipeShape([0, 1, 3], 0, 0)).toEqual({ form: 'te', turns: 0 });
+    expect(pipeShape([0, 1, 2, 3], 0, 0).form).toBe('croix');
+    // Tunnel : entrée (raccord derrière) et sortie (raccord devant).
+    expect(pipeShape([], 4, 0)).toEqual({ form: 'regard', turns: 3 });
+    expect(pipeShape([], 5, 0)).toEqual({ form: 'regard', turns: 1 });
   });
 });

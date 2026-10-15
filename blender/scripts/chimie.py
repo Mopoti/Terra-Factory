@@ -210,6 +210,7 @@ def raffinerie_t3(coll, leger=True):
     xa, ya = -1.25, -0.3
     T.box(coll, 'armoire', (0.34, 0.4, 0.95), (xa, ya, 0.48), 'acier', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.38, 0.44, 0.05), (xa, ya, 0.975), 'acier_sombre', bevel=0.01)
+    T.borne_electrique(coll, lot, (xa, ya, 1.0), 0.45, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     for i, c in enumerate(('vert', 'jaune', 'rouge')):
         lot.cube(c, (0.04, 0.02, 0.04), (xa - 0.08 + i * 0.08, ya - 0.205, 0.8), 0)
     lot.cube('jaune', (0.12, 0.01, 0.12), (xa, ya - 0.203, 0.6), 0)

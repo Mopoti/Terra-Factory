@@ -57,6 +57,23 @@ PALETTE = {
     'groupeur': '#8a6aa0',    # groupeur (mauve)
     'trieur': '#2a8f8a',      # trieur (sarcelle : couleur du tri, comme le bras filtrant)
     'bras_t3': '#22a397',     # bras filtrant T3 (sarcelle)
+    'laiton': '#d9b44a',      # tuyaux T2 (laiton)
+    'inox': '#aab4bd',        # tuyaux T3 (inox)
+    'plasma': '#ff4fd8',      # plasma du réacteur à fusion
+    'violet': '#8a5ad8',      # cristaux de l'antenne quantique
+    # Végétation (arbres et buissons des biomes).
+    'feuille': '#4f8f3a',
+    'feuille_claire': '#74ad4a',
+    'feuille_sombre': '#33652c',
+    'pin': '#2f6a42',
+    'pin_sombre': '#22472f',
+    'ecorce': '#6b4a2b',
+    'ecorce_claire': '#d8d2c4',   # bouleau
+    'bois_sec': '#8a7055',
+    'neige': '#eef3f7',
+    'cactus': '#5a9150',
+    'herbe_seche': '#b9a35a',
+    'rose': '#e07fb0',
 }
 
 
@@ -291,18 +308,99 @@ def convoyeur(lot, a, b, largeur=0.36, rp=0.08, rouleaux=2, sg=8, tambours=True,
         pas = largeur * 0.8
         nb = max(1, int((lg - 0.2) / pas))
         for k in range(nb):
-            c = a + d * (lg / 2 + (k - (nb - 1) / 2) * pas) + n * (rp + 0.012)
-            pointe = c + d * (largeur * 0.12)
-            for s_ in (-1, 1):
-                bout = c - d * (largeur * 0.12) + w * (s_ * largeur * 0.4)
-                u = (pointe - bout).normalized()
-                lot.cube('acier', ((pointe - bout).length + 0.01, largeur * 0.06, 0.005), tuple((pointe + bout) / 2), 0,
-                         Matrix((u, n.cross(u), n)).transposed())
+            _fleche_bande(lot, a + d * (lg / 2 + (k - (nb - 1) / 2) * pas) + n * (rp + 0.012), d, w, n, largeur)
     if tambours:
         for c in (a, b):
             lot.tube('acier_sombre', c - w * (largeur / 2 + 0.02), c + w * (largeur / 2 + 0.02), rp, sg)
             lot.tube('acier', c - w * (largeur / 2 + 0.06), c + w * (largeur / 2 + 0.06), 0.025, 6)
     return d, w, n, rot
+
+
+def _fleche_bande(lot, c, d, w, n, largeur):
+    """Lame en flèche (gris acier) posée sur une bande au point `c`, pointe vers `d`."""
+    pointe = c + d * (largeur * 0.12)
+    for s_ in (-1, 1):
+        bout = c - d * (largeur * 0.12) + w * (s_ * largeur * 0.4)
+        u = (pointe - bout).normalized()
+        lot.cube('acier', ((pointe - bout).length + 0.01, largeur * 0.06, 0.005), tuple((pointe + bout) / 2), 0,
+                 Matrix((u, n.cross(u), n)).transposed())
+
+
+def convoyeur_charge(coll, nom, lot, a, b, largeur, rp, pas, poser=None, debut=0.15, fin=0.15, **kw):
+    """Convoyeur COMMUN qui avance : la bande (fixe, dans `lot`) et un groupe mobile `nom` (`<nom>_*`) qui porte les
+    lames en flèche et les marchandises, tous les `pas` le long de la bande. Le jeu fait glisser ce groupe d'un pas, de
+    `a` vers `b`, puis le ramène (le motif retombe sur lui-même) : la bande semble défiler avec ce qu'elle porte.
+
+    `poser(groupe, k, p, d, w, n, rot)` pose la k-ième marchandise au point `p` du dessus de la bande (rien si None).
+    Les places vont de `debut` à `lg - fin - pas` depuis `a` (`fin` négatif : la dernière marchandise peut dépasser le
+    bout en avançant, elle « tombe » de la bande) ; les lames sont entre deux places, sur toute la bande. Pivot `pivot_<nom>` sur l'axe de la bande, avec le pas (voir `pivot`).
+    Retourne (groupe, (d, w, n, rot), lg).
+    """
+    a, b = Vector(a), Vector(b)
+    d, w, n, rot = convoyeur(lot, a, b, largeur, rp, fleches=False, **kw)
+    lg = (b - a).length
+    mob = Lot(coll, nom)
+    k, s = 0, debut
+    while poser and s <= lg - fin - pas + 1e-6:
+        poser(mob, k, a + d * s + n * rp, d, w, n, rot)
+        k, s = k + 1, s + pas
+    # Lames entre deux places, sur toute la bande : elles y restent en avançant d'un pas.
+    s = debut - pas / 2
+    while s - pas >= 0.04:
+        s -= pas
+    while s + pas <= lg - 0.04 + 1e-6:
+        if s >= 0.04:
+            _fleche_bande(mob, a + d * s + n * (rp + 0.012), d, w, n, largeur)
+        s += pas
+    pivot(coll, 'pivot_' + nom, tuple(a + n * rp), tuple(d), pas=pas)
+    return mob, (d, w, n, rot), lg
+
+
+def raccord_fluide(lot, bord, d, z=0.36, r=0.15, longueur=0.3, mat='acier_sombre', sg=8):
+    """Raccord de fluide COMMUN : bout de tuyau qui arrive au bord de la machine (point `bord`, direction `d` vers
+    l'extérieur), à la hauteur des tuyaux du jeu (`z` = axe à 0,36), terminé par une bride boulonnée au ras du bord.
+    Retourne le point de départ côté machine (pour y relier une conduite)."""
+    b = Vector((bord[0], bord[1], z))
+    d = Vector(d).normalized()
+    a = b - d * longueur
+    lot.tube(mat, a, b - d * 0.02, r, sg)
+    lot.tube('fonte', b - d * 0.07, b - d * 0.005, r * 1.45, sg)  # bride (pas au ras exact : pas de face confondue)
+    w = d.cross(Vector((0, 0, 1)))
+    w = w.normalized() if w.length > 1e-6 else Vector((1, 0, 0))
+    n = w.cross(d).normalized()
+    for k in range(6):
+        ang = 2 * math.pi * k / 6
+        p = b - d * 0.04 + (w * math.cos(ang) + n * math.sin(ang)) * r * 1.2
+        lot.cube('acier', (0.03, 0.03, 0.03), tuple(p))
+    return a
+
+
+def borne_electrique(coll, lot, pied, hauteur=0.45, sg=8):
+    """Borne de raccordement COMMUNE à toutes les machines électriques : tige fine, isolateur, petite boule en cuivre au
+    bout. Le câble électrique du jeu s'accroche à la boule : repère vide `accroche_cable` en son centre (lu par le jeu).
+    Le poteau électrique est un modèle à part (`poteau_electrique` de energie.py) : il n'est plus dessiné sur les machines.
+    `pied` = (x, y, z) du bas de la tige (posée sur la machine). Retourne le centre de la boule.
+    """
+    x, y, z = pied
+    lot.cube('acier_sombre', (0.11, 0.11, 0.03), (x, y, z + 0.015))  # platine
+    lot.tube('acier', (x, y, z + 0.03), (x, y, z + hauteur), 0.022, sg)  # tige
+    for k in range(2):  # isolateur à deux disques
+        zk = z + hauteur - 0.13 + k * 0.05
+        lot.tube('blanc', (x, y, zk), (x, y, zk + 0.025), 0.05, sg)
+    c = Vector((x, y, z + hauteur + 0.04))
+    lot.boule('cuivre', tuple(c), 0.055)
+    reperer(coll, 'accroche_cable', tuple(c))
+    return c
+
+
+def reperer(coll, name, loc):
+    """Repère vide (sans forme) exporté comme nœud du `.glb`, lu par le jeu (ex. `accroche_cable`)."""
+    obj = bpy.data.objects.new(name, None)
+    obj.empty_display_type = 'SPHERE'
+    obj.empty_display_size = 0.08
+    obj.location = loc
+    coll.objects.link(obj)
+    return obj
 
 
 def poteau_electrique(lot, pied, niveau=2, hauteur=2.3, sg=8):
@@ -530,6 +628,8 @@ def agrandir(coll, k, demi_x, demi_y=None):
     for o in coll.objects:
         if o.type == 'MESH':
             o.data.transform(m)
+        elif 'pas' in o:
+            o['pas'] = o['pas'] * k
         o.location = o.location * k
     return poser_au_sol(coll, demi_x, demi_y)
 
@@ -567,11 +667,13 @@ def agrandir_auto(coll, demi_x, demi_y, recentrer=False):
     return k
 
 
-def pivot(coll, name, loc, axe=(0, 0, 1)):
+def pivot(coll, name, loc, axe=(0, 0, 1), pas=None):
     """Pivot d'animation : objet vide nommé `pivot_<groupe>` (voir blender/ANIMATIONS.md), placé en `loc`.
 
     Il n'a pas de forme (le jeu l'ignore au rendu) : il donne au code du jeu le point autour duquel tournent (ou à partir
     duquel bougent) les pièces du groupe, et son axe Z local suit `axe` (axe de rotation, dans le repère Blender).
+    `pas` (unités) : course d'une boucle (objets posés tous les `pas` sur un convoyeur) ; exporté comme échelle du nœud
+    (en mètres), le jeu s'en sert à la place de la course écrite dans `partMotions.ts`.
     """
     obj = bpy.data.objects.new(name, None)
     obj.empty_display_type = 'ARROWS'
@@ -579,6 +681,8 @@ def pivot(coll, name, loc, axe=(0, 0, 1)):
     obj.location = loc
     obj.rotation_mode = 'QUATERNION'
     obj.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(Vector(axe))
+    if pas:
+        obj['pas'] = float(pas)
     coll.objects.link(obj)
     return obj
 
@@ -603,6 +707,8 @@ def _export_copy(coll):
             copy.location = loc * CELL_M
             copy.rotation_mode = 'QUATERNION'
             copy.rotation_quaternion = rot
+            if 'pas' in obj:  # pas d'une boucle, en mètres (voir `pivot`)
+                copy.scale = (obj['pas'] * CELL_M,) * 3
         else:
             mesh = obj.data.copy()
             mesh.transform(Matrix.Scale(CELL_M, 4) @ monde)

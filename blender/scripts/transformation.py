@@ -132,17 +132,14 @@ def estampeuse_t1(coll, leger=True):
 
     # --- Sortie devant : convoyeur commun, du pied de la chabotte au bord avant ; plaques estampées qui avancent
     # (groupe `sortie_`).
-    so = T.Lot(coll, 'sortie')
     S0, S1 = Vector((0, y0 - 0.56, 0.62)), Vector((0, -1.42, 0.4))
-    ds, ws, ns, rs = T.convoyeur(lot, S0, S1, 0.46, 0.07, rouleaux=2, sg=sg)
+
+    def plaque(g, k, p, d, w, n, rot):
+        g.cube('acier', (0.26, 0.26, 0.02), tuple(p + n * 0.024), 0, rot)  # plaque estampée
+        g.cube('acier_sombre', (0.16, 0.16, 0.004), tuple(p + n * 0.036), 0, rot)  # empreinte
+    so, _, _ = T.convoyeur_charge(coll, 'sortie', lot, S0, S1, 0.46, 0.07, 0.3, plaque, debut=0.12, fin=-0.12, rouleaux=2, sg=sg)
     for dx in (-0.22, 0.22):
         lot.cube('acier_sombre', (0.05, 0.05, S1.z - 0.07), (dx, S1.y + 0.08, (S1.z - 0.07) / 2), 0)  # pieds
-    ls = (S1 - S0).length
-    for t in (0.15, 0.55):  # pas = 0,4 de la longueur : même pas que la boucle de `sortie` (partMotions.ts)
-        p = S0 + ds * (ls * t) + ns * (0.07 + 0.024)
-        so.cube('acier', (0.26, 0.26, 0.02), tuple(p), 0, rs)  # plaque estampée
-        so.cube('acier_sombre', (0.16, 0.16, 0.004), tuple(p + ns * 0.012), 0, rs)  # empreinte
-    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * 0.07), tuple(ds))
 
     # --- Chaudière verticale derrière à droite : foyer côté +Y, cerclages, dôme, cheminée, manomètre.
     xc, yc, rc = 0.9, 1.05, 0.38
@@ -422,15 +419,10 @@ def assembleur_t2(coll, leger=True):
     lot.tube('noir', (xm - 0.2, yh - ph / 2, zt + 0.1), (xm - 0.2, ym2 + 0.1, zt + 0.1), 0.025, 6)
     T.cylinder(coll, 'voyant_pied', 0.05, 0.04, (1.05, -0.12, zt + 0.02), 'acier_sombre', segments=sg)
     T.cylinder(coll, 'voyant', 0.045, 0.09, (1.05, -0.12, zt + 0.085), 'vert', segments=sg, radius_top=0.035)
-    # Antenne à isolateurs (arrière droite) et câble vers le transformateur.
+    # Borne électrique (arrière droite ; le câble du jeu s'accroche à sa boule) et câble vers le transformateur.
     xa, ya = 1.02, 1.05
-    lot.tube('acier_sombre', (xa, ya, zt), (xa, ya, 2.32), 0.035, sg)
-    lot.cube('acier_sombre', (0.36, 0.05, 0.05), (xa, ya, 2.3), 0.008)
-    for x in (xa - 0.14, xa + 0.14):
-        for k in range(2):
-            T.cylinder(coll, f'isolateur_{x}_{k}', 0.045, 0.03, (x, ya, 2.35 + k * 0.04), 'blanc', segments=8)
-        T.cylinder(coll, f'isolateur_tete_{x}', 0.02, 0.05, (x, ya, 2.45), 'cuivre', segments=6)
-    cable = [(xa - 0.14, ya, 2.43), (xa - 0.35, ya - 0.1, 2.15), (xh + lh / 2, yh + 0.1, zt + 0.2)]
+    T.borne_electrique(coll, lot, (xa, ya, zt), 2.4 - zt, sg)
+    cable = [(xa - 0.02, ya, zt + 0.3), (xh + lh / 2, yh + 0.1, zt + 0.2)]
     for a, b in zip(cable, cable[1:]):
         lot.tube('noir', a, b, 0.018, 6)
 
@@ -641,7 +633,7 @@ def concasseur_t1(coll, leger=True):
     zf = 0.74  # porte du foyer, à la hauteur de la sortie de la vis
     T.box(coll, 'foyer_cadre', (0.36, 0.05, 0.3), (xc, yc + rc - 0.005, zf), 'acier_sombre', bevel=0.01)
     T.box(coll, 'foyer', (0.28, 0.04, 0.22), (xc, yc + rc + 0.01, zf), 'noir')
-    T.box(coll, 'foyer_lueur', (0.2, 0.03, 0.12), (xc, yc + rc + 0.025, zf - 0.03), 'braise')
+    T.box(coll, 'lueur_foyer', (0.2, 0.03, 0.12), (xc, yc + rc + 0.025, zf - 0.03), 'braise')
     lot.cube('acier', (0.12, 0.04, 0.03), (xc + 0.1, yc + rc + 0.04, zf + 0.08), 0)  # poignée
     # Vis sans fin inclinée : monte le charbon du bac jusqu'au-dessus de la porte du foyer (groupe `vis_` qui tourne).
     va, vb = Vector((xc, 1.05, 0.16)), Vector((xc, 0.57, 0.68))
@@ -885,20 +877,23 @@ def betonniere_t2(coll, leger=True):
 
     # --- Convoyeur de sortie (convoyeur commun) et blocs de béton (groupe `blocs_`).
     zr = 0.38  # dessus de la bande
-    T.convoyeur(lot, (0, -1.1, zr - 0.09), (0, -1.42, zr - 0.09), 0.44, 0.08, rouleaux=1, sg=sg)
+    def blocs(g, k, p, d, w, n, rot):  # deux blocs côte à côte, à la sortie de la presse (y = -1,3)
+        if k != 1:
+            return
+        for x in (-0.12, 0.12):
+            g.cube('beton', (0.2, 0.2, 0.14), (x, p.y, zr + 0.07), 0.01 * bv)
+            for dx in (-0.045, 0.045):
+                g.cube('pierre_sombre', (0.06, 0.12, 0.005), (x + dx, p.y, zr + 0.142), 0)  # alvéoles
+    bl, _, _ = T.convoyeur_charge(coll, 'blocs', lot, (0, -1.1, zr - 0.09), (0, -1.42, zr - 0.09), 0.44, 0.08, 0.15,
+                                  blocs, debut=0.05, fin=-0.1, rouleaux=1, sg=sg)
     for sx in (-1, 1):
         lot.cube('acier_sombre', (0.05, 0.05, zr - 0.19), (sx * 0.27, -1.4, (zr - 0.19) / 2), 0)  # pieds
-    bl = T.Lot(coll, 'blocs')
-    for x in (-0.12, 0.12):
-        bl.cube('beton', (0.2, 0.2, 0.14), (x, -1.3, zr + 0.07), 0.01 * bv)
-        for dx in (-0.045, 0.045):
-            bl.cube('pierre_sombre', (0.06, 0.12, 0.005), (x + dx, -1.3, zr + 0.142), 0)  # alvéoles
-    T.pivot(coll, 'pivot_blocs', (0, -1.3, zr), (0, 1, 0))
 
     # --- Armoire électrique (avant droite) et câble vers le moteur.
     xa = 1.18
     T.box(coll, 'armoire', (0.42, 0.3, 0.9), (xa, -1.05, 0.59), 'acier', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.48, 0.36, 0.05), (xa, -1.05, 1.065), 'acier_sombre', bevel=0.01)
+    T.borne_electrique(coll, lot, (xa + 0.1, -1.05, 1.09), 0.4, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     for i, c in enumerate(('vert', 'jaune', 'rouge')):
         lot.cube(c, (0.05, 0.02, 0.05), (xa - 0.12 + i * 0.08, -1.205, 0.92), 0)
     lot.cube('noir', (0.03, 0.06, 0.2), (xa + 0.15, -1.22, 0.7), 0, Matrix.Rotation(-0.4, 3, 'X'))
@@ -1146,7 +1141,18 @@ def station_lavage_t2(coll, leger=True):
     nc = Vector((0, 0, 1)) - dc * dc.z
     nc.normalize()  # normale à la bande, vers le haut
     rb = Matrix.Rotation(math.atan2(dc.z, -dc.y), 3, 'X').inverted()  # couche une pièce (longueur en Y) le long de la bande
-    T.convoyeur(lot, Q, H, wb, rp, rouleaux=2 if leger else 3, sg=sg)  # convoyeur commun (voir terra.py)
+    # Convoyeur commun qui avance (voir terra.py) : tasseaux, minerai brut et lames en flèche (groupe `bande_`).
+    pas_t = 0.22
+
+    def tasseau(g, k, p, d, w, n, rot):
+        g.cube('noir', (0.03, wb - 0.04, 0.05), tuple(p + n * 0.03), 0, rot)
+        q = p + d * (pas_t / 2) + n * 0.04
+        for j_ in range(2):
+            t = rnd.uniform(0.05, 0.08)
+            g.cube(rnd.choice(('brique_sombre', 'boue', 'pierre')), (t, t, t * 0.8),
+                   tuple(q + w * rnd.uniform(-0.1, 0.1)), 0, rot @ Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
+    ba, _, _ = T.convoyeur_charge(coll, 'bande', lot, Q, H, wb, rp, pas_t, tasseau, debut=0.12 * lc,
+                                  rouleaux=2 if leger else 3, sg=sg)
     # Pieds sous le haut de la montée, posés sur le mur arrière du bassin, et chevalet à la queue.
     yp = yb1 - ep / 2
     pz = Q.z + (Q.y - yp) / (Q.y - H.y) * (H.z - Q.z)
@@ -1187,39 +1193,25 @@ def station_lavage_t2(coll, leger=True):
     lot.tube('bleu', (xm - 0.14, Q.y, Q.z), (xm - 0.34, Q.y, Q.z), 0.08, sg)  # moteur
     lot.cube('acier_sombre', (0.3, 0.16, 0.04), (xm - 0.18, Q.y, Q.z - 0.1), 0)
     lot.cube('acier_sombre', (0.04, 0.12, Q.z - 0.12), (xm - 0.3, Q.y, (Q.z - 0.12) / 2), 0)
-    # Tasseaux et minerai brut sur la bande (groupe `bande_`).
-    ba = T.Lot(coll, 'bande')
-    n_t = 5 if leger else 7
-    for k in range(n_t):
-        f = 0.12 + k * 0.78 / (n_t - 1)
-        p = Q + dc * (lc * f) + nc * (rp + 0.03)
-        ba.cube('noir', (wb - 0.04, 0.03, 0.05), tuple(p), 0, rb)
-        if k < n_t - 1:
-            q = Q + dc * (lc * (f + 0.39 / (n_t - 1))) + nc * (rp + 0.04)
-            for j_ in range(2):
-                t = rnd.uniform(0.05, 0.08)
-                ba.cube(rnd.choice(('brique_sombre', 'boue', 'pierre')), (t, t, t * 0.8),
-                        tuple(q + Vector((rnd.uniform(-0.1, 0.1), 0, 0))), 0, Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
-    T.pivot(coll, 'pivot_bande', tuple(Q + nc * rp), tuple(dc))
 
     # --- Convoyeur de sortie (devant) : il part de l'intérieur du crible, sous la bouche du trommel, et descend
     # doucement jusqu'au bord avant, chargé de minerai lavé (groupe `sortie_`).
     S0, S1 = Vector((0, F.y + 0.16, 0.62)), Vector((0, -1.4, 0.34))
-    ds, ws, ns, rs = T.convoyeur(lot, S0, S1, wb, rp, rouleaux=2 if leger else 3, sg=sg)
-    ls = (S1 - S0).length
+
+    def minerai_lave(g, k, p, d, w, n, rot):  # deux morceaux de minerai lavé
+        for j_ in range(2):
+            t = rnd.uniform(0.05, 0.08)
+            g.cube(rnd.choice(('cuivre', 'acier', 'pierre_claire', 'gris_clair')), (t, t, t * 0.8),
+                   tuple(p + n * 0.04 + w * (0.07 if j_ else -0.07) + d * rnd.uniform(-0.03, 0.03)), 0,
+                   Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
+    so, (ds, ws, ns, rs), ls = T.convoyeur_charge(coll, 'sortie', lot, S0, S1, wb, rp, 0.2, minerai_lave, debut=0.12,
+                                                  rouleaux=2 if leger else 3, sg=sg)
     for sx in (-1, 1):  # pieds : sur le mur avant du bassin et au sol, au bout
         for y in (yb0 + ep / 2, S1.y + 0.04):
             z = S0.z + (S1.z - S0.z) * (y - S0.y) / (S1.y - S0.y) - rp - 0.02
             z0 = hb + 0.04 if y > yb0 else 0.0
             lot.cube('acier', (0.05, 0.05, z - z0), (sx * (wb / 2 + 0.05), y, (z + z0) / 2), 0)
             lot.cube('fonte', (0.1, 0.1, 0.02), (sx * (wb / 2 + 0.05), y, z0 + 0.01), 0)
-    so = T.Lot(coll, 'sortie')
-    for k in range(5 if leger else 9):
-        t = rnd.uniform(0.05, 0.08)
-        p = S0 + ds * (ls * (0.3 + 0.62 * k / (4 if leger else 8))) + ns * (rp + 0.04) + ws * rnd.uniform(-0.12, 0.12)
-        so.cube(rnd.choice(('cuivre', 'acier', 'pierre_claire', 'gris_clair')), (t, t, t * 0.8), tuple(p), 0,
-                Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
-    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * rp), tuple(ds))
     for k in range(3):  # gouttes qui tombent de la bande dans le bassin
         lot.cube('eau', (0.015, 0.015, 0.1), (-0.12 + k * 0.12, -0.9, zo + 0.08), 0)
 
@@ -1227,6 +1219,7 @@ def station_lavage_t2(coll, leger=True):
     xa = 1.15
     T.box(coll, 'armoire', (0.42, 0.28, 0.85), (xa, -1.24, 0.425), 'acier', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.48, 0.34, 0.05), (xa, -1.24, 0.875), 'acier_sombre', bevel=0.01)
+    T.borne_electrique(coll, lot, (xa + 0.1, -1.24, 0.9), 0.45, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     for i, c in enumerate(('vert', 'jaune', 'rouge')):
         lot.cube(c, (0.05, 0.02, 0.05), (xa - 0.12 + i * 0.08, -1.385, 0.72), 0)
     lot.cube('noir', (0.03, 0.06, 0.2), (xa + 0.15, -1.4, 0.5), 0, Matrix.Rotation(-0.4, 3, 'X'))
@@ -1338,30 +1331,24 @@ def constructeur_t2(coll, leger=True):
         lot.cube('noir', (0.5, 0.01, 0.3), (0, y, z + 0.1), 0)  # trappes
         lot.cube('jaune', (0.58, 0.02, 0.04), (0, y + (0.005 if y > 0 else -0.005), z + 0.27), 0)
     E0, E1 = Vector((0, 1.42, 0.3)), Vector((0, yb1 - 0.05, 0.46))
-    de, we, ne, re_ = T.convoyeur(lot, E0, E1, wb, rp, rouleaux=2, sg=sg)
     S0, S1 = Vector((0, yb0 + 0.05, 0.38)), Vector((0, -1.42, 0.3))
-    ds, ws, ns, _ = T.convoyeur(lot, S0, S1, wb, rp, rouleaux=2, sg=sg)
+
+    def lingot(g, k, p, d, w, n, rot):  # lingots de cuivre et de zinc, en alternance
+        mat = 'cuivre' if k % 2 == 0 else 'gris_clair'
+        g.cube(mat, (0.16, 0.1, 0.06), tuple(p + n * 0.04), 0, rot)
+        g.cube(mat, (0.12, 0.07, 0.03), tuple(p + n * 0.08), 0, rot)
+
+    def tube(g, k, p, d, w, n, rot):  # tube en laiton coudé
+        q = p + n * 0.04
+        a, b = q + Vector((-0.12, 0, 0)), q + Vector((0.08, 0, 0))
+        g.tube('orange', a, b, 0.03, sg)
+        g.tube('orange', b, b + d * 0.14, 0.03, sg)
+        g.boule('orange', b, 0.034)
+    en, _, _ = T.convoyeur_charge(coll, 'entree', lot, E0, E1, wb, rp, 0.27, lingot, rouleaux=2, sg=sg)
+    so, _, _ = T.convoyeur_charge(coll, 'sortie', lot, S0, S1, wb, rp, 0.38, tube, debut=0.2, rouleaux=2, sg=sg)
     for sx in (-1, 1):  # pieds
         for p in (E0, S1):
             lot.cube('acier', (0.05, 0.05, p.z - rp - 0.02), (sx * (wb / 2 + 0.05), p.y, (p.z - rp - 0.02) / 2), 0)
-    en = T.Lot(coll, 'entree')
-    le = (E1 - E0).length
-    for k in range(3):
-        p = E0 + de * (le * (0.22 + 0.27 * k)) + ne * (rp + 0.04)
-        en.cube('cuivre' if k % 2 == 0 else 'gris_clair', (0.16, 0.1, 0.06), tuple(p), 0, re_)  # lingots
-        en.cube('cuivre' if k % 2 == 0 else 'gris_clair', (0.12, 0.07, 0.03), tuple(p + ne * 0.04), 0, re_)
-    T.pivot(coll, 'pivot_entree', tuple(E0 + ne * rp), tuple(de))
-    so = T.Lot(coll, 'sortie')
-    ls = (S1 - S0).length
-    for k in range(2):
-        p = S0 + ds * (ls * (0.3 + 0.4 * k)) + ns * (rp + 0.04)
-        a = p + Vector((-0.12, 0, 0))
-        b = p + Vector((0.08, 0, 0))
-        c = b + ds * 0.14
-        so.tube('orange', a, b, 0.03, sg)
-        so.tube('orange', b, c, 0.03, sg)
-        so.boule('orange', b, 0.034)
-    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * rp), tuple(ds))
 
     # --- Groupe de refroidissement (droite) : radiateur, ventilateur (groupe `ventilateur_`), tuyaux, arrivée d'eau.
     xf, yf, zf = 1.23, 0.15, 0.5
@@ -1409,6 +1396,7 @@ def constructeur_t2(coll, leger=True):
     xa, ya = -1.2, 0.85
     T.box(coll, 'armoire', (0.42, 0.34, 1.1), (xa, ya, 0.55), 'acier', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.48, 0.4, 0.05), (xa, ya, 1.125), 'acier_sombre', bevel=0.01)
+    T.borne_electrique(coll, lot, (xa, ya, 1.15), 0.4, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     lot.cube('acier_sombre', (0.01, 0.01, 0.95), (xa + 0.211, ya, 0.55), 0)
     for i, c in enumerate(('vert', 'jaune', 'rouge')):
         lot.cube(c, (0.02, 0.05, 0.05), (xa + 0.215, ya - 0.08 + i * 0.08, 0.95), 0)
@@ -1509,26 +1497,21 @@ def presse_lourde_t3(coll, leger=True):
     # --- Convoyeurs communs : lingots d'acier derrière, tubes d'acier devant.
     wb, rp = 0.36, 0.08
     E0, E1 = Vector((0, 1.42, 0.3)), Vector((0, yf + 0.06, zs + 0.06))
-    de, we, ne, re_ = T.convoyeur(lot, E0, E1, wb, rp, rouleaux=2, sg=sg)
     S0, S1 = Vector((0, -yf - 0.06, zs + 0.06)), Vector((0, -1.42, 0.3))
-    ds, ws, ns, rs = T.convoyeur(lot, S0, S1, wb, rp, rouleaux=2, sg=sg)
+
+    def lingot(g, k, p, d, w, n, rot):  # lingot d'acier
+        g.cube('acier', (0.2, 0.12, 0.07), tuple(p + n * 0.045), 0, rot)
+        g.cube('acier', (0.15, 0.09, 0.03), tuple(p + n * 0.09), 0, rot)
+
+    def tube(g, k, p, d, w, n, rot):  # tube d'acier, couché en travers
+        q = p + n * 0.05
+        g.tube('gris_clair', q - w * 0.14, q + w * 0.14, 0.05, sg)
+        g.tube('noir', q - w * 0.145, q - w * 0.14, 0.035, sg)
+    en, _, _ = T.convoyeur_charge(coll, 'entree', lot, E0, E1, wb, rp, 0.32, lingot, rouleaux=2, sg=sg)
+    so, _, _ = T.convoyeur_charge(coll, 'sortie', lot, S0, S1, wb, rp, 0.32, tube, rouleaux=2, sg=sg)
     for sx in (-1, 1):
         for p in (E0, S1):
             lot.cube('acier', (0.05, 0.05, p.z - rp - 0.02), (sx * (wb / 2 + 0.05), p.y, (p.z - rp - 0.02) / 2), 0)
-    en = T.Lot(coll, 'entree')
-    le = (E1 - E0).length
-    for k in range(2):
-        p = E0 + de * (le * (0.3 + 0.38 * k)) + ne * (rp + 0.045)
-        en.cube('acier', (0.2, 0.12, 0.07), tuple(p), 0, re_)
-        en.cube('acier', (0.15, 0.09, 0.03), tuple(p + ne * 0.045), 0, re_)
-    T.pivot(coll, 'pivot_entree', tuple(E0 + ne * rp), tuple(de))
-    so = T.Lot(coll, 'sortie')
-    ls = (S1 - S0).length
-    for k in range(2):
-        p = S0 + ds * (ls * (0.3 + 0.4 * k)) + ns * (rp + 0.05)
-        so.tube('gris_clair', p - ws * 0.14, p + ws * 0.14, 0.05, sg)
-        so.tube('noir', p - ws * 0.145, p - ws * 0.14, 0.035, sg)
-    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * rp), tuple(ds))
 
     # --- Centrale hydraulique (droite) : bâche, moteur et pompe, refroidisseur, accumulateurs, flexibles.
     xh = 1.2
@@ -1595,6 +1578,7 @@ def presse_lourde_t3(coll, leger=True):
     xa, ya = -1.2, 0.45
     T.box(coll, 'armoire', (0.46, 0.6, 1.5), (xa, ya, 0.75), 'gris_clair', bevel=0.02)
     T.box(coll, 'armoire_toit', (0.5, 0.64, 0.05), (xa, ya, 1.525), cadre, bevel=0.01)
+    T.borne_electrique(coll, lot, (xa, ya + 0.15, 1.55), 0.35, sg)  # borne électrique : le câble du jeu s'accroche à sa boule
     yv_ = ya - 0.3  # façade de l'armoire, tournée vers l'avant
     lot.cube('acier_sombre', (0.01, 0.01, 1.3), (xa, yv_ - 0.001, 0.75), 0)
     lot.cube('panneau', (0.3, 0.012, 0.24), (xa, yv_ - 0.004, 1.15), 0)  # écran tactile

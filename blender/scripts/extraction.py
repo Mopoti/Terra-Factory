@@ -135,7 +135,7 @@ def foreuse_t1(coll, leger=True):
     T.cylinder(coll, 'cheminee_trou', 0.13, 0.01, (0.85, yb, 3.162), 'noir', segments=sg)
     # Foyer rougeoyant au bout du socle (côté +X).
     T.box(coll, 'foyer', (0.04, 0.4, 0.26), (1.615, yb, 0.42), 'noir')
-    T.box(coll, 'foyer_lueur', (0.03, 0.3, 0.16), (1.635, yb, 0.4), 'braise')
+    T.box(coll, 'lueur_foyer', (0.03, 0.3, 0.16), (1.635, yb, 0.4), 'braise')
     # Volant d'inertie (côté -X), axe, palier.
     xv = -1.5
     # Groupe `volant_` (tourne autour de X) : jante, moyeu et rayons.
@@ -263,14 +263,9 @@ def foreuse_electrique_t2(coll, leger=True):
             n_angle=16 if leger else 32, n_z=12 if leger else 28, pointe=0.12)
     T.pivot(coll, 'pivot_foret', (0, 0, 1.5))
 
-    # --- Petite antenne à isolateurs sur le moteur, câble qui descend le long d'un pied vers un boîtier.
-    lot.tube('acier_sombre', (0, 0, 3.53), (0, 0, 3.72), 0.03, sg)
-    lot.cube('acier_sombre', (0.4, 0.05, 0.05), (0, 0, 3.7), 0.008)
-    for x in (-0.17, 0.17):
-        for k in range(2):
-            T.cylinder(coll, f'isolateur_{x}_{k}', 0.045, 0.03, (x, 0, 3.75 + k * 0.04), 'blanc', segments=8)
-        T.cylinder(coll, f'isolateur_tete_{x}', 0.02, 0.05, (x, 0, 3.85), 'cuivre', segments=6)
-    cable = [(0.17, 0, 3.84), (0.5, 0.42, 3.0), coin(1, 1, 1.6), coin(1, 1, 0.95), (1.2, 1.38, 0.95)]
+    # --- Borne électrique sur le moteur (le câble du jeu s'accroche à sa boule), câble qui descend vers un boîtier.
+    T.borne_electrique(coll, lot, (0, 0, 3.53), 0.32, sg)
+    cable = [(0.03, 0, 3.62), (0.5, 0.42, 3.0), coin(1, 1, 1.6), coin(1, 1, 0.95), (1.2, 1.38, 0.95)]
     for a, b in zip(cable, cable[1:]):
         lot.tube('noir', a, b, 0.02, 6)
     T.box(coll, 'boitier', (0.3, 0.2, 0.26), (1.2, 1.38, 0.92), 'acier_sombre', bevel=0.02)
@@ -346,12 +341,9 @@ def foreuse_eco_t3(coll, leger=True):
     T.cylinder(coll, 'capsule_joint', 0.44, 0.03, (0, 0, zm + 0.04), 'acier_sombre', segments=seg)
     T.cylinder(coll, 'capsule_dome', 0.42, 0.16, (0, 0, zm + 0.52), 'gris_clair', segments=seg, radius_top=0.18)
 
-    # --- Antenne fine (câble électrique).
+    # --- Borne électrique (le câble du jeu s'accroche à sa boule).
     za = zm + 0.6
-    lot.tube('gris_clair', (0, 0, za), (0, 0, 3.78), 0.03, sg)
-    for k in range(2):
-        T.cylinder(coll, f'isolateur_{k}', 0.055, 0.03, (0, 0, za + 0.12 + k * 0.05), 'blanc', segments=8)
-    lot.boule('gris_clair', (0, 0, 3.82), 0.06)
+    T.borne_electrique(coll, lot, (0, 0, za), 3.78 - za, sg)
 
     # --- Sortie devant : bouche encadrée, goulotte blanche, minerai.
     T.box(coll, 'sortie_bouche', (0.6, 0.04, 0.24), (0, -1.5, 0.3), 'noir')
@@ -594,15 +586,9 @@ def chevalet_t2(coll, leger=True):
     lot.cube('acier_sombre', (0.4, 0.34, 0.12), (1.0, yr, 0.42), 0.015)  # plus court que le moteur (pas de faces confondues)
     T.box(coll, 'moteur_boitier', (0.16, 0.13, 0.16), (1.0, yr - 0.26, 0.7), 'acier_sombre', bevel=0.015)
 
-    # --- Petite antenne à isolateurs (arrière droite) et câble vers le moteur.
-    lot.tube('acier_sombre', (1.2, 1.25, 0.12), (1.2, 1.25, 1.55), 0.04, sg)
-    lot.cube('acier_sombre', (0.36, 0.05, 0.05), (1.2, 1.25, 1.5), 0.008)
-    for x in (1.06, 1.34):
-        for k in range(2):
-            T.cylinder(coll, f'isolateur_{x}_{k}', 0.045, 0.03, (x, 1.25, 1.55 + k * 0.04), 'blanc', segments=8)
-        T.cylinder(coll, f'isolateur_tete_{x}', 0.02, 0.05, (x, 1.25, 1.65), 'cuivre', segments=6)
-    for a, b in (((1.06, 1.25, 1.63), (1.17, 1.25, 1.3)), ((1.17, 1.25, 1.3), (1.03, yr - 0.26, 0.74))):
-        lot.tube('noir', a, b, 0.018, 6)
+    # --- Borne électrique (arrière droite ; le câble du jeu s'accroche à sa boule) et câble vers le moteur.
+    T.borne_electrique(coll, lot, (1.2, 1.25, 0.12), 1.45, sg)
+    lot.tube('noir', (1.2, 1.22, 0.9), (1.03, yr - 0.26, 0.74), 0.018, 6)
 
     for l in (lot, bal, tige, man, bie):
         l.finir()

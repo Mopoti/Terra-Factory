@@ -161,8 +161,8 @@ def _virage(coll, leger, inverse):
     sg = 8 if leger else 14
     lot, bande = _lot(coll, 'pieces', leger), _lot(coll, 'bande', leger)
     R = 1.0
-    _secteur(coll, 'bande_porteuse', R - LARG_BANDE, R + LARG_BANDE, *Z_BANDE, 'noir', n)
-    _secteur(coll, 'bande_retour', R - LARG_BANDE + 0.04, R + LARG_BANDE - 0.04, *Z_RETOUR, 'noir', n)
+    _secteur(coll, 'tapis_porteur', R - LARG_BANDE, R + LARG_BANDE, *Z_BANDE, 'noir', n)
+    _secteur(coll, 'tapis_retour', R - LARG_BANDE + 0.04, R + LARG_BANDE - 0.04, *Z_RETOUR, 'noir', n)
     for s in (-1, 1):
         r = R + s * Y_LONG
         _secteur(coll, f'longeron_{s}', r - EP_LONG / 2, r + EP_LONG / 2, *Z_LONG, CHASSIS, n)
@@ -219,8 +219,8 @@ def _rampe(coll, leger, descente):
 
     def para(zb, zh):
         return [(-1.0, zb + zx(-1.0)), (1.0, zb + zx(1.0)), (1.0, zh + zx(1.0)), (-1.0, zh + zx(-1.0))]
-    _prisme(coll, 'bande_porteuse', para(*Z_BANDE), -LARG_BANDE, LARG_BANDE, 'noir')
-    _prisme(coll, 'bande_retour', para(*Z_RETOUR), -LARG_BANDE + 0.04, LARG_BANDE - 0.04, 'noir')
+    _prisme(coll, 'tapis_porteur', para(*Z_BANDE), -LARG_BANDE, LARG_BANDE, 'noir')
+    _prisme(coll, 'tapis_retour', para(*Z_RETOUR), -LARG_BANDE + 0.04, LARG_BANDE - 0.04, 'noir')
     for s in (-1, 1):
         y = s * Y_LONG
         _prisme(coll, f'longeron_{s}', para(*Z_LONG), y - EP_LONG / 2, y + EP_LONG / 2, CHASSIS)
@@ -480,6 +480,7 @@ def trieur(coll, leger=True):
     lot.cube('acier', (0.2, 0.14, 0.26), (0.62, 0.62, 0.55 + 0.0))  # coffret électrique (sur le poteau)
     lot.cube('vert', (0.03, 0.01, 0.03), (0.58, 0.548, 0.62))
     lot.tube('noir', (0.62, 0.62, 0.42), (0.62, 0.62, 0.3), 0.02, 6)
+    T.borne_electrique(coll, lot, (0.62, 0.62, 0.68), 0.35, sg)  # le câble du jeu s'accroche à sa boule
     sc.finir()
     lot.finir()
     bande.finir()
@@ -523,7 +524,7 @@ def bras_t1(coll, leger=True):
     for z in (0.06, 0.27):  # cerclages rivetés
         lot.cube('acier_sombre', (0.64, yf1 - yf0 + 0.02, 0.03), (0, (yf0 + yf1) / 2, z))
     lot.cube('noir', (0.3, 0.012, 0.14), (0, yf1 + 0.006, 0.15))  # porte du foyer
-    lot.cube('braise', (0.24, 0.014, 0.07), (0, yf1 + 0.008, 0.13))
+    T.box(coll, 'lueur_foyer', (0.24, 0.014, 0.07), (0, yf1 + 0.008, 0.13), 'braise')  # rougeoie en jeu
     for k in range(3):
         lot.cube('acier', (0.27, 0.016, 0.014), (0, yf1 + 0.01, 0.1 + k * 0.035))  # grille
     lot.tube('acier', (0.17, yf1 + 0.01, 0.15), (0.17, yf1 + 0.05, 0.15), 0.02, 6)  # poignée
@@ -665,6 +666,10 @@ def _bras_robot_tourelle(coll, leger, couleur, filtre):
         tr.cube('cyan', (0.2, 0.006, 0.025), (0, -0.318, Z_TOUR + 0.09))
         tr.tube('cyan', (0, 0, Z_TOUR + 0.32), (0, 0, Z_TOUR + 0.335), 0.23, seg)  # anneau lumineux
     T.pivot(coll, 'pivot_tourelle', (0, 0, Z_TOUR), (0, 0, 1))
+    # Borne électrique derrière à droite (hors de portée du bras) : le câble du jeu s'accroche à sa boule.
+    lot.cube(CHASSIS, (0.18, 0.18, 0.05), (0.42, 0.66, 0.025))
+    T.borne_electrique(coll, lot, (0.42, 0.66, 0.05), 0.75, sg)
+    lot.barre('noir', (0.4, 0.6, 0.06), (0.3, 0.45, 0.1), 0.03, 0)  # câble vers le socle
     lot.finir()
     tr.finir()
     T.poser_au_sol(coll, 1.0)

@@ -1,4 +1,4 @@
-"""Famille « nucléaire » : centrifugeuse (et plus tard réacteur à fission, vitrificateur…).
+"""Famille « nucléaire » : centrifugeuse, réacteur à fission, réacteur à fusion (et plus tard vitrificateur…).
 
 Style low poly stylisé (voir blender/README.md) : relief et variations de teinte, pas d'image de texture.
 Deux niveaux de détail par modèle, dans le même .blend :
@@ -149,23 +149,21 @@ def centrifugeuse_t4(coll, leger=True):
     for k in range(3):  # rideau à lanières (laisse passer le minerai)
         lot.cube('acier_sombre', (0.1, 0.006, 0.12), (cx - 0.12 + k * 0.12, yb + 0.22, 1.05), 0)
     E0, E1 = Vector((cx, 1.42, 0.3)), Vector((cx, yb + 0.08, 0.93))
-    de, we, ne, re_ = T.convoyeur(lot, E0, E1, 0.3, 0.07, rouleaux=1, sg=sg)
+
+    def charge(g, k, p, d, w, n, rot):  # tasseau (la bande monte fort) et, un sur deux, un bloc de « yellowcake »
+        g.cube('acier_sombre', (0.02, 0.28, 0.04), tuple(p + n * 0.015), 0, rot)
+        if k % 2 == 0:
+            q = p + d * 0.1 + n * 0.035
+            g.cube('jaune', (0.1, 0.1, 0.06), tuple(q), 0, rot)
+            g.cube('orange', (0.06, 0.06, 0.03), tuple(q + n * 0.045), 0, rot)
+    en, _, _ = T.convoyeur_charge(coll, 'entree', lot, E0, E1, 0.3, 0.07, 0.24, charge, debut=0.15, rouleaux=1, sg=sg)
     for sx in (-1, 1):
         lot.cube('acier', (0.04, 0.04, 0.26), (cx + sx * 0.19, 1.36, 0.13), 0)
         lot.cube('acier', (0.04, 0.04, 0.6), (cx + sx * 0.19, 0.96, 0.3), 0)
-    en = T.Lot(coll, 'entree')
-    le = (E1 - E0).length
-    for k in range(4):  # tasseaux (la bande monte fort)
-        p = E0 + de * (le * (0.15 + 0.22 * k)) + ne * 0.085
-        en.cube('acier_sombre', (0.02, 0.28, 0.04), tuple(p), 0, re_)
-    for k in range(2):
-        p = E0 + de * (le * (0.26 + 0.44 * k)) + ne * (0.07 + 0.035)
-        en.cube('jaune', (0.1, 0.1, 0.06), tuple(p), 0, re_)  # « yellowcake »
-        en.cube('orange', (0.06, 0.06, 0.03), tuple(p + ne * 0.045), 0, re_)
-    T.pivot(coll, 'pivot_entree', tuple(E0 + ne * 0.07), tuple(de))
-    # --- Derrière à gauche : raccordement électrique. Poteau T2 (fonction commune) -> transformateur -> caniveau.
+    # --- Derrière à gauche : raccordement électrique. Borne (fonction commune : le câble du jeu s'accroche à sa boule)
+    # -> transformateur -> caniveau.
     pt = Vector((-1.18, 1.3, 0.06))
-    accroches = T.poteau_electrique(lot, tuple(pt), niveau=2, hauteur=2.3, sg=sg)
+    boule = T.borne_electrique(coll, lot, tuple(pt), 1.1, sg)
     xt, yt = -0.9, 0.75
     T.box(coll, 'transformateur', (0.5, 0.45, 0.62), (xt, yt, 0.06 + 0.31 + 0.04), 'vert_fonce', bevel=0.015)
     lot.cube('acier_sombre', (0.56, 0.5, 0.04), (xt, yt, 0.08), 0)  # socle
@@ -182,8 +180,9 @@ def centrifugeuse_t4(coll, leger=True):
             lot.tube('blanc', (xt + dx, yt - 0.08, 0.75 + k * 0.05), (xt + dx, yt - 0.08, 0.78 + k * 0.05), 0.035 - k * 0.003, sg)
         lot.tube('acier', (xt + dx, yt - 0.08, 0.95), (xt + dx, yt - 0.08, 0.98), 0.012, 4)
         bornes.append(Vector((xt + dx, yt - 0.08, 0.98)))
-    for a, b in zip(accroches, bornes):  # câbles du poteau aux traversées
-        m = (a + b) / 2 + Vector((0, 0, -0.12))  # léger fléchissement
+    for b in bornes:  # câbles de la borne aux traversées
+        a = boule + Vector((0, 0, -0.17))
+        m = (a + b) / 2 + Vector((0, 0, -0.1))  # léger fléchissement
         lot.tube('noir', a, m, 0.008, 4)
         lot.tube('noir', m, b, 0.008, 4)
     lot.cube('jaune', (0.2, 0.01, 0.1), (xt + 0.1, yt - 0.231, 0.55), 0)  # plaque « haute tension »
@@ -193,19 +192,19 @@ def centrifugeuse_t4(coll, leger=True):
 
     # --- Sortie : convoyeur sous la goulotte, entre les pieds, jusqu'au bord avant.
     S0, S1 = Vector((cx, cy + 0.12, 0.32)), Vector((cx, -1.42, 0.28))
-    ds, ws, ns, rs = T.convoyeur(lot, S0, S1, 0.36, 0.08, rouleaux=2, sg=sg)
+
+    def fut(g, k, p, d, w, n, rot):  # capsule verte (enrichi) et conteneur gris (appauvri), en alternance
+        q = p + n * 0.05
+        if k % 2 == 0:
+            g.tube('vert', q - w * 0.07, q + w * 0.07, 0.045, sg)
+            g.tube('cyan', q - w * 0.075, q - w * 0.07, 0.03, sg)
+        else:
+            g.tube('acier_sombre', q - w * 0.09, q + w * 0.09, 0.05, sg)
+            g.tube('acier', q - w * 0.095, q - w * 0.09, 0.035, sg)
+    so, _, _ = T.convoyeur_charge(coll, 'sortie', lot, S0, S1, 0.36, 0.08, 0.36, fut, debut=0.5, rouleaux=2, sg=sg)
     for y in (-0.7, -1.38):
         for sx in (-1, 1):
             lot.cube('acier', (0.04, 0.04, 0.2), (sx * 0.22, y, 0.12), 0)
-    so = T.Lot(coll, 'sortie')
-    ls = (S1 - S0).length
-    p = S0 + ds * (ls * 0.42) + ns * 0.13
-    so.tube('vert', p - ws * 0.07, p + ws * 0.07, 0.045, sg)  # capsule d'uranium enrichi
-    so.tube('cyan', p - ws * 0.075, p - ws * 0.07, 0.03, sg)
-    p = S0 + ds * (ls * 0.82) + ns * 0.13
-    so.tube('acier_sombre', p - ws * 0.09, p + ws * 0.09, 0.05, sg)  # conteneur d'uranium appauvri
-    so.tube('acier', p - ws * 0.095, p - ws * 0.09, 0.035, sg)
-    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * 0.08), tuple(ds))
 
     # --- Derrière à droite : groupe froid à ventilateur, tuyaux vers la double enveloppe du carter.
     xf, yf = 1.05, 0.95
@@ -282,7 +281,282 @@ def centrifugeuse_t4(coll, leger=True):
     T.poser_au_sol(coll, 1.5)
 
 
-MODELES = {'centrifugeuse_t4': centrifugeuse_t4}
+def _anneau_z(lot, mat, c, r, ep, n):
+    """Anneau horizontal (plan XY), centre `c`, rayon `r`, section carrée `ep`."""
+    c = Vector(c)
+    for k in range(n):
+        a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
+        lot.barre(mat, c + Vector((r * math.cos(a0), r * math.sin(a0), 0)), c + Vector((r * math.cos(a1), r * math.sin(a1), 0)), ep)
+
+
+def _pompe_verticale(coll, lot, g, nom, p, sg, seg):
+    """Pompe de circulation verticale (corps bleu, moteur, ventilateur du moteur dans le groupe `g`, axe Z)."""
+    x, y = p
+    T.cylinder(coll, nom + '_corps', 0.26, 0.5, (x, y, 0.2 + 0.25), 'bleu', segments=seg)
+    lot.tube('acier_sombre', (x, y, 0.68), (x, y, 0.74), 0.28, seg)
+    T.cylinder(coll, nom + '_moteur', 0.2, 0.5, (x, y, 0.74 + 0.25), 'acier', segments=seg)
+    for k in range(4):
+        lot.tube('acier', (x, y, 0.82 + k * 0.1), (x, y, 0.84 + k * 0.1), 0.22, seg)
+    lot.tube('acier_sombre', (x, y, 1.24), (x, y, 1.3), 0.22, seg)
+    g.tube('acier_sombre', (x, y, 1.3), (x, y, 1.36), 0.06, 8)
+    for k in range(4):
+        a = math.pi / 2 * k
+        g.cube('jaune', (0.3, 0.07, 0.02), (x + 0.1 * math.cos(a), y + 0.1 * math.sin(a), 1.34), 0, Matrix.Rotation(a, 3, 'Z'))
+    T.pivot(coll, 'pivot_' + g.name, (x, y, 1.33), (0, 0, 1))
+
+
+def reacteur_fission_t4(coll, leger=True):
+    """Réacteur à fission T4 (`fission_reactor`) : 4 x 4 cases, 2,5 m de haut (modèle jusqu'à 6,5 unités). Eau sous
+    pression qui entre par le côté +X, eau contaminée rejetée par le côté -X ; combustible derrière (+Y), produits devant.
+
+    Enceinte de confinement en béton à dôme, cerclages, hublots qui luisent en cyan (`voyant_hublot_*`, pulsent),
+    mécanismes des barres de contrôle sur le dôme ; sas du personnel devant ; à droite la pompe d'alimentation, à gauche
+    le générateur de vapeur et la pompe de rejet ; trappes de chargement (derrière) et de déchargement (devant) ;
+    panneaux « danger radioactif » ; borne électrique.
+    Pièces mobiles : `pompe1_`, `pompe2_` (ventilateurs des moteurs des pompes, axe Z).
+    """
+    sg = 10 if leger else 16
+    seg = 20 if leger else 32
+    lot, p1, p2 = T.Lot(coll, 'pieces'), T.Lot(coll, 'pompe1'), T.Lot(coll, 'pompe2')
+    lot.cube('beton', (3.92, 3.92, 0.2), (0, 0, 0.1), 0.02)
+    for s in (-1, 1):
+        lot.cube('jaune', (3.6, 0.06, 0.012), (0, s * 1.8, 0.205))
+        lot.cube('jaune', (0.06, 3.6, 0.012), (s * 1.8, 0, 0.205))
+    # Enceinte et dôme.
+    T.cylinder(coll, 'enceinte', 1.3, 3.0, (0, 0, 0.2 + 1.5), 'beton', segments=seg)
+    T.tour(coll, 'enceinte_dome', [(1.3, 3.2), (1.22, 3.6), (1.0, 3.95), (0.6, 4.2), (0.0, 4.3)], 'beton', segments=seg)
+    for z in (0.9, 1.8, 2.7):
+        lot.tube('pierre_claire', (0, 0, z - 0.04), (0, 0, z + 0.04), 1.33, seg)
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        o = T.box(coll, f'voyant_hublot_{k}', (0.05, 0.3, 0.5), (1.31 * math.cos(a), 1.31 * math.sin(a), 2.25), 'cyan')
+        o.rotation_euler = (0, 0, a)
+        f = T.box(coll, f'hublot_cadre_{k}', (0.04, 0.4, 0.6), (1.29 * math.cos(a), 1.29 * math.sin(a), 2.25), 'acier_sombre')
+        f.rotation_euler = (0, 0, a)
+    _trefle(lot, (0, -1.31, 1.35), (0, -1, 0), 0.32)
+    # Mécanismes des barres de contrôle, portique.
+    for i in (-1, 0, 1):
+        for j in (-1, 0, 1):
+            lot.tube('acier', (i * 0.17, j * 0.17, 4.05), (i * 0.17, j * 0.17, 4.75), 0.05, 6)
+    lot.cube('acier_sombre', (0.7, 0.7, 0.08), (0, 0, 4.8), 0.01)
+    lot.cube('jaune', (1.6, 0.12, 0.12), (0, 0.5, 4.95), 0.01)
+    for s in (-1, 1):
+        lot.barre('jaune', (s * 0.75, 0.5, 4.95), (s * 0.95, 0.5, 3.75), 0.1)
+    # Sas du personnel (devant), trappes de chargement et de déchargement.
+    lot.cube('acier_sombre', (0.7, 0.5, 1.0), (-0.55, -1.4, 0.7), 0.02)
+    lot.cube('jaune', (0.4, 0.02, 0.7), (-0.55, -1.66, 0.62))
+    lot.cube('noir', (0.3, 0.025, 0.6), (-0.55, -1.665, 0.6))
+    for y, s in ((1.62, 1), (-1.62, -1)):
+        x = 0 if s > 0 else 0.6
+        lot.cube('acier', (0.8, 0.5, 0.5), (x, y, 0.45), 0.02)
+        lot.cube('jaune', (0.66, 0.02, 0.36), (x, y + s * 0.255, 0.45))
+        lot.cube('noir', (0.5, 0.025, 0.24), (x, y + s * 0.26, 0.45))
+    # Côté +X : pompe d'alimentation, eau sous pression qui entre.
+    a = T.raccord_fluide(lot, (2.0, 0), (1, 0, 0), r=0.13, longueur=0.3, sg=sg)
+    _pompe_verticale(coll, lot, p1, 'pompe_alim', (1.6, 0.75), sg, seg)
+    _tuyau(lot, [tuple(a), (1.6, 0, 0.36), (1.6, 0.45, 0.36)], 'bleu', 0.12, sg)
+    _tuyau(lot, [(1.6, 0.75, 0.6), (1.6, 0.4, 0.6), (1.25, 0.4, 0.6)], 'bleu', 0.1, sg)
+    # Côté -X : générateur de vapeur, pompe de rejet, eau contaminée qui sort.
+    T.cylinder(coll, 'generateur_vapeur', 0.32, 2.2, (-1.6, 0.75, 0.2 + 1.1), 'gris_clair', segments=seg)
+    lot.boule('gris_clair', (-1.6, 0.75, 2.4), 0.32)
+    for z in (0.8, 1.5, 2.1):
+        lot.tube('acier_sombre', (-1.6, 0.75, z - 0.03), (-1.6, 0.75, z + 0.03), 0.34, seg)
+    _trefle(lot, (-1.6, 0.42, 1.2), (0, -1, 0), 0.18)
+    _tuyau(lot, [(-1.1, 0.75, 1.8), (-1.35, 0.75, 1.8)], 'gris_clair', 0.12, sg)
+    _pompe_verticale(coll, lot, p2, 'pompe_rejet', (-1.6, -0.75), sg, seg)
+    b = T.raccord_fluide(lot, (-2.0, 0), (-1, 0, 0), r=0.13, longueur=0.3, sg=sg)
+    _tuyau(lot, [(-1.6, 0.75, 0.36), (-1.6, -0.45, 0.36)], 'vert', 0.12, sg)
+    _tuyau(lot, [(-1.6, -0.75, 0.6), (-1.6, 0, 0.6), (-1.6, 0, 0.36), tuple(b)], 'vert', 0.12, sg)
+    T.borne_electrique(coll, lot, (1.55, -1.55, 0.2), 0.9, sg)
+    for l in (lot, p1, p2):
+        l.finir()
+    T.poser_au_sol(coll, 2.0)
+
+
+def reacteur_fusion(coll, leger=True):
+    """Réacteur à fusion magnétique (`fusion_reactor`) : 6 x 6 cases, 3 m de haut (modèle jusqu'à 7,8 unités).
+    Combustible derrière (+Y).
+
+    Tokamak : socle octogonal, cryostat, anneau de plasma rose qui luit (`voyant_plasma_*`, pulse quand le plasma est
+    allumé) tenu par douze bobines toroïdales en cuivre et quatre anneaux en inox, solénoïde central, deux grandes
+    bobines horizontales sur huit poteaux, deux injecteurs de neutres, trappe de chargement, armoire de commande,
+    conduites cryogéniques, borne électrique.
+    """
+    sg = 10 if leger else 16
+    seg = 24 if leger else 40
+    n = 24 if leger else 36
+    lot, pl = T.Lot(coll, 'pieces'), T.Lot(coll, 'voyant_plasma')
+    zc, R = 2.2, 1.75
+    # Socle, cryostat.
+    T.cylinder(coll, 'socle', 2.95, 0.25, (0, 0, 0.125), 'acier_sombre', segments=8)
+    T.cylinder(coll, 'socle_haut', 2.55, 0.2, (0, 0, 0.35), 'gris_clair', segments=8)
+    T.cylinder(coll, 'cryostat', 2.3, 0.75, (0, 0, 0.45 + 0.375), 'inox', segments=seg)
+    for k in range(8):
+        a = 2 * math.pi * (k + 0.5) / 8
+        lot.cube('jaune', (0.5, 0.06, 0.012), (2.75 * math.cos(a), 2.75 * math.sin(a), 0.255), 0, Matrix.Rotation(a + math.pi / 2, 3, 'Z'))
+    # Plasma (anneau rose).
+    for k in range(n):
+        a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
+        pl.tube('plasma', (R * math.cos(a0), R * math.sin(a0), zc), (R * math.cos(a1), R * math.sin(a1), zc), 0.3, 10)
+    # Anneaux en inox autour du plasma (enceinte à vide ajourée).
+    for dr, dz in ((-0.55, 0.45), (0.55, 0.45), (-0.55, -0.45), (0.55, -0.45)):
+        _anneau_z(lot, 'inox', (0, 0, zc + dz), R + dr, 0.1, n)
+    # Bobines toroïdales (cadres en D, cuivre), entretoises.
+    nb = 12
+    for k in range(nb):
+        a = 2 * math.pi * k / nb
+        u = Vector((math.cos(a), math.sin(a), 0))
+        c = Vector((0, 0, zc)) + u * R
+        coins = [c - u * 0.75 - Vector((0, 0, 0.8)), c + u * 0.8 - Vector((0, 0, 0.7)), c + u * 0.8 + Vector((0, 0, 0.7)),
+                 c - u * 0.75 + Vector((0, 0, 0.8))]
+        for p, q in zip(coins, coins[1:] + coins[:1]):
+            lot.barre('cuivre', p, q, 0.16)
+        lot.cube('acier_sombre', (0.2, 0.2, zc - 0.8 - 1.2), tuple(c - u * 0.6 + Vector((0, 0, -(zc - 0.8 - 1.2) / 2 - 0.8 + 0.0))))
+    # Solénoïde central.
+    T.cylinder(coll, 'solenoide', 0.55, 3.4, (0, 0, 1.2 + 1.7 - 0.0), 'acier', segments=seg)
+    for z in (1.6, 2.2, 2.8, 3.4):
+        lot.tube('cuivre', (0, 0, z - 0.08), (0, 0, z + 0.08), 0.58, seg)
+    lot.cube('acier_sombre', (0.8, 0.8, 0.1), (0, 0, 4.65), 0.01)
+    # Grandes bobines horizontales sur huit poteaux.
+    for z in (zc + 1.2, 1.25):
+        _anneau_z(lot, 'acier_sombre', (0, 0, z), 2.6, 0.2, 32)
+    for k in range(8):
+        a = 2 * math.pi * k / 8
+        lot.cube('acier', (0.16, 0.16, zc + 1.2 - 0.45), (2.6 * math.cos(a), 2.6 * math.sin(a), 0.45 + (zc + 1.2 - 0.45) / 2), 0.01)
+    # Injecteurs de neutres (deux boîtes pointées vers le tore).
+    for a in (math.radians(22.5 + 45), math.radians(22.5 + 225)):
+        u = Vector((math.cos(a), math.sin(a), 0))
+        rot = Matrix.Rotation(a, 3, 'Z')
+        lot.cube('gris_clair', (1.0, 0.6, 0.6), tuple(u * 2.4 + Vector((0, 0, zc))), 0.02, rot)
+        lot.tube('acier_sombre', u * 1.95 + Vector((0, 0, zc)), u * 1.82 + Vector((0, 0, zc)), 0.14, sg)
+        lot.cube('jaune', (0.06, 0.62, 0.62), tuple(u * 1.93 + Vector((0, 0, zc))), 0, rot)
+    # Trappe de chargement (derrière), armoire de commande (devant à droite), conduites cryogéniques.
+    lot.cube('acier', (0.9, 0.4, 0.5), (0, 2.7, 0.5), 0.02)
+    lot.cube('jaune', (0.76, 0.02, 0.36), (0, 2.91, 0.5))
+    lot.cube('noir', (0.6, 0.025, 0.24), (0, 2.915, 0.5))
+    lot.cube('gris_clair', (0.7, 0.45, 1.3), (2.1, -2.3, 0.25 + 0.65), 0.02)
+    lot.cube('panneau', (0.56, 0.02, 0.4), (2.1, -2.53, 1.1))
+    for k, c in enumerate(('vert', 'jaune', 'rouge')):
+        lot.cube(c, (0.06, 0.02, 0.06), (1.93 + k * 0.17, -2.53, 0.7))
+    for dz in (0.0, 0.15):
+        _tuyau(lot, [(1.9, -2.05, 0.6 + dz), (1.5, -1.6, 0.6 + dz), (1.5, -1.6, 1.0 + dz)], 'inox', 0.05, 8)
+    T.borne_electrique(coll, lot, (-2.25, -2.25, 0.25), 1.0, sg)
+    for l in (lot, pl):
+        l.finir()
+    T.poser_au_sol(coll, 3.0)
+
+
+def tour_evaporation_t4(coll, leger=True):
+    """Tour d'évaporation T4 (`evaporation_tower`) : 3 x 3 cases, 2 m de haut (modèle jusqu'à 5,2 unités). L'eau
+    contaminée entre par derrière (+Y).
+
+    Bassin de rétention en béton, haute cheminée qui s'affine (béton puis inox), quatre nervures, cerclages, échelle à
+    crinoline et deux plateformes, couronne de bouches au sommet ; panache verdâtre (`jet_fumee_*`, vacille en marche) ;
+    conduite d'arrivée, réchauffeur à la base, panneaux « danger radioactif ».
+    """
+    sg = 10 if leger else 16
+    seg = 16 if leger else 28
+    lot = T.Lot(coll, 'pieces')
+    lot.cube('beton', (2.9, 2.9, 0.3), (0, 0, 0.15), 0.02)
+    lot.cube('vert', (2.5, 2.5, 0.02), (0, 0, 0.305))  # fond du bassin (eau croupie)
+    for s in (-1, 1):
+        lot.cube('beton', (2.9, 0.2, 0.18), (0, s * 1.35, 0.39), 0.01)
+        lot.cube('beton', (0.2, 2.9, 0.18), (s * 1.35, 0, 0.39), 0.01)
+    # Cheminée qui s'affine.
+    T.tour(coll, 'cheminee', [(0.95, 0.3), (0.85, 1.6), (0.7, 3.2), (0.6, 4.35)], 'beton', segments=seg, fond=False)
+    T.tour(coll, 'cheminee_haut', [(0.62, 4.3), (0.62, 4.6), (0.72, 4.75)], 'inox', segments=seg, fond=False, dessus=False)
+    for z, r in ((1.0, 0.9), (2.0, 0.81), (3.0, 0.72), (4.0, 0.64)):
+        lot.tube('acier_sombre', (0, 0, z - 0.04), (0, 0, z + 0.04), r, seg)
+    for k in range(4):  # nervures
+        a = math.pi / 4 + k * math.pi / 2
+        lot.barre('acier_sombre', (0.98 * math.cos(a), 0.98 * math.sin(a), 0.3), (0.62 * math.cos(a), 0.62 * math.sin(a), 4.3), 0.1)
+    # Couronne de bouches et panache.
+    for k in range(6):
+        a = 2 * math.pi * k / 6
+        lot.cube('acier_sombre', (0.16, 0.16, 0.14), (0.55 * math.cos(a), 0.55 * math.sin(a), 4.72), 0.01)
+    # Panache : bouffées verdâtres (boules facettées, vacillent en marche) ; reste sous 5,2 unités (hauteur 2 m du jeu).
+    for k, (x, y, z, r) in enumerate(((0, 0, 4.92, 0.27), (0.3, 0.18, 4.88, 0.19), (-0.28, -0.16, 4.9, 0.2), (0.05, -0.28, 5.03, 0.15))):
+        jet = T.Lot(coll, f'jet_fumee_{k}')
+        jet.boule('vert' if k % 2 == 0 else 'gris_clair', (x, y, z), r)
+        jet.finir()
+    # Échelle à crinoline et plateformes (côté -X).
+    xe = -0.95
+    for dy in (-0.15, 0.15):
+        lot.barre('acier', (xe, dy, 0.48), (xe + 0.3, dy, 4.3), 0.04)
+    for k in range(14):
+        t = k / 13
+        lot.barre('acier', (xe + 0.3 * t, -0.15, 0.48 + 3.82 * t), (xe + 0.3 * t, 0.15, 0.48 + 3.82 * t), 0.025)
+    for z, r in ((2.4, 0.95), (4.3, 0.85)):
+        _anneau_z(lot, 'jaune', (0, 0, z + 0.32), r + 0.2, 0.04, 16)
+        T.cylinder(coll, f'plateforme_{z}', r + 0.2, 0.05, (0, 0, z), 'acier_sombre', segments=16)
+    # Arrivée d'eau contaminée (derrière), réchauffeur.
+    a = T.raccord_fluide(lot, (0, 1.5), (0, 1, 0), r=0.12, longueur=0.15, sg=sg)
+    _tuyau(lot, [tuple(a), (0, 1.2, 0.36), (0, 1.2, 0.8), (0, 0.85, 0.8)], 'vert', 0.1, sg)
+    lot.cube('acier', (0.7, 0.4, 0.45), (0.7, 0.95, 0.75), 0.02)  # réchauffeur
+    lot.tube('rouge', (0.45, 0.95, 0.98), (0.45, 0.95, 1.3), 0.04, 6)
+    _trefle(lot, (0, -0.86, 1.5), (0, -1, 0), 0.32)
+    _trefle(lot, (0.7, 0.74, 0.8), (0, -1, 0), 0.2)
+    lot.finir()
+    T.poser_au_sol(coll, 1.5)
+
+
+def station_vitrification_t4(coll, leger=True):
+    """Station de vitrification T4 (`vitrifier`) : 3 x 3 cases, 1,2 m de haut (modèle jusqu'à 3,1 unités). Déchets
+    liquides par le côté +X, matières (sable de verre) par derrière, conteneurs de verre devant.
+
+    Four de fusion trapu (porte où le verre en fusion rougeoie : `lueur_coulee`), goulotte de coulée au-dessus du
+    convoyeur de sortie qui emporte les conteneurs (groupe `sortie_`, cylindres de verre vert cerclés) ; trémie à
+    l'arrière ; cheminée de traitement des fumées ; raccord du côté +X ; armoire et borne électrique ; trèfles.
+    """
+    sg = 10 if leger else 16
+    seg = 16 if leger else 28
+    lot = T.Lot(coll, 'pieces')
+    lot.cube('acier_sombre', (2.9, 2.9, 0.1), (0, 0, 0.05), 0.01)
+    # Four de fusion.
+    lot.cube('gris_clair', (1.5, 1.3, 1.25), (0, 0.25, 0.1 + 0.625), 0.03)
+    lot.cube('acier_sombre', (1.56, 1.36, 0.1), (0, 0.25, 1.4), 0.01)
+    for x in (-0.6, 0.6):
+        lot.cube('acier_sombre', (0.08, 1.34, 1.25), (x, 0.25, 0.725))
+    lot.cube('fonte', (0.6, 0.06, 0.5), (0, -0.42, 0.7), 0.01)  # porte de coulée
+    lot.cube('noir', (0.46, 0.02, 0.36), (0, -0.455, 0.68))
+    T.box(coll, 'lueur_coulee', (0.38, 0.01, 0.26), (0, -0.468, 0.66), 'braise')
+    lot.cube('fonte', (0.22, 0.3, 0.06), (0, -0.6, 0.6), 0.005, Matrix.Rotation(0.4, 3, 'X'))  # goulotte
+    _trefle(lot, (0.45, -0.405, 1.05), (0, -1, 0), 0.22)
+    # Convoyeur de sortie et conteneurs de verre.
+    def conteneur(g, k, p, d, w, n, rot):
+        q = p + n * 0.02
+        g.tube('vert', q, q + n * 0.34, 0.15, sg)
+        for z in (0.04, 0.3):
+            g.tube('inox', q + n * z, q + n * (z + 0.03), 0.16, sg)
+        g.tube('inox', q + n * 0.34, q + n * 0.37, 0.1, sg)
+    so, _, _ = T.convoyeur_charge(coll, 'sortie', lot, (0, -0.45, 0.33), (0, -1.38, 0.3), 0.42, 0.07, 0.4, conteneur,
+                       debut=0.12, fin=-0.15, rouleaux=2, sg=sg)
+    for sx in (-1, 1):
+        lot.cube('acier', (0.05, 0.05, 0.2), (sx * 0.27, -1.35, 0.2))
+    # Trémie à l'arrière (matières).
+    T.tour(coll, 'tremie', [(0.18, 1.4), (0.45, 1.85), (0.47, 1.9)], 'acier', segments=4, centre=(0, 0.75), fond=False, dessus=False)
+    lot.cube('pierre_claire', (0.55, 0.55, 0.05), (0, 0.75, 1.82))
+    # Déchets liquides : raccord +X, conduite vers le four.
+    a = T.raccord_fluide(lot, (1.5, 0.3), (1, 0, 0), r=0.11, longueur=0.15, sg=sg)
+    _tuyau(lot, [tuple(a), (1.1, 0.3, 0.36), (1.1, 0.3, 1.0), (0.75, 0.3, 1.0)], 'vert', 0.09, sg)
+    # Traitement des fumées : caisson et cheminée (derrière à gauche).
+    lot.cube('inox', (0.55, 0.55, 0.8), (-1.05, 0.95, 0.5), 0.02)
+    T.cylinder(coll, 'cheminee', 0.13, 1.9, (-1.05, 0.95, 0.9 + 0.95), 'inox', segments=10)
+    _tuyau(lot, [(-0.75, 0.6, 1.2), (-0.95, 0.75, 1.2)], 'inox', 0.07, sg)
+    # Armoire et borne.
+    lot.cube('gris_clair', (0.5, 0.35, 0.9), (1.05, -1.1, 0.55), 0.02)
+    lot.cube('panneau', (0.36, 0.02, 0.24), (1.05, -1.28, 0.75))
+    for k, c in enumerate(('vert', 'jaune', 'rouge')):
+        lot.cube(c, (0.05, 0.02, 0.05), (0.92 + k * 0.13, -1.28, 0.45))
+    T.borne_electrique(coll, lot, (1.05, -1.1, 1.0), 0.45, sg)
+    lot.finir()
+    so.finir()
+    T.poser_au_sol(coll, 1.5)
+
+
+MODELES = {'centrifugeuse_t4': centrifugeuse_t4, 'reacteur_fission_t4': reacteur_fission_t4,
+           'reacteur_fusion': reacteur_fusion, 'tour_evaporation_t4': tour_evaporation_t4,
+           'station_vitrification_t4': station_vitrification_t4}
 
 
 

@@ -21,6 +21,11 @@ export interface BakedModel {
   flames?: FlameParts;
   /** Groupes de pièces mobiles (`MOTIONS` dans `partMotions.ts`), absents des tableaux ci-dessus, par nom de groupe. */
   groups?: Record<string, PartGroup>;
+  /**
+   * Point d'accroche du câble électrique (nœud `accroche_cable` du `.glb` : boule de la borne d'une machine électrique,
+   * haut d'un poteau), dans le repère du modèle. Sans lui, le câble part du haut de la machine.
+   */
+  anchor?: { x: number; y: number; z: number };
 }
 
 /** Pièces d'un groupe mobile : maillage propre (repère du modèle) et pivot lu dans le nœud `pivot_<groupe>` du `.glb`. */
@@ -32,6 +37,11 @@ export interface PartGroup {
   pivot: { x: number; y: number; z: number };
   /** Axe de rotation (ou de glissement) : l'axe Y local du nœud pivot. */
   axis: { x: number; y: number; z: number };
+  /**
+   * Pas d'une boucle (m du modèle) : échelle du nœud pivot quand le modèle la donne (`T.pivot(..., pas=…)`, objets et
+   * lames posés tous les `pas` sur un convoyeur). Il remplace alors la course `amount` du mouvement `loop`.
+   */
+  step?: number;
 }
 
 /** Un maillage animé (une flamme) : plage de sommets dans `FlameParts` et son pied (point autour duquel il vacille). */
@@ -43,10 +53,14 @@ export interface FlameGroup {
   pz: number;
   /** Lueur (maillage `lueur_*`, ex. braises d'un foyer) : ne vacille pas en taille, sa couleur rougeoie (rouge ↔ orange). */
   glow?: boolean;
+  /** Voyant (maillage `voyant_*` ou `scanner_*`) : garde sa couleur, qui pulse en marche ; reste visible (terne) à l'arrêt. */
+  pulse?: boolean;
 }
 
 /** Préfixe des lueurs parmi les maillages animés (`ANIMATED_MESHES`) : couleur qui rougeoie, forme fixe. */
 const GLOW_PREFIX = ['lueur'];
+/** Préfixes des voyants parmi les maillages animés : couleur propre qui pulse, toujours visibles. */
+const PULSE_PREFIX = ['voyant', 'scanner'];
 
 /** Maillages animés d'un modèle, dans le repère du modèle (mêmes unités et même origine que `BakedModel`). */
 export interface FlameParts {
@@ -112,6 +126,29 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   heavy_press: 'presse_lourde_t3',
   refinery: 'raffinerie_t3',
   centrifuge: 'centrifugeuse_t4',
+  pole: 'poteau_electrique',
+  chest_wood: 'coffre_bois',
+  chest_iron: 'coffre_fer',
+  waterwheel: 'roue_a_aubes',
+  pump: 'pompe_eau',
+  crank: 'manivelle_reamorcage',
+  boiler: 'chaudiere',
+  turbine: 'turbine_vapeur',
+  lab: 'laboratoire',
+  generator: 'generateur_combustible',
+  accumulator: 'accumulateur_t3',
+  relay: 'relais_hyperfrequence',
+  fission_reactor: 'reacteur_fission_t4',
+  antenna: 'antenne_quantique',
+  fusion_reactor: 'reacteur_fusion',
+  barreler: 'remplisseuse_barils',
+  booster: 'surpresseur_t2',
+  cooling_tower: 'tour_refroidissement_t2',
+  evaporation_tower: 'tour_evaporation_t4',
+  vitrifier: 'station_vitrification_t4',
+  turret_heavy: 'tourelle_lourde',
+  turret_laser: 'tourelle_laser',
+  turret_plasma: 'tourelle_plasma',
 };
 
 /**
@@ -125,6 +162,29 @@ export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = 
   refinery: ['flamme', 'coeur'],
   washer: ['jet', 'ruissellement'],
   stamper: ['lueur'],
+  // Foyers rougeoyants (`lueur_foyer`, `lueur_bouche`) et voyants qui pulsent (`voyant_*`, `scanner_*`).
+  drill: ['lueur'],
+  crusher: ['lueur'],
+  arm: ['lueur'],
+  furnace_electric: ['lueur'],
+  centrifuge: ['voyant'],
+  sorter: ['scanner'],
+  waterwheel: ['jet'],
+  boiler: ['lueur'],
+  generator: ['lueur'],
+  crank: ['voyant'],
+  lab: ['voyant'],
+  accumulator: ['voyant'],
+  relay: ['voyant'],
+  antenna: ['voyant'],
+  fission_reactor: ['voyant'],
+  fusion_reactor: ['voyant'],
+  // Panaches de vapeur / de fumée (vacillent en marche), coulée de verre qui rougeoie, voyants des tourelles.
+  cooling_tower: ['jet'],
+  evaporation_tower: ['jet'],
+  vitrifier: ['lueur'],
+  turret_laser: ['voyant'],
+  turret_plasma: ['voyant'],
 };
 
 /** Préfixes animés du modèle de ce nom (machines qui l'utilisent dans `TERRA_MODELS`). */
@@ -171,14 +231,84 @@ export const beltModel = (shape: BeltShape, tier: number): BakedModel | null => 
   return (own ? baked.get(own) : undefined) ?? baked.get(BELT_MODELS[shape][t]) ?? null;
 };
 
+/**
+ * Tuyaux maison (`blender/scripts/fluides.py`) : une forme par façon d'être raccordé, trois paliers. Raccords de chaque
+ * forme quand le modèle n'est pas tourné (côtés du jeu, 0 = +z, 1 = +x, 2 = -z, 3 = -x) ; le jeu la tourne pour couvrir
+ * les côtés raccordés. `regard` = tuyau enterré (entrée ou sortie de tunnel) : un raccord, il plonge de l'autre côté.
+ */
+export type PipeForm = 'droit' | 'coude' | 'te' | 'croix' | 'bout' | 'seul' | 'regard';
+const PIPE_PORTS: Record<PipeForm, number[]> = {
+  droit: [3, 1],
+  coude: [3, 0],
+  te: [3, 1, 0],
+  croix: [0, 1, 2, 3],
+  bout: [3],
+  seul: [],
+  regard: [3],
+};
+const PIPE_NAMES = (
+  ['droit', 'coude', 'te', 'croix', 'bout', 'seul', 'regard'] as PipeForm[]
+).flatMap((f) => [1, 2, 3].map((t) => `tuyau_${f}_t${t}`));
+
+/** Forme et quarts de tour du tuyau d'après ses côtés raccordés (ou son entrée / sortie de tunnel). */
+export function pipeShape(
+  sides: number[],
+  lift: number,
+  rot: number,
+): { form: PipeForm; turns: number } {
+  const want = (form: PipeForm, set: Set<number>): { form: PipeForm; turns: number } => {
+    for (let t = 0; t < 4; t++) {
+      const got = PIPE_PORTS[form].map((s) => (s + t) % 4);
+      if (got.length === set.size && got.every((s) => set.has(s))) return { form, turns: t };
+    }
+    return { form, turns: 0 };
+  };
+  if (lift === 4 || lift === 5)
+    return want('regard', new Set([lift === 4 ? (rot + 2) % 4 : rot % 4]));
+  const set = new Set(sides.map((s) => ((s % 4) + 4) % 4));
+  if (set.size === 0) return { form: 'seul', turns: rot % 4 };
+  if (set.size === 1) return want('bout', set);
+  if (set.size === 2)
+    return want((set.has(0) && set.has(2)) || (set.has(1) && set.has(3)) ? 'droit' : 'coude', set);
+  return want(set.size === 3 ? 'te' : 'croix', set);
+}
+
+/** Modèle maison du tuyau de ce palier et de cette forme (ou null s'il n'est pas chargé). */
+export const pipeModel = (form: PipeForm, tier: number): BakedModel | null =>
+  baked.get(`tuyau_${form}_t${Math.max(1, Math.min(3, tier))}`) ?? null;
+
+/**
+ * Autres modèles maison chargés avec les machines, et leurs groupes mobiles : le buggy (une roue par groupe, voir
+ * `blender/scripts/vehicules.py`) et la végétation des biomes (`blender/scripts/vegetation.py`, voir `nature.ts`).
+ */
+const EXTRA_GROUPS: Record<string, string[]> = {
+  buggy: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
+};
+/** Biomes des modèles de végétation maison (noms de fichiers) : `arbre_<biome>_<1-3>`, `buisson_<biome>_<1-3>`. */
+export const NATURE_FILE_BIOMES = ['prairie', 'foret', 'desert', 'toundra'] as const;
+export const NATURE_VARIANTS = 3;
+const NATURE_NAMES = ['arbre', 'buisson'].flatMap((kind) =>
+  NATURE_FILE_BIOMES.flatMap((b) =>
+    Array.from({ length: NATURE_VARIANTS }, (_, i) => `${kind}_${b}_${i + 1}`),
+  ),
+);
+
 const TERRA_NAMES = [
   ...new Set([
+    ...PIPE_NAMES,
+    ...Object.keys(EXTRA_GROUPS),
+    ...NATURE_NAMES,
     ...Object.values(TERRA_MODELS),
     ...Object.values(TERRA_BELT_MODELS)
       .flat()
       .filter((n): n is string => n !== null),
   ]),
 ] as string[];
+const BELT_NAMES = new Set<string>(
+  Object.values(TERRA_BELT_MODELS)
+    .flat()
+    .filter((n): n is string => n !== null),
+);
 const NAMES = [
   ...new Set([...Object.values(MACHINE_MODELS), ...Object.values(BELT_MODELS).flat()]),
 ] as string[];
@@ -263,7 +393,7 @@ export function bake(
   const groups: FlameGroup[] = [];
   root.updateMatrixWorld(true);
   // Pivots : nœuds `pivot_<groupe>` (le chargeur retire les points des noms, l'exporteur ajoute parfois « 002 »).
-  const pivots = new Map<string, { pivot: THREE.Vector3; axis: THREE.Vector3 }>();
+  const pivots = new Map<string, { pivot: THREE.Vector3; axis: THREE.Vector3; step?: number }>();
   root.traverse((o) => {
     if (!o.name.toLowerCase().startsWith('pivot_')) return;
     const key = o.name
@@ -272,8 +402,20 @@ export function bake(
       .replace(/\d{3}$/, '');
     const q = new THREE.Quaternion();
     const p = new THREE.Vector3();
-    o.matrixWorld.decompose(p, q, new THREE.Vector3());
-    pivots.set(key, { pivot: p, axis: new THREE.Vector3(0, 1, 0).applyQuaternion(q) });
+    const s = new THREE.Vector3();
+    o.matrixWorld.decompose(p, q, s);
+    pivots.set(key, {
+      pivot: p,
+      axis: new THREE.Vector3(0, 1, 0).applyQuaternion(q),
+      step: Math.abs(s.x - 1) > 1e-4 ? s.x : undefined,
+    });
+  });
+  // Accroche du câble électrique : nœud vide `accroche_cable` (le premier trouvé).
+  let anchor: { x: number; y: number; z: number } | undefined;
+  root.traverse((o) => {
+    if (anchor || !o.name.toLowerCase().startsWith('accroche')) return;
+    const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+    anchor = { x: p.x, y: p.y, z: p.z };
   });
   const byLength = [...groupNames].sort((a, b) => b.length - a.length);
   const parts = new Map<string, { pos: number[]; nor: number[]; col: number[]; idx: number[] }>();
@@ -348,6 +490,7 @@ export function bake(
         py: y0,
         pz: (z0 + z1) / 2,
         glow: hasAnimatedName(mesh, GLOW_PREFIX),
+        pulse: hasAnimatedName(mesh, PULSE_PREFIX),
       });
     }
   });
@@ -373,6 +516,7 @@ export function bake(
     size: { x: max.x - min.x, y: max.y - min.y, z: max.z - min.z },
     min,
   };
+  if (anchor) model.anchor = anchor;
   if (parts.size > 0) {
     model.groups = {};
     for (const [name, g] of parts) {
@@ -395,6 +539,7 @@ export function bake(
         pivot: { x: found.pivot.x, y: found.pivot.y, z: found.pivot.z },
         axis: { x: found.axis.x, y: found.axis.y, z: found.axis.z },
       };
+      if (found.step) model.groups[name].step = found.step;
     }
   }
   if (groups.length > 0)
@@ -421,7 +566,11 @@ export function loadModels(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
           loader.load(
             `${baseUrl}models/${folder}/${name}.glb`,
             (gltf) => {
-              const model = bake(gltf.scene, prefixesOf(name), groupsOf(name));
+              // Tapis maison : leurs lames (groupe `bande_`) défilent à part (voir `beltBands.ts`).
+              const groups = BELT_NAMES.has(name)
+                ? ['bande']
+                : (EXTRA_GROUPS[name] ?? groupsOf(name));
+              const model = bake(gltf.scene, prefixesOf(name), groups);
               if (model) baked.set(name, model);
               resolve();
             },

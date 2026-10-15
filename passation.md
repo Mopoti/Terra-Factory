@@ -164,6 +164,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Déterminisme : ne jamais utiliser `Math.random()` dans la génération du monde.
 
 ## Prochaines étapes
+- **Modèles 3D (octobre 2026)** : dernières machines, puis éléments du monde (arbres, rochers, minerais), puis personnage du joueur selon [`docs/personnage.md`](docs/personnage.md).
 0. Finir la discussion de cadrage (`docs/risques.md`) avant de coder.
 1. Périmètre du prototype : menu d'accueil complet (Continuer/Nouvelle/Charger/Paramètres/Quitter), édition de partie, sol plat, 3 vues.
 2. Prototype : scène Three.js, sol plat, caméra 3 vues, contrôles remappables.

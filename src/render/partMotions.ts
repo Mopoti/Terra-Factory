@@ -32,6 +32,8 @@ export type Motion =
     }
   /** Descend tout droit en fin de cycle de travail (comme le piston des presses du kit). */
   | { kind: 'press'; depth: number }
+  /** S'ouvre de `angle` (rad) autour de l'axe du pivot tant que la machine « travaille », se referme sinon (couvercle). */
+  | { kind: 'open'; angle: number }
   /** Tourne par quarts de tour : `angle` à chaque période, en marquant une pause entre deux. */
   | { kind: 'step'; angle: number; period: number }
   /** Pièce du chevalet de pompage : pose calculée par la cinématique (voir `rockerPose`). */
@@ -179,9 +181,43 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     lingot: loop(0.11, 8, 'front'),
   },
   arm: { tourelle: { kind: 'swing', angle: 0.9, period: 2.85 }, volant: spin(8) },
+  // Coffres : le couvercle s'ouvre quand on s'en sert (fenêtre ouverte, objet qui entre ou sort).
+  chest_wood: { couvercle: { kind: 'open', angle: 1.9 } },
+  chest_iron: { couvercle: { kind: 'open', angle: 1.9 } },
+  // Roue à aubes : ne tourne que si le réseau demande de l'énergie (état « running »).
+  waterwheel: { roue: spin(0.9), pignon: spin(-3.4) },
+  // Pompe : accouplement moteur-pompe, et bagues d'eau qui montent dans le voyant de débit (pas lu dans le modèle).
+  pump: { arbre: spin(30), debit: loop(0.05, 0.25) },
+  // Manivelle de réamorçage : tourne pendant qu'on l'actionne (sa fenêtre est ouverte).
+  crank: { manivelle: spin(4) },
+  turbine: { arbre: spin(40) },
+  generator: { volant: spin(6), ventilateur: spin(14) },
+  lab: { carrousel: spin(1.5) },
+  // Relais : la parabole balaye doucement ; antenne : anneaux qui tournent en sens contraires.
+  relay: { parabole: { kind: 'swing', angle: 0.5, period: 9 } },
+  antenna: { anneaux: spin(0.7), contre: spin(-1.1) },
+  fission_reactor: { pompe1: spin(12), pompe2: spin(12) },
+  // Remplisseuse : les barils avancent sur le convoyeur (pas lu dans le modèle), la buse descend sur chaque baril.
+  barreler: { barils: loop(0.25, 2.4), buse: { kind: 'press', depth: 0.05 } },
+  booster: { ventilateur: spin(22) },
+  cooling_tower: { ventilateur: spin(3) },
+  vitrifier: { sortie: loop(0.2, 3) },
+  // Tourelles : la tête balaye l'horizon tant qu'elles sont prêtes à tirer (munitions ou courant).
+  turret_heavy: { tourelle: { kind: 'swing', angle: 0.7, period: 7 } },
+  turret_laser: { tourelle: { kind: 'swing', angle: 0.8, period: 6 } },
+  turret_plasma: { tourelle: { kind: 'swing', angle: 0.6, period: 8 } },
   arm_electric: { tourelle: { kind: 'swing', angle: 0.9, period: 2.85 } },
   arm_filter: { tourelle: { kind: 'swing', angle: 0.9, period: 2.85 } },
 };
+
+/**
+ * Course d'une boucle donnée par le modèle (pas des objets et des lames sur un convoyeur, voir `PartGroup.step`) : elle
+ * remplace `amount`, pour que le motif retombe exactement sur lui-même à chaque période.
+ */
+export function withStep(motion: Motion, step?: number): Motion {
+  if (!step || motion.kind !== 'slide' || motion.shape !== 'loop') return motion;
+  return { ...motion, amount: step };
+}
 
 /** Noms des groupes à sortir du maillage fixe pour cette machine. */
 export const motionGroups = (type: MachineType): string[] => Object.keys(MOTIONS[type] ?? {});
@@ -219,6 +255,7 @@ export function poseOf(
   spinAngle: number,
   cycle: number | null,
   axis: { x: number; y: number; z: number },
+  level = 1,
 ): Pose {
   const pose: Pose = { angle: 0, dx: 0, dy: 0, dz: 0 };
   switch (motion.kind) {
@@ -265,6 +302,10 @@ export function poseOf(
       else pose.dx = -t;
       break;
     }
+    case 'open':
+      // Ouverture douce (le niveau est déjà lissé) : un peu plus vite au début, comme un couvercle qu'on lève.
+      pose.angle = motion.angle * Math.sin((Math.PI / 2) * Math.min(1, Math.max(0, level)));
+      break;
     case 'rocker':
       break;
   }

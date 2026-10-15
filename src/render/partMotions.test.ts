@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MACHINES } from '../core/data/machines';
-import { MOTIONS, poseOf, pulse, ROCKER_DEFAULT, rockerPose } from './partMotions';
+import { MOTIONS, poseOf, pulse, ROCKER_DEFAULT, rockerPose, withStep } from './partMotions';
 import { TERRA_MODELS } from './models';
 
 const Y = { x: 0, y: 1, z: 0 };
@@ -106,5 +106,32 @@ describe('table des mouvements', () => {
       for (const [name, motion] of Object.entries(groups ?? {}))
         if (motion.parent)
           expect(Object.keys(groups ?? {}), `${type}/${name}`).toContain(motion.parent);
+  });
+});
+
+describe('pas des boucles donné par le modèle', () => {
+  it('remplace la course d’une boucle, pas les autres mouvements', () => {
+    const loopMotion = {
+      kind: 'slide',
+      dir: 'axis',
+      amount: 0.1,
+      period: 2,
+      shape: 'loop',
+    } as const;
+    expect(withStep(loopMotion, 0.3)).toEqual({ ...loopMotion, amount: 0.3 });
+    expect(withStep(loopMotion)).toBe(loopMotion);
+    const spinMotion = { kind: 'spin', speed: 2 } as const;
+    expect(withStep(spinMotion, 0.3)).toBe(spinMotion);
+  });
+});
+
+describe('couvercle des coffres', () => {
+  it('s’ouvre avec le niveau et reste fermé à zéro', () => {
+    const lid = { kind: 'open', angle: 1.9 } as const;
+    const axis = { x: -1, y: 0, z: 0 };
+    expect(poseOf(lid, 0, 0, null, axis, 0).angle).toBe(0);
+    expect(poseOf(lid, 0, 0, null, axis, 1).angle).toBeCloseTo(1.9);
+    expect(poseOf(lid, 0, 0, null, axis, 0.5).angle).toBeGreaterThan(0.95);
+    expect(MOTIONS.chest_wood?.couvercle.kind).toBe('open');
   });
 });

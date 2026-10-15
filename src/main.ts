@@ -286,6 +286,7 @@ function startGame(
     // et le joueur marcher : la souris est libre pour s'en servir.
     view.setPaused(s.pause.isOpen());
     view.setUiOpen(s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen() || s.tech.isOpen());
+    view.setOpenedMachine(s.machine.isOpen() ? s.machine.openedId() : null);
   };
 
   s.machine = mountMachineWindow(machineEl, state, view.factory, {

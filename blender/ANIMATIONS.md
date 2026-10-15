@@ -165,3 +165,66 @@ mêmes pivots ; la bande défile à la vitesse du palier (×1, ×2, ×4, comme `
 | `separateur`, `groupeur`, `trieur` | `bande_` (flèches des bouts de tapis) | défilent comme les tapis (sortie : vers l'extérieur, entrée : vers le centre) | — |
 | `bras_t1`, `bras_t2`, `bras_t3` (`arm`, `arm_electric`, `arm_filter`) | `tourelle_` (tourelle et bras) | **pivote** autour de l'axe de la tourelle : **fait** dans le jeu (`MACHINE_ANIM`, « swing ») ; le jeu prend les maillages `tourelle_*` comme partie mobile (`BakedModel.parts`), tout le reste est fixe | `pivot_tourelle` (0 ; 0 ; 0,28), axe Z |
 | `bras_t1` | `volant_` (volant du petit moteur thermique, à droite du foyer) | **tourne** en continu en marche | `pivot_volant` (0,53 ; 0,62 ; 0,2), axe X |
+
+## Rectifications d'octobre 2026 : tout ce qui bouge en marche
+
+- **Tapis** (`convoyeur_*`, branchés) : la bande défile. Les lames (`bande_*`) sont dans un seul maillage pour tous les tapis,
+  animé par le shader (`src/render/beltBands.ts`) : tapis droit = glissement d'un pas (0,5) vers +X, virage = rotation d'un pas
+  (22,5°) autour du coin ; ce qui sort de la tuile est découpé. La bande noire des virages s'appelle désormais `tapis_porteur`
+  (elle ne bouge pas). Vitesse = celle des objets (`tierSpeeds`).
+- **Convoyeurs des machines** (`T.convoyeur_charge`) : lames en flèche + marchandises dans le groupe mobile, avec le **pas
+  écrit dans le pivot** (échelle du nœud, lue par le jeu : `PartGroup.step`) ; la boucle de `partMotions.ts` prend ce pas.
+  Estampeuse (`sortie_`), constructeur et presse lourde (`entree_`, `sortie_`), centrifugeuse (`entree_` avec tasseaux,
+  `sortie_`), station de lavage (`bande_` à tasseaux, `sortie_`), bétonnière (`blocs_`), Bessemer (`lingot_`).
+- **Foyers qui rougeoient** (`lueur_*`, `ANIMATED_MESHES`) : estampeuse, concasseur, foreuse T1, bras T1 (`lueur_foyer`),
+  four électrique (`lueur_bouche`, la bouche de sortie rougeoie en marche).
+- **Voyants qui pulsent** (`voyant_*`, `scanner_*`, toujours visibles, ternes à l'arrêt) : centrifugeuse, trieur.
+- **Bornes électriques** (`accroche_cable`) sur toutes les machines électriques modélisées : foreuses T2 et T3, chevalet,
+  four électrique, Bessemer, assembleur, bétonnière, station de lavage, constructeur, presse lourde, raffinerie,
+  centrifugeuse, bras T2 et T3, trieur, pompe, roue à aubes. Le câble du jeu part de la boule.
+
+## Énergie, stockage, fluides
+
+| Modèle | Groupe | Mouvement | Pivot (Blender) |
+|---|---|---|---|
+| `poteau_electrique` (`pole`) | — | rien ne bouge ; les câbles partent de l'isolateur de tête (`accroche_cable`) | — |
+| `roue_a_aubes` (`waterwheel`) | `roue_` (jantes, rayons, aubes, axe, couronne dentée) | **tourne** autour de l'axe X, **seulement quand le réseau demande de l'énergie** (état « running ») | `pivot_roue` (0 ; 0 ; 1,5), axe X |
+| `roue_a_aubes` | `pignon_` (pignon de la génératrice) | **tourne en sens contraire**, environ 3,75 fois plus vite | `pivot_pignon` (0,94 ; 0 ; 2,11), axe X |
+| `roue_a_aubes` | `jet_eclaboussure_*` | **vacillent** en marche (éclaboussures sous la roue), cachées à l'arrêt | — |
+| `coffre_bois`, `coffre_fer` (`chest_wood`, `chest_iron`) | `couvercle_` (bombé, renforts, moraillon) | **s'ouvre** (bascule vers l'arrière, ≈ 110°) quand la fenêtre du coffre est ouverte et un moment quand un objet entre ou sort ; mouvement `open` | `pivot_couvercle` (0 ; 0,67 ; 0,76), axe −X |
+| `pompe_eau` (`pump`) | `arbre_` (accouplement moteur-pompe) | **tourne vite** en marche | `pivot_arbre` (0,29 ; −0,32 ; 0,72), axe X |
+| `pompe_eau` | `debit_` (bagues d'eau dans le voyant de débit en verre) | **montent** en boucle (pas 0,1 écrit dans le pivot) : on voit l'eau passer | `pivot_debit` (0 ; −0,46 ; 1,3), axe Z |
+
+## Énergie (suite), recherche, nucléaire, tuyaux (octobre 2026)
+
+| Modèle | Groupe | Mouvement | Pivot (Blender) |
+|---|---|---|---|
+| `manivelle_reamorcage` (`crank`) | `manivelle_` (volant rouge, arbre, manivelle) | **tourne** pendant qu'on l'actionne (sa fenêtre est ouverte) ; `voyant_lampe` pulse | `pivot_manivelle` (0 ; 0 ; 1,25), axe X |
+| `chaudiere` (`boiler`) | `lueur_foyer` | **rougeoie** en marche (porte du foyer, derrière) | — |
+| `turbine_vapeur` (`turbine`) | `arbre_` (accouplement) | **tourne vite** quand le réseau demande de l'énergie | `pivot_arbre` (0,43 ; 0,2 ; 1,05), axe X |
+| `generateur_combustible` (`generator`) | `volant_`, `ventilateur_` ; `lueur_foyer` | volant et ventilateur du radiateur **tournent** ; braises du gazogène **rougeoient** | `pivot_volant` (0,5 ; 0,4 ; 0,62) et `pivot_ventilateur` (−1 ; 0,4 ; 0,72), axe X |
+| `laboratoire` (`lab`) | `carrousel_` (six fioles colorées dans la cage) ; `voyant_*` | carrousel **tourne** ; capteur, écran, voyant de l'armoire **pulsent** | `pivot_carrousel` (0 ; 0 ; 0,67), axe Z |
+| `accumulateur_t3` (`accumulator`) | `voyant_charge_*` (jauge à six segments) | **pulsent** tant qu'il est raccordé | — |
+| `relais_hyperfrequence` (`relay`) | `parabole_` (coque, cornet, lampe) ; `voyant_abri` | parabole **balaye** (± 0,5 rad, 9 s) quand il est alimenté | `pivot_parabole` (0 ; −0,45 ; 3,3), axe Z |
+| `antenne_quantique` (`antenna`) | `anneaux_` (bas et haut), `contre_` (milieu) ; `voyant_cristal_*` | anneaux **tournent** en sens contraires, cristal **pulse**, quand elle est alimentée | `pivot_anneaux`, `pivot_contre` (0 ; 0 ; 3,6), axe Z |
+| `reacteur_fission_t4` (`fission_reactor`) | `pompe1_`, `pompe2_` (ventilateurs des moteurs) ; `voyant_hublot_*` | **tournent** ; hublots cyan **pulsent** (en marche ou en surchauffe) | `pivot_pompe1` (1,6 ; 0,75 ; 1,33), `pivot_pompe2` (−1,6 ; −0,75 ; 1,33), axe Z |
+| `reacteur_fusion` (`fusion_reactor`) | `voyant_plasma_*` (anneau de plasma rose) | **pulse** quand le plasma est allumé (état « plasma ») | — |
+| `tuyau_<forme>_t<palier>` (`pipe`) | — | rien ne bouge ; formes `droit`, `coude`, `te`, `croix`, `bout`, `seul`, `regard` (entrée / sortie de tunnel), paliers cuivre / laiton / inox avec une bague jaune / orange / rouge ; le jeu choisit la forme et la tourne d'après les côtés raccordés (`pipeShape`) | — |
+
+Raccords de fluide (`T.raccord_fluide`) : chaudière (eau ±X, vapeur devant), turbine (vapeur derrière → devant), réacteur
+à fission (eau +X, eau contaminée −X), pompe (devant).
+
+## Fluides (suite), nucléaire (suite), défense, véhicule (octobre 2026)
+
+| Modèle | Groupe | Mouvement | Pivot (Blender) |
+|---|---|---|---|
+| `remplisseuse_barils` (`barreler`) | `barils_` (barils bleus et noirs, lames en flèche) | **avancent** d'un pas en boucle (pas 0,5 écrit dans le pivot) | `pivot_barils` (0 ; 0,98 ; 0,42), axe −Y |
+| `remplisseuse_barils` | `buse_` (tige, tête et buse de remplissage) | **descend** sur le baril puis remonte (`press`) | `pivot_buse` (0 ; 0 ; 0,93), axe Z |
+| `surpresseur_t2` (`booster`) | `ventilateur_` (pales sous le capot du moteur) | **tourne vite** en marche | `pivot_ventilateur` (0 ; 0 ; 1,5), axe Z |
+| `tour_refroidissement_t2` (`cooling_tower`) | `ventilateur_` (pales dans le col de la tour, ouverte en haut) ; `jet_vapeur_*` | ventilateur **tourne** ; bouffées de vapeur **vacillent** en marche | `pivot_ventilateur` (0 ; 0 ; 2,97), axe Z |
+| `tour_evaporation_t4` (`evaporation_tower`) | `jet_fumee_*` (panache verdâtre au sommet) | **vacillent** quand il y a de l'eau contaminée à évaporer | — |
+| `station_vitrification_t4` (`vitrifier`) | `sortie_` (conteneurs de verre sur le convoyeur) ; `lueur_coulee` | conteneurs **avancent** (pas 0,4 dans le pivot) ; verre en fusion **rougeoie** | `pivot_sortie` (0 ; −0,45 ; 0,4), axe ≈ −Y |
+| `tourelle_lourde`, `tourelle_laser`, `tourelle_plasma` (`turret_heavy`, `turret_laser`, `turret_plasma`) | `tourelle_` (tête sur son fût) ; `voyant_*` (laser, plasma) | tête **balaye** l'horizon (± 0,6 à 0,8 rad) tant que la tourelle est prête à tirer (état « idle ») ; voyants **pulsent** | `pivot_tourelle` (0 ; 0,1 ; 0,95), (0 ; 0,05 ; 0,95), (0 ; 0 ; 0,92), axe Z |
+| `buggy` (véhicule, pas une machine) | `roue_avg`, `roue_avd`, `roue_arg`, `roue_ard` (une roue par groupe) | **tournent** de la distance parcourue (`vehicleModel.ts`, `rollWheels`) | `pivot_roue_*` (± 0,8 ; ± 1,05 ; 0,42), axe X |
+
+Arbres et buissons (`arbre_*`, `buisson_*`) : rien ne bouge.
