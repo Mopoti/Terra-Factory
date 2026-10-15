@@ -53,7 +53,7 @@ const loop = (amount: number, period: number, dir: 'axis' | 'front' | 'back' = '
 // Constructeur, presse lourde et centrifugeuse : modèles agrandis de ×1,33 pour l'emprise 4 × 4 (courses ×1,33).
 export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
   drill: {
-    foret: spin(7),
+    foret: spin(-7),
     volant: spin(4),
     poulie_boite: spin(12),
     poulie_tete: spin(2),
@@ -66,12 +66,14 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     tige: { kind: 'rocker', role: 'tige' },
     bielle: { kind: 'rocker', role: 'bielle' },
   },
-  stamper: { marteau: { kind: 'press', depth: 0.1 } },
+  // Estampeuse agrandie de ×1,33 (emprise 4 × 4) : course du marteau et pas des plaques en conséquence.
+  stamper: { marteau: { kind: 'press', depth: 0.133 }, sortie: loop(0.21, 3) },
   crusher: {
     volant: spin(2.5),
     rouleau: spin(-2.5),
     moteur: spin(6.5),
-    vis: spin(3),
+    vis: spin(-3),
+    gravier: loop(0.06, 0.4),
   },
   mixer: {
     tambour: spin(1.2),

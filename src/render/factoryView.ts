@@ -72,7 +72,7 @@ interface FlameInstance {
   /** Sommets au repos (repère de la machine) ; le maillage reçoit les sommets mis à l'échelle autour du pied de chaque flamme. */
   base: Float32Array;
   colors: Float32Array;
-  groups: { first: number; count: number; px: number; py: number; pz: number }[];
+  groups: { first: number; count: number; px: number; py: number; pz: number; glow?: boolean }[];
   /** Intensité lissée : 1 pleine, 0,2 braises, 0 éteinte. */
   level: number;
 }
@@ -507,7 +507,7 @@ export class FactoryView {
     }
     const groups = parts.groups.map((g) => {
       const p = place(g.px, g.py, g.pz);
-      return { first: g.first, count: g.count, px: p[0], py: p[1], pz: p[2] };
+      return { first: g.first, count: g.count, px: p[0], py: p[1], pz: p[2], glow: g.glow };
     });
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3));
@@ -553,6 +553,21 @@ export class FactoryView {
       f.groups.forEach((g, k) => {
         // Deux sinus de fréquences différentes et un déphasage propre à chaque machine et à chaque flamme.
         const ph = f.m.id * 1.7 + k * 2.3;
+        if (g.glow) {
+          // Lueur (braises d'un foyer) : forme fixe, la couleur rougeoie lentement entre un rouge sombre et un orange vif.
+          const t = 0.5 + 0.25 * Math.sin(time * 2.1 + ph) + 0.25 * Math.sin(time * 3.7 + ph * 1.3);
+          const heat = Math.min(1, f.level) * (0.55 + 0.45 * t);
+          for (let i = g.first; i < g.first + g.count; i++) {
+            const o = i * 3;
+            arr[o] = f.base[o];
+            arr[o + 1] = f.base[o + 1];
+            arr[o + 2] = f.base[o + 2];
+            carr[o] = 0.35 + 0.75 * heat;
+            carr[o + 1] = 0.02 + 0.5 * heat * t;
+            carr[o + 2] = 0.01 + 0.08 * heat * t;
+          }
+          return;
+        }
         const wave = 0.5 * Math.sin(time * 9 + ph) + 0.5 * Math.sin(time * 14.3 + ph * 1.9);
         const sy = f.level * (0.975 + 0.175 * wave);
         const sxz = f.level * (1 + 0.06 * Math.sin(time * 11 + ph * 1.3));

@@ -258,12 +258,13 @@ def lissage(coll, name, anneaux, mat, fond=False, dessus=True, n_coin=4):
     return _object(coll, name, bm, mat)
 
 
-def convoyeur(lot, a, b, largeur=0.36, rp=0.08, rouleaux=2, sg=8, tambours=True):
+def convoyeur(lot, a, b, largeur=0.36, rp=0.08, rouleaux=2, sg=8, tambours=True, fleches=True):
     """Convoyeur à bande COMMUN à tous les modèles, de l'axe du tambour `a` à celui du tambour `b` (pente libre).
 
-    Provisoire : il sera remplacé par le modèle commun du convoyeur du jeu. Tout convoyeur d'un modèle doit passer par
-    cette fonction (même aspect partout, un seul endroit à changer). Pose dans `lot` : brin porteur et brin de retour
-    (noir), longerons (acier sombre), rives jaunes, `rouleaux` rouleaux porteurs, tambours aux deux bouts.
+    Même aspect que les tapis T1 validés (`blender/scripts/logistique.py`) : bande noire avec lames en flèche vers `b`,
+    rives jaunes T1 (`rive_t1`), châssis acier sombre. Tout convoyeur d'un modèle doit passer par cette fonction (un
+    seul endroit à changer). Pose dans `lot` : brin porteur et brin de retour (noir), longerons (acier sombre), rives,
+    `rouleaux` rouleaux porteurs, tambours aux deux bouts, flèches (si `fleches`).
     Retourne (d, w, n, rot) : direction de la bande, côté, normale (vers le haut) et rotation des pièces
     (X local = sens de la bande, Y = largeur, Z = normale), pour poser tasseaux et marchandises dessus.
     """
@@ -282,10 +283,21 @@ def convoyeur(lot, a, b, largeur=0.36, rp=0.08, rouleaux=2, sg=8, tambours=True)
     for s in (-1, 1):
         c = m + w * (s * (largeur / 2 + 0.05))
         lot.cube('acier_sombre', (lg + 0.1, 0.04, 0.12), tuple(c), 0, rot)  # longerons
-        lot.cube('jaune', (lg - 0.1, 0.045, 0.03), tuple(c + n * 0.07), 0, rot)  # rives
+        lot.cube('rive_t1', (lg - 0.1, 0.045, 0.03), tuple(c + n * 0.07), 0, rot)  # rives
     for k in range(rouleaux):  # rouleaux porteurs
         p = a + d * (0.2 + (lg - 0.4) * (k + 0.5) / rouleaux) + n * (rp - 0.035)
         lot.tube('acier', p - w * (largeur / 2), p + w * (largeur / 2), 0.03, 6)
+    if fleches:  # lames en flèche (gris acier) qui montrent le sens de la bande
+        pas = largeur * 0.8
+        nb = max(1, int((lg - 0.2) / pas))
+        for k in range(nb):
+            c = a + d * (lg / 2 + (k - (nb - 1) / 2) * pas) + n * (rp + 0.012)
+            pointe = c + d * (largeur * 0.12)
+            for s_ in (-1, 1):
+                bout = c - d * (largeur * 0.12) + w * (s_ * largeur * 0.4)
+                u = (pointe - bout).normalized()
+                lot.cube('acier', ((pointe - bout).length + 0.01, largeur * 0.06, 0.005), tuple((pointe + bout) / 2), 0,
+                         Matrix((u, n.cross(u), n)).transposed())
     if tambours:
         for c in (a, b):
             lot.tube('acier_sombre', c - w * (largeur / 2 + 0.02), c + w * (largeur / 2 + 0.02), rp, sg)

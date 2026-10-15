@@ -27,7 +27,7 @@ l'agrandissement, sauf pour les foreuses** : multiplier X, Y et Z par le facteur
 |---|---|---|
 | foreuses T1, T2, T3 | 4 × 5 | ×1,22 (pivots déjà à jour) |
 | `chevalet_t2` | 4 × 4 | ×1,35 (recentré en X), puis élargi et rehaussé de ×1,33 (X et Z seulement) |
-| `assembleur_t2`, `constructeur_t2`, `presse_lourde_t3`, `raffinerie_t3`, `centrifugeuse_t4` | 4 × 4 | ×1,33 environ |
+| `assembleur_t2`, `constructeur_t2`, `presse_lourde_t3`, `raffinerie_t3`, `centrifugeuse_t4`, `estampeuse_t1` | 4 × 4 | ×1,33 environ |
 | `bras_t1`, `bras_t2`, `bras_t3` | 2 × 3 | ×1,53 (T1) et ×1,57 (T2, T3) environ |
 
 Les courses en mètres de `src/render/partMotions.ts` (constructeur, presse lourde, centrifugeuse) ont été multipliées par 1,33.
@@ -73,6 +73,8 @@ Données utiles pour le calcul (unités Blender, plan Y-Z) :
 | Modèle | Groupe | Mouvement | Pivot (Blender) |
 |---|---|---|---|
 | `estampeuse_t1` | `marteau_` (masse, plaque rivetée, matrice haute, crosse, tige du piston) | **descend et remonte tout droit** : course de **0,2** vers le bas jusqu'à la matrice basse (frappe en fin de cycle, comme `press`) | `pivot_marteau` (0 ; −0,1 ; 1,07) = bas de la matrice haute, marteau en haut |
+| `estampeuse_t1` | `sortie_` (deux plaques estampées sur le convoyeur de sortie) | **avancent** vers l'avant, en boucle (pas = 0,4 de la longueur du convoyeur) : **fait** dans le jeu | `pivot_sortie` (0 ; −0,91 ; 0,92), axe = sens du convoyeur |
+| `estampeuse_t1` | `lueur_foyer` (braises du foyer de la chaudière, derrière) | **rougeoie** (couleur entre rouge sombre et orange) quand il y a du combustible : **fait** dans le jeu (`ANIMATED_MESHES.stamper`, préfixe `lueur`) | — |
 | `assembleur_t2` | `bras1_` (bras gauche : tourelle, bras, avant-bras, poignet, pince, câbles) | **pivote** autour de l'axe vertical de sa tourelle (va-et-vient entre la pièce au centre et le bac de plaques, comme `swing`) | `pivot_bras1` (−0,72 ; −0,78 ; 0,92), axe vertical |
 | `assembleur_t2` | `bras2_` (bras droit, symétrique) | idem, en décalé avec le bras gauche | `pivot_bras2` (0,72 ; −0,78 ; 0,92), axe vertical |
 | `assembleur_t2` | `plateau_` (plateau tournant, gabarit, plaque, engrenage) | **tourne** par quarts de tour entre deux passes des bras | `pivot_plateau` (0 ; −0,72 ; 0,9), axe vertical |
@@ -80,7 +82,8 @@ Données utiles pour le calcul (unités Blender, plan Y-Z) :
 | `concasseur_t1` | `volant_` (rouleau denté arrière, son engrenage, poulie à droite, arbre) | **tourne** en continu en marche | `pivot_volant` (0,2 ; 0,3 ; 2,07), axe X |
 | `concasseur_t1` | `rouleau_` (rouleau denté avant et son engrenage) | **tourne en sens contraire** de `volant_`, même vitesse (les deux rouleaux broient la pierre entre eux) | `pivot_rouleau` (0,2 ; −0,2 ; 2,07), axe X |
 | `concasseur_t1` | `moteur_` (poulie motrice, plateau de manivelle, bielle de la machine à vapeur) | **tourne** environ 2,6 fois plus vite que le volant (rapport des poulies) | `pivot_moteur` (1,4 ; 1,08 ; 1,42), axe X |
-| `concasseur_t1` | `vis_` (hélice et arbre de la vis sans fin qui monte le charbon du bac au foyer) | **tourne** en continu en marche, autour de son axe incliné | `pivot_vis` (−1,18 ; 1,05 ; 0,16), axe (0 ; −0,68 ; 0,74) = le long de la vis |
+| `concasseur_t1` | `vis_` (hélice et arbre de la vis sans fin qui monte le charbon du bac au foyer) | **tourne** en continu en marche, autour de son axe incliné | `pivot_vis` (−1,18 ; 1,05 ; 0,16), axe (0 ; −0,68 ; 0,74) = le long de la vis ; sens réglé dans le jeu (`spin(-3)`) pour que l'hélice fasse monter le charbon |
+| `concasseur_t1` | `gravier_` (rangées de pierres sur la goulotte, une tous les 0,12) | **dévale** la goulotte vers l'avant : glisse d'un pas de rangée (0,12) et revient, en boucle (0,4 s) | `pivot_gravier` (0 ; −0,57 ; 0,46), axe (0 ; −0,94 ; −0,34) = sens de la pente |
 | `betonniere_t2` | `tambour_` (tambour orange, bandages, couronne dentée, bandes en spirale) | **tourne** en continu en marche, autour de son axe incliné | `pivot_tambour` (0 ; −0,55 ; 1,05) = centre de la bouche, axe (0 ; 0,97 ; 0,25) = le long du tambour |
 | `betonniere_t2` | `pignon_` (pignon et son arbre) | **tourne en sens contraire** du tambour, environ 5 fois plus vite (rapport 0,81 / 0,15) | `pivot_pignon` (0,84 ; 0,365 ; 0,785), même axe que le tambour |
 | `betonniere_t2` | `tiroir_` (tiroir d'alimentation, plein de béton) | **avance tout droit vers −Y** (≈ 0,25) jusqu'au-dessus du moule, puis revient sous la petite trémie | `pivot_tiroir` (0 ; −0,7 ; 0,49) = dessous du tiroir |

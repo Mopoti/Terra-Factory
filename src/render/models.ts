@@ -41,7 +41,12 @@ export interface FlameGroup {
   px: number;
   py: number;
   pz: number;
+  /** Lueur (maillage `lueur_*`, ex. braises d'un foyer) : ne vacille pas en taille, sa couleur rougeoie (rouge ↔ orange). */
+  glow?: boolean;
 }
+
+/** Préfixe des lueurs parmi les maillages animés (`ANIMATED_MESHES`) : couleur qui rougeoie, forme fixe. */
+const GLOW_PREFIX = ['lueur'];
 
 /** Maillages animés d'un modèle, dans le repère du modèle (mêmes unités et même origine que `BakedModel`). */
 export interface FlameParts {
@@ -119,6 +124,7 @@ export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = 
   bessemer: ['flamme', 'coeur'],
   refinery: ['flamme', 'coeur'],
   washer: ['jet', 'ruissellement'],
+  stamper: ['lueur'],
 };
 
 /** Préfixes animés du modèle de ce nom (machines qui l'utilisent dans `TERRA_MODELS`). */
@@ -335,7 +341,14 @@ export function bake(
         z0 = Math.min(z0, fPos[i * 3 + 2]);
         z1 = Math.max(z1, fPos[i * 3 + 2]);
       }
-      groups.push({ first: base, count: p.count, px: (x0 + x1) / 2, py: y0, pz: (z0 + z1) / 2 });
+      groups.push({
+        first: base,
+        count: p.count,
+        px: (x0 + x1) / 2,
+        py: y0,
+        pz: (z0 + z1) / 2,
+        glow: hasAnimatedName(mesh, GLOW_PREFIX),
+      });
     }
   });
   if (pos.length === 0 && fPos.length === 0 && parts.size === 0) return null;

@@ -30,12 +30,12 @@ def estampeuse_t1(coll, leger=True):
 
     Massif de pierre ; bâti en fonte peinte en vert foncé à deux jambes inclinées, glissières et traverse ; cylindre à
     vapeur sur la traverse ; marteau (masse, matrice haute, tige du piston) au-dessus de la chabotte, de l'enclume et de
-    la matrice basse ; convoyeurs avec lingots sur les deux côtés X (entrées) ; goulotte et plaques estampées
+    la matrice basse ; râteliers à lingots inclinés sur les deux côtés X (fer, cuivre) ; convoyeur et plaques estampées
     devant (sortie) ; chaudière verticale derrière à droite (foyer rougeoyant côté +Y, cheminée, manomètre, conduite de
     vapeur en cuivre vers le cylindre), charbon ; râtelier à moules (plaque, engrenage) derrière à gauche ; levier.
     Massive : elle occupe presque toute l'emprise et monte jusqu'à la limite de hauteur.
-    Pièce mobile : groupe `marteau_` (monte et descend), pivot `pivot_marteau`.
-    Tout reste dans l'emprise 3 x 3 (de -1,5 à 1,5) et entre Z = 0 et Z = 2,6.
+    Pièces mobiles : `marteau_` (monte et descend), `sortie_` (plaques sur le convoyeur) ; `lueur_foyer` rougeoie.
+    Dessinée dans 3 x 3 (de -1,5 à 1,5), puis agrandie pour l'emprise 4 x 4 (table `EMPRISES`).
     """
     rnd = random.Random(41)
     bv = 0.0 if leger else 1.0
@@ -109,30 +109,40 @@ def estampeuse_t1(coll, leger=True):
     mar.tube('acier', (0, y0, zm0 + 0.68), (0, y0, 2.4), 0.06, sg)  # tige du piston (entre dans le cylindre)
     T.pivot(coll, 'pivot_marteau', (0, y0, zm0))
 
-    # --- Convoyeurs (convoyeur commun) sur les deux côtés X (entrées des lingots) : fer à gauche, cuivre à droite.
-    yt, zt = y0 - 0.56, 0.72
+    # --- Râteliers à lingots sur les deux côtés X (entrées) : fer à gauche, cuivre à droite. Plan incliné vers la
+    # chabotte, rebords, butée, pieds ; lingots empilés en pyramide, plaque de repère de la couleur du métal.
+    yt = y0 - 0.56
     for s, mat in ((-1, 'acier'), (1, 'cuivre')):
-        a, b = Vector((s * 1.42, yt, zt - 0.04)), Vector((s * 0.55, yt, zt - 0.04))
-        T.convoyeur(lot, a, b, 0.3, 0.08, rouleaux=2, sg=sg)
-        for x in (s * 0.75, s * 1.38):
-            for dy in (-0.2, 0.2):
-                lot.cube('acier_sombre', (0.05, 0.05, zt - 0.14), (x, yt + dy, (zt - 0.14) / 2), 0)  # pieds
-        for x in (s * 0.85, s * 1.2):
-            lot.cube(mat, (0.3, 0.14, 0.08), (x, yt + rnd.uniform(-0.03, 0.03), zt + 0.09), 0.01 * bv,
-                     Matrix.Rotation(rnd.uniform(-0.1, 0.1), 3, 'Z'))  # lingots
+        a, b = Vector((s * 1.42, yt, 0.9)), Vector((s * 0.72, yt, 0.74))
+        rot = Matrix.Rotation(-s * math.atan2(a.z - b.z, abs(a.x - b.x)), 3, 'Y')
+        m = (a + b) / 2
+        lg = (b - a).length
+        lot.cube('acier_sombre', (lg, 0.42, 0.04), tuple(m), 0.008 * bv, rot)  # plan incliné
+        for dy in (-0.2, 0.2):
+            lot.cube('acier', (lg, 0.03, 0.1), tuple(m + Vector((0, dy, 0.04))), 0, rot)  # rebords
+        lot.cube('fonte', (0.05, 0.44, 0.14), tuple(b + Vector((s * 0.02, 0, 0.05))), 0.008 * bv)  # butée
+        for p in (a, b):
+            for dy in (-0.17, 0.17):
+                lot.cube('acier_sombre', (0.05, 0.05, p.z - 0.04), (p.x - s * 0.04, yt + dy, (p.z - 0.04) / 2), 0)  # pieds
+        lot.cube('acier_sombre', (0.05, 0.38, 0.04), (m.x, yt, 0.3), 0)  # entretoise
+        lot.cube(mat, (0.2, 0.012, 0.12), tuple(a + Vector((-s * 0.12, -0.226, -0.06))), 0)  # plaque de repère
+        for t, h in ((0.2, 0), (0.5, 0), (0.8, 0), (0.35, 1), (0.65, 1)):  # lingots en pyramide
+            p = a + (b - a) * t + Vector((0, rnd.uniform(-0.02, 0.02), 0.075 + h * 0.08))
+            lot.cube(mat, (0.13, 0.3, 0.08), tuple(p), 0.01 * bv, rot @ Matrix.Rotation(rnd.uniform(-0.06, 0.06), 3, 'Z'))
 
-    # --- Sortie devant : goulotte inclinée et plaques estampées.
-    yg0, yg1, zg0, zg1 = y0 - 0.5, -1.45, 0.7, 0.22
-    d = Vector((0, yg1 - yg0, zg1 - zg0))
-    pente = Matrix.Rotation(math.atan2(d.z, d.y), 3, 'X')
-    c = Vector((0, (yg0 + yg1) / 2, (zg0 + zg1) / 2))
-    lot.cube('fonte', (0.6, d.length, 0.045), tuple(c), 0.01 * bv, pente)
-    for x in (-0.32, 0.32):
-        lot.cube('acier_sombre', (0.045, d.length, 0.11), tuple(c + Vector((x, 0, 0.03))), 0, pente)
-    lot.cube('acier_sombre', (0.6, 0.06, zg1), (0, yg1 + 0.06, zg1 / 2), 0)  # pied de la goulotte
-    for k in range(3):
-        lot.cube('acier', (0.26, 0.26, 0.02), (rnd.uniform(-0.05, 0.05), -1.3 + rnd.uniform(-0.03, 0.03), 0.33 + k * 0.025),
-                 0, pente @ Matrix.Rotation(rnd.uniform(-0.2, 0.2), 3, 'Z'))
+    # --- Sortie devant : convoyeur commun, du pied de la chabotte au bord avant ; plaques estampées qui avancent
+    # (groupe `sortie_`).
+    so = T.Lot(coll, 'sortie')
+    S0, S1 = Vector((0, y0 - 0.56, 0.62)), Vector((0, -1.42, 0.4))
+    ds, ws, ns, rs = T.convoyeur(lot, S0, S1, 0.46, 0.07, rouleaux=2, sg=sg)
+    for dx in (-0.22, 0.22):
+        lot.cube('acier_sombre', (0.05, 0.05, S1.z - 0.07), (dx, S1.y + 0.08, (S1.z - 0.07) / 2), 0)  # pieds
+    ls = (S1 - S0).length
+    for t in (0.15, 0.55):  # pas = 0,4 de la longueur : même pas que la boucle de `sortie` (partMotions.ts)
+        p = S0 + ds * (ls * t) + ns * (0.07 + 0.024)
+        so.cube('acier', (0.26, 0.26, 0.02), tuple(p), 0, rs)  # plaque estampée
+        so.cube('acier_sombre', (0.16, 0.16, 0.004), tuple(p + ns * 0.012), 0, rs)  # empreinte
+    T.pivot(coll, 'pivot_sortie', tuple(S0 + ns * 0.07), tuple(ds))
 
     # --- Chaudière verticale derrière à droite : foyer côté +Y, cerclages, dôme, cheminée, manomètre.
     xc, yc, rc = 0.9, 1.05, 0.38
@@ -142,7 +152,7 @@ def estampeuse_t1(coll, leger=True):
         T.cylinder(coll, f'chaudiere_cercle_{z}', rc + 0.02, 0.05, (xc, yc, z), 'cuivre', segments=seg)
     T.cylinder(coll, 'chaudiere_dome', rc, 0.2, (xc, yc, 1.7), 'fonte', segments=seg, radius_top=0.14)
     T.box(coll, 'foyer', (0.34, 0.06, 0.26), (xc, yc + rc - 0.01, 0.45), 'noir')
-    T.box(coll, 'foyer_lueur', (0.26, 0.04, 0.16), (xc, yc + rc + 0.01, 0.43), 'braise')
+    T.box(coll, 'lueur_foyer', (0.26, 0.04, 0.16), (xc, yc + rc + 0.01, 0.43), 'braise')  # rougeoie en jeu
     lot.cube('acier_sombre', (0.4, 0.04, 0.04), (xc, yc + rc + 0.02, 0.6), 0)
     lot.tube('fonte', (xc, yc, 1.78), (xc, yc, 2.45), 0.1, sg)  # cheminée
     T.cylinder(coll, 'cheminee_chapeau', 0.11, 0.1, (xc, yc, 2.5), 'fonte', segments=sg, radius_top=0.17)
@@ -184,7 +194,7 @@ def estampeuse_t1(coll, leger=True):
     lot.barre('acier', (-0.6, y0 + 0.6, 0.44), (-0.6, y0 + 0.45, 1.05), 0.045, 0)
     lot.boule('rouge', (-0.6, y0 + 0.45, 1.08), 0.055)
 
-    for l in (lot, mar):
+    for l in (lot, mar, so):
         l.finir()
     T.poser_au_sol(coll, 1.5)
 
@@ -506,12 +516,23 @@ def concasseur_t1(coll, leger=True):
     for x in (-0.32, 0.32):
         lot.cube('acier_sombre', (0.04, d.length, 0.12), tuple(c + Vector((x, 0, 0.04))), 0, pente)
     lot.cube('acier_sombre', (0.6, 0.06, zg1), (0, yg1 + 0.06, zg1 / 2), 0)
-    for _ in range(8 if leger else 16):  # gravier sur la goulotte
-        t = rnd.uniform(0.04, 0.07)
-        y = rnd.uniform(-1.35, -0.85)
-        z = zg0 + (zg1 - zg0) * (y - yg0) / (yg1 - yg0) + 0.03
-        lot.cube(rnd.choice(('pierre_claire', 'pierre', 'beton')), (t, t, t * 0.8), (rnd.uniform(-0.22, 0.22), y, z),
-                 0, Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
+    # Gravier qui dévale la goulotte (groupe `gravier_`) : rangées régulières tous les 0,12 le long de la pente, pour
+    # que la boucle du jeu (glissement de 0,12, puis retour) paraisse continue.
+    grav = T.Lot(coll, 'gravier')
+    du = d.normalized()
+    nu = Vector((0, -du.z, du.y)) if du.y < 0 else Vector((0, du.z, -du.y))
+    if nu.z < 0:
+        nu = -nu
+    a0 = Vector((0, yg0, zg0))
+    s_ = 0.1
+    while s_ < d.length - 0.1:
+        for _ in range(2 if leger else 3):
+            t = rnd.uniform(0.04, 0.07)
+            p = a0 + du * (s_ + rnd.uniform(-0.03, 0.03)) + nu * (0.02 + t * 0.4) + Vector((rnd.uniform(-0.22, 0.22), 0, 0))
+            grav.cube(rnd.choice(('pierre_claire', 'pierre', 'beton')), (t, t, t * 0.8), tuple(p), 0,
+                      pente @ Matrix.Rotation(rnd.uniform(0, 3), 3, 'Z'))
+        s_ += 0.12
+    T.pivot(coll, 'pivot_gravier', tuple(a0), tuple(du))
 
     # --- Broyeur sur le dessus : deux rouleaux dentés qui tournent en sens contraire (groupes `rouleau_` et `volant_`),
     # dans un cadre ouvert ; paliers sur des montants, engrenages et poulie à droite.
@@ -656,7 +677,7 @@ def concasseur_t1(coll, leger=True):
         lot.boule('cuivre', p, 0.05)
     T.cylinder(coll, 'vanne_vapeur', 0.07, 0.04, (-0.3, ye, zt), 'rouge', segments=sg)
 
-    for l in (lot, vol, mot, rou):
+    for l in (lot, vol, mot, rou, grav):
         l.finir()
     T.poser_au_sol(coll, 1.5)
 
@@ -1611,6 +1632,7 @@ MODELES = {'estampeuse_t1': estampeuse_t1, 'assembleur_t2': assembleur_t2, 'conc
 # Emprises agrandies dans le jeu (content/machines.json) : ces modèles, dessinés pour l'ancienne emprise, sont agrandis
 # (mêmes proportions) juste assez pour remplir la nouvelle (± demi-largeur en X, ± demi-profondeur en Y).
 EMPRISES = {
+    'estampeuse_t1': (2.0, 2.0, False),
     'assembleur_t2': (2.0, 2.0, False),
     'constructeur_t2': (2.0, 2.0, False),
     'presse_lourde_t3': (2.0, 2.0, False),
