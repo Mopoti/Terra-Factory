@@ -13,7 +13,8 @@ import {
   type Stack,
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
-import { TECHS, packCost, scienceCost, techById, techFor } from '../data/techs';
+import { TECHS, isSciencePack, scienceCost, techById, techFor, type TechDef } from '../data/techs';
+import { DEFAULT_DIFFICULTY, type Difficulty } from '../save/saveIndex';
 import { WEAPONS, isWeapon, type WeaponSpec } from '../data/weapons';
 import {
   isSmith,
@@ -181,6 +182,7 @@ export class GameState {
       });
     }
     guest.creative = host.creative;
+    guest.costs = host.costs;
     guest.onChange((e) => {
       if (e.type === 'inventory' || e.type === 'hotbar') {
         if (share.inventory) host.relay({ ...e, remote: true });
@@ -191,6 +193,8 @@ export class GameState {
 
   /** Mode Créatif : recherche et fabrication gratuites, sac sans limite de poids ni de volume. */
   creative = false;
+  /** Multiplicateurs de difficulté de la partie (coûts des technologies et de la fabrication). */
+  costs: Difficulty = DEFAULT_DIFFICULTY;
 
   /** Capacité du sac : de base, plus les bonus de l'équipement porté (sac à dos…). */
   get limits(): BagLimits {
@@ -754,19 +758,50 @@ export class GameState {
     );
   }
 
+  /** Coût d'une technologie, multiplié par la difficulté (au moins 1 de chaque). */
+  techCost(tech: TechDef): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [item, n] of Object.entries(tech.cost)) {
+      const k = isSciencePack(item) ? this.costs.researchPacks : this.costs.researchItems;
+      out[item] = Math.max(1, Math.round(n * k));
+    }
+    return out;
+  }
+
+  /** Paquets de science demandés par une technologie (difficulté comprise). */
+  packCostOf(tech: TechDef): Record<string, number> {
+    return Object.fromEntries(
+      Object.entries(this.techCost(tech)).filter(([item]) => isSciencePack(item)),
+    );
+  }
+
+  /** Recette de fabrication à la main d'un objet (ingrédients multipliés par la difficulté), ou null. */
+  recipeFor(item: string): Record<string, number> | null {
+    const recipe = itemById(item).recipe;
+    if (!recipe) return null;
+    if (this.costs.crafting === 1) return recipe;
+    return Object.fromEntries(
+      Object.entries(recipe).map(([id, n]) => [
+        id,
+        Math.max(1, Math.round(n * this.costs.crafting)),
+      ]),
+    );
+  }
+
   /** Recherche une technologie : consomme son coût dans le sac. */
   research(id: string): 'ok' | 'done' | 'locked' | 'missing' | 'lab' {
     const tech = techById(id);
     if (this.changes.unlocked.includes(id)) return 'done';
     if (scienceCost(tech) > 0 && !this.creative) return 'lab';
     if (!tech.requires.every((r) => this.changes.unlocked.includes(r))) return 'locked';
+    const cost = this.techCost(tech);
     if (
       !this.creative &&
-      !Object.entries(tech.cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n)
+      !Object.entries(cost).every(([item, n]) => (this.inventory[item] ?? 0) >= n)
     )
       return 'missing';
     if (!this.creative)
-      for (const [item, n] of Object.entries(tech.cost))
+      for (const [item, n] of Object.entries(cost))
         this.inventory = remove(this.inventory, item, n).inventory;
     this.changes.unlocked.push(id);
     this.addLog(this.creative ? 'creative' : 'research', id);
@@ -823,7 +858,7 @@ export class GameState {
     if (!id) return {};
     const done = this.packsDone(id);
     const needs: Record<string, number> = {};
-    for (const [pack, n] of Object.entries(packCost(techById(id)))) {
+    for (const [pack, n] of Object.entries(this.packCostOf(techById(id)))) {
       const left = n - (done[pack] ?? 0);
       if (left > 0) needs[pack] = left;
     }
@@ -839,7 +874,7 @@ export class GameState {
   addStudy(packs: Record<string, number>): void {
     const id = this.changes.researching;
     if (!id) return;
-    const wanted = packCost(techById(id));
+    const wanted = this.packCostOf(techById(id));
     const done = { ...this.packsDone(id) };
     let added = 0;
     for (const [pack, n] of Object.entries(packs)) {
@@ -865,7 +900,7 @@ export class GameState {
 
   /** Durée (s) d'une fabrication à la main : 0,5 s par ingrédient, divisée par la vitesse de l'outil ; instantanée en Créatif. */
   craftSeconds(item: string): number {
-    const recipe = itemById(item).recipe;
+    const recipe = this.recipeFor(item);
     if (!recipe || this.creative) return 0;
     const count = Object.values(recipe).reduce((a, b) => a + b, 0);
     return Math.max(
@@ -879,7 +914,7 @@ export class GameState {
    * Refuse si l'objet est verrouillé ou si la première ne peut pas démarrer.
    */
   queueCraft(item: string, times: number): 'ok' | 'locked' | 'resources' | 'bag' {
-    const recipe = itemById(item).recipe;
+    const recipe = this.recipeFor(item);
     if (!recipe) return 'resources';
     if (!this.isUnlocked(item)) return 'locked';
     if (
@@ -897,7 +932,7 @@ export class GameState {
   }
 
   private canStartCraft(item: string): 'ok' | 'resources' | 'bag' {
-    const recipe = itemById(item).recipe ?? {};
+    const recipe = this.recipeFor(item) ?? {};
     if (
       !this.creative &&
       !Object.entries(recipe).every(([id, n]) => (this.inventory[id] ?? 0) >= n)
@@ -917,7 +952,7 @@ export class GameState {
       if (!job) return;
       if (!job.running) {
         // Démarrage : les ingrédients sont pris dans le sac.
-        const recipe = itemById(job.item).recipe ?? {};
+        const recipe = this.recipeFor(job.item) ?? {};
         if (this.canStartCraft(job.item) !== 'ok') {
           if (this.canStartCraft(job.item) === 'resources') this.craftQueue.shift();
           return; // sac plein : on attend de la place
@@ -962,7 +997,7 @@ export class GameState {
     const job = this.craftQueue[index];
     if (!job) return;
     if (job.running && !this.creative) {
-      for (const [id, n] of Object.entries(itemById(job.item).recipe ?? {}))
+      for (const [id, n] of Object.entries(this.recipeFor(job.item) ?? {}))
         this.inventory = add(this.inventory, id, n);
     }
     this.craftQueue.splice(index, 1);
@@ -984,7 +1019,7 @@ export class GameState {
     item: string,
     times: number,
   ): { made: number; stopped: 'resources' | 'bag' | 'locked' | null } {
-    const recipe = itemById(item).recipe;
+    const recipe = this.recipeFor(item);
     if (!recipe) return { made: 0, stopped: 'resources' };
     if (!this.isUnlocked(item)) return { made: 0, stopped: 'locked' };
     let made = 0;

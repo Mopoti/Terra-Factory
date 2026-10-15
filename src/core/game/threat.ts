@@ -52,6 +52,14 @@ export interface ThreatOptions {
   aggressive: boolean;
   /** Les colonies s'étendent : un nid qui se nourrit assez de pollution en fonde un autre. */
   expand?: boolean;
+  /** Vitesse d'expansion (×1 par défaut : `EXPAND_COST` de pollution par nouveau nid). */
+  expansionSpeed?: number;
+  /** Sensibilité à la pollution (×1 par défaut : `SPAWN_COST` de pollution par ennemi). */
+  pollutionSensitivity?: number;
+  /** Ennemis en vie au maximum (25 par défaut). */
+  maxEnemies?: number;
+  /** Gardiens autour de chaque nid (3 par défaut). */
+  guardsPerNest?: number;
 }
 
 export interface Damage {
@@ -120,6 +128,12 @@ export class Threat {
   /** Part de l'absorption des arbres (saison). */
   treeFactor = 1;
   private nextId = 1;
+  private get maxEnemies(): number {
+    return this.options.maxEnemies ?? MAX_ENEMIES;
+  }
+  private get guardsPerNest(): number {
+    return this.options.guardsPerNest ?? GUARDS_PER_NEST;
+  }
   private readonly charge = new Map<string, number>();
   private clock = 0;
   private spreadClock = 0;
@@ -252,7 +266,9 @@ export class Threat {
 
   /** Une seconde de pollution : absorption naturelle, nids, étalement. */
   private secondStep(): void {
-    const cost = this.options.aggressive ? SPAWN_COST_AGGRESSIVE : SPAWN_COST;
+    const cost =
+      (this.options.aggressive ? SPAWN_COST_AGGRESSIVE : SPAWN_COST) /
+      (this.options.pollutionSensitivity ?? 1);
     this.groundStep(cost);
     const cells = Object.keys(this.pollution);
     for (const k of cells) {
@@ -268,7 +284,7 @@ export class Threat {
             const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
             this.grow(nest, nk, take);
             const c = (this.charge.get(nk) ?? 0) + take;
-            if (c >= cost && this.enemies.length < MAX_ENEMIES) {
+            if (c >= cost && this.enemies.length < this.maxEnemies) {
               this.charge.set(nk, c - cost);
               this.spawn(nest.x, nest.z, this.random() < SPITTER_SHARE ? 'spitter' : 'scout');
             } else this.charge.set(nk, c);
@@ -315,7 +331,7 @@ export class Threat {
             const nk = `${Math.round(nest.x)},${Math.round(nest.z)}`;
             this.grow(nest, nk, take);
             const c = (this.charge.get(nk) ?? 0) + take;
-            if (c >= cost && this.enemies.length < MAX_ENEMIES) {
+            if (c >= cost && this.enemies.length < this.maxEnemies) {
               this.charge.set(nk, c - cost);
               this.spawn(nest.x, nest.z, this.random() < SPITTER_SHARE ? 'spitter' : 'scout');
             } else this.charge.set(nk, c);
@@ -334,7 +350,8 @@ export class Threat {
   private grow(nest: { x: number; z: number }, nk: string, taken: number): void {
     if (!this.options.expand || !this.world.addNest) return;
     const g = (this.growth.get(nk) ?? 0) + taken;
-    if (g < EXPAND_COST) {
+    const need = EXPAND_COST / (this.options.expansionSpeed ?? 1);
+    if (g < need) {
       this.growth.set(nk, g);
       return;
     }
@@ -342,7 +359,7 @@ export class Threat {
     const d = EXPAND_MIN_M + this.random() * (EXPAND_MAX_M - EXPAND_MIN_M);
     // Si le monde refuse (eau, base, départ…), on réessaie un peu plus tard, ailleurs.
     const ok = this.world.addNest(nest.x + Math.cos(a) * d, nest.z + Math.sin(a) * d);
-    this.growth.set(nk, ok ? 0 : EXPAND_COST * 0.7);
+    this.growth.set(nk, ok ? 0 : need * 0.7);
   }
 
   /** Les nids proches du joueur gardent quelques gardiens ; un gardien tué revient après un moment. */
@@ -355,14 +372,14 @@ export class Threat {
           e.home &&
           `${Math.round(e.home.x)},${Math.round(e.home.z)}` === nk,
       );
-      if (mine.length >= GUARDS_PER_NEST) {
+      if (mine.length >= this.guardsPerNest) {
         this.guardTimer.set(nk, GUARD_RESPAWN_S);
         continue;
       }
       const wait = this.guardTimer.get(nk);
       if (wait === undefined) {
         // Première visite : tous les gardiens sont là.
-        for (let i = mine.length; i < GUARDS_PER_NEST; i++) this.spawn(nest.x, nest.z, 'guard');
+        for (let i = mine.length; i < this.guardsPerNest; i++) this.spawn(nest.x, nest.z, 'guard');
         this.guardTimer.set(nk, GUARD_RESPAWN_S);
       } else if (wait - dt <= 0) {
         this.spawn(nest.x, nest.z, 'guard');

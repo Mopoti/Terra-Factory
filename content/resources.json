@@ -57,13 +57,13 @@
         "tundra": 0.108
       },
       "biomeCover": {
-        "prairie": 0.5,
-        "forest": 0.4,
-        "desert": 1.2,
-        "tundra": 1.0
+        "prairie": 0.28,
+        "forest": 0.22,
+        "desert": 0.66,
+        "tundra": 0.55
       },
       "clusterWavelengthM": 22,
-      "outsideFactor": 0.01,
+      "outsideFactor": 0.003,
       "harvest": {
         "item": "stone",
         "secondsPerUnit": 0.5

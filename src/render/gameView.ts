@@ -2530,6 +2530,10 @@ export function startGameView(
     {
       aggressive: game.options.enemies.aggressive,
       expand: game.options.enemies.expand,
+      expansionSpeed: game.options.enemies.expansionSpeed,
+      pollutionSensitivity: game.options.enemies.pollutionSensitivity,
+      maxEnemies: game.options.enemies.maxEnemies,
+      guardsPerNest: game.options.enemies.guardsPerNest,
     },
     options.state.changes.enemies,
   );

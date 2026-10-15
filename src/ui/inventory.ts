@@ -177,7 +177,8 @@ export function mountInventory(
     }
     const def = itemById(hovered);
     tooltip.replaceChildren(el('strong', undefined, itemName(hovered)));
-    if (def.recipe) {
+    const recipe = state.recipeFor(def.id);
+    if (recipe) {
       tooltip.append(
         el(
           'div',
@@ -185,7 +186,7 @@ export function mountInventory(
           def.yield > 1 ? `${t('inv.recipe')} (→ ${def.yield})` : t('inv.recipe'),
         ),
       );
-      for (const [id, n] of Object.entries(def.recipe)) {
+      for (const [id, n] of Object.entries(recipe)) {
         const have = state.inventory[id] ?? 0;
         const line = el('div', have >= n ? 'ok' : 'lack', `${n} × ${itemName(id)} `);
         line.append(el('small', undefined, t('inv.have', { n: String(have) })));
@@ -472,9 +473,10 @@ export function mountInventory(
       const cell = el('button', 'slot craft');
       cell.type = 'button';
       cell.style.setProperty('--item', def.color);
+      const recipe = state.recipeFor(def.id);
       const canCraft =
-        def.recipe !== null &&
-        Object.entries(def.recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
+        recipe !== null &&
+        Object.entries(recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
       cell.classList.toggle('lack', def.recipe !== null && !canCraft);
       cell.append(el('span', 'slot-name', itemName(def.id)));
       cell.draggable = true;

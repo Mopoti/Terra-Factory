@@ -1,6 +1,6 @@
 import type { Inventory } from '../game/inventory';
 import { emptyChanges, type WorldChanges } from '../game/worldChanges';
-import { normalizeWorldParams, type WorldFamilies } from '../world/worldgen';
+import { normalizeWorldParams, type ResourceParams, type WorldFamilies } from '../world/worldgen';
 import {
   normalizeGame,
   normalizeOptions,
@@ -96,14 +96,23 @@ export class SaveLibrary implements SaveIndex {
   create(
     name: string,
     seed: string,
-    extras: { families?: WorldFamilies; distanceRatio?: number; options?: GameOptions } = {},
+    extras: {
+      families?: WorldFamilies;
+      distanceRatio?: number;
+      resources?: ResourceParams;
+      safeZoneM?: number;
+      options?: GameOptions;
+    } = {},
     now = Date.now(),
   ): GameSummary {
     const game: GameSummary = {
       id: newId('game', now),
       name: cleanName(name) || 'Partie',
       createdAt: now,
-      world: normalizeWorldParams(seed, extras.families, extras.distanceRatio),
+      world: normalizeWorldParams(seed, extras.families, extras.distanceRatio, {
+        resources: extras.resources,
+        safeZoneM: extras.safeZoneM,
+      }),
       options: normalizeOptions(extras.options, true),
       saves: [],
     };

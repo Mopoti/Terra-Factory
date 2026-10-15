@@ -3,7 +3,12 @@ import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { SaveLibrary } from './library';
-import { DEFAULT_MULTIPLAYER, DEFAULT_PLAYER_STATE } from './saveIndex';
+import {
+  DEFAULT_DIFFICULTY,
+  DEFAULT_GAME_OPTIONS,
+  DEFAULT_MULTIPLAYER,
+  DEFAULT_PLAYER_STATE,
+} from './saveIndex';
 import { IndexedDbStorage, LocalStorageStorage, MemoryStorage, LEGACY_KEY } from './storage';
 
 const player = { ...DEFAULT_PLAYER_STATE, x: 3 };
@@ -153,7 +158,8 @@ describe('gérer les sauvegardes', () => {
     const lib = memory();
     const g = lib.create('A', 'seed-a', {
       options: {
-        enemies: { aggressive: true, expand: false },
+        enemies: { ...DEFAULT_GAME_OPTIONS.enemies, aggressive: true, expand: false },
+        difficulty: DEFAULT_DIFFICULTY,
         realism: 'realistic',
         mode: 'survival',
         tutorial: false,

@@ -1,14 +1,7 @@
 import { playSfx } from '../audio/sfx';
 import { DISCOVERIES, type DiscoveryDef } from '../core/data/discoveries';
 import { itemById } from '../core/data/items';
-import {
-  TECHS,
-  isSciencePack,
-  isTechVisible,
-  packCost,
-  scienceCost,
-  type TechDef,
-} from '../core/data/techs';
+import { TECHS, isSciencePack, isTechVisible, scienceCost, type TechDef } from '../core/data/techs';
 import type { GameState } from '../core/game/state';
 import type { CommandBus } from '../core/game/commands';
 import { t, type TranslationKey } from '../i18n';
@@ -52,7 +45,8 @@ export function mountTech(
     const cost = document.createElement('div');
     cost.className = 'tech-line';
     cost.append(`${t('tech.cost')} : `);
-    for (const [item, n] of Object.entries(tech.cost)) {
+    const needs = state.techCost(tech);
+    for (const [item, n] of Object.entries(needs)) {
       if (isSciencePack(item)) continue;
       const have = state.inventory[item] ?? 0;
       const span = document.createElement('span');
@@ -63,7 +57,7 @@ export function mountTech(
     const science = state.creative ? 0 : scienceCost(tech);
     if (science > 0) {
       const done = state.changes.packProgress[tech.id];
-      for (const [pack, need] of Object.entries(packCost(tech))) {
+      for (const [pack, need] of Object.entries(state.packCostOf(tech))) {
         const line = document.createElement('span');
         const have = done
           ? (done[pack] ?? 0)

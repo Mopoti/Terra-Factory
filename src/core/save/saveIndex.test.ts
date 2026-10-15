@@ -6,6 +6,7 @@ import { MemoryStorage } from './storage';
 import { emptyChanges } from '../game/worldChanges';
 import { defaultWorldParams } from '../world/worldgen';
 import {
+  DEFAULT_DIFFICULTY,
   DEFAULT_GAME_OPTIONS,
   DEFAULT_MULTIPLAYER,
   normalizeMultiplayer,
@@ -171,7 +172,8 @@ describe('options et réglages de la partie', () => {
         ores: { frequency: 2, size: 1.5, density: 0.5 },
       },
       options: {
-        enemies: { aggressive: true, expand: false },
+        enemies: { ...DEFAULT_GAME_OPTIONS.enemies, aggressive: true, expand: false },
+        difficulty: DEFAULT_DIFFICULTY,
         realism: 'realistic',
         mode: 'survival',
         tutorial: false,
@@ -183,7 +185,8 @@ describe('options et réglages de la partie', () => {
     expect(back?.world.families.ores).toEqual({ frequency: 2, size: 1.5, density: 0.5 });
     expect(back?.world.families.forests).toEqual({ frequency: 1, size: 1, density: 1 });
     expect(back?.options).toEqual({
-      enemies: { aggressive: true, expand: false },
+      enemies: { ...DEFAULT_GAME_OPTIONS.enemies, aggressive: true, expand: false },
+      difficulty: DEFAULT_DIFFICULTY,
       realism: 'realistic',
       mode: 'survival',
       tutorial: false,
@@ -195,7 +198,8 @@ describe('options et réglages de la partie', () => {
     const index = SaveLibrary.empty(new MemoryStorage());
     const g = index.create('Ma base', 'terra');
     expect(g.options).toEqual({
-      enemies: { aggressive: false, expand: true },
+      enemies: DEFAULT_GAME_OPTIONS.enemies,
+      difficulty: DEFAULT_DIFFICULTY,
       realism: 'balanced',
       mode: 'survival',
       tutorial: true,
@@ -212,7 +216,7 @@ describe('options et réglages de la partie', () => {
     });
     expect(g.world.families.ores).toEqual({ frequency: 3, size: 0.25, density: 1 });
     expect(g.options.realism).toBe('balanced');
-    expect(g.options.enemies).toEqual({ aggressive: false, expand: true });
+    expect(g.options.enemies).toEqual(DEFAULT_GAME_OPTIONS.enemies);
   });
   it('une ancienne partie reçoit les options par défaut', () => {
     const [g] = normalizeGame({ id: 'old', name: 'Ancienne' });

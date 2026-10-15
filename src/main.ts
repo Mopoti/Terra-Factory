@@ -219,6 +219,7 @@ function startGame(
 
   const state = guestState ?? new GameState(slot);
   state.creative = game.options.mode === 'creative';
+  state.costs = game.options.difficulty;
   const view = startGameView(appEl, game, {
     state,
     start,

@@ -3,7 +3,8 @@ import { Factory, emptyMachine } from '../factory/factory';
 import { aimBuild, aimExisting, riseFromDirection } from '../build/aim';
 import { evaluatePlan, planLine, planRect, planWall, rayOnEdgePlane } from '../build/plan';
 import { edgeKeysToRemove, edgeState, pieceKey, posFor, type Pieces } from '../build/pieces';
-import { BAG_LIMITS, itemById } from '../data/items';
+import { BAG_LIMITS, ITEMS, itemById } from '../data/items';
+import { techById } from '../data/techs';
 import { RESOURCES } from '../data/resources';
 import { WorldGenerator, defaultWorldParams } from '../world/worldgen';
 import { add, maxAddable, normalizeInventory, remove, totals } from './inventory';
@@ -1188,5 +1189,39 @@ describe('fabrication à la main : temps et file d’attente', () => {
     s.creative = true;
     expect(s.queueCraft('tool_stone', 2)).toBe('ok');
     expect(s.inventory.tool_stone).toBe(2);
+  });
+});
+
+describe('difficulté : coûts multipliés', () => {
+  it('les paquets, les objets de recherche et les ingrédients suivent les multiplicateurs', () => {
+    const s = new GameState({
+      inventory: { iron_ingot: 100, copper_ingot: 100, stone: 100, wood: 100 },
+    });
+    const tech = techById('metallurgy');
+    expect(s.techCost(tech)).toEqual(tech.cost);
+    s.costs = { researchPacks: 2, researchItems: 0.5, crafting: 2 };
+    expect(s.techCost(tech).iron_ingot).toBe(Math.round(tech.cost.iron_ingot * 0.5));
+    const packs = techById('manufacturing_2');
+    expect(s.packCostOf(packs).science_pack).toBe(packs.cost.science_pack * 2);
+    // Jamais moins de 1 de chaque.
+    s.costs = { researchPacks: 0.25, researchItems: 0.25, crafting: 0.25 };
+    expect(Math.min(...Object.values(s.techCost(tech)))).toBeGreaterThanOrEqual(1);
+    // Fabrication à la main : l'ingrédient double.
+    s.costs = { researchPacks: 1, researchItems: 1, crafting: 2 };
+    const item = ITEMS.find(
+      (i) => i.recipe && Object.keys(i.recipe).length === 1 && s.isUnlocked(i.id),
+    );
+    expect(item).toBeDefined();
+    const need = Object.entries(item?.recipe ?? {})[0];
+    expect(s.recipeFor(item?.id ?? '')?.[need[0]]).toBe(need[1] * 2);
+  });
+
+  it('la recherche consomme le coût multiplié', () => {
+    const s = new GameState({ inventory: { iron_ingot: 100, stone: 100 } });
+    s.costs = { researchPacks: 1, researchItems: 2, crafting: 1 };
+    const tech = techById('metallurgy');
+    const before = { ...s.inventory };
+    expect(s.research('metallurgy')).toBe('ok');
+    expect(before.iron_ingot - s.inventory.iron_ingot).toBe(tech.cost.iron_ingot * 2);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CELL_SIZE_M, CHUNK_CELLS } from '../constants';
+import { RESOURCES } from '../data/resources';
 import { BIOME_IDS, biomeAt } from './biomes';
 import { hashSeed } from './rng';
 import {
@@ -508,4 +509,95 @@ describe('gisements de pierre', () => {
     expect(cells).toBeGreaterThan(50);
     expect(nearest).toBeLessThan(300);
   });
+});
+
+describe('réglages par ressource et zone sûre', () => {
+  const countOre = (gen: WorldGenerator, id: string, r = 14): number => {
+    let n = 0;
+    for (let cx = -r; cx <= r; cx++)
+      for (let cz = -r; cz <= r; cz++) for (const o of gen.chunk(cx, cz).ore) if (o.id === id) n++;
+    return n;
+  };
+
+  it('le réglage d’un minerai ne touche pas les autres', () => {
+    const base = defaultWorldParams('terra');
+    const more = defaultWorldParams('terra');
+    (
+      more.resources as Record<string, { frequency: number; size: number; density: number }>
+    ).iron_ore = {
+      frequency: 3,
+      size: 2,
+      density: 1,
+    };
+    const a = new WorldGenerator(base);
+    const b = new WorldGenerator(more);
+    expect(countOre(b, 'iron_ore')).toBeGreaterThan(countOre(a, 'iron_ore') * 1.5);
+    // Les autres ne gagnent rien (un gros filon de fer peut seulement en recouvrir un peu).
+    expect(countOre(b, 'coal')).toBeLessThanOrEqual(countOre(a, 'coal'));
+    expect(countOre(b, 'copper_ore')).toBeLessThanOrEqual(countOre(a, 'copper_ore'));
+  });
+
+  it('une ancienne partie (sans réglages par ressource) donne le même monde qu’avec tout à ×1', () => {
+    const legacy = new WorldGenerator({
+      seed: 'terra',
+      families: defaultWorldParams('').families,
+      distanceRatio: 1,
+    });
+    const modern = new WorldGenerator(defaultWorldParams('terra'));
+    expect(JSON.stringify(legacy.chunk(3, -2))).toBe(JSON.stringify(modern.chunk(3, -2)));
+  });
+
+  it('la zone sûre repousse les nids', () => {
+    const nests = (safe: number): number[] => {
+      const p = defaultWorldParams('terra');
+      p.safeZoneM = safe;
+      const gen = new WorldGenerator(p);
+      const out: number[] = [];
+      for (let cx = -40; cx <= 40; cx++)
+        for (let cz = -40; cz <= 40; cz++)
+          for (const o of gen.chunk(cx, cz).objects)
+            if (o.id === 'nest') out.push(Math.hypot(o.gx, o.gz) * CELL_SIZE_M);
+      return out;
+    };
+    const normal = nests(250);
+    expect(normal.length).toBeGreaterThan(0);
+    expect(Math.min(...normal)).toBeGreaterThanOrEqual(240);
+    expect(nests(1000)).toHaveLength(0); // toute la zone testée (≈ 320 m) est sûre
+    expect(Math.min(...nests(50))).toBeLessThan(250);
+  });
+});
+
+describe('tous les minerais existent et se génèrent', () => {
+  it('chaque gisement apparaît, jamais avant sa distance minimale (chunk = 8 m)', () => {
+    const gen = new WorldGenerator(defaultWorldParams('terra'));
+    const found: Record<string, number> = {};
+    const nearest: Record<string, number> = {};
+    const scan = (x0: number, x1: number, z0: number, z1: number): void => {
+      for (let cx = x0; cx <= x1; cx++)
+        for (let cz = z0; cz <= z1; cz++)
+          for (const o of gen.chunk(cx, cz).ore) {
+            found[o.id] = (found[o.id] ?? 0) + 1;
+            const d = Math.hypot(o.gx, o.gz) * CELL_SIZE_M;
+            nearest[o.id] = Math.min(nearest[o.id] ?? Infinity, d);
+          }
+    };
+    // Autour du départ (≈ 640 m) : fer, cuivre, charbon, sable, pierre, zinc, bauxite, pétrole.
+    scan(-80, 80, -80, 80);
+    // Loin (≈ 1,5 km dans quatre directions) : l'uraninite n'apparaît qu'à partir de 1 200 m.
+    for (const [ox, oz] of [
+      [190, 0],
+      [-190, 0],
+      [0, 190],
+      [0, -190],
+    ])
+      scan(ox - 20, ox + 20, oz - 20, oz + 20);
+    for (const r of RESOURCES) {
+      if (r.kind !== 'deposit') continue;
+      expect(found[r.id] ?? 0, `${r.id} se génère`).toBeGreaterThan(0);
+      // Le bord d'un filon peut dépasser de quelques mètres sa distance minimale de tirage.
+      expect(nearest[r.id], `${r.id} pas trop près`).toBeGreaterThanOrEqual(
+        (r.minDistanceM ?? 0) - 40,
+      );
+    }
+  }, 120000);
 });

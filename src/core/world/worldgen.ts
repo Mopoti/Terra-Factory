@@ -23,12 +23,23 @@ export interface FamilyParams {
   density: number;
 }
 export type WorldFamilies = Record<FamilyId, FamilyParams>;
+/** Réglages propres à chaque ressource (id → fréquence, taille, densité) : se multiplient à ceux de sa famille. */
+export type ResourceParams = Record<string, FamilyParams>;
 export interface WorldParams {
   seed: string;
   families: WorldFamilies;
   /** Ratio de distance (×0,25 à ×3) : plus il est haut, plus les filons lointains sont massifs mais espacés. */
   distanceRatio: number;
+  /** Réglages par ressource (absent ou incomplet = ×1) : l'écran de création les règle un par un. */
+  resources?: ResourceParams;
+  /** Rayon (m) autour du départ sans nid ennemi : la zone sûre (absent = `DEFAULT_SAFE_ZONE_M`). */
+  safeZoneM?: number;
 }
+
+/** Rayon de la zone sûre par défaut (m) : aucun nid ne naît plus près du départ. */
+export const DEFAULT_SAFE_ZONE_M = 250;
+export const SAFE_ZONE_MIN_M = 50;
+export const SAFE_ZONE_MAX_M = 1000;
 
 export const MULTIPLIER_MIN = 0.25;
 export const MULTIPLIER_MAX = 3;
@@ -39,7 +50,9 @@ const NEST_MAX_CELLS = 12;
 export function defaultWorldParams(seed: string): WorldParams {
   const families = {} as WorldFamilies;
   for (const id of FAMILY_IDS) families[id] = { frequency: 1, size: 1, density: 1 };
-  return { seed, families, distanceRatio: 1 };
+  const resources: ResourceParams = {};
+  for (const r of RESOURCES) resources[r.id] = { frequency: 1, size: 1, density: 1 };
+  return { seed, families, distanceRatio: 1, resources, safeZoneM: DEFAULT_SAFE_ZONE_M };
 }
 
 /** Réglages valides : toutes les familles présentes, multiplicateurs dans ×0,25 – ×3. */
@@ -47,6 +60,7 @@ export function normalizeWorldParams(
   seed: string,
   families?: Partial<WorldFamilies>,
   distanceRatio?: number,
+  extra: { resources?: Partial<ResourceParams>; safeZoneM?: number } = {},
 ): WorldParams {
   const result = defaultWorldParams(seed);
   const num = (v: unknown): number =>
@@ -60,6 +74,21 @@ export function normalizeWorldParams(
     };
   }
   result.distanceRatio = num(distanceRatio);
+  const resources: ResourceParams = {};
+  for (const r of RESOURCES) {
+    const p = extra.resources?.[r.id];
+    resources[r.id] = {
+      frequency: num(p?.frequency),
+      size: num(p?.size),
+      density: num(p?.density),
+    };
+  }
+  result.resources = resources;
+  const z = extra.safeZoneM;
+  result.safeZoneM =
+    typeof z === 'number' && Number.isFinite(z)
+      ? clamp(Math.round(z), SAFE_ZONE_MIN_M, SAFE_ZONE_MAX_M)
+      : DEFAULT_SAFE_ZONE_M;
   return result;
 }
 
@@ -157,9 +186,25 @@ export class WorldGenerator {
   private readonly salts = new Map<string, number>();
 
   constructor(params: WorldParams) {
-    this.params = normalizeWorldParams(params.seed, params.families, params.distanceRatio);
+    this.params = normalizeWorldParams(params.seed, params.families, params.distanceRatio, {
+      resources: params.resources,
+      safeZoneM: params.safeZoneM,
+    });
     this.seed = hashSeed(params.seed);
     this.buildStarters();
+  }
+
+  /** Réglages d'une ressource : ceux de sa famille × les siens. */
+  private eff(res: { id: string; family: FamilyId }): FamilyParams {
+    const f = this.params.families[res.family];
+    const r = this.params.resources?.[res.id];
+    return r
+      ? {
+          frequency: f.frequency * r.frequency,
+          size: f.size * r.size,
+          density: f.density * r.density,
+        }
+      : f;
   }
 
   private salt(key: string): number {
@@ -196,7 +241,7 @@ export class WorldGenerator {
     objects.forEach((res, i) => {
       const angle = base + Math.PI / kinds.length + (i * Math.PI * 2) / objects.length;
       const distance = 35 + 40 * hash01(this.seed, i, 2, this.salt('starter.cluster'));
-      const size = this.params.families[res.family].size;
+      const size = this.eff(res).size;
       this.starterClusters.push({
         res,
         xM: Math.cos(angle) * distance,
@@ -209,7 +254,7 @@ export class WorldGenerator {
       const distance =
         STARTER_MIN_DISTANCE_M +
         STARTER_DISTANCE_RANGE_M * hash01(this.seed, i, 1, this.salt('starter.distance'));
-      const size = this.params.families[res.family].size;
+      const size = this.eff(res).size;
       const mid = (res.radiusM[0] + res.radiusM[1]) / 2;
       this.starters.push({
         res,
@@ -223,12 +268,12 @@ export class WorldGenerator {
   }
 
   /** Cases-candidates d'une ressource : taille réglée par la fréquence de sa famille. */
-  private candidateSize(res: { candidateSizeM: number; family: FamilyId }): number {
-    return res.candidateSizeM / Math.sqrt(this.params.families[res.family].frequency);
+  private candidateSize(res: { id: string; candidateSizeM: number; family: FamilyId }): number {
+    return res.candidateSizeM / Math.sqrt(this.eff(res).frequency);
   }
 
-  private presence(res: { presence: number; family: FamilyId; kind: string }): number {
-    const density = this.params.families[res.family].density;
+  private presence(res: { id: string; presence: number; family: FamilyId; kind: string }): number {
+    const density = this.eff(res).density;
     // Pour les étangs et les nids, la densité règle la probabilité d'en avoir un par case-candidate.
     return res.kind === 'deposit' ? res.presence : clamp(res.presence * density, 0, 1);
   }
@@ -241,8 +286,7 @@ export class WorldGenerator {
     minZ: number,
     maxZ: number,
   ): Patch[] {
-    const fam = this.params.families[res.family];
-    const size = fam.size;
+    const size = this.eff(res).size;
     const extra = res.kind === 'pond' ? POND_BAND_MAX_M : 0;
     const reach = res.radiusM[1] * size * SHAPE_REACH + extra;
     const s = this.candidateSize(res);
@@ -315,7 +359,7 @@ export class WorldGenerator {
 
   /** Nombre de minerais dans une case : max au centre, `edgeRatio` × le max au bord. */
   private oreAmount(p: Patch & { res: DepositResource }, t: number): number {
-    const density = this.params.families[p.res.family].density;
+    const density = this.eff(p.res).density;
     const tc = clamp(t, 0, 1);
     const profile = p.res.edgeRatio + (1 - p.res.edgeRatio) * (1 - tc * tc);
     const richer = distanceRichness(Math.hypot(p.xM, p.zM), this.params.distanceRatio);
@@ -326,7 +370,7 @@ export class WorldGenerator {
 
   /** Emprise d'un nid : le réglage « taille » des ennemis agrandit ou réduit les colonies de départ. */
   private nestCells(res: NestResource): number {
-    const size = this.params.families[res.family].size;
+    const size = this.eff(res).size;
     return clamp(Math.round(res.footprintCells * size), NEST_MIN_CELLS, NEST_MAX_CELLS);
   }
 
@@ -350,7 +394,7 @@ export class WorldGenerator {
       for (let iz = izMin; iz <= izMax; iz++) {
         const xM = (ix + 0.1 + 0.8 * hash01(this.seed, ix, iz, saltId + 2)) * s;
         const zM = (iz + 0.1 + 0.8 * hash01(this.seed, ix, iz, saltId + 3)) * s;
-        if (Math.hypot(xM, zM) < res.minDistanceFromSpawnM) continue;
+        if (Math.hypot(xM, zM) < (this.params.safeZoneM ?? DEFAULT_SAFE_ZONE_M)) continue;
         const weight = res.biomeWeight[this.biomeAt(xM, zM)];
         if (hash01(this.seed, ix, iz, saltId + 1) >= this.presence(res) * weight) continue;
         // (gx, gz) = coin de l'emprise ; le nid est centré sur le point tiré.
@@ -483,7 +527,7 @@ export class WorldGenerator {
         const slotX = gx / OBJECT_SLOT_CELLS;
         const slotZ = gz / OBJECT_SLOT_CELLS;
         for (const res of objectRes) {
-          const fam = this.params.families[res.family];
+          const fam = this.eff(res);
           const saltId = this.salt(res.id);
           const cover = clamp(0.5 * fam.frequency * res.biomeCover[biome], 0.03, 1);
           const threshold = 0.5 + (0.5 - cover) * 0.8;

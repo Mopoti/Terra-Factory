@@ -34,6 +34,19 @@ export const REALISM_LEVELS: readonly Realism[] = ['arcade', 'balanced', 'realis
 export type GameMode = 'survival' | 'creative';
 export const GAME_MODES: readonly GameMode[] = ['survival', 'creative'];
 
+/** Multiplicateurs de coûts (×0,25 à ×4). */
+export interface Difficulty {
+  /** Paquets de science et de combat demandés par les technologies. */
+  researchPacks: number;
+  /** Objets (lingots, plaques…) demandés par les technologies à recherche manuelle. */
+  researchItems: number;
+  /** Ingrédients de la fabrication à la main. */
+  crafting: number;
+}
+export const DIFFICULTY_MIN = 0.25;
+export const DIFFICULTY_MAX = 4;
+export const DEFAULT_DIFFICULTY: Difficulty = { researchPacks: 1, researchItems: 1, crafting: 1 };
+
 /** Règles de la partie choisies à sa création. */
 export interface GameOptions {
   enemies: {
@@ -41,7 +54,17 @@ export interface GameOptions {
     aggressive: boolean;
     /** Les colonies grossissent et fondent de nouveaux nids. Défaut : oui. */
     expand: boolean;
+    /** Vitesse d'expansion des colonies (×0,25 à ×4 ; ×2 = un nouveau nid avec deux fois moins de pollution). */
+    expansionSpeed: number;
+    /** Sensibilité à la pollution (×0,25 à ×4 ; ×2 = deux fois plus d'ennemis pour la même pollution). */
+    pollutionSensitivity: number;
+    /** Nombre maximal d'ennemis en vie en même temps (0 à 100). */
+    maxEnemies: number;
+    /** Gardiens maintenus autour de chaque nid (0 à 8). */
+    guardsPerNest: number;
   };
+  /** Difficulté : multiplicateurs des quantités demandées au joueur (×1 = les valeurs du jeu). */
+  difficulty: Difficulty;
   realism: Realism;
   mode: GameMode;
   /** Tutoriel pas à pas (en haut à droite) : oui par défaut dans une nouvelle partie. */
@@ -71,7 +94,15 @@ export const DEFAULT_MULTIPLAYER: MultiplayerOptions = {
 };
 
 export const DEFAULT_GAME_OPTIONS: GameOptions = {
-  enemies: { aggressive: false, expand: true },
+  enemies: {
+    aggressive: false,
+    expand: true,
+    expansionSpeed: 1,
+    pollutionSensitivity: 1,
+    maxEnemies: 25,
+    guardsPerNest: 3,
+  },
+  difficulty: DEFAULT_DIFFICULTY,
   realism: 'balanced',
   mode: 'survival',
   tutorial: true,
@@ -101,6 +132,19 @@ export function normalizeMultiplayer(raw: unknown): MultiplayerOptions {
   };
 }
 
+const numIn = (v: unknown, min: number, max: number, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
+
+export function normalizeDifficulty(raw: unknown): Difficulty {
+  const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const d = DEFAULT_DIFFICULTY;
+  return {
+    researchPacks: numIn(r.researchPacks, DIFFICULTY_MIN, DIFFICULTY_MAX, d.researchPacks),
+    researchItems: numIn(r.researchItems, DIFFICULTY_MIN, DIFFICULTY_MAX, d.researchItems),
+    crafting: numIn(r.crafting, DIFFICULTY_MIN, DIFFICULTY_MAX, d.crafting),
+  };
+}
+
 export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOptions {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
   const e = (typeof o.enemies === 'object' && o.enemies !== null ? o.enemies : {}) as Record<
@@ -112,7 +156,12 @@ export function normalizeOptions(raw: unknown, tutorialDefault = false): GameOpt
     enemies: {
       aggressive: typeof e.aggressive === 'boolean' ? e.aggressive : d.enemies.aggressive,
       expand: typeof e.expand === 'boolean' ? e.expand : d.enemies.expand,
+      expansionSpeed: numIn(e.expansionSpeed, 0.25, 4, d.enemies.expansionSpeed),
+      pollutionSensitivity: numIn(e.pollutionSensitivity, 0.25, 4, d.enemies.pollutionSensitivity),
+      maxEnemies: Math.round(numIn(e.maxEnemies, 0, 100, d.enemies.maxEnemies)),
+      guardsPerNest: Math.round(numIn(e.guardsPerNest, 0, 8, d.enemies.guardsPerNest)),
     },
+    difficulty: normalizeDifficulty(o.difficulty),
     realism: REALISM_LEVELS.find((r) => r === o.realism) ?? d.realism,
     mode: GAME_MODES.find((m) => m === o.mode) ?? d.mode,
     multiplayer: normalizeMultiplayer(o.multiplayer),
@@ -260,7 +309,10 @@ export function normalizeGame(item: unknown): GameSummary[] {
       id: g.id,
       name: g.name,
       createdAt,
-      world: normalizeWorldParams(seed, world?.families, world?.distanceRatio),
+      world: normalizeWorldParams(seed, world?.families, world?.distanceRatio, {
+        resources: world?.resources,
+        safeZoneM: world?.safeZoneM,
+      }),
       options: normalizeOptions(g.options),
       saves: Array.isArray(g.saves) ? g.saves.flatMap(normalizeSlot) : [],
     },

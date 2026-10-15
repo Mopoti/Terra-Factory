@@ -222,3 +222,54 @@ describe('expansion des colonies', () => {
     expect(asked).toBeGreaterThan(1);
   });
 });
+
+describe('réglages des ennemis (écran de création)', () => {
+  const feedSeconds = (t: Threat, seconds: number): void => {
+    for (let s = 0; s < seconds; s++) {
+      t.emit(100, 0, 3);
+      run(t, 1);
+    }
+  };
+
+  it('le nombre maximal d’ennemis plafonne la fabrication', () => {
+    const t = new Threat({}, {}, world, { aggressive: false, maxEnemies: 2 });
+    feedSeconds(t, 200);
+    expect(t.enemies).toHaveLength(2);
+    const none = new Threat({}, {}, world, { aggressive: false, maxEnemies: 0 });
+    feedSeconds(none, 100);
+    expect(none.enemies).toHaveLength(0);
+  });
+
+  it('la sensibilité à la pollution multiplie le nombre d’ennemis fabriqués', () => {
+    const calm = new Threat({}, {}, world, { aggressive: false, pollutionSensitivity: 0.5 });
+    const touchy = new Threat({}, {}, world, { aggressive: false, pollutionSensitivity: 2 });
+    feedSeconds(calm, 60);
+    feedSeconds(touchy, 60);
+    expect(touchy.enemies.length).toBeGreaterThan(calm.enemies.length);
+  });
+
+  it('un nid garde le nombre de gardiens demandé', () => {
+    const t = new Threat({}, {}, world, { aggressive: false, guardsPerNest: 1 });
+    t.keepGuards(60, 0, 1);
+    expect(t.enemies).toHaveLength(1);
+    const none = new Threat({}, {}, world, { aggressive: false, guardsPerNest: 0 });
+    none.keepGuards(60, 0, 1);
+    expect(none.enemies).toHaveLength(0);
+  });
+
+  it('une expansion plus rapide fonde plus de nids', () => {
+    const count = (speed: number): number => {
+      let n = 0;
+      const w: ThreatWorld = { ...world, addNest: () => (n++, true) };
+      const t = new Threat({}, {}, w, {
+        aggressive: false,
+        expand: true,
+        expansionSpeed: speed,
+        maxEnemies: 0,
+      });
+      feedSeconds(t, 400);
+      return n;
+    };
+    expect(count(3)).toBeGreaterThan(count(0.5));
+  });
+});
