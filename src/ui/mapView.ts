@@ -6,9 +6,15 @@ import { resourceById } from '../core/data/resources';
 import type { Factory } from '../core/factory/factory';
 import type { GameState } from '../core/game/state';
 import { BIOME_COLORS } from '../core/world/biomes';
-import { WorldGenerator, type WorldParams } from '../core/world/worldgen';
+import { depositInfo } from '../core/world/deposits';
+import {
+  WorldGenerator,
+  chunkOfCell,
+  type ChunkData,
+  type WorldParams,
+} from '../core/world/worldgen';
 import { POLLUTION_CELL_M, type Threat } from '../core/game/threat';
-import { t, type TranslationKey } from '../i18n';
+import { getLocale, t, type TranslationKey } from '../i18n';
 import './menu.css';
 
 export interface MapWindow {
@@ -55,6 +61,11 @@ const hex = (c: string): [number, number, number] => [
 export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
   const generator = new WorldGenerator(options.world);
   const chunkCache = new Map<string, HTMLCanvasElement>();
+  /** Contenu des chunks (minerai restant compris) pour les info-bulles ; vidé à chaque ouverture. */
+  const dataCache = new Map<
+    string,
+    { data: ChunkData; ore: Map<string, { id: string; amount: number }> }
+  >();
   let isOpenNow = false;
   let zoomIndex = 2;
   /** Voile de pollution affiché sur la carte (case à cocher). */
@@ -65,9 +76,53 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
   let canvas: HTMLCanvasElement | null = null;
   let info: HTMLElement | null = null;
   let hoverCell: { gx: number; gz: number } | null = null;
+  /** Info-bulle de la ressource sous le curseur. */
+  let tip: HTMLElement | null = null;
   let drag: { x: number; y: number } | null = null;
 
   const key = (cx: number, cz: number): string => `${cx},${cz}`;
+
+  /** Contenu d'un chunk, minerai déjà pris retiré. */
+  function chunkInfo(
+    cx: number,
+    cz: number,
+  ): {
+    data: ChunkData;
+    ore: Map<string, { id: string; amount: number }>;
+  } {
+    const k = key(cx, cz);
+    let c = dataCache.get(k);
+    if (!c) {
+      const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
+      c = {
+        data,
+        ore: new Map(data.ore.map((o) => [`${o.gx},${o.gz}`, { id: o.id, amount: o.amount }])),
+      };
+      dataCache.set(k, c);
+    }
+    return c;
+  }
+
+  /** Minerai de la case (id et quantité restante), ou null. */
+  function oreAt(gx: number, gz: number): { id: string; amount: number } | null {
+    return chunkInfo(chunkOfCell(gx), chunkOfCell(gz)).ore.get(`${gx},${gz}`) ?? null;
+  }
+
+  /** Texte de l'info-bulle d'une case : la ressource (hors arbres) et, pour un minerai, le total du filon. */
+  function tipFor(gx: number, gz: number): string | null {
+    const info = depositInfo(oreAt, gx, gz);
+    if (info) {
+      const name = t(`res.${info.id}` as TranslationKey);
+      const n = Math.round(info.total).toLocaleString(getLocale());
+      return t(info.truncated ? 'map.deposit.atLeast' : 'map.deposit', { name, n });
+    }
+    const { data } = chunkInfo(chunkOfCell(gx), chunkOfCell(gz));
+    for (const o of data.objects)
+      if (gx >= o.gx && gx < o.gx + o.cells && gz >= o.gz && gz < o.gz + o.cells)
+        return o.id === 'tree' ? null : t(`res.${o.id}` as TranslationKey);
+    if (data.water.some((w) => w.gx === gx && w.gz === gz)) return t('res.water');
+    return null;
+  }
 
   /** Une case de chunk = un pixel. */
   function drawChunk(cx: number, cz: number): HTMLCanvasElement {
@@ -84,7 +139,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       img.data[i + 2] = rgb[2];
       img.data[i + 3] = 255;
     };
-    const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
+    const data = chunkInfo(cx, cz).data;
     // Fond : biome (un échantillon par bloc de 4 x 4 cases).
     const block = 4;
     for (let bz = 0; bz < CHUNK_CELLS; bz += block) {
@@ -388,7 +443,10 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     x.title = t('inv.close');
     x.setAttribute('aria-label', t('inv.close'));
     x.addEventListener('click', closeWindow);
-    panel.append(title, canvas, info, legend, help, x);
+    tip = document.createElement('div');
+    tip.className = 'map-tip';
+    tip.hidden = true;
+    panel.append(title, canvas, info, legend, help, x, tip);
     root.replaceChildren(panel);
 
     const cellAt = (e: MouseEvent): { gx: number; gz: number } => {
@@ -407,6 +465,15 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     window.addEventListener('mouseup', () => (drag = null));
     canvas.addEventListener('mousemove', (e) => {
       hoverCell = cellAt(e);
+      if (tip) {
+        const text = !drag && hoverCell ? tipFor(hoverCell.gx, hoverCell.gz) : null;
+        tip.hidden = !text;
+        if (text) {
+          tip.textContent = text;
+          tip.style.left = `${e.clientX + 16}px`;
+          tip.style.top = `${e.clientY + 16}px`;
+        }
+      }
       if (!drag) return;
       const zoom = ZOOMS[zoomIndex];
       const rect = canvas!.getBoundingClientRect();
@@ -417,7 +484,10 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
       };
       drag = { x: e.clientX, y: e.clientY };
     });
-    canvas.addEventListener('mouseleave', () => (hoverCell = null));
+    canvas.addEventListener('mouseleave', () => {
+      hoverCell = null;
+      if (tip) tip.hidden = true;
+    });
     canvas.addEventListener(
       'wheel',
       (e) => {
@@ -431,6 +501,7 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
   function openWindow(): void {
     // Les chunks sont redessinés à chaque ouverture : nids détruits, arbres coupés, minerai épuisé.
     chunkCache.clear();
+    dataCache.clear();
     if (isOpenNow) return;
     isOpenNow = true;
     const p = options.player();

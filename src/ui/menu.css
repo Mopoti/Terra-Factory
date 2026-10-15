@@ -2449,3 +2449,18 @@ body.touch-mode .menu-corner {
 .ng-table thead th:first-child {
   width: 20%;
 }
+.map-tip {
+  position: fixed;
+  z-index: 40;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(10, 13, 17, 0.94);
+  border: 1px solid #44546a;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.map-tip[hidden] {
+  display: none;
+}

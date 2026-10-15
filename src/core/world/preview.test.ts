@@ -77,3 +77,28 @@ describe('carte d’aperçu', () => {
     expect([r.pixels[i], r.pixels[i + 1], r.pixels[i + 2]]).toEqual([255, 255, 255]);
   });
 });
+
+describe('info-bulle de l’aperçu', () => {
+  it('retrouve la ressource sous un pixel de la carte (minerai, eau, objet)', () => {
+    const gen = new WorldGenerator(defaultWorldParams('terra'));
+    const r = new PreviewRenderer(gen, 6);
+    const chunk = gen.chunk(1, 1);
+    const ore = chunk.ore[0];
+    expect(ore).toBeDefined();
+    // Pixel de cette case : (gx + rayon × 16, gz + rayon × 16).
+    const { gx, gz } = r.cellOfPixel(ore.gx + 6 * 16, ore.gz + 6 * 16);
+    expect([gx, gz]).toEqual([ore.gx, ore.gz]);
+    expect(r.inspect(gx, gz)).toEqual({ kind: 'ore', id: ore.id });
+    expect(r.oreAt(gx, gz)?.amount).toBe(ore.amount);
+    const rock = gen
+      .chunk(0, 0)
+      .objects.concat(gen.chunk(2, 2).objects)
+      .find((o) => o.id === 'rock');
+    if (rock) expect(r.inspect(rock.gx, rock.gz)).toEqual({ kind: 'object', id: 'rock' });
+    // Une case sans rien.
+    let empty: { gx: number; gz: number } | null = null;
+    for (let x = 0; x < 16 && !empty; x++)
+      for (let z = 0; z < 16 && !empty; z++) if (!r.inspect(x, z)) empty = { gx: x, gz: z };
+    expect(empty).not.toBeNull();
+  });
+});
