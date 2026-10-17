@@ -1,3 +1,4 @@
+import { getPseudo } from '../core/profile/store';
 import type { SaveLibrary } from '../core/save/library';
 import { splitPlayTime } from '../core/save/playTime';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
@@ -478,7 +479,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       'text',
       new URLSearchParams(window.location.search).get('join') ?? '',
     );
-    const who = fields(t('join.name'), 'text', t('join.defaultName'));
+    const who = fields(t('join.name'), 'text', getPseudo() || t('join.defaultName'));
     const pass = fields(t('join.password'), 'password');
     const status = el('p', 'note');
     const go = button(

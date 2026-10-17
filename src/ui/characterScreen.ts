@@ -14,7 +14,13 @@ import {
   type BodyKey,
   type ColorKey,
 } from '../core/profile/appearance';
-import { getCharacter, setCharacter } from '../core/profile/store';
+import {
+  getCharacter,
+  getPseudo,
+  PSEUDO_MAX,
+  setCharacter,
+  setPseudo,
+} from '../core/profile/store';
 import { Avatar, avatarFaceKeys, avatarReady, loadAvatar } from '../render/avatarModel';
 import { t, type TranslationKey } from '../i18n';
 
@@ -225,6 +231,14 @@ export function buildCharacterScreen(back: () => void): CharacterScreen {
 
   const panes = new Map<Tab, HTMLElement>();
   const tabButtons = new Map<Tab, HTMLButtonElement>();
+  const pseudoField = el('label', 'field char-pseudo');
+  pseudoField.append(el('span', undefined, t('char.pseudo')));
+  const pseudoInput = el('input');
+  pseudoInput.type = 'text';
+  pseudoInput.maxLength = PSEUDO_MAX;
+  pseudoInput.value = getPseudo();
+  pseudoInput.placeholder = t('join.defaultName');
+  pseudoField.append(pseudoInput);
   const tablist = el('div', 'ng-tabs');
   tablist.setAttribute('role', 'tablist');
   const showTab = (tab: Tab): void => {
@@ -246,7 +260,7 @@ export function buildCharacterScreen(back: () => void): CharacterScreen {
     pane.setAttribute('role', 'tabpanel');
     panes.set(id, pane);
   }
-  side.append(tablist, ...TABS.map((id) => panes.get(id) as HTMLElement));
+  side.append(pseudoField, tablist, ...TABS.map((id) => panes.get(id) as HTMLElement));
 
   // Corps.
   const body = panes.get('body') as HTMLElement;
@@ -339,6 +353,7 @@ export function buildCharacterScreen(back: () => void): CharacterScreen {
       t('char.validate'),
       () => {
         setCharacter(draft);
+        setPseudo(pseudoInput.value);
         back();
       },
       'menu-btn primary',

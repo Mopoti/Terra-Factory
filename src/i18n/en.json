@@ -1168,6 +1168,7 @@
   "creative.flyOn": "Free flight: Jump to rise, Crouch to descend (double Jump to land)",
   "creative.flyOff": "Free flight off",
   "menu.character": "Character",
+  "char.pseudo": "Nickname",
   "char.title": "Character customization",
   "char.loading": "Loading the character…",
   "char.unavailable": "The character model could not be loaded.",

@@ -1168,6 +1168,7 @@
   "creative.flyOn": "Vol libre : Saut pour monter, Accroupi pour descendre (double Saut pour se poser)",
   "creative.flyOff": "Vol libre terminé",
   "menu.character": "Personnage",
+  "char.pseudo": "Pseudo",
   "char.title": "Personnalisation du personnage",
   "char.loading": "Chargement du personnage…",
   "char.unavailable": "Le modèle du personnage n'a pas pu être chargé.",

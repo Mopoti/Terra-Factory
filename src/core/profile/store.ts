@@ -6,6 +6,9 @@ import { defaultAppearance, normalizeAppearance, type Appearance } from './appea
 
 const STORAGE_KEY = 'terra.character';
 
+const PSEUDO_KEY = 'terra.pseudo';
+export const PSEUDO_MAX = 20;
+
 let current: Appearance = defaultAppearance();
 const listeners = new Set<(a: Appearance) => void>();
 
@@ -43,4 +46,23 @@ export function setCharacter(next: Appearance): Appearance {
   }
   listeners.forEach((fn) => fn(current));
   return current;
+}
+
+/** Pseudo du joueur (vide tant qu'il n'en a pas choisi) : repris comme nom en multijoueur. */
+export function getPseudo(): string {
+  try {
+    return (localStorage.getItem(PSEUDO_KEY) ?? '').slice(0, PSEUDO_MAX);
+  } catch {
+    return '';
+  }
+}
+
+export function setPseudo(value: string): string {
+  const pseudo = value.trim().slice(0, PSEUDO_MAX);
+  try {
+    localStorage.setItem(PSEUDO_KEY, pseudo);
+  } catch {
+    /* stockage indisponible : le pseudo n'est pas conservé */
+  }
+  return pseudo;
 }
