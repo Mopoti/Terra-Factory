@@ -2517,3 +2517,127 @@ body.touch-mode .menu-corner {
   width: min(100%, max(240px, calc(100vh - 380px)));
   align-self: center;
 }
+
+/* --- Personnalisation du personnage --- */
+.panel.character {
+  width: min(980px, calc(100vw - 48px));
+}
+.char-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.char-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: radial-gradient(
+    ellipse at 50% 70%,
+    rgba(217, 130, 43, 0.18),
+    rgba(16, 20, 25, 0.4) 70%
+  );
+  border: 1px solid #2f3b48;
+  border-radius: 12px;
+  padding: 8px;
+}
+.char-canvas {
+  width: 100%;
+  aspect-ratio: 360 / 520;
+  max-height: 62vh;
+  cursor: grab;
+  touch-action: none;
+}
+.char-loading {
+  position: absolute;
+  top: 45%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #9fb0bf;
+}
+.char-loading:empty {
+  display: none;
+}
+.char-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.char-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 56px;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #1f2933;
+}
+.char-row .ng-segment {
+  grid-column: 2 / 4;
+  justify-self: start;
+}
+.char-row input[type='range'] {
+  accent-color: var(--accent);
+}
+.char-label {
+  font-size: 14px;
+}
+.char-value {
+  text-align: right;
+  font-size: 12px;
+  color: #9fb0bf;
+  font-variant-numeric: tabular-nums;
+}
+.char-colors {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1f2933;
+}
+.char-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.char-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #33414f;
+  cursor: pointer;
+  padding: 0;
+}
+.char-swatch[aria-pressed='true'] {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.char-free {
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #33414f;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.char-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.char-actions .menu-btn {
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .char-layout {
+    grid-template-columns: 1fr;
+  }
+  .char-row {
+    grid-template-columns: 1fr;
+  }
+}

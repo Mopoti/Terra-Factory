@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { PlayerInfo } from '../core/net/protocol';
 import { Miner, minerReady } from './minerModel';
+import { decodeLook } from '../core/profile/appearance';
 import { Avatar, avatarReady } from './avatarModel';
 
 /** Teinte propre à chaque joueur (silhouette, mannequin et point de la carte). */
@@ -79,8 +80,13 @@ export class RemotePlayersView {
         const hue = playerHue(p.id);
         const color = new THREE.Color().setHSL(hue / 360, 0.6, 0.5).getHex();
         // Personnage du jeu (homme ou femme selon le joueur, en attendant le profil), sinon le mannequin.
+        const look = decodeLook(p.look);
         entry.miner = avatarReady()
-          ? new Avatar(1.7, color, { silhouette: hue % 2 === 0 ? 'homme' : 'femme' })
+          ? new Avatar(
+              1.7,
+              color,
+              look ? { appearance: look } : { silhouette: hue % 2 === 0 ? 'homme' : 'femme' },
+            )
           : new Miner(1.7, color);
         entry.miner.root.position.y = 0.85;
         entry.group.add(entry.miner.root);

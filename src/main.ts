@@ -6,6 +6,8 @@ import {
   type SaveSlot,
 } from './core/save/saveIndex';
 import { GameState } from './core/game/state';
+import { encodeLook } from './core/profile/appearance';
+import { getCharacter, loadCharacter } from './core/profile/store';
 import { SaveLibrary } from './core/save/library';
 import { LocalStorageStorage, openBestStorage } from './core/save/storage';
 import { initLocale, t, type TranslationKey } from './i18n';
@@ -35,6 +37,7 @@ initLocale();
 installKeyHints();
 await initKeyboardLayout();
 loadSettings();
+loadCharacter();
 startApplyingSettings();
 watchVisibility();
 document.title = t('game.title');
@@ -348,6 +351,7 @@ function startGame(
                 world: game.world,
                 options: game.options,
                 hostName: t('join.defaultName'),
+                hostLook: encodeLook(getCharacter()),
                 players: s.savedPlayers,
                 approve: (name) => window.confirm(t('pause.multi.approve', { name })),
               });

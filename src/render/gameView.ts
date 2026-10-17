@@ -150,6 +150,7 @@ import {
 import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
+import { getCharacter } from '../core/profile/store';
 import { loadPickModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
@@ -295,7 +296,7 @@ export function startGameView(
     if ((!own && !ok) || !viewAlive) return;
     const make = (firstPerson: boolean): Miner | Avatar =>
       own
-        ? new Avatar(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson })
+        ? new Avatar(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson, appearance: getCharacter() })
         : new Miner(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson });
     miner = make(false);
     player.add(miner.root);

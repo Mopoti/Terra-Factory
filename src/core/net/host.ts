@@ -3,6 +3,7 @@
  * applique sur l'état de CE joueur (même monde, fiche individuelle) avec son propre terrain, puis répond. Il diffuse
  * régulièrement l'état du monde et la position des joueurs.
  */
+import { decodeLook, encodeLook } from '../profile/appearance';
 import { WEAPONS, isWeapon } from '../data/weapons';
 import type { Threat } from '../game/threat';
 import type { Factory } from '../factory/factory';
@@ -40,6 +41,8 @@ export interface HostOptions {
   world: WorldParams;
   options: GameOptions;
   hostName: string;
+  /** Apparence de l'hôte (forme courte, voir `encodeLook`). */
+  hostLook?: string;
   /** Partie privée : l'hôte accepte ou refuse chaque arrivant. Sans réponse, tout le monde est refusé. */
   approve?: (name: string) => boolean | Promise<boolean>;
   /** Secondes entre deux envois de l'état du monde / des positions. */
@@ -98,7 +101,15 @@ export class HostSession {
   private changeCb: (() => void) | null = null;
 
   constructor(private readonly opts: HostOptions) {
-    this.hostInfo = { id: HOST_ID, name: opts.hostName, x: 0, y: 0, z: 0, yaw: 0 };
+    this.hostInfo = {
+      id: HOST_ID,
+      name: opts.hostName,
+      x: 0,
+      y: 0,
+      z: 0,
+      yaw: 0,
+      look: opts.hostLook,
+    };
     for (const [name, p] of Object.entries(opts.players ?? {})) {
       this.profiles.set(name, {
         id: `p${this.nextId++}`,
@@ -283,7 +294,17 @@ export class HostSession {
       factory: this.opts.factory,
       blockedFor: this.opts.blockedFor,
     });
-    const info: PlayerInfo = { id: profile.id, name, x: 0, y: 0, z: 0, yaw: 0 };
+    // L'apparence reçue est relue puis réécrite : un texte invalide ou trop long est ignoré.
+    const decoded = decodeLook(msg.look);
+    const info: PlayerInfo = {
+      id: profile.id,
+      name,
+      x: 0,
+      y: 0,
+      z: 0,
+      yaw: 0,
+      look: decoded ? encodeLook(decoded) : undefined,
+    };
     const snapshot = this.worldSnapshot();
     const sent = new Map(
       Object.entries(snapshot).map(([k, v]) => [k, JSON.stringify(v)] as [string, string]),

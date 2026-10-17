@@ -15,13 +15,15 @@ export interface PlayerInfo {
   y: number;
   z: number;
   yaw: number;
+  /** Apparence du personnage (forme courte, voir `encodeLook`) ; absente : couleur de joueur par défaut. */
+  look?: string;
 }
 
 export type RefusalReason = 'version' | 'closed' | 'full' | 'password' | 'denied' | 'bad-request';
 
 /** Invité → hôte. */
 export type ToHost =
-  | { t: 'join'; version: number; name: string; password?: string }
+  | { t: 'join'; version: number; name: string; password?: string; look?: string }
   | { t: 'cmd'; seq: number; cmd: Command }
   | { t: 'pos'; x: number; y: number; z: number; yaw: number }
   /** Action du monde jouée chez l'invité, à rejouer chez l'hôte (méthode de la liste blanche et ses arguments). */

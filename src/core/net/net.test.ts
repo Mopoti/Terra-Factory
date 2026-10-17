@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Factory, type FactoryWorld } from '../factory/factory';
 import { GameState } from '../game/state';
 import { DEFAULT_GAME_OPTIONS, normalizeMultiplayer, type GameOptions } from '../save/saveIndex';
+import { decodeLook, defaultAppearance, encodeLook } from '../profile/appearance';
 import { defaultWorldParams } from '../world/worldgen';
 import { GuestClient, RefusedError } from './guest';
 import { HostSession } from './host';
@@ -63,6 +64,20 @@ describe('rejoindre une partie', () => {
     expect(host.playerCount).toBe(2);
     expect(guest.players.map((p) => p.name)).toEqual(['Hôte', 'Ana']);
     expect(guest.worldParams.seed).toBe('seed');
+  });
+
+  it('l’apparence du personnage est transmise aux autres joueurs (un texte invalide est ignoré)', async () => {
+    const { net, host, code } = await setup();
+    const look = defaultAppearance('femme');
+    look.colors.suit = '#123456';
+    const ana = await GuestClient.connect(net, code, { name: 'Ana', look: encodeLook(look) });
+    const bad = await GuestClient.connect(net, code, { name: 'Bob', look: "n'importe quoi" });
+    await flush();
+    const byName = (n: string) => host.players().find((p) => p.name === n);
+    expect(decodeLook(byName('Ana')?.look)).toEqual(look);
+    expect(byName('Bob')?.look).toBeUndefined();
+    expect(ana.players.find((p) => p.name === 'Ana')?.look).toBe(encodeLook(look));
+    expect(bad.you.name).toBe('Bob');
   });
 
   it('mot de passe : refusé s’il est faux, accepté s’il est bon', async () => {

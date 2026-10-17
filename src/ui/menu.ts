@@ -22,9 +22,10 @@ import { confirmModal, infoModal, promptModal } from './modal';
 import { GuestClient, RefusedError } from '../core/net/guest';
 import { parseInviteCode, type Network } from '../core/net/transport';
 import { buildSettingsPanel } from './settingsScreen';
+import { buildCharacterScreen } from './characterScreen';
 import './menu.css';
 
-type Screen = 'main' | 'newGame' | 'loadGame' | 'settings' | 'join';
+type Screen = 'main' | 'newGame' | 'loadGame' | 'settings' | 'join' | 'character';
 
 /** Icône « corbeille ». */
 const TRASH_ICON =
@@ -151,6 +152,7 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     if (games.length > 0) panel.append(button(t('menu.loadGame'), () => go('loadGame')));
     else panel.append(button(t('manage.import'), () => void importFromFile()));
     if (options.network) panel.append(button(t('menu.join'), () => go('join')));
+    panel.append(button(t('menu.character'), () => go('character')));
     panel.append(button(t('menu.settings'), () => go('settings')));
     if (canQuit()) panel.append(button(t('menu.quit'), () => window.close()));
 
@@ -541,6 +543,12 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       case 'join':
         root.append(joinPanel());
         break;
+      case 'character': {
+        const screen = buildCharacterScreen(() => go('main'));
+        disposeEditor = screen.dispose;
+        root.append(screen.element);
+        break;
+      }
     }
     const first = screen === 'newGame' ? root.querySelector('input') : root.querySelector('button');
     first?.focus({ preventScroll: true });

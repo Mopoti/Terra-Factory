@@ -8,16 +8,48 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import {
+  FACE_KEYS,
+  bodyScales,
+  type Appearance,
+  type FaceKey,
+  type Silhouette,
+} from '../core/profile/appearance';
 
-export type Silhouette = 'homme' | 'femme';
+export type { Silhouette };
 
 /** Taille du personnage dans le fichier (m), de la plante des pieds au sommet du crâne. */
 const MODEL_HEIGHT_M = 1.8;
+/** Hauteur des hanches dans le fichier (m) : de là partent les jambes. */
+const HIP_HEIGHT_M = 0.9;
 
 const sources = new Map<Silhouette, THREE.Group>();
 let loading: Promise<boolean> | null = null;
 
 export const avatarReady = (): boolean => sources.size === 2;
+
+/** Formes de déformation du visage attendues dans le modèle (voir `docs/personnage.md`) : `<nom>` pousse dans un sens, `<nom>_moins` dans l'autre. */
+export const FACE_MORPHS: Record<FaceKey, string> = {
+  noseSize: 'nez_taille',
+  noseWidth: 'nez_largeur',
+  noseHeight: 'nez_hauteur',
+  mouthWidth: 'bouche_largeur',
+  lips: 'levres',
+  mouthHeight: 'bouche_hauteur',
+  eyeShape: 'yeux_forme',
+  eyeSpacing: 'yeux_ecart',
+};
+
+/** Réglages du visage que le modèle chargé sait appliquer (vide tant qu'il n'a pas de formes de déformation). */
+export function avatarFaceKeys(): FaceKey[] {
+  const found = new Set<string>();
+  for (const source of sources.values())
+    source.traverse((o) => {
+      const dict = (o as THREE.Mesh).morphTargetDictionary;
+      if (dict) for (const name of Object.keys(dict)) found.add(name);
+    });
+  return FACE_KEYS.filter((k) => found.has(FACE_MORPHS[k]));
+}
 
 /** Charge (une seule fois) les deux silhouettes ; false si un fichier manque (on garde le mannequin). */
 export function loadAvatar(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<boolean> {
@@ -60,20 +92,28 @@ export class Avatar {
   /** Matériau de la combinaison. */
   readonly suit: THREE.MeshStandardMaterial;
   private readonly materials: THREE.Material[] = [];
+  private readonly named = new Map<string, THREE.MeshStandardMaterial>();
+  private readonly bones = new Map<string, THREE.Bone>();
+  private readonly morphMeshes: THREE.Mesh[] = [];
+  private readonly model: THREE.Group;
+  private readonly baseHeight: number;
   private readonly joints = new Map<string, Joint>();
   private readonly firstPerson: boolean;
   private phase = 0;
   private strike = 0;
   private amount = 0;
 
-  /** `height` : taille (m) ; `color` : couleur de la combinaison ; `silhouette` : homme ou femme. */
+  /**
+   * `height` : taille (m) ; `color` : couleur de la combinaison ; `silhouette` : homme ou femme ; `appearance` : le
+   * profil du joueur (silhouette, morphologie, couleurs), qui remplace `color` et `silhouette`.
+   */
   constructor(
     height: number,
     color: number,
-    options: { firstPerson?: boolean; silhouette?: Silhouette } = {},
+    options: { firstPerson?: boolean; silhouette?: Silhouette; appearance?: Appearance } = {},
   ) {
     this.firstPerson = options.firstPerson ?? false;
-    const source = sources.get(options.silhouette ?? 'homme');
+    const source = sources.get(options.appearance?.silhouette ?? options.silhouette ?? 'homme');
     if (!source) throw new Error('Personnage non chargé');
     const model = cloneSkinned(source) as THREE.Group;
     const byName = new Map<string, THREE.MeshStandardMaterial>();
@@ -82,6 +122,7 @@ export class Avatar {
       if ((o as THREE.Bone).isBone) bones.set(o.name, o as THREE.Bone);
       const mesh = o as THREE.SkinnedMesh;
       if (!mesh.isSkinnedMesh && !(mesh as unknown as THREE.Mesh).isMesh) return;
+      if (mesh.morphTargetDictionary) this.morphMeshes.push(mesh);
       const own = (m: THREE.Material): THREE.MeshStandardMaterial => {
         const name = m.name.replace(/\.\d+$/, '');
         let c = byName.get(name);
@@ -101,6 +142,8 @@ export class Avatar {
       mesh.castShadow = !this.firstPerson;
       mesh.frustumCulled = false;
     });
+    this.named = byName;
+    this.bones = bones;
     this.suit = byName.get('combinaison') ?? new THREE.MeshStandardMaterial();
     this.suit.color.setHex(color);
     // Les bandes : une teinte plus claire de la même couleur, pour que chaque joueur reste reconnaissable.
@@ -123,7 +166,57 @@ export class Avatar {
     const k = height / MODEL_HEIGHT_M;
     model.scale.setScalar(k);
     model.position.y = -height / 2;
+    this.model = model;
+    this.baseHeight = height;
     this.root.add(model);
+    if (options.appearance) this.look(options.appearance);
+  }
+
+  /**
+   * Applique le profil du joueur : couleurs, coupe de cheveux, morphologie (échelles des os, la taille du corps) et
+   * visage (formes de déformation, si le modèle en a). À appeler avant d'attacher un outil à la main.
+   */
+  look(a: Appearance): void {
+    const color = (name: string, hex: string): void => {
+      this.named.get(name)?.color.set(hex);
+    };
+    color('combinaison', a.colors.suit);
+    color('bande', a.colors.stripe);
+    color('couture', a.colors.suit);
+    this.named.get('couture')?.color.multiplyScalar(0.7);
+    color('peau', a.colors.skin);
+    color('cheveux', a.colors.hair);
+    color('iris', a.colors.eyes);
+    const hair = this.named.get('cheveux');
+    if (hair) hair.visible = a.hairStyle !== 'none';
+    // Morphologie : des échelles sur les os du tronc et des jambes ; ce qui ne doit pas grossir est compensé.
+    const s = bodyScales(a.body, a.silhouette);
+    const set = (name: string, x: number, y: number, z: number): void => {
+      this.bones.get(name)?.scale.set(x, y, z);
+    };
+    set('bassin', s.hips, 1, s.hips);
+    set('poitrine', s.shoulders, 1, s.chest / s.hips);
+    set('cou', 1 / (s.hips * s.shoulders), 1, 1 / s.chest);
+    for (const side of ['g', 'd']) {
+      set(`cuisse_${side}`, s.thighs / s.hips, s.legs, s.thighs / s.hips);
+      set(`pied_${side}`, 1, 1 / s.legs, 1);
+    }
+    const k = (this.baseHeight / MODEL_HEIGHT_M) * s.size;
+    this.model.scale.setScalar(k);
+    // Des jambes plus longues descendent les pieds : on remonte le corps de la même longueur.
+    this.model.position.y = -this.baseHeight / 2 + HIP_HEIGHT_M * (s.legs - 1) * k;
+    for (const key of FACE_KEYS) this.morph(FACE_MORPHS[key], a.face[key]);
+  }
+
+  /** Règle une forme de déformation de −1 à +1 (`<nom>` vers le plus, `<nom>_moins` vers le moins). */
+  private morph(name: string, value: number): void {
+    for (const mesh of this.morphMeshes) {
+      const dict = mesh.morphTargetDictionary;
+      const influences = mesh.morphTargetInfluences;
+      if (!dict || !influences) continue;
+      if (name in dict) influences[dict[name]] = Math.max(0, value);
+      if (`${name}_moins` in dict) influences[dict[`${name}_moins`]] = Math.max(0, -value);
+    }
   }
 
   /** Plans de découpe (vue à la 1re personne : le corps derrière la caméra ne se voit pas). */

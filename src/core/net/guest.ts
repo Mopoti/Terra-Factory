@@ -15,6 +15,8 @@ import {
   type ToGuest,
   type ToHost,
 } from './protocol';
+import { encodeLook } from '../profile/appearance';
+import { getCharacter } from '../profile/store';
 import type { Link, Network } from './transport';
 
 export class RefusedError extends Error {
@@ -61,7 +63,7 @@ export class GuestClient {
   static async connect(
     network: Network,
     code: string,
-    who: { name: string; password?: string },
+    who: { name: string; password?: string; look?: string },
   ): Promise<GuestClient> {
     const link = await network.join(code);
     return new Promise<GuestClient>((resolve, reject) => {
@@ -77,6 +79,7 @@ export class GuestClient {
         version: PROTOCOL_VERSION,
         name: who.name,
         password: who.password,
+        look: who.look ?? encodeLook(getCharacter()),
       } satisfies ToHost);
     });
   }

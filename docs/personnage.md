@@ -58,6 +58,15 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    joueur est un homme en attendant le profil ; les autres joueurs sont homme ou femme selon leur identifiant. Le
    mannequin (`minerModel.ts`) reste en secours si les fichiers manquent. **À regarder en jouant** : proportions, cou,
    visage, cheveux (une seule coupe par silhouette pour l'instant).
-2. Formes de déformation (corps et visage), coupes de cheveux, couleurs.
-3. Écran de personnalisation à l'accueil, enregistrement du profil, envoi aux autres joueurs.
+2. 🟡 Corps et couleurs faits côté jeu ; visage et coupes dépendent de Blender. Le corps est déformé par **échelle des
+   os** (taille, carrure, corpulence, longueur des jambes, poitrine : `bodyScales` dans
+   `src/core/profile/appearance.ts`, appliqué par `Avatar.look`). Couleurs libres (combinaison, bandes, peau, cheveux,
+   yeux). Coupes de cheveux : `model` (celle du modèle) ou `none` pour l'instant. **À faire dans Blender** : formes de
+   déformation (*shape keys*) nommées `nez_taille`, `nez_largeur`, `nez_hauteur`, `bouche_largeur`, `levres`,
+   `bouche_hauteur`, `yeux_forme`, `yeux_ecart` (valeur positive = `<nom>`, négative = `<nom>_moins`). Le jeu les
+   détecte seul : les curseurs du visage n'apparaissent que pour celles que le modèle contient. Pièces de cheveux
+   interchangeables à ajouter ensuite.
+3. ✅ Écran « Personnage » à l'accueil (onglets Corps / Visage / Cheveux / Tenue, rotation, aléatoire, réinitialiser,
+   valider), profil enregistré (`terra.character`, `src/core/profile/store.ts`), repris dans chaque partie et envoyé aux
+   autres joueurs (champ `look`, chaîne courte `encodeLook`/`decodeLook`).
 4. Animations sur le squelette commun.
