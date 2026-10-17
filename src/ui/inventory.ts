@@ -434,6 +434,30 @@ export function mountInventory(
       grid.append(cell);
     }
     bag.append(grid);
+    // Mode Créatif : corbeille (glisser une pile dessus, ou y poser la pile tenue au curseur, la détruit).
+    if (state.creative) {
+      const trash = el('button', 'slot trash');
+      trash.type = 'button';
+      trash.title = t('inv.trashHint');
+      trash.append(el('span', 'slot-name', `🗑 ${t('inv.trash')}`));
+      trash.addEventListener('click', () => {
+        if (state.trashHand() > 0) playSfx('pickup');
+        render();
+      });
+      trash.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(BAG_SLOT_TYPE)) e.preventDefault();
+      });
+      trash.addEventListener('drop', (e) => {
+        const from = e.dataTransfer?.getData(BAG_SLOT_TYPE);
+        if (from === undefined || from === '') return;
+        e.preventDefault();
+        if (state.trashBagSlot(Number(from)) > 0) playSfx('pickup');
+        selected = null;
+        selectedSlot = null;
+        render();
+      });
+      bag.append(trash);
+    }
     const count = selected ? (state.inventory[selected] ?? 0) : 0;
     if (selected && count > 0) {
       bag.append(

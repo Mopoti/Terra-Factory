@@ -62,4 +62,4 @@ export const sellPrice = (id: string): number => Math.max(1, Math.floor(itemValu
 export const buyPrice = (id: string): number => Math.max(1, Math.ceil(itemValue(id) * 1.5));
 
 /** Tout est en vente, sauf les machines au sol déjà posées : le catalogue du comptoir. */
-export const TRADABLE: string[] = ITEMS.map((i) => i.id);
+export const TRADABLE: string[] = ITEMS.filter((i) => !i.creativeOnly).map((i) => i.id);

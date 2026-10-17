@@ -292,12 +292,36 @@ const NATURE_NAMES = ['arbre', 'buisson'].flatMap((kind) =>
     Array.from({ length: NATURE_VARIANTS }, (_, i) => `${kind}_${b}_${i + 1}`),
   ),
 );
+/** Rochers maison (`blender/scripts/mineraux.py`) : `rocher_<biome>_<n>`. */
+export const ROCK_VARIANTS = 3;
+/** Gisement du jeu → nom des amas de minerai maison (`minerai_<nom>_<n>`). */
+export const ORE_FILE_NAMES: Record<string, string> = {
+  iron_ore: 'fer',
+  copper_ore: 'cuivre',
+  coal: 'charbon',
+  zinc_ore: 'zinc',
+  bauxite: 'bauxite',
+  stone_ore: 'pierre',
+  uraninite: 'uraninite',
+  sand: 'sable',
+  oil: 'petrole',
+};
+export const ORE_VARIANTS = 2;
+const MINERAL_NAMES = [
+  ...NATURE_FILE_BIOMES.flatMap((b) =>
+    Array.from({ length: ROCK_VARIANTS }, (_, i) => `rocher_${b}_${i + 1}`),
+  ),
+  ...Object.values(ORE_FILE_NAMES).flatMap((o) =>
+    Array.from({ length: ORE_VARIANTS }, (_, i) => `minerai_${o}_${i + 1}`),
+  ),
+];
 
 const TERRA_NAMES = [
   ...new Set([
     ...PIPE_NAMES,
     ...Object.keys(EXTRA_GROUPS),
     ...NATURE_NAMES,
+    ...MINERAL_NAMES,
     ...Object.values(TERRA_MODELS),
     ...Object.values(TERRA_BELT_MODELS)
       .flat()

@@ -65,6 +65,22 @@ export interface SpawnPoint {
   kind: 'bag' | 'bed';
 }
 
+/**
+ * Ressource posée par le joueur en mode Créatif (onglet « Ressources ») : arbre, rocher, buisson (objet de 2 × 2 cases
+ * ancré en `gx, gz`), case de minerai, ou case d'eau (`id` = `water`). `amount` compte aussi ce qui avait déjà été
+ * prélevé sur cette case avant la pose (`taken`), pour que le reste affiché soit la quantité tirée au hasard.
+ */
+export interface PlacedResource {
+  id: string;
+  gx: number;
+  gz: number;
+  amount: number;
+  /** Objet : taille (0 petit, 1 moyen, 2 grand), échelle et orientation. */
+  size?: number;
+  scale?: number;
+  rotation?: number;
+}
+
 /** Objets déposés au sol par le joueur. */
 export interface DroppedStack {
   id: string;
@@ -147,6 +163,10 @@ export interface WorldChanges {
   rifleAmmo: number;
   /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
   energyVersion: number;
+  /** Ressources posées en mode Créatif (voir `PlacedResource`). */
+  placed: PlacedResource[];
+  /** Cases d'eau du monde d'origine supprimées en mode Créatif (« gx,gz »). */
+  dried: string[];
   /** Version des emprises des machines (2 = tapis en tuiles de 2 × 2, machines +1 case ; 3-4 = emprises rectangulaires (+1 case de profondeur) et grosses machines 4 × 4 ; 5 = chevalet de pompage 4 × 4 ; 6 = four électrique, estampeuse, concasseur, Bessemer, bétonnière et station de lavage 4 × 4). */
   footprintVersion: number;
 }
@@ -202,8 +222,54 @@ export function emptyChanges(): WorldChanges {
     ammo: 0,
     rifleAmmo: 0,
     energyVersion: 1,
+    placed: [],
+    dried: [],
     footprintVersion: FOOTPRINT_VERSION,
   };
+}
+
+/** Plafond des ressources posées en mode Créatif. */
+export const MAX_PLACED = 20000;
+/** Objets du monde (2 × 2 cases) que le mode Créatif peut poser. */
+export const PLACED_OBJECT_CELLS = 2;
+
+/**
+ * Le monde d'origine d'un chunk, plus les ressources posées en mode Créatif (elles remplacent une case de minerai
+ * existante) et moins les cases d'eau supprimées. Les quantités restent celles d'origine (voir `applyChanges`).
+ */
+export function withPlaced(chunk: ChunkData, changes: WorldChanges): ChunkData {
+  if (changes.placed.length === 0 && changes.dried.length === 0) return chunk;
+  const inChunk = changes.placed.filter(
+    (p) =>
+      Math.floor(p.gx / CHUNK_CELLS) === chunk.cx && Math.floor(p.gz / CHUNK_CELLS) === chunk.cz,
+  );
+  const dried = new Set(changes.dried);
+  if (inChunk.length === 0 && !chunk.water.some((w) => dried.has(cellKey(w.gx, w.gz))))
+    return chunk;
+  const objects = [...chunk.objects];
+  const ore = new Map(chunk.ore.map((o) => [cellKey(o.gx, o.gz), o]));
+  const water = chunk.water.filter((w) => !dried.has(cellKey(w.gx, w.gz)));
+  for (const p of inChunk) {
+    if (p.id === 'water') {
+      if (!water.some((w) => w.gx === p.gx && w.gz === p.gz)) water.push({ gx: p.gx, gz: p.gz });
+      continue;
+    }
+    const kind = resourceById(p.id).kind;
+    if (kind === 'deposit')
+      ore.set(cellKey(p.gx, p.gz), { id: p.id, gx: p.gx, gz: p.gz, amount: p.amount });
+    else if (kind === 'object')
+      objects.push({
+        id: p.id,
+        gx: p.gx,
+        gz: p.gz,
+        cells: PLACED_OBJECT_CELLS,
+        scale: p.scale ?? 1,
+        rotation: p.rotation ?? 0,
+        amount: p.amount,
+        size: p.size ?? 1,
+      });
+  }
+  return { ...chunk, objects, ore: [...ore.values()], water };
 }
 
 /** Applique les changements du joueur à un chunk fraîchement généré. */
@@ -225,7 +291,8 @@ export function extraNestsIn(changes: WorldChanges, cx: number, cz: number): Pla
     }));
 }
 
-export function applyChanges(chunk: ChunkData, changes: WorldChanges): ChunkData {
+export function applyChanges(source: ChunkData, changes: WorldChanges): ChunkData {
+  const chunk = withPlaced(source, changes);
   const hasTaken = Object.keys(changes.taken).length > 0;
   const extra = extraNestsIn(changes, chunk.cx, chunk.cz);
   if (!hasTaken && extra.length === 0) return chunk;
@@ -528,6 +595,32 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   const maxId = result.drops.reduce((m, d) => Math.max(m, Number(d.id.replace(/\D/g, '')) || 0), 0);
   result.nextDropId = Math.max(isNum(r.nextDropId) ? Math.floor(r.nextDropId) : 1, maxId + 1);
+  for (const raw of Array.isArray(r.placed) ? r.placed.slice(0, MAX_PLACED) : []) {
+    const o = rec(raw);
+    if (!o || typeof o.id !== 'string' || !isNum(o.gx) || !isNum(o.gz) || !isNum(o.amount))
+      continue;
+    if (o.id !== 'water') {
+      try {
+        const kind = resourceById(o.id).kind;
+        if (kind !== 'object' && kind !== 'deposit') continue;
+      } catch {
+        continue;
+      }
+    }
+    result.placed.push({
+      id: o.id,
+      gx: Math.floor(o.gx),
+      gz: Math.floor(o.gz),
+      amount: Math.max(0, Math.floor(o.amount)),
+      ...(isNum(o.size) ? { size: Math.max(0, Math.min(2, Math.floor(o.size))) } : {}),
+      ...(isNum(o.scale) ? { scale: o.scale } : {}),
+      ...(isNum(o.rotation) ? { rotation: o.rotation } : {}),
+    });
+  }
+  if (Array.isArray(r.dried))
+    result.dried = r.dried.filter(
+      (k): k is string => typeof k === 'string' && /^-?\d+,-?\d+$/.test(k),
+    );
   if (r.footprintVersion !== FOOTPRINT_VERSION && result.machines.length > 0)
     migrateFootprints(result);
   return result;

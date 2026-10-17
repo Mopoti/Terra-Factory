@@ -3,7 +3,7 @@ import { CELL_SIZE_M, CHUNK_CELLS } from '../core/constants';
 import { REACH_M, itemById } from '../core/data/items';
 import { resourceById, type DepositResource, type ObjectResource } from '../core/data/resources';
 import { distanceToFootprint, isWithinReach } from '../core/game/reach';
-import type { GameState } from '../core/game/state';
+import { CREATIVE_DESTROY_SECONDS, type GameState } from '../core/game/state';
 import { cellKey, type DroppedStack } from '../core/game/worldChanges';
 import type { ChunkData } from '../core/world/worldgen';
 import { playSfx } from '../audio/sfx';
@@ -36,12 +36,14 @@ const TREE_HEIGHTS_M = [3.9, 5.5, 7.2];
 const ROCK_HEIGHTS_M = [0.45, 0.8, 1.3];
 const BUSH_HEIGHT_M = 0.6;
 const DROP_PICK_RADIUS_M = 0.5;
+/** Mode Créatif : portée pour récolter ou détruire une ressource (m). */
+const CREATIVE_REACH_M = 24;
 /** Portée pour frapper une construction (m). */
 const STRUCTURE_REACH_M = 4;
 
 /** Une ressource que le joueur peut récolter à la main. */
 export interface Target {
-  kind: 'object' | 'ore';
+  kind: 'object' | 'ore' | 'water';
   resId: string;
   key: string;
   gx: number;
@@ -55,6 +57,8 @@ export interface Target {
   height: number;
   item: string;
   secondsPerUnit: number;
+  /** Mode Créatif : ne se récolte pas, se détruit seulement (eau, pétrole). */
+  destroyOnly?: boolean;
 }
 
 /** Une construction ou une machine que l'on peut frapper pour la démolir et récupérer ses ressources. */
@@ -211,7 +215,8 @@ export class Interaction {
     }
     for (const o of data.ore) {
       const res = resourceById(o.id) as DepositResource;
-      if (res.liquid) continue;
+      // Le pétrole ne se récolte pas à la main ; en Créatif, on peut le détruire.
+      if (res.liquid && !this.state.creative) continue;
       const key = cellKey(o.gx, o.gz);
       add({
         kind: 'ore',
@@ -225,9 +230,34 @@ export class Interaction {
         height: ORE_HEIGHT_M,
         item: res.harvest.item,
         secondsPerUnit: res.harvest.secondsPerUnit,
+        ...(res.liquid ? { destroyOnly: true } : {}),
       });
     }
+    // Mode Créatif : les cases d'eau se visent pour être détruites.
+    if (this.state.creative) {
+      for (const w of data.water) {
+        add({
+          kind: 'water',
+          resId: 'water',
+          key: cellKey(w.gx, w.gz),
+          gx: w.gx,
+          gz: w.gz,
+          cells: 1,
+          total: 0,
+          left: 0,
+          height: 0.06,
+          item: '',
+          secondsPerUnit: 1,
+          destroyOnly: true,
+        });
+      }
+    }
     this.byChunk.set(chunkKey, keys);
+  }
+
+  /** Ressource (arbre, rocher, buisson, case de minerai ou d'eau) qui occupe cette case, ou null. */
+  targetAt(gx: number, gz: number): Target | null {
+    return this.targets.get(cellKey(gx, gz)) ?? null;
   }
 
   unregisterChunk(chunkKey: string): void {
@@ -411,7 +441,11 @@ export class Interaction {
       hit !== null &&
       isWithinReach(
         this.reach(hit, frame.player),
-        hit.type === 'structure' ? STRUCTURE_REACH_M : REACH_M,
+        hit.type === 'structure'
+          ? STRUCTURE_REACH_M
+          : this.state.creative
+            ? CREATIVE_REACH_M
+            : REACH_M,
       );
     this.aimed = reachable;
     this.showHighlight(hit, reachable);
@@ -431,12 +465,19 @@ export class Interaction {
           ? hit.structure.id
           : hit.target.key;
     const item =
-      hit.type === 'drop' ? hit.stack.item : hit.type === 'structure' ? '' : hit.target.item;
+      hit.type === 'drop'
+        ? hit.stack.item
+        : hit.type === 'structure' || hit.target.destroyOnly
+          ? ''
+          : hit.target.item;
+    // Mode Créatif : clic droit maintenu sur une ressource (arbre, rocher, minerai, eau) pour la détruire en 1 s.
+    const destroying = hit.type === 'target' && this.state.creative && frame.demolishing;
     // À mains nues, abattre, casser ou miner est long ; l'outil de la case d'outils va plus vite (et le fer donne plus).
     const needsTool = hit.type === 'target' && hit.target.resId !== 'fiber_bush';
     const tool = needsTool ? this.state.harvestTool() : null;
-    const seconds =
-      hit.type === 'drop'
+    const seconds = destroying
+      ? CREATIVE_DESTROY_SECONDS
+      : hit.type === 'drop'
         ? PICKUP_SECONDS
         : hit.type === 'structure'
           ? hit.structure.seconds
@@ -451,22 +492,41 @@ export class Interaction {
       return;
     }
     // Les constructions se démolissent au clic droit maintenu ; le reste se récolte au clic gauche.
-    const holdingNow = hit.type === 'structure' ? frame.demolishing : frame.active;
+    const holdingNow =
+      hit.type === 'structure'
+        ? frame.demolishing
+        : destroying || (frame.active && !(hit.type === 'target' && hit.target.destroyOnly));
     if (reachable && holdingNow) {
       this.working = hit.type === 'target' ? (tool ? 'tool' : 'hands') : null;
-      if (this.holdingId !== id) {
-        this.holdingId = id;
+      if (this.holdingId !== (destroying ? `x:${id}` : id)) {
+        this.holdingId = destroying ? `x:${id}` : id;
         this.holdingTime = 0;
       }
       this.holdingTime += frame.dt;
-      while (hit.type === 'structure' && this.holdingTime >= seconds) {
+      if (destroying && hit.type === 'target') {
+        if (this.holdingTime >= seconds) {
+          this.holdingTime = 0;
+          this.holdingId = null;
+          const t0 = hit.target;
+          if (this.state.destroyResource(t0.kind, t0.gx, t0.gz, t0.total)) {
+            playSfx(
+              t0.resId === 'tree' ? 'treeFall' : t0.kind === 'ore' ? 'oreBreak' : 'rockBreak',
+            );
+            this.options.rebuildChunk(
+              Math.floor(t0.gx / CHUNK_CELLS),
+              Math.floor(t0.gz / CHUNK_CELLS),
+            );
+          }
+        }
+      }
+      while (!destroying && hit.type === 'structure' && this.holdingTime >= seconds) {
         // Frappée assez longtemps : la construction est démolie et ses ressources reviennent.
         this.holdingTime = 0;
         this.holdingId = null;
         this.options.demolish?.(hit.structure.id);
         break;
       }
-      while (hit.type !== 'structure' && this.holdingTime >= seconds) {
+      while (!destroying && hit.type !== 'structure' && this.holdingTime >= seconds) {
         this.holdingTime -= seconds;
         const result =
           hit.type === 'drop'
@@ -520,7 +580,7 @@ export class Interaction {
           : t(`target.${hit.target.resId}` as TranslationKey);
     if (item && !bagFull && !this.state.hasRoomFor(item)) bagFull = true;
     // Ressource récoltable : « [icône] Pierre : 309 » sur une seule ligne (l'état n'apparaît que s'il y a un souci).
-    const compact = hit.type === 'target' && reachable && !bagFull;
+    const compact = hit.type === 'target' && reachable && !bagFull && !hit.target.destroyOnly;
     if (compact && hit.type === 'target') {
       const swatch = document.createElement('i');
       swatch.className = 'interact-icon';
@@ -539,11 +599,12 @@ export class Interaction {
             : 'harvest.structureUse'
           : 'harvest.demolish',
       );
-    } else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
+    } else if (destroying || hit.target.destroyOnly) status = t('creative.destroy');
+    else status = t('harvest.left', { n: String(hit.target.left), item: itemName(item) });
     this.hudDetail.textContent = compact ? '' : status;
     this.hudDetail.hidden = compact;
     this.hudDetail.classList.toggle('warn', !reachable || bagFull);
-    const holding = reachable && holdingNow && this.holdingId === id;
+    const holding = reachable && holdingNow && this.holdingId === (destroying ? `x:${id}` : id);
     this.hudBar.hidden = !holding;
     this.hudFill.style.width = `${Math.min(100, (this.holdingTime / seconds) * 100)}%`;
     this.hud.hidden = false;

@@ -1,5 +1,7 @@
 # Personnage du joueur : modèle et personnalisation
 
+Pour modifier le personnage (forme, couleurs, cheveux…), voir le mode d'emploi [`personnage-modifier.md`](personnage-modifier.md).
+
 Proposition validée par le porteur du projet (15 octobre 2026), **à réaliser après les machines et les éléments du
 monde** (arbres, rochers, minerais). Elle remplacera le mannequin provisoire actuel (`src/render/minerModel.ts`, avec
 casque à lampe).
@@ -46,8 +48,16 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
 
 ## Étapes
 
-1. Modèle de base homme et femme, squelette commun, combinaison (Blender), premier essai dans le jeu à la place du
-   mannequin.
+1. ✅ (17 octobre 2026) Modèle de base homme et femme, squelette commun, combinaison (Blender), premier essai dans le
+   jeu à la place du mannequin. Fait : `blender/scripts/personnage.py` (16 os : `bassin`, `ventre`, `poitrine`, `cou`,
+   `tete`, `epaule/bras/avantbras/main_g/d`, `cuisse/jambe/pied_g/d` ; pièces rigides par os, rotules aux
+   articulations ; teintes `combinaison`, `bande`, `peau`, `cheveux`, `iris`, `oeil`, `levres`, `semelle`, `couture`),
+   exports `personnage_homme.glb` et `personnage_femme.glb` (1,80 m, en mètres, l'avant vers +z). Dans le jeu :
+   `src/render/avatarModel.ts` (classe `Avatar`, même usage que le mannequin : marche, frappe, outil dans la main
+   droite, bras en vue subjective) ; la combinaison prend la couleur du joueur, les bandes une teinte plus claire. Le
+   joueur est un homme en attendant le profil ; les autres joueurs sont homme ou femme selon leur identifiant. Le
+   mannequin (`minerModel.ts`) reste en secours si les fichiers manquent. **À regarder en jouant** : proportions, cou,
+   visage, cheveux (une seule coupe par silhouette pour l'instant).
 2. Formes de déformation (corps et visage), coupes de cheveux, couleurs.
 3. Écran de personnalisation à l'accueil, enregistrement du profil, envoi aux autres joueurs.
 4. Animations sur le squelette commun.

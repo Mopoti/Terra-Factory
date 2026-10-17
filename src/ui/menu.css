@@ -1016,6 +1016,16 @@
   background: #141b22;
   cursor: default;
 }
+/* Corbeille du mode Créatif, sous les cases du sac. */
+.slot.trash {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  border-style: dashed;
+  border-left: 5px solid #b8403a;
+  background: #1d1416;
+}
 .slot:hover:not(:disabled),
 .slot.selected {
   border-color: var(--accent);

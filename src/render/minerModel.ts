@@ -139,6 +139,11 @@ export class Miner {
     if (!this.firstPerson) this.addHelmet(model);
   }
 
+  /** Plans de découpe (vue à la 1re personne). */
+  clip(planes: THREE.Plane[]): void {
+    this.suit.clippingPlanes = planes;
+  }
+
   /**
    * Place un outil dans la main droite (`tool` : objet de ~0,7 m de long, tête vers +z, pointe vers -y) : il suit le
    * bras. Il est orienté pour que, au moment du coup (bras tendu vers l'avant), la tête pointe vers l'avant et la

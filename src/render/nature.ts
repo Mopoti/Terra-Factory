@@ -1,12 +1,21 @@
 /**
  * Décor naturel. Les arbres et les buissons sont des modèles maison, propres à chaque biome
  * (`blender/scripts/vegetation.py`, fichiers `arbre_<biome>_<n>` et `buisson_<biome>_<n>`) ; tant qu'ils ne sont pas
- * chargés, on prend ceux du pack « Low Poly Nature ». Rochers et bûches viennent du pack (couleurs de sommet, fusionnées
- * avec le reste du décor). Voir `docs/modeles3d.md` pour les sources. Sans aucun fichier, le décor garde ses formes
+ * chargés, on prend ceux du pack « Low Poly Nature ». Les rochers aussi sont maison, propres à chaque biome
+ * (`blender/scripts/mineraux.py`, fichiers `rocher_<biome>_<n>`), comme les amas de minerai posés sur les gisements
+ * (`minerai_<gisement>_<n>`) ; les bûches viennent du pack (couleurs de sommet, fusionnées avec le reste du décor). Voir `docs/modeles3d.md` pour les sources. Sans aucun fichier, le décor garde ses formes
  * simples.
  */
 import type { BiomeId } from '../core/world/biomes';
-import { bakedModel, loadModels, NATURE_VARIANTS, type BakedModel } from './models';
+import {
+  bakedModel,
+  loadModels,
+  NATURE_VARIANTS,
+  ORE_FILE_NAMES,
+  ORE_VARIANTS,
+  ROCK_VARIANTS,
+  type BakedModel,
+} from './models';
 
 const lows = new Map<string, BakedModel>();
 
@@ -97,6 +106,57 @@ const ownFor = (kind: 'arbre' | 'buisson', biome: BiomeId): BakedModel[] =>
     ownNatureModel(`${kind}_${OWN_BIOME[biome]}_${i + 1}`),
   ).filter((m): m is BakedModel => m !== null);
 
+/**
+ * Rocher maison ramené à une largeur de 1 (la plus grande de x et z), posé au sol et centré, comme les rochers du pack
+ * (qui font environ 1 m de large) ; null tant qu'il n'est pas chargé.
+ */
+function ownRockModel(name: string): BakedModel | null {
+  const hit = owned.get(name);
+  if (hit) return hit;
+  const m = bakedModel(name);
+  if (!m) return null;
+  const k = 1 / Math.max(m.size.x, m.size.z, 1e-6);
+  const cx = m.min.x + m.size.x / 2;
+  const cz = m.min.z + m.size.z / 2;
+  const positions = new Float32Array(m.positions.length);
+  for (let i = 0; i < positions.length; i += 3) {
+    positions[i] = (m.positions[i] - cx) * k;
+    positions[i + 1] = (m.positions[i + 1] - m.min.y) * k;
+    positions[i + 2] = (m.positions[i + 2] - cz) * k;
+  }
+  const out: BakedModel = {
+    positions,
+    normals: m.normals,
+    colors: m.colors,
+    index: m.index,
+    min: { x: -(m.size.x * k) / 2, y: 0, z: -(m.size.z * k) / 2 },
+    size: { x: m.size.x * k, y: m.size.y * k, z: m.size.z * k },
+  };
+  owned.set(name, out);
+  ownSet.add(out);
+  return out;
+}
+
+/** Rochers de ce biome : les maison, sinon ceux du pack (vide tant que rien n'est chargé). */
+export const rockModelsFor = (biome: BiomeId): BakedModel[] => {
+  const own = Array.from({ length: ROCK_VARIANTS }, (_, i) =>
+    ownRockModel(`rocher_${OWN_BIOME[biome]}_${i + 1}`),
+  ).filter((m): m is BakedModel => m !== null);
+  return own.length > 0 ? own : rockModels();
+};
+
+/**
+ * Amas de minerai maison d'un gisement (modèles d'une case de 50 cm, déjà en mètres, posés au sol) ; vide tant qu'ils
+ * ne sont pas chargés, ou pour une ressource sans amas.
+ */
+export const oreClumpModels = (resourceId: string): BakedModel[] => {
+  const file = ORE_FILE_NAMES[resourceId];
+  if (!file) return [];
+  return Array.from({ length: ORE_VARIANTS }, (_, i) =>
+    bakedModel(`minerai_${file}_${i + 1}`),
+  ).filter((m): m is BakedModel => m !== null);
+};
+
 /** Modèle du pack par nom, ou null tant qu'il n'est pas chargé. */
 export const lowModel = (name: string): BakedModel | null => lows.get(name) ?? null;
 /** Arbres disponibles pour ce biome : les maison, sinon ceux du pack (vide tant que rien n'est chargé). */
@@ -161,7 +221,7 @@ export function parseLowpoly(file: LowFile): Map<string, BakedModel> {
 
 let loading: Promise<void> | null = null;
 
-/** Charge (une seule fois) les arbres et buissons maison et le pack (rochers, bûches…) ; un échec est ignoré. */
+/** Charge (une seule fois) les modèles maison (arbres, buissons, rochers, minerai) et le pack ; un échec est ignoré. */
 export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<void> {
   if (loading) return loading;
   const dir = `${baseUrl}models/nature/`;

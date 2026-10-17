@@ -305,7 +305,9 @@ export function mountMachineWindow(
     out.push(search);
     const buyBox = el('div', 'trade-list');
     const shown = ITEMS.filter(
-      (i) => tradeSearch === '' || itemName(i.id).toLowerCase().includes(tradeSearch),
+      (i) =>
+        !i.creativeOnly &&
+        (tradeSearch === '' || itemName(i.id).toLowerCase().includes(tradeSearch)),
     ).slice(0, 40);
     for (const item of shown) {
       const row = el('div', 'trade-row');
@@ -606,7 +608,7 @@ export function mountMachineWindow(
         );
     } else {
       for (const def of ITEMS) {
-        if (def.recipe && state.isUnlocked(def.id))
+        if (def.recipe && !def.creativeOnly && state.isUnlocked(def.id))
           select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
       }
     }
@@ -711,6 +713,7 @@ export function mountMachineWindow(
         grid.replaceChildren();
         const q = (filterSearch.get(key) ?? '').trim().toLowerCase();
         for (const def of ITEMS) {
+          if (def.creativeOnly) continue;
           const name = itemName(def.id);
           if (q && !name.toLowerCase().includes(q) && !f.items.includes(def.id)) continue;
           const on = f.items.includes(def.id);

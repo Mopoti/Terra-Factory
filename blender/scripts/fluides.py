@@ -374,8 +374,15 @@ def tour_refroidissement_t2(coll, leger=True):
     profil = [(1.3, z0), (1.12, 1.25), (0.95, 2.0), (0.92, 2.45), (0.98, 2.95), (1.08, 3.3)]
     T.tour(coll, 'coque', profil, 'beton', segments=seg, fond=False, dessus=False)
     # Paroi intérieure sombre (la tour est ouverte en haut : on voit dedans), lèvre au sommet.
-    T.tour(coll, 'coque_dedans', [(r - 0.07, z) for r, z in profil[2:]], 'pierre_sombre', segments=seg, fond=False,
-           dessus=False)
+    dedans = T.tour(coll, 'coque_dedans', [(r - 0.07, z) for r, z in profil[2:]], 'pierre_sombre', segments=seg,
+                    fond=False, dessus=False)
+    # Faces tournées vers l'axe : vue d'en haut, on voit la paroi intérieure (sinon le jeu, qui ne dessine qu'un côté
+    # des faces, la cache, et on voit à travers la tour quand la caméra passe à côté).
+    for poly in dedans.data.polygons:
+        c = poly.center
+        if poly.normal.x * c.x + poly.normal.y * c.y > 0:
+            poly.flip()
+    dedans.data.update()
     T.tour(coll, 'coque_levre', [(1.01, 3.3), (1.08, 3.3), (1.08, 3.36), (1.01, 3.36)], 'pierre_claire', segments=seg,
            fond=False, dessus=False)
     T.cylinder(coll, 'coque_fond', 0.88, 0.03, (0, 0, 2.0), 'noir', segments=seg)  # pénombre sous le ventilateur

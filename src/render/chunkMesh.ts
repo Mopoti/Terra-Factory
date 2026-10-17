@@ -15,7 +15,8 @@ import {
   OWN_TREE_MAX_WIDTH,
   bushModelsFor,
   isOwnNature,
-  rockModels,
+  oreClumpModels,
+  rockModelsFor,
   treeModelsFor,
 } from './nature';
 
@@ -24,6 +25,9 @@ const TRUNK = hexToRgb('#6b4a2b');
 const ORE_MAX_HEIGHT_M = 0.1;
 const ORE_MIN_HEIGHT_M = 0.02;
 const ORE_FULL_AMOUNT = 3500;
+/** Pétrole : part des cases qui portent une flaque, au bord (pauvre), et en plus au cœur (riche). */
+const OIL_SEEP_MIN = 0.2;
+const OIL_SEEP_RICH = 0.4;
 const WATER_HEIGHT_M = 0.04;
 
 export interface ChunkMesh {
@@ -246,7 +250,8 @@ function buildProps(
   biomeAt: (xM: number, zM: number) => BiomeId,
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
-  const rockMeshes = rockModels();
+  const rockCache = new Map<BiomeId, ReturnType<typeof rockModelsFor>>();
+  const clumpCache = new Map<string, ReturnType<typeof oreClumpModels>>();
   const treeCache = new Map<BiomeId, ReturnType<typeof treeModelsFor>>();
   const bushCache = new Map<BiomeId, ReturnType<typeof bushModelsFor>>();
   const ox = data.cx * CHUNK_SIZE_M;
@@ -337,6 +342,10 @@ function buildProps(
     } else if (o.id === 'rock') {
       const x = cxm + Math.cos(o.rotation) * 0.15;
       const z = czm + Math.sin(o.rotation) * 0.15;
+      // Rocher maison propre au biome (granite, blocs moussus, grès, granite enneigé), sinon ceux du pack.
+      const biome = biomeAt(cxm + ox, czm + oz);
+      let rockMeshes = rockCache.get(biome);
+      if (!rockMeshes) rockCache.set(biome, (rockMeshes = rockModelsFor(biome)));
       if (rockMeshes.length > 0) {
         const model = rockMeshes[Math.floor(hash01(4, o.gx, o.gz, 12) * rockMeshes.length)];
         const k = ROCK_MODEL_WIDTH_M * o.scale;
@@ -442,8 +451,29 @@ function buildProps(
     const turn = Math.floor(hash01(3, o.gx, o.gz, 21) * 4);
     const rotated = corners.map((_, i) => corners[(i + turn) % 4]);
     if (hash01(3, o.gx, o.gz, 22) < 0.5) rotated.reverse();
-    const light = 0.85 + 0.25 * richness;
+    let light = 0.85 + 0.25 * richness;
     const top = height;
+    // Minerai maison : chaque case est couverte de ses cailloux (3 ou 4, ou des petits cailloux pour le sable), tournés
+    // et retournés au hasard ; ils sont plus hauts là où la case est riche et s'aplatissent quand elle s'épuise. Le
+    // pétrole n'a qu'une flaque sur une partie des cases.
+    let clumps = clumpCache.get(o.id);
+    if (!clumps) clumpCache.set(o.id, (clumps = oreClumpModels(o.id)));
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    const pick = clumps[Math.floor(hash01(3, o.gx, o.gz, 24) * clumps.length)];
+    if (o.id === 'oil') {
+      if (pick && hash01(3, o.gx, o.gz, 23) < OIL_SEEP_MIN + OIL_SEEP_RICH * richness) {
+        const jx = (hash01(3, o.gx, o.gz, 25) - 0.5) * 0.1;
+        const jz = (hash01(3, o.gx, o.gz, 26) - 0.5) * 0.1;
+        b.model(pick, cx + jx, top, cz + jz, hash01(3, o.gx, o.gz, 27) * 4, 0.9 + 0.5 * richness);
+      }
+    } else if (pick) {
+      const turns = Math.floor(hash01(3, o.gx, o.gz, 27) * 4);
+      const mirror = hash01(3, o.gx, o.gz, 28) < 0.5;
+      b.model(pick, cx, top, cz, turns, 1, undefined, 0, mirror, 0.7 + 0.5 * richness);
+      // Le fond entre les cailloux, assombri, se lit comme leur ombre.
+      light *= 0.35;
+    }
     quad(
       ground.ore,
       [

@@ -1,4 +1,4 @@
-import { ITEMS, itemById } from '../core/data/items';
+import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
@@ -33,7 +33,14 @@ import {
 import type { GameState } from '../core/game/state';
 import { DISCOVERIES } from '../core/data/discoveries';
 import { MOULD_CYCLES, recipeById } from '../core/data/recipes';
-import { applyChanges, extraNestsIn, MAX_EXTRA_NESTS, NEST_HP } from '../core/game/worldChanges';
+import {
+  applyChanges,
+  extraNestsIn,
+  MAX_EXTRA_NESTS,
+  NEST_HP,
+  PLACED_OBJECT_CELLS,
+  withPlaced,
+} from '../core/game/worldChanges';
 import { hash01 } from '../core/world/rng';
 import { WorldGenerator } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
@@ -124,11 +131,25 @@ import { WEAPONS, isWeapon, type WeaponSpec } from '../core/data/weapons';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import type { PlayerInfo } from '../core/net/protocol';
-import { bakedModel, loadModels } from './models';
+import { bakedModel, loadModels, modelsReady } from './models';
+import { MeshBuilder, hexToRgb } from './meshBuilder';
+import type { BiomeId } from '../core/world/biomes';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
-import { loadNature } from './nature';
+import {
+  BUSH_HEIGHT_MODEL_M,
+  OWN_TREE_MAX_WIDTH,
+  ROCK_MODEL_WIDTH_M,
+  TREE_MODEL_HEIGHT_M,
+  bushModelsFor,
+  isOwnNature,
+  loadNature,
+  oreClumpModels,
+  rockModelsFor,
+  treeModelsFor,
+} from './nature';
 import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
+import { Avatar, loadAvatar } from './avatarModel';
 import { loadPickModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
@@ -141,6 +162,12 @@ const SKY = 0x8fb8d8;
 // Déplacement provisoire (le vrai personnage arrive plus tard).
 const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
+/** Mode Créatif, vol libre : vitesse horizontale (× la marche), vitesse de montée/descente (m/s), plafond (m). */
+const FLY_SPEED_FACTOR = 3;
+const FLY_VERTICAL_M_S = 8;
+const FLY_MAX_HEIGHT_M = 120;
+/** Deux appuis sur Saut en moins de ce délai (s) : on décolle ou on se pose. */
+const FLY_DOUBLE_TAP_S = 0.35;
 /** Buggy : vitesse (par rapport à la marche) avec / sans carburant. */
 const BUGGY_FACTOR = 2.6;
 const PLAYER_RADIUS_M = 0.25;
@@ -258,25 +285,30 @@ export function startGameView(
   scene.add(player);
   // Le mannequin articulé remplace la capsule dès que le fichier est chargé (la capsule reste invisible, elle sert
   // encore de support aux objets portés).
-  let miner: Miner | null = null;
-  let firstArm: Miner | null = null;
+  let miner: Miner | Avatar | null = null;
+  let firstArm: Miner | Avatar | null = null;
   const firstClip = new THREE.Plane();
   const clipDir = new THREE.Vector3();
   const clipPos = new THREE.Vector3();
-  void loadMiner().then((ok) => {
-    if (!ok || !viewAlive) return;
-    miner = new Miner(PLAYER_HEIGHT_M, 0xd9822b);
+  // Le personnage fait pour le jeu (homme / femme) s'il est chargé, sinon le mannequin provisoire.
+  void Promise.all([loadAvatar(), loadMiner()]).then(([own, ok]) => {
+    if ((!own && !ok) || !viewAlive) return;
+    const make = (firstPerson: boolean): Miner | Avatar =>
+      own
+        ? new Avatar(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson })
+        : new Miner(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson });
+    miner = make(false);
     player.add(miner.root);
     (player.material as THREE.Material).visible = false;
     player.castShadow = false;
     miner.attachHandTool(bodyTool);
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
-    firstArm = new Miner(PLAYER_HEIGHT_M, 0xd9822b, { firstPerson: true });
+    firstArm = make(true);
     firstArm.root.position.set(0.02, -0.55, 0.12);
     firstArm.root.scale.setScalar(0.8);
     firstArm.root.rotation.y = Math.PI;
-    firstArm.suit.clippingPlanes = [firstClip];
+    firstArm.clip([firstClip]);
     renderer.localClippingEnabled = true;
     camera.add(firstArm.root);
     firstArm.attachHandTool(hand);
@@ -296,6 +328,10 @@ export function startGameView(
   let playerY = state.y;
   let velY = 0;
   let onGround = playerY === 0;
+  /** Mode Créatif : vol libre (double appui sur Saut). */
+  let flying = false;
+  let jumpWasDown = false;
+  let lastJumpTap = -Infinity;
   let playerZ = state.z;
   let facing = 0;
   let lastX = playerX;
@@ -434,7 +470,12 @@ export function startGameView(
     const key = `${cx},${cz}`;
     let cells = oreCache.get(key);
     if (!cells) {
-      cells = new Map(generator.chunk(cx, cz).ore.map((o) => [cellKey(o.gx, o.gz), o]));
+      cells = new Map(
+        withPlaced(generator.chunk(cx, cz), options.state.changes).ore.map((o) => [
+          cellKey(o.gx, o.gz),
+          o,
+        ]),
+      );
       oreCache.set(key, cells);
     }
     return cells.get(cellKey(gx, gz)) ?? null;
@@ -446,7 +487,11 @@ export function startGameView(
     const key = `${cx},${cz}`;
     let cells = waterCache.get(key);
     if (!cells) {
-      cells = new Set(generator.chunk(cx, cz).water.map((w) => cellKey(w.gx, w.gz)));
+      cells = new Set(
+        withPlaced(generator.chunk(cx, cz), options.state.changes).water.map((w) =>
+          cellKey(w.gx, w.gz),
+        ),
+      );
       waterCache.set(key, cells);
     }
     return cells.has(cellKey(gx, gz));
@@ -582,10 +627,15 @@ export function startGameView(
   }
   const unsubscribeBuild = options.state.onChange((e) => {
     // Un invité récolte (arbre, rocher…) : l'hôte redessine la zone pour que le reste de la ressource soit juste.
-    if (e.type === 'harvest' && e.remote) {
+    if (e.type === 'harvest') {
       const [gx, gz] = e.key.split(',').map(Number);
-      if (Number.isFinite(gx) && Number.isFinite(gz))
-        dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+      if (Number.isFinite(gx) && Number.isFinite(gz)) {
+        const ck = `${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`;
+        // Mode Créatif : une ressource posée ou détruite change les cases de minerai et d'eau.
+        oreCache.delete(ck);
+        waterCache.delete(ck);
+        if (e.remote) dirtyChunks.add(ck);
+      }
     }
     if (e.type === 'discovery') {
       const d = DISCOVERIES.find((x) => x.id === e.id);
@@ -1897,6 +1947,38 @@ export function startGameView(
   /** Saut, gravité, se tenir sur une dalle ou sur la tranche d'un mur. */
   function stepBody(dt: number): void {
     const pieces = options.state.changes.pieces;
+    // Vol libre (Créatif) : double appui sur Saut pour décoller ou se poser.
+    const clock = performance.now() / 1000;
+    const jumpDown = input.isActionActive('jump');
+    if (jumpDown && !jumpWasDown) {
+      if (options.state.creative && clock - lastJumpTap < FLY_DOUBLE_TAP_S) {
+        flying = !flying;
+        velY = 0;
+        lastJumpTap = -Infinity;
+        options.onMessage?.(t(flying ? 'creative.flyOn' : 'creative.flyOff'));
+      } else lastJumpTap = clock;
+    }
+    jumpWasDown = jumpDown;
+    if (flying && !options.state.creative) flying = false;
+    if (flying) {
+      // Saut = monter, Accroupi = descendre ; on traverse tout. En touchant le sol en descendant, on se pose.
+      const up = (jumpDown ? 1 : 0) - (input.isActionActive('crouch') ? 1 : 0);
+      playerY = Math.min(FLY_MAX_HEIGHT_M, playerY + up * FLY_VERTICAL_M_S * dt);
+      let floor = 0;
+      for (const [dx, dz] of FOOT_SAMPLES)
+        floor = Math.max(floor, groundAt(pieces, playerX + dx, playerZ + dz, playerY, 0));
+      if (playerY <= floor) {
+        playerY = floor;
+        if (up < 0) {
+          flying = false;
+          options.onMessage?.(t('creative.flyOff'));
+        }
+      }
+      velY = 0;
+      onGround = !flying;
+      airTime = 0;
+      return;
+    }
     let ground = 0;
     for (const [dx, dz] of FOOT_SAMPLES) {
       ground = Math.max(ground, groundAt(pieces, playerX + dx, playerZ + dz, playerY, stepSlack));
@@ -1997,7 +2079,10 @@ export function startGameView(
     const base = mounted ? BUGGY_FACTOR : 1;
     if (mounted && driving) mounted.fuel = Math.max(0, mounted.fuel - dt);
     const speed =
-      WALK_SPEED_M_S * base * (!mounted && input.isActionActive('sprint') ? SPRINT_FACTOR : 1);
+      WALK_SPEED_M_S *
+      base *
+      (flying ? FLY_SPEED_FACTOR : 1) *
+      (!mounted && input.isActionActive('sprint') ? (flying ? 2 : SPRINT_FACTOR) : 1);
     const yaw = rig.yaw;
     // « Avant » = la direction vers laquelle regarde la caméra.
     const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
@@ -2009,7 +2094,8 @@ export function startGameView(
     const oz = playerZ;
     // Coincé dans une machine posée sur soi : on peut en sortir librement.
     const stuck = machineSolidAt(playerX, playerZ);
-    if (stuck || canStand(nx, nz)) {
+    // En vol libre, on passe au-dessus et au travers de tout.
+    if (flying || stuck || canStand(nx, nz)) {
       playerX = nx;
       playerZ = nz;
     } else if (canStand(nx, playerZ)) playerX = nx;
@@ -2100,6 +2186,123 @@ export function startGameView(
   vehicleBox.hidden = true;
   container.appendChild(vehicleBox);
   let placeWasDown = false;
+  /** Mode Créatif : dernière case où l'on a posé une ressource pendant ce clic (on peint case après case). */
+  let lastCreativeCell: string | null = null;
+  /** Mode Créatif : portée pour poser une ressource (m). */
+  const CREATIVE_REACH_M = 24;
+  /** Mode Créatif : cases couvertes par la ressource `resId` posée en `gx, gz`. */
+  const creativeCells = (resId: string, gx: number, gz: number): [number, number][] => {
+    if (resId === 'water' || resourceById(resId).kind === 'deposit') return [[gx, gz]];
+    const out: [number, number][] = [];
+    for (let dx = 0; dx < PLACED_OBJECT_CELLS; dx++)
+      for (let dz = 0; dz < PLACED_OBJECT_CELLS; dz++) out.push([gx + dx, gz + dz]);
+    return out;
+  };
+  /**
+   * Mode Créatif : la ressource peut-elle être posée là ? Une machine, une construction ou un nid l'en empêche ; une
+   * ressource déjà là (arbre, rocher, buisson, minerai, eau) sera remplacée.
+   */
+  const creativeCellFree = (resId: string, gx: number, gz: number): boolean =>
+    creativeCells(resId, gx, gz).every(
+      ([x, z]) =>
+        !factory.machineAt(x, z) &&
+        !factory.machineAt(x, z, UPPER_LEVEL) &&
+        (!isBlockedAt(center(x), center(z)) || interaction.targetAt(x, z) !== null),
+    );
+  /** Mode Créatif : retire les ressources qui gênent la pose (elles sont remplacées). */
+  const clearForCreative = (resId: string, gx: number, gz: number): void => {
+    const seen = new Set<string>();
+    for (const [x, z] of creativeCells(resId, gx, gz)) {
+      const t0 = interaction.targetAt(x, z);
+      if (!t0 || seen.has(t0.key + t0.kind)) continue;
+      seen.add(t0.key + t0.kind);
+      if (options.state.destroyResource(t0.kind, t0.gx, t0.gz, t0.total))
+        buildInto(Math.floor(t0.gx / CHUNK_CELLS), Math.floor(t0.gz / CHUNK_CELLS));
+    }
+  };
+  // Aperçu de la ressource tenue en main (vert : on peut la poser, rouge : non), sous le curseur.
+  const resGhostMaterial = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.6,
+    depthWrite: false,
+  });
+  const resGhost = new THREE.Mesh(new THREE.BufferGeometry(), resGhostMaterial);
+  resGhost.visible = false;
+  resGhost.renderOrder = 5;
+  scene.add(resGhost);
+  let resGhostKey = '';
+  const GHOST_OK = hexToRgb('#4cd964');
+  const GHOST_BAD = hexToRgb('#ff5a4a');
+  /** Géométrie de l'aperçu : le vrai modèle (arbre du biome, rocher, amas de minerai) ou une dalle d'eau, teinté. */
+  function resGhostGeometry(resId: string, biome: BiomeId, ok: boolean): THREE.BufferGeometry {
+    const b = new MeshBuilder();
+    const tint = ok ? GHOST_OK : GHOST_BAD;
+    const half = (PLACED_OBJECT_CELLS * CELL_SIZE_M) / 2;
+    if (resId === 'water') b.box(0, 0, 0, CELL_SIZE_M, 0.05, CELL_SIZE_M, hexToRgb('#3f8fd0'));
+    else if (resourceById(resId).kind === 'deposit') {
+      const clump = oreClumpModels(resId)[0];
+      if (clump) b.model(clump, 0, 0, 0, 0, 1, tint, 0.35);
+      else b.box(0, 0, 0, CELL_SIZE_M, 0.1, CELL_SIZE_M, hexToRgb(resourceById(resId).color));
+    } else {
+      const models =
+        resId === 'tree'
+          ? treeModelsFor(biome)
+          : resId === 'rock'
+            ? rockModelsFor(biome)
+            : bushModelsFor(biome);
+      const m = models[0];
+      if (m && resId === 'tree') {
+        const wide = Math.max(m.size.x, m.size.z) / m.size.y;
+        const k =
+          TREE_MODEL_HEIGHT_M * Math.min(1, (isOwnNature(m) ? OWN_TREE_MAX_WIDTH : 0.6) / wide);
+        b.model(m, half, 0, half, 0, k, tint, 0.35);
+      } else if (m && resId === 'rock')
+        b.model(m, half, 0, half, 0, ROCK_MODEL_WIDTH_M, tint, 0.35);
+      else if (m) b.model(m, half, 0, half, 0, BUSH_HEIGHT_MODEL_M, tint, 0.35);
+      else b.box(half, 0, half, half * 2, 0.6, half * 2, hexToRgb(resourceById(resId).color));
+    }
+    // Contour au sol : la ou les cases occupées.
+    const span =
+      resId === 'water' || resourceById(resId).kind === 'deposit' ? CELL_SIZE_M : half * 2;
+    const c = resId === 'water' || resourceById(resId).kind === 'deposit' ? 0 : half;
+    b.box(c, 0, c, span, 0.02, span, tint);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(b.positions, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(b.normals, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(b.colors, 3));
+    return g;
+  }
+  /** Place l'aperçu sous le curseur (ou le cache). */
+  function updateResGhost(resId: string | null): void {
+    if (!resId || building || uiOpen || paused) {
+      resGhost.visible = false;
+      return;
+    }
+    computeRay();
+    const cell = cellOnPlane(rayOrigin, rayDir, 0);
+    if (!cell) {
+      resGhost.visible = false;
+      return;
+    }
+    const ok =
+      Math.hypot(center(cell.gx) - playerX, center(cell.gz) - playerZ) <= CREATIVE_REACH_M &&
+      creativeCellFree(resId, cell.gx, cell.gz);
+    const deposit = resId === 'water' || resourceById(resId).kind === 'deposit';
+    const biome = generator.biomeAt(center(cell.gx), center(cell.gz));
+    const key = `${resId}|${biome}|${ok}|${modelsReady()}`;
+    if (key !== resGhostKey) {
+      resGhost.geometry.dispose();
+      resGhost.geometry = resGhostGeometry(resId, biome, ok);
+      resGhostKey = key;
+    }
+    resGhost.position.set(
+      deposit ? center(cell.gx) : cell.gx * CELL_SIZE_M,
+      0.01,
+      deposit ? center(cell.gz) : cell.gz * CELL_SIZE_M,
+    );
+    resGhost.visible = true;
+  }
   let runOverCooldown = 0;
   const vehicleChests = new Map<number, Machine>();
   /** Le coffre d'un buggy, vu comme un coffre en bois qui partage le contenu du buggy. */
@@ -2295,6 +2498,30 @@ export function startGameView(
         } else playSfx('deny');
       }
     }
+    // Mode Créatif : poser la ressource choisie (onglet « Ressources ») ; bouton maintenu = on peint case après case.
+    const resId = options.state.creative ? creativeResourceOf(spawnItem) : null;
+    if (down && resId && !building && !uiOpen) {
+      computeRay();
+      const cell = cellOnPlane(rayOrigin, rayDir, 0);
+      const cellId = cell ? `${cell.gx},${cell.gz}` : null;
+      if (cell && cellId !== lastCreativeCell) {
+        lastCreativeCell = cellId;
+        if (Math.hypot(center(cell.gx) - playerX, center(cell.gz) - playerZ) > CREATIVE_REACH_M)
+          playSfx('deny');
+        else if (!creativeCellFree(resId, cell.gx, cell.gz)) {
+          if (!placeWasDown) options.onMessage?.(t('creative.blocked'));
+        } else {
+          // Une ressource déjà là est remplacée.
+          clearForCreative(resId, cell.gx, cell.gz);
+          if (options.state.placeResource(resId, cell.gx, cell.gz, Math.random())) {
+            playSfx(resId === 'water' ? 'placeWood' : 'placeStone');
+            buildInto(Math.floor(cell.gx / CHUNK_CELLS), Math.floor(cell.gz / CHUNK_CELLS));
+          }
+        }
+      }
+    }
+    if (!down) lastCreativeCell = null;
+    updateResGhost(resId);
     placeWasDown = down;
     if (mounted) {
       mounted.x = playerX;
@@ -2577,8 +2804,10 @@ export function startGameView(
     // L'état du monde reçu de l'hôte : les arbres et rochers récoltés, les nids… se redessinent.
     let takenSeen: Record<string, number> = { ...options.state.changes.taken };
     guest.onWorldChange((changed) => {
-      if (changed.includes('nests')) {
+      if (changed.includes('nests') || changed.includes('placed') || changed.includes('dried')) {
         nestCache.clear();
+        oreCache.clear();
+        waterCache.clear();
         for (const k of chunks.keys()) dirtyChunks.add(k);
       }
       if (changed.includes('taken')) {
@@ -3305,6 +3534,7 @@ export function startGameView(
         !building &&
         !clickStartedBuilding &&
         options.state.selectedItem() !== 'pistol' &&
+        !creativeResourceOf(options.state.selectedItem()) &&
         input.isActionActive('interact'),
       demolishing:
         !paused &&

@@ -43,6 +43,8 @@ export const REMOTE_CALLS = [
   'setFilterMode',
   'toggleFilterItem',
   'clearFilter',
+  'placeResource',
+  'destroyResource',
 ] as const;
 export type RemoteCall = (typeof REMOTE_CALLS)[number];
 

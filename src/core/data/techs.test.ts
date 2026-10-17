@@ -61,7 +61,8 @@ describe('onglets de fabrication', () => {
     }
     for (const c of ITEM_CATEGORIES) {
       expect(counts.get(c) ?? 0, c).toBeGreaterThan(0);
-      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(12);
+      // L'onglet « Ressources » du mode Créatif tient toutes les ressources du monde (13).
+      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(c === 'resources' ? 14 : 12);
     }
   });
 });

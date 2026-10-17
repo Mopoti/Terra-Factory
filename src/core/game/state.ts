@@ -27,6 +27,7 @@ import {
 import { buyPrice, sellPrice } from './trade';
 import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from './playerData';
 import { recipeById } from '../data/recipes';
+import { resourceById } from '../data/resources';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
 import { pillarsFor, pillarsForFace } from '../build/support';
 import { detectRooms, type Room } from '../build/rooms';
@@ -51,11 +52,14 @@ import {
 } from './inventory';
 import {
   MAX_LOG,
+  MAX_PLACED,
+  cellKey,
   emptyChanges,
   normalizeChanges,
   type Corpse,
   type LogEntry,
   type DroppedStack,
+  type PlacedResource,
   type SpawnPoint,
   type Vehicle,
   type WorldChanges,
@@ -117,6 +121,11 @@ export interface CraftJob {
 
 /** Secondes de fabrication à la main par ingrédient, à vitesse d'outil ×1. */
 export const CRAFT_SECONDS_PER_INGREDIENT = 0.5;
+/** Mode Créatif : quantité tirée au hasard d'une case de minerai posée. */
+export const CREATIVE_ORE_MIN = 300;
+export const CREATIVE_ORE_MAX = 3000;
+/** Mode Créatif : durée pour détruire une ressource au clic droit maintenu (s). */
+export const CREATIVE_DESTROY_SECONDS = 1;
 
 export class GameState {
   inventory: Inventory;
@@ -750,6 +759,7 @@ export class GameState {
    */
   /** Cet objet peut-il être fabriqué (sa technologie est-elle recherchée) ? */
   isUnlocked(item: string): boolean {
+    if (!this.creative && ITEMS.find((i) => i.id === item)?.creativeOnly) return false;
     const tech = techFor(item);
     const discovery = discoveryFor(item);
     return (
@@ -1558,6 +1568,118 @@ export class GameState {
     const n = Math.max(0, Math.min(units, this.remaining(key, total)));
     if (n > 0) this.changes.taken[key] = (this.changes.taken[key] ?? 0) + n;
     return n;
+  }
+
+  // --- Mode Créatif : poser et détruire des ressources, corbeille ------------------------------------
+
+  /**
+   * Mode Créatif : pose la ressource `resId` (minerai, arbre, rocher, buisson, `water`) avec une quantité tirée au
+   * hasard, ancrée en `gx, gz` (la vue a vérifié que la place est libre). Renvoie ce qui a été posé, ou null.
+   */
+  placeResource(
+    resId: string,
+    gx: number,
+    gz: number,
+    seed = Math.random(),
+  ): PlacedResource | null {
+    if (!this.creative || this.changes.placed.length >= MAX_PLACED) return null;
+    const key = cellKey(gx, gz);
+    const rnd = (salt: number): number => {
+      const x = Math.sin(seed * 9301 + salt * 49297) * 233280;
+      return x - Math.floor(x);
+    };
+    let placed: PlacedResource;
+    if (resId === 'water') {
+      placed = { id: 'water', gx, gz, amount: 0 };
+      // Eau d'origine supprimée plus tôt : elle revient simplement.
+      if (this.changes.dried.includes(key)) {
+        this.changes.dried = this.changes.dried.filter((k) => k !== key);
+        this.emit({ type: 'harvest', key });
+        return placed;
+      }
+    } else {
+      let res;
+      try {
+        res = resourceById(resId);
+      } catch {
+        return null;
+      }
+      // Ce qui avait déjà été prélevé sur cette case compte dans la quantité : le reste est celui tiré au hasard.
+      const before = this.changes.taken[key] ?? 0;
+      if (res.kind === 'deposit') {
+        const amount = Math.round(
+          CREATIVE_ORE_MIN + rnd(1) * (CREATIVE_ORE_MAX - CREATIVE_ORE_MIN),
+        );
+        placed = { id: resId, gx, gz, amount: amount + before };
+      } else if (res.kind === 'object') {
+        let size = 1;
+        let amount = res.amount;
+        let scale = 0.8 + 0.45 * rnd(2);
+        if (res.sizes) {
+          const total = res.sizes.reduce((a, x) => a + x.weight, 0);
+          let pick = rnd(3) * total;
+          size = res.sizes.findIndex((x) => (pick -= x.weight) < 0);
+          if (size < 0) size = res.sizes.length - 1;
+          amount = res.sizes[size].amount;
+          scale = res.sizes[size].scale * (0.92 + 0.16 * rnd(2));
+        }
+        placed = {
+          id: resId,
+          gx,
+          gz,
+          amount: amount + before,
+          size,
+          scale,
+          rotation: rnd(4) * Math.PI * 2,
+        };
+      } else return null;
+    }
+    // Une seule ressource posée par case d'ancrage : la nouvelle remplace l'ancienne.
+    this.changes.placed = this.changes.placed.filter((p) => !(p.gx === gx && p.gz === gz));
+    this.changes.placed.push(placed);
+    this.emit({ type: 'harvest', key });
+    return placed;
+  }
+
+  /**
+   * Mode Créatif : détruit la ressource ancrée en `gx, gz` (`total` = sa quantité d'origine) : celle posée en Créatif
+   * disparaît, celle du monde d'origine est vidée ; `water` supprime la case d'eau.
+   */
+  destroyResource(
+    kind: 'object' | 'ore' | 'water',
+    gx: number,
+    gz: number,
+    total: number,
+  ): boolean {
+    if (!this.creative) return false;
+    const key = cellKey(gx, gz);
+    const i = this.changes.placed.findIndex(
+      (p) => p.gx === gx && p.gz === gz && (kind === 'water') === (p.id === 'water'),
+    );
+    if (i >= 0) this.changes.placed.splice(i, 1);
+    else if (kind === 'water') {
+      if (!this.changes.dried.includes(key)) this.changes.dried.push(key);
+    } else this.changes.taken[key] = Math.max(this.changes.taken[key] ?? 0, total);
+    this.emit({ type: 'harvest', key });
+    return true;
+  }
+
+  /** Corbeille : détruit la pile tenue au bout du curseur. Renvoie la quantité détruite. */
+  trashHand(): number {
+    const h = this.hand;
+    if (!h) return 0;
+    this.hand = null;
+    this.emit({ type: 'inventory' });
+    return h.count;
+  }
+
+  /** Corbeille : détruit la pile n° `index` du sac. Renvoie la quantité détruite. */
+  trashBagSlot(index: number): number {
+    const s = this.clearBagSlot(index);
+    if (!s) return 0;
+    this.inventory = remove(this.inventory, s.item, s.count).inventory;
+    this.emit({ type: 'inventory' });
+    return s.count;
   }
 
   /** Range des objets du sac dans un coffre (jusqu'à `count`). Renvoie la quantité rangée. */

@@ -24,6 +24,8 @@ export interface ItemDef {
   } | null;
   /** Outil (case d'outils) : multiplicateur de vitesse de récolte et unités obtenues par coup. */
   tool: { speed: number; yield: number } | null;
+  /** Objet du mode Créatif seulement (onglet « Ressources ») : invisible et non fabricable en Survie. */
+  creativeOnly: boolean;
 }
 
 export type EquipSlot = 'head' | 'torso' | 'back' | 'legs' | 'feet' | 'hands';
@@ -48,6 +50,7 @@ interface RawItem {
   category?: ItemCategory;
   energyMJ?: number;
   tool?: { speed: number; yield: number };
+  creative?: boolean;
   equip?: {
     slot: EquipSlot;
     bag?: { slots?: number; weightKg?: number; volumeL?: number };
@@ -65,6 +68,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   yield: i.yield ?? 1,
   energyMJ: i.energyMJ ?? null,
   tool: i.tool ?? null,
+  creativeOnly: i.creative === true,
   equip: i.equip
     ? {
         slot: i.equip.slot,
@@ -98,6 +102,7 @@ export const ITEM_CATEGORIES = [
   'equipment',
   'armor',
   'tools',
+  'resources',
 ] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
@@ -105,6 +110,13 @@ export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 export function categoryOf(item: ItemDef): ItemCategory | null {
   return item.category;
 }
+
+/**
+ * Mode Créatif : ressource du monde que pose un objet de l'onglet « Ressources » (`res_<ressource>` : `res_iron_ore`,
+ * `res_tree`, `res_water`…), ou null.
+ */
+export const creativeResourceOf = (item: string | null): string | null =>
+  item && item.startsWith('res_') ? item.slice(4) : null;
 
 /** Portée de la récolte à la main, en mètres. */
 export const REACH_M: number = raw.reachM;
