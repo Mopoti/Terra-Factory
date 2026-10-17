@@ -86,7 +86,7 @@
 - `public/models/nature/lowpoly.json` : 27 modèles choisis dans le pack, convertis en sommets dédoublonnés avec couleur lue dans la palette (pied du tronc à l'origine, hauteur ou largeur ramenée à 1). Chargés par `src/render/nature.ts` (`parseLowpoly`, `TREES_BY_BIOME`, `ROCKS`, `LOG`, `LOG_PAIR`) et fusionnés dans le décor (`MeshBuilder.model`).
 - **Arbres par biome** : prairie = feuillus (Tree016, 019, 012, 013), forêt = conifères (009, 017, 018, 010, 001, 004), désert = arbres secs (022, 024, 026), toundra = résineux élancés (007, 008, 005, 003) givrés (teinte blanche à 45 %). Le biome est lu à l'emplacement de l'arbre ; les feuillus larges sont réduits pour garder une emprise raisonnable.
 - **Tailles** (`content/resources.json`, clé `sizes`, tirage pondéré fixe par emplacement) : arbre petit (40 %) = 4 bois, moyen (40 %) = 6, grand (20 %) = 8, de 0,7 / 1 / 1,3 × 5,5 m. Rocher petit (50 %) = 10 pierres, moyen (35 %) = 20, grand (15 %) = 32, de 0,55 / 1 / 1,6 × 0,95 m. Densité des rochers à 60 % de l'ancienne (moins fréquents) ; la pierre moyenne par rocher passe de 20 à environ 17. La quantité et la hauteur de survol suivent la taille (`PlacedObject.size`, `amount`).
-- **Bois au sol** : une bûche du pack (Tree025) pour 1 ou 2 bois, une paire de bûches (Stump) à partir de 3 ; les autres objets restent de petits blocs colorés.
+- **Bois au sol** : une bûche du pack (Tree025) pour 1 ou 2 bois, une paire de bûches (Stump) à partir de 3 (repli tant que les objets maison ne sont pas chargés, voir « Objets posés au sol »).
 - Non utilisés : les autres arbres (arbres à champignon, cactus, etc.), souches, champignons, herbes et fleurs du pack ; ils pourraient décorer certains biomes.
 
 ## Buissons du pack (Tour 151)
@@ -118,3 +118,11 @@ Faits : foreuses (foret, volant, poulies, gyrophare), chevalet (manivelle, balan
 - **Buggy** : modèle maison (`blender/scripts/vehicules.py`, `export/buggy.glb`), une roue par groupe (`roue_avg`, `roue_avd`, `roue_arg`, `roue_ard`) qui tourne de la distance parcourue (`src/render/vehicleModel.ts`). Les boîtes jaunes restent en secours tant que le fichier n'est pas chargé.
 - **Tourelles lourde, laser, plasma** : modèles maison (`blender/scripts/defense.py`) ; la tête (`tourelle_`) balaye l'horizon tant que la tourelle est prête à tirer.
 - **Sol des biomes** : dessiné par le code, en facettes low poly (`src/render/groundStyle.ts`) : deux triangles par case, chacun de sa couleur, avec une normale à peine penchée (le sol reste plat sous les machines). Palettes et motifs par biome : prairie (verts mêlés, taches plus claires et sèches), forêt (mousse sombre, plaques d'humus et de feuilles mortes), désert (sable en rides, plaques de roche rouille), toundra (neige bleutée, plaques de gravier et de glace). La teinte de saison s'applique par-dessus, comme avant.
+
+## Objets posés au sol (octobre 2026)
+- **Formes maison** : `blender/scripts/objets.py` (`objets.blend`) fabrique 17 formes `objet_<forme>` : `bois` (bûches), `caillou`, `minerai`, `sable` (tas), `lingot`, `plaque` (pile), `engrenage`, `bobine` (fil), `fibre` (botte), `tissu` (rouleau), `baril`, `science` (caisse avec fiole), `puce`, `bloc` (béton), `conteneur` (uranium, déchets), `verre`, `caisse` (tout le reste). Les faces au matériau `teinte` (magenta `#ff00ff`) prennent la couleur de l'objet (`items.json`, `color`) ; le reste garde ses couleurs.
+- **Choix de la forme** : `dropShape(item)` dans `src/render/dropModels.ts` (règles sur l'identifiant : `_ingot` → lingot, `barrel_` → baril, `science_pack` → science…). Minerai et caillou sont grossis ×1,5 (`SHAPE_SCALE`) ; une grosse pile grossit jusqu'à +25 %.
+- **Machines au sol** : leur propre modèle en miniature, plus grande dimension 45 cm (`MINI_MACHINE_M`) ; tapis = tapis droit du palier, buggy = son modèle.
+- Utilisé par `refreshDrops` (`interaction.ts`) ; carapace et tissu vivant gardent leur forme à part. Tant que les modèles ne sont pas chargés, l'ancien petit bloc coloré reste.
+- Ajouter une forme : la fabriquer dans `objets.py`, l'ajouter à `DROP_SHAPES` (`models.ts`) et à `dropShape`, exporter puis `node scripts/sync-modeles.mjs`.
+

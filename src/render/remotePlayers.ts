@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { PlayerInfo } from '../core/net/protocol';
 import { Miner, minerReady } from './minerModel';
-import { decodeLook } from '../core/profile/appearance';
+import { HAIR_STYLES, decodeLook } from '../core/profile/appearance';
 import { Avatar, avatarReady } from './avatarModel';
 
 /** Teinte propre à chaque joueur (silhouette, mannequin et point de la carte). */
@@ -85,7 +85,12 @@ export class RemotePlayersView {
           ? new Avatar(
               1.7,
               color,
-              look ? { appearance: look } : { silhouette: hue % 2 === 0 ? 'homme' : 'femme' },
+              look
+                ? { appearance: look }
+                : {
+                    silhouette: hue % 2 === 0 ? 'homme' : 'femme',
+                    hairStyle: HAIR_STYLES[Math.floor(hue / 2) % (HAIR_STYLES.length - 1)],
+                  },
             )
           : new Miner(1.7, color);
         entry.miner.root.position.y = 0.85;

@@ -9,7 +9,8 @@ import type { ChunkData } from '../core/world/worldgen';
 import { playSfx } from '../audio/sfx';
 import { t, type TranslationKey } from '../i18n';
 import { MeshBuilder } from './meshBuilder';
-import type { BakedModel } from './models';
+import { loadModels, type BakedModel } from './models';
+import { dropGeometry } from './dropModels';
 import { LOG, LOG_PAIR, loadNature, lowModel } from './nature';
 
 /** Temps pour ramasser une pile posée au sol (s). */
@@ -19,6 +20,8 @@ const BARE_HANDS_FACTOR = 3;
 const FEED_SECONDS = 2.2;
 const ORE_HEIGHT_M = 0.1;
 const logMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+/** Objets posés au sol en modèle (couleurs de sommet). */
+const dropModelMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
 /** Géométrie d'une bûche du pack, ramenée à `length` mètres de long. */
 function logGeometry(model: BakedModel, length: number): THREE.BufferGeometry {
   const b = new MeshBuilder();
@@ -171,6 +174,7 @@ export class Interaction {
     this.refreshDrops();
     // Les bûches du pack arrivent après le chargement : on redessine alors le bois déjà posé au sol.
     void loadNature().then(() => this.refreshDrops());
+    void loadModels().then(() => this.refreshDrops());
     this.unsubscribe = state.onChange((e) => {
       if (e.type === 'drops') this.refreshDrops();
     });
@@ -282,6 +286,17 @@ export class Interaction {
       (child as THREE.Mesh).geometry.dispose();
     }
     for (const d of this.state.changes.drops) {
+      // Forme de l'objet (lingots, baril, paquet de science…) ou machine en miniature, dès que les modèles sont chargés.
+      const shell0 = d.item === 'carapace' || d.item === 'living_tissue';
+      const own = shell0 ? null : dropGeometry(d.item, d.count);
+      if (own) {
+        const mesh = new THREE.Mesh(own, dropModelMaterial);
+        mesh.position.set(d.x, 0, d.z);
+        mesh.rotation.y = (Number(d.id.replace(/\D/g, '')) * 0.9) % Math.PI;
+        mesh.castShadow = true;
+        this.dropGroup.add(mesh);
+        continue;
+      }
       const h = 0.1 + Math.min(0.25, d.count * 0.01);
       // Le bois se pose sous forme de bûche (une seule, ou une paire à partir de trois) ; le reste, en petit bloc.
       const log = d.item === 'wood' ? lowModel(d.count >= 3 ? LOG_PAIR : LOG) : null;

@@ -201,7 +201,8 @@ export function buildCharacterScreen(back: () => void): CharacterScreen {
   ): HTMLElement {
     const box = el('div', 'char-row');
     box.append(el('span', 'char-label', label));
-    const seg = el('div', 'ng-segment');
+    // Beaucoup de choix (les coupes de cheveux) : en grille sur plusieurs lignes.
+    const seg = el('div', options.length > 4 ? 'ng-segment char-grid' : 'ng-segment');
     const buttons = new Map<T, HTMLButtonElement>();
     for (const o of options) {
       const b = el('button', undefined, text(o));
@@ -306,7 +307,6 @@ export function buildCharacterScreen(back: () => void): CharacterScreen {
       },
     ),
     colors('hair', t('char.color.hair')),
-    el('p', 'help', t('char.hair.more')),
   );
 
   // Tenue.

@@ -9,17 +9,19 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import {
+  DEFAULT_HAIR,
   FACE_KEYS,
   bodyScales,
   type Appearance,
   type FaceKey,
+  type HairStyle,
   type Silhouette,
 } from '../core/profile/appearance';
 
 export type { Silhouette };
 
-/** Taille du personnage dans le fichier (m), de la plante des pieds au sommet du crâne. */
-const MODEL_HEIGHT_M = 1.8;
+/** Taille du personnage dans le fichier (m), de la plante des pieds au sommet du crâne (sans les cheveux). */
+const MODEL_HEIGHT_M = 1.82;
 /** Hauteur des hanches dans le fichier (m) : de là partent les jambes. */
 const HIP_HEIGHT_M = 0.9;
 
@@ -95,6 +97,8 @@ export class Avatar {
   private readonly named = new Map<string, THREE.MeshStandardMaterial>();
   private readonly bones = new Map<string, THREE.Bone>();
   private readonly morphMeshes: THREE.Mesh[] = [];
+  /** Pièces des coupes de cheveux (`<modèle>_coupe_<nom>`), une seule visible. */
+  private readonly cuts: { object: THREE.Object3D; style: string }[] = [];
   private readonly model: THREE.Group;
   private readonly baseHeight: number;
   private readonly joints = new Map<string, Joint>();
@@ -110,16 +114,25 @@ export class Avatar {
   constructor(
     height: number,
     color: number,
-    options: { firstPerson?: boolean; silhouette?: Silhouette; appearance?: Appearance } = {},
+    options: {
+      firstPerson?: boolean;
+      silhouette?: Silhouette;
+      /** Coupe de cheveux sans profil (par défaut celle de la silhouette). */
+      hairStyle?: HairStyle;
+      appearance?: Appearance;
+    } = {},
   ) {
     this.firstPerson = options.firstPerson ?? false;
-    const source = sources.get(options.appearance?.silhouette ?? options.silhouette ?? 'homme');
+    const silhouette = options.appearance?.silhouette ?? options.silhouette ?? 'homme';
+    const source = sources.get(silhouette);
     if (!source) throw new Error('Personnage non chargé');
     const model = cloneSkinned(source) as THREE.Group;
     const byName = new Map<string, THREE.MeshStandardMaterial>();
     const bones = new Map<string, THREE.Bone>();
     model.traverse((o) => {
       if ((o as THREE.Bone).isBone) bones.set(o.name, o as THREE.Bone);
+      const cut = /_coupe_([a-z_]+?)(?:_\d+)?$/.exec(o.name);
+      if (cut) this.cuts.push({ object: o, style: cut[1] });
       const mesh = o as THREE.SkinnedMesh;
       if (!mesh.isSkinnedMesh && !(mesh as unknown as THREE.Mesh).isMesh) return;
       if (mesh.morphTargetDictionary) this.morphMeshes.push(mesh);
@@ -169,6 +182,7 @@ export class Avatar {
     this.model = model;
     this.baseHeight = height;
     this.root.add(model);
+    this.showHair(options.hairStyle ?? DEFAULT_HAIR[silhouette]);
     if (options.appearance) this.look(options.appearance);
   }
 
@@ -187,8 +201,7 @@ export class Avatar {
     color('peau', a.colors.skin);
     color('cheveux', a.colors.hair);
     color('iris', a.colors.eyes);
-    const hair = this.named.get('cheveux');
-    if (hair) hair.visible = a.hairStyle !== 'none';
+    this.showHair(a.hairStyle);
     // Morphologie : des échelles sur les os du tronc et des jambes ; ce qui ne doit pas grossir est compensé.
     const s = bodyScales(a.body, a.silhouette);
     const set = (name: string, x: number, y: number, z: number): void => {
@@ -206,6 +219,11 @@ export class Avatar {
     // Des jambes plus longues descendent les pieds : on remonte le corps de la même longueur.
     this.model.position.y = -this.baseHeight / 2 + HIP_HEIGHT_M * (s.legs - 1) * k;
     for (const key of FACE_KEYS) this.morph(FACE_MORPHS[key], a.face[key]);
+  }
+
+  /** Montre une seule coupe de cheveux (`none` : aucune). */
+  private showHair(style: HairStyle): void {
+    for (const c of this.cuts) c.object.visible = c.style === style;
   }
 
   /** Règle une forme de déformation de −1 à +1 (`<nom>` vers le plus, `<nom>_moins` vers le moins). */

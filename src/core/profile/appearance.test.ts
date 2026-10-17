@@ -18,14 +18,14 @@ describe('apparence du personnage', () => {
     const a = normalizeAppearance({
       silhouette: 'robot',
       body: { height: 9, build: 'oops', bulk: -3 },
-      hairStyle: 'iroquoise',
+      hairStyle: 'crete',
       colors: { suit: '#ABCDEF', skin: 'rouge', hair: '#12345' },
     });
     expect(a.silhouette).toBe('homme');
     expect(a.body.height).toBe(1);
     expect(a.body.build).toBe(0);
     expect(a.body.bulk).toBe(-1);
-    expect(a.hairStyle).toBe('model');
+    expect(a.hairStyle).toBe('courte');
     expect(a.colors.suit).toBe('#abcdef');
     expect(a.colors.skin).toBe(defaultAppearance().colors.skin);
     expect(a.colors.hair).toBe(defaultAppearance().colors.hair);

@@ -56,16 +56,21 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    `src/render/avatarModel.ts` (classe `Avatar`, même usage que le mannequin : marche, frappe, outil dans la main
    droite, bras en vue subjective) ; la combinaison prend la couleur du joueur, les bandes une teinte plus claire. Le
    joueur est un homme en attendant le profil ; les autres joueurs sont homme ou femme selon leur identifiant. Le
-   mannequin (`minerModel.ts`) reste en secours si les fichiers manquent. **À regarder en jouant** : proportions, cou,
-   visage, cheveux (une seule coupe par silhouette pour l'instant).
+   mannequin (`minerModel.ts`) reste en secours si les fichiers manquent.
+   Retouches du 17 octobre (retours du PO) : **tête et cheveux agrandis** (×1,18 autour du menton, menton plus bas :
+   le cou est plus court) ; **10 coupes de cheveux** pour les deux silhouettes, pièces séparées dans le même fichier
+   (`<modèle>_coupe_<nom>`) : courte, rasée, en brosse, iroquoise, mi-longue, longue, carré, queue de cheval, chignon,
+   afro, plus « chauve » (aucune pièce). Dans le jeu : réglage `hairStyle` du profil (`HAIR_STYLES` dans
+   `src/core/profile/appearance.ts`, onglet Cheveux de l'écran Personnage) ; par défaut courte (homme) et queue de
+   cheval (femme) ; un joueur sans profil reçoit une coupe selon son identifiant. **À regarder en jouant** :
+   proportions, cou, visage, cheveux.
 2. 🟡 Corps et couleurs faits côté jeu ; visage et coupes dépendent de Blender. Le corps est déformé par **échelle des
    os** (taille, carrure, corpulence, longueur des jambes, poitrine : `bodyScales` dans
    `src/core/profile/appearance.ts`, appliqué par `Avatar.look`). Couleurs libres (combinaison, bandes, peau, cheveux,
-   yeux). Coupes de cheveux : `model` (celle du modèle) ou `none` pour l'instant. **À faire dans Blender** : formes de
+   yeux). Coupes de cheveux : les 10 coupes ou `none` (anciens profils `model` → coupe de la silhouette). **À faire dans Blender** : formes de
    déformation (*shape keys*) nommées `nez_taille`, `nez_largeur`, `nez_hauteur`, `bouche_largeur`, `levres`,
    `bouche_hauteur`, `yeux_forme`, `yeux_ecart` (valeur positive = `<nom>`, négative = `<nom>_moins`). Le jeu les
-   détecte seul : les curseurs du visage n'apparaissent que pour celles que le modèle contient. Pièces de cheveux
-   interchangeables à ajouter ensuite.
+   détecte seul : les curseurs du visage n'apparaissent que pour celles que le modèle contient.
 3. ✅ Écran « Personnage » à l'accueil (onglets Corps / Visage / Cheveux / Tenue, rotation, aléatoire, réinitialiser,
    valider), profil enregistré (`terra.character`, `src/core/profile/store.ts`), repris dans chaque partie et envoyé aux
    autres joueurs (champ `look`, chaîne courte `encodeLook`/`decodeLook`).

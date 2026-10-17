@@ -2579,6 +2579,21 @@ body.touch-mode .menu-corner {
   grid-column: 2 / 4;
   justify-self: start;
 }
+.char-row .ng-segment.char-grid {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 1px;
+  justify-self: stretch;
+}
+.char-row .ng-segment.char-grid button {
+  border: 0;
+  background: #1a222b;
+  box-shadow: 0 0 0 1px #33414f;
+}
+.char-row .ng-segment.char-grid button[aria-pressed='true'] {
+  background: linear-gradient(135deg, rgba(217, 130, 43, 0.35), rgba(217, 130, 43, 0.12)), #1a222b;
+}
 .char-row input[type='range'] {
   accent-color: var(--accent);
 }

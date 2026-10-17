@@ -24,9 +24,23 @@ export const FACE_KEYS = [
 ] as const;
 export type FaceKey = (typeof FACE_KEYS)[number];
 
-/** Coupes de cheveux : `model` est celle du modèle de base ; d'autres viendront avec de nouvelles pièces. */
-export const HAIR_STYLES = ['model', 'none'] as const;
+/** Coupes de cheveux (pièces `<modèle>_coupe_<nom>` du fichier, `blender/scripts/personnage.py`) ; `none` = chauve. */
+export const HAIR_STYLES = [
+  'courte',
+  'rase',
+  'brosse',
+  'iroquoise',
+  'mi_longue',
+  'longue',
+  'carre',
+  'queue',
+  'chignon',
+  'afro',
+  'none',
+] as const;
 export type HairStyle = (typeof HAIR_STYLES)[number];
+/** Coupe par défaut de chaque silhouette. */
+export const DEFAULT_HAIR: Record<Silhouette, HairStyle> = { homme: 'courte', femme: 'queue' };
 
 export const COLOR_KEYS = ['suit', 'stripe', 'skin', 'hair', 'eyes'] as const;
 export type ColorKey = (typeof COLOR_KEYS)[number];
@@ -70,7 +84,7 @@ export function defaultAppearance(silhouette: Silhouette = 'homme'): Appearance 
       eyeShape: 0,
       eyeSpacing: 0,
     },
-    hairStyle: 'model',
+    hairStyle: DEFAULT_HAIR[silhouette],
     colors: { ...DEFAULT_COLORS },
   };
 }
@@ -100,7 +114,8 @@ export function normalizeAppearance(raw: unknown): Appearance {
   >;
   for (const k of BODY_KEYS) out.body[k] = slider(body[k]);
   for (const k of FACE_KEYS) out.face[k] = slider(face[k]);
-  out.hairStyle = HAIR_STYLES.find((h) => h === r.hairStyle) ?? 'model';
+  // Coupe inconnue (ou « model », l'ancienne coupe unique) : celle de la silhouette.
+  out.hairStyle = HAIR_STYLES.find((h) => h === r.hairStyle) ?? DEFAULT_HAIR[silhouette];
   for (const k of COLOR_KEYS) {
     const c = colors[k];
     out.colors[k] = isHexColor(c) ? c.toLowerCase() : DEFAULT_COLORS[k];
@@ -121,14 +136,14 @@ export function randomAppearance(random: () => number = Math.random): Appearance
 
 // --- Forme courte (réseau) ---------------------------------------------------------------------------
 
-/** « h|0,0,0,0,0|0,0,0,0,0,0,0,0|m|d9822b,f0c24a,e0b38a,4a3020,3f7a4f » : environ 100 caractères. */
+/** « h|0,0,0,0,0|0,0,0,0,0,0,0,0|courte|d9822b,f0c24a,e0b38a,4a3020,3f7a4f » : environ 100 caractères. */
 export function encodeLook(a: Appearance): string {
   const n = (v: number): string => String(Math.round(v * 100));
   return [
     a.silhouette === 'homme' ? 'h' : 'f',
     BODY_KEYS.map((k) => n(a.body[k])).join(','),
     FACE_KEYS.map((k) => n(a.face[k])).join(','),
-    a.hairStyle === 'none' ? 'n' : 'm',
+    a.hairStyle,
     COLOR_KEYS.map((k) => a.colors[k].slice(1)).join(','),
   ].join('|');
 }
@@ -150,7 +165,8 @@ export function decodeLook(text: unknown): Appearance | null {
     silhouette: parts[0] === 'f' ? 'femme' : 'homme',
     body: Object.fromEntries(BODY_KEYS.map((k, i) => [k, body[i]])),
     face: Object.fromEntries(FACE_KEYS.map((k, i) => [k, face[i]])),
-    hairStyle: parts[3] === 'n' ? 'none' : 'model',
+    // « n » et « m » : ancienne forme (chauve, coupe du modèle).
+    hairStyle: parts[3] === 'n' ? 'none' : parts[3],
     colors: Object.fromEntries(COLOR_KEYS.map((k, i) => [k, `#${colors[i]}`])),
   });
 }

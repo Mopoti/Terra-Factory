@@ -307,6 +307,27 @@ export const ORE_FILE_NAMES: Record<string, string> = {
   oil: 'petrole',
 };
 export const ORE_VARIANTS = 2;
+/** Formes des objets posés au sol (`blender/scripts/objets.py`, `objet_<forme>.glb`) ; voir `dropModels.ts`. */
+export const DROP_SHAPES = [
+  'bois',
+  'caillou',
+  'minerai',
+  'sable',
+  'lingot',
+  'plaque',
+  'engrenage',
+  'bobine',
+  'fibre',
+  'tissu',
+  'baril',
+  'science',
+  'puce',
+  'bloc',
+  'conteneur',
+  'verre',
+  'caisse',
+] as const;
+const OBJET_NAMES = DROP_SHAPES.map((f) => `objet_${f}`);
 const MINERAL_NAMES = [
   ...NATURE_FILE_BIOMES.flatMap((b) =>
     Array.from({ length: ROCK_VARIANTS }, (_, i) => `rocher_${b}_${i + 1}`),
@@ -322,6 +343,7 @@ const TERRA_NAMES = [
     ...Object.keys(EXTRA_GROUPS),
     ...NATURE_NAMES,
     ...MINERAL_NAMES,
+    ...OBJET_NAMES,
     ...Object.values(TERRA_MODELS),
     ...Object.values(TERRA_BELT_MODELS)
       .flat()

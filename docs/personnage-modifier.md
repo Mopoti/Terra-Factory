@@ -44,7 +44,8 @@ Ouvrir `blender/scripts/personnage.py` dans l'éditeur (VS Code par exemple). Le
 - **Corps** (jambes, bassin, torse, bras, mains, bandes) : la fonction `corps(...)`. Les largeurs dépendent de
   `femme` : `ep` (épaules), `hx` (écart des hanches), `hanche`, `taille`, `poit`, `rb` (épaisseur des bras)…
 - **Visage** (crâne, nez, yeux, sourcils, bouche, oreilles) : la fonction `tete(...)`.
-- **Cheveux** : la fonction `cheveux(...)` (calotte, frange ; queue de cheval pour la femme).
+- **Cheveux** : une fonction par coupe (`coupe_courte`, `coupe_longue`, `coupe_afro`…), listées dans le dictionnaire `COUPES`. Pour ajouter une coupe : écrire une fonction `coupe_<nom>(m, femme, seg)`, l'ajouter à `COUPES`, et ajouter son nom à la liste `HAIR_STYLES` de `src/core/profile/appearance.ts` et sa traduction `char.hair.<nom>` dans `src/i18n/fr.json` et `en.json`.
+- **Taille de la tête** : `TETE_ECHELLE` (agrandissement de la tête et des cheveux autour du menton) et `MENTON_NOUVEAU` (plus bas = cou plus court).
 - **Squelette** : la fonction `os_du_squelette(...)` (position des os). Si on déplace une articulation du corps
   (épaule, coude, genou…), il faut déplacer l'os correspondant de la même façon.
 
@@ -105,6 +106,7 @@ git push
 - **Couleur de la combinaison** du joueur : `0xd9822b` dans la fonction `make` de `src/render/gameView.ts` (elle sert au
   corps et aux bras en vue subjective). Les bandes prennent automatiquement une teinte plus claire de la même couleur.
 - **Taille** du personnage : `PLAYER_HEIGHT_M` (le modèle est mis à cette taille).
+- **Coupe et couleur des cheveux** du joueur : le joueur les choisit dans l'écran « Personnage » de l'accueil (onglet Cheveux) ; sans profil, option `hairStyle` de l'`Avatar`.
 - **Homme ou femme** pour le joueur : dans la même fonction `make`, écrire `{ firstPerson, silhouette: 'femme' }` à
   la création de l'`Avatar` (en attendant l'écran de personnalisation).
 - **Mouvements** (amplitude de la marche, geste de frappe, écart des bras) : méthodes `update`, `arm` et `leg` de
