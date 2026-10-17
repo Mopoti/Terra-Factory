@@ -500,7 +500,7 @@ describe('machines et tapis dans la partie', () => {
     const s = new GameState({ inventory: { machine_conveyor: 2 } });
     const f = new Factory(s.changes.machines, noWorld);
     expect(s.placeMachine(f, 'conveyor', 1, 1, 0, none)).toBe('ok');
-    expect(s.placeMachine(f, 'conveyor', 1, 1, 2, none)).toBe('blocked');
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 0, none)).toBe('blocked');
     const m = s.changes.machines[0];
     m.stock = { item: 'iron_ingot', count: 4 };
     expect(s.unloadMachine(m, 'stock')).toBe(4);
@@ -835,6 +835,42 @@ describe('piles du sac, objet en main et outils', () => {
     s.assignTool(0, 'tool_iron');
     expect(s.harvestTool()?.yield).toBe(2);
     expect(s.snapshot().changes.tools[0]).toBe('tool_iron');
+  });
+
+  it("un outil mis dans la case quitte le sac et y revient quand on l'enlève ou le remplace", () => {
+    const s = new GameState({ inventory: { tool_stone: 1, tool_iron: 1 } });
+    expect(s.assignTool(0, 'tool_stone')).toBe(true);
+    expect(s.inventory.tool_stone ?? 0).toBe(0);
+    expect(s.assignTool(0, 'tool_iron')).toBe(true);
+    expect(s.inventory.tool_stone).toBe(1);
+    expect(s.inventory.tool_iron ?? 0).toBe(0);
+    expect(s.assignTool(0, null)).toBe(true);
+    expect(s.inventory.tool_iron).toBe(1);
+    expect(s.toolItem()).toBeNull();
+  });
+
+  it('une ancienne sauvegarde (outil aussi dans le sac) est corrigée au chargement, une seule fois', () => {
+    const changes = { ...emptyChanges(), tools: ['tool_stone'] } as Record<string, unknown>;
+    delete changes.toolsHeld;
+    const s = new GameState({ inventory: { tool_stone: 1 }, changes });
+    expect(s.toolItem()).toBe('tool_stone');
+    expect(s.inventory.tool_stone ?? 0).toBe(0);
+    const again = new GameState(s.snapshot());
+    expect(again.toolItem()).toBe('tool_stone');
+    expect(again.inventory.tool_stone ?? 0).toBe(0);
+  });
+
+  it('un tapis posé par-dessus un autre le remplace (palier, sens) et rend l’ancien', () => {
+    const none = (): boolean => false;
+    const noWorld = { oreAt: () => null, mineOre: () => 0 };
+    const s = new GameState({ inventory: { machine_conveyor: 1, machine_conveyor_2: 1 } });
+    const f = new Factory(s.changes.machines, noWorld);
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 0, none)).toBe('ok');
+    expect(s.placeMachine(f, 'conveyor', 1, 1, 1, none, 0, 2)).toBe('ok');
+    expect(s.changes.machines).toHaveLength(1);
+    expect(s.changes.machines[0].rot).toBe(1);
+    expect(s.changes.machines[0].tier).toBe(2);
+    expect(s.inventory.machine_conveyor).toBe(1);
   });
 });
 

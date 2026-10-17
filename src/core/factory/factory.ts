@@ -1017,6 +1017,29 @@ export class Factory {
     );
   }
 
+  /**
+   * Tapis ou tuyau que celui qu'on pose remplacerait, à la même case : amélioration, rétrogradation, changement de
+   * sens ou réparation. Un tapis à plat posé sur une rampe ou un tunnel en garde la forme (`lift`).
+   */
+  replaceTarget(
+    type: MachineType,
+    gx: number,
+    gz: number,
+    lift: number,
+    tier: number,
+    rot: number,
+  ): { old: Machine; lift: number } | null {
+    if (type !== 'conveyor' && type !== 'pipe') return null;
+    const there = this.machines.filter((m) => m.type === type && m.gx === gx && m.gz === gz);
+    const differs = (m: Machine): boolean =>
+      m.tier !== tier || m.broken === true || (type === 'conveyor' && m.rot !== rot);
+    const exact = there.find((m) => m.lift === lift);
+    if (exact) return differs(exact) ? { old: exact, lift } : null;
+    if (type !== 'conveyor' || lift !== 0) return null;
+    const keep = there.find((m) => m.lift !== 0 && LIFTS[m.lift]?.layers.includes(0));
+    return keep && differs(keep) ? { old: keep, lift: keep.lift } : null;
+  }
+
   /** La machine peut-elle se poser là (cases libres, sol praticable) ? */
   canPlace(
     type: MachineType,
@@ -1033,7 +1056,7 @@ export class Factory {
         ? (c: Cell): boolean => !this.world.waterAt?.call(this.world, c.gx, c.gz) && blockedBy(c)
         : blockedBy;
     // Un tapis d'un palier supérieur se pose par-dessus un tapis plus lent, à la même place : il le remplace.
-    if (this.upgradeOf(type, gx, gz, lift, tier)) return true;
+    if (this.replaceTarget(type, gx, gz, lift, tier, rot)) return true;
     if (type === 'pump' && !this.waterNear(type, gx, gz, rot)) return false;
     if (type === 'waterwheel' && !this.onShore(type, gx, gz, rot)) return false;
     const cells = footprint(type, gx, gz, rot);

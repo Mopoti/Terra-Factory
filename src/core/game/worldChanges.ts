@@ -107,6 +107,8 @@ export interface WorldChanges {
   hotbar: (string | null)[];
   /** Case(s) d'outils à droite de la barre : outil de récolte ou pistolet (utilisé quand l'action le demande). */
   tools: (string | null)[];
+  /** Faux dans une ancienne sauvegarde : l'outil de la case y restait aussi dans le sac (corrigé au chargement). */
+  toolsHeld: boolean;
   /** Machines et tapis posés (voir `core/factory`). */
   machines: Machine[];
   nextMachineId: number;
@@ -191,6 +193,7 @@ export function emptyChanges(): WorldChanges {
     rotations: {},
     hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
     tools: Array.from({ length: TOOL_SLOTS }, () => null),
+    toolsHeld: true,
     machines: [],
     nextMachineId: 1,
     equipment: {},
@@ -565,6 +568,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       }
     });
   }
+  result.toolsHeld = r.toolsHeld === true;
   if (Array.isArray(r.tools)) {
     r.tools.slice(0, TOOL_SLOTS).forEach((rawId, i) => {
       if (typeof rawId !== 'string') return;

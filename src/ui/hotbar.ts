@@ -87,16 +87,11 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
     key.textContent = '🛠';
     slot.append(key);
     if (id) {
-      const count = state.inventory[id] ?? 0;
       slot.style.setProperty('--item', itemById(id).color);
-      slot.classList.toggle('poor', count === 0);
       const name = document.createElement('span');
       name.className = 'hot-name';
       name.textContent = t(`item.${id}` as TranslationKey);
-      const qty = document.createElement('span');
-      qty.className = 'hot-count';
-      qty.textContent = String(count);
-      slot.append(name, qty);
+      slot.append(name);
       slot.title = t(`item.${id}` as TranslationKey);
     } else {
       slot.classList.add('empty');

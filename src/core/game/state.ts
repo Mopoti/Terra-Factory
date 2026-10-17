@@ -147,6 +147,15 @@ export class GameState {
   ) {
     this.inventory = normalizeInventory(saved?.inventory);
     this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
+    // Ancienne sauvegarde : l'outil de la case est aussi compté dans le sac ; il n'y reste plus qu'à un seul endroit.
+    if (!this.changes.toolsHeld) {
+      this.changes.toolsHeld = true;
+      this.changes.tools = this.changes.tools.map((id) => {
+        if (!id || (this.inventory[id] ?? 0) < 1) return null;
+        this.inventory = remove(this.inventory, id, 1).inventory;
+        return id;
+      });
+    }
   }
 
   /** Rejoue chez l'hôte un événement venu de l'état d'un joueur invité (le monde a changé : affichage à refaire). */
@@ -662,8 +671,7 @@ export class GameState {
 
   /** Outil rangé dans la case d'outils (s'il en reste dans le sac), ou null : mains nues. */
   toolItem(index = 0): string | null {
-    const id = this.changes.tools[index] ?? null;
-    return id && (this.inventory[id] ?? 0) > 0 ? id : null;
+    return this.changes.tools[index] ?? null;
   }
 
   /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
@@ -691,8 +699,22 @@ export class GameState {
       const def = itemById(item);
       if (!def.tool && !isWeapon(def.id)) return false;
     }
+    const previous = this.changes.tools[index] ?? null;
+    if (previous === item) return true;
+    // L'outil quitte le sac pour la case (comme un équipement) ; celui qui y était y retourne.
+    if (item !== null && (this.inventory[item] ?? 0) < 1) return false;
+    const saved = this.inventory;
+    if (item !== null) this.inventory = remove(this.inventory, item, 1).inventory;
+    if (previous) {
+      if (maxAddable(this.inventory, previous, this.limits) < 1) {
+        this.inventory = saved;
+        return false;
+      }
+      this.inventory = add(this.inventory, previous, 1);
+    }
     this.changes.tools[index] = item;
     this.carried = null;
+    this.emit({ type: 'inventory' });
     this.emit({ type: 'hotbar' });
     return true;
   }
@@ -1113,6 +1135,8 @@ export class GameState {
       inventory,
       equipment: { ...this.changes.equipment },
     };
+    for (const tool of this.changes.tools) if (tool) inventory[tool] = (inventory[tool] ?? 0) + 1;
+    this.changes.tools = this.changes.tools.map(() => null);
     this.inventory = {};
     this.hand = null;
     this.held = null;
@@ -1307,9 +1331,10 @@ export class GameState {
     if ((this.inventory[item] ?? 0) < 1) return 'missing';
     if (!factory.canPlace(type, gx, gz, rot, blocked, lift, tier)) return 'blocked';
     this.inventory = remove(this.inventory, item, 1).inventory;
-    // Amélioration d'un tapis : l'ancien revient dans le sac, ses objets restent sur le nouveau.
-    const old = factory.upgradeOf(type, gx, gz, lift, tier);
-    if (old) {
+    // Remplacement d'un tapis (palier, sens, forme gardée) : l'ancien revient dans le sac, ses objets restent sur le nouveau.
+    const target = factory.replaceTarget(type, gx, gz, lift, tier, rot);
+    if (target) {
+      const old = target.old;
       factory.remove(old.id);
       // Un tuyau rompu est jeté : le neuf posé par-dessus est la réparation.
       if (!old.broken)
@@ -1317,7 +1342,15 @@ export class GameState {
           x: (gx + 0.5) * CELL_SIZE_M,
           z: (gz + 0.5) * CELL_SIZE_M,
         });
-      const fresh = emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier);
+      const fresh = emptyMachine(
+        this.changes.nextMachineId++,
+        type,
+        gx,
+        gz,
+        rot,
+        target.lift,
+        tier,
+      );
       fresh.belt = old.belt;
       fresh.fluid = old.broken ? fresh.fluid : old.fluid;
       factory.add(fresh);

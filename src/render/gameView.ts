@@ -312,7 +312,7 @@ export function startGameView(
     firstArm.clip([firstClip]);
     renderer.localClippingEnabled = true;
     camera.add(firstArm.root);
-    firstArm.attachHandTool(hand, 1.15, Math.PI / 2);
+    firstArm.attachHandTool(hand, 1.15, Math.PI / 2, -0.5);
     bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).

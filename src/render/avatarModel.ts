@@ -275,7 +275,7 @@ export class Avatar {
    * Place un outil dans la main droite (`tool` : ~0,7 m de long, tête vers +z, pointe vers -y) : il suit le bras et,
    * au moment du coup (bras tendu vers l'avant), la tête pointe vers l'avant et la pointe vers le bas.
    */
-  attachHandTool(tool: THREE.Object3D, size = 1.15, roll = 0): void {
+  attachHandTool(tool: THREE.Object3D, size = 1.15, roll = 0, tilt = 0): void {
     const j = this.joints.get(ARM.d[2]) ?? this.joints.get(ARM.d[1]);
     const hand = this.handBone();
     if (!j || !hand) return;
@@ -302,7 +302,8 @@ export class Avatar {
     holder.scale.setScalar(rootScale.x / scale.x);
     tool.position.set(0, 0, 0.21 * size);
     // `roll` : quart de tour autour du manche (0 : la tête à plat ; π/2 : la tête debout).
-    tool.rotation.set(0, 0, roll);
+    // `tilt` : inclinaison du manche dans la main (tenu plus ou moins debout).
+    tool.rotation.set(tilt, 0, roll);
     tool.scale.setScalar(size);
     holder.add(tool);
     hand.add(holder);

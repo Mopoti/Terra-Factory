@@ -830,7 +830,7 @@ describe('tapis en hauteur et tunnels', () => {
     expect(f.canPlace('conveyor', 4, 10, 0, () => false, 2)).toBe(false); // déjà pris en l'air
     const fresh = new Factory(ground, world);
     expect(fresh.canPlace('conveyor', 4, 10, 0, () => false, 2)).toBe(true); // libre en l'air
-    expect(fresh.canPlace('conveyor', 4, 10, 0, () => false, 0)).toBe(false); // occupé au sol
+    expect(fresh.canPlace('conveyor', 4, 10, 1, () => false, 0)).toBe(false); // occupé au sol
     bridge[0].belt.push({ item: 'iron_ore', pos: 0 });
     ground[0].belt.push({ item: 'copper_ore', pos: 0 });
     run(f, 12);
@@ -1423,7 +1423,7 @@ describe('point 5a : tapis et foreuses par palier', () => {
     expect(speeds[2]).toBeCloseTo(3, 2);
   });
 
-  it('un tapis plus rapide se pose par-dessus un plus lent (même case) mais pas l’inverse', () => {
+  it('un tapis d’un autre palier se pose par-dessus (même case), dans les deux sens', () => {
     const b1 = emptyMachine(1, 'conveyor', 4, 4, 0);
     const f = new Factory([b1], makeWorld().world);
     expect(f.canPlace('conveyor', 4, 4, 0, () => false, 0, 1)).toBe(false);
@@ -1431,7 +1431,17 @@ describe('point 5a : tapis et foreuses par palier', () => {
     expect(f.upgradeOf('conveyor', 4, 4, 0, 3)).toBe(b1);
     const b3 = emptyMachine(2, 'conveyor', 8, 8, 0, 0, 3);
     const g = new Factory([b3], makeWorld().world);
-    expect(g.canPlace('conveyor', 8, 8, 0, () => false, 0, 2)).toBe(false);
+    expect(g.canPlace('conveyor', 8, 8, 0, () => false, 0, 2)).toBe(true); // rétrogradation
+    expect(g.canPlace('conveyor', 8, 8, 0, () => false, 0, 3)).toBe(false); // identique : rien à faire
+  });
+
+  it('un tapis posé par-dessus change le sens et garde la forme (rampe, tunnel)', () => {
+    const ramp = emptyMachine(1, 'conveyor', 4, 4, 0, 1, 1);
+    const f = new Factory([ramp], makeWorld().world);
+    // À plat sur une rampe : même forme, autre sens ou autre palier.
+    expect(f.replaceTarget('conveyor', 4, 4, 0, 1, 2)).toEqual({ old: ramp, lift: 1 });
+    expect(f.replaceTarget('conveyor', 4, 4, 0, 2, 0)).toEqual({ old: ramp, lift: 1 });
+    expect(f.replaceTarget('conveyor', 4, 4, 0, 1, 0)).toBeNull();
   });
 
   it('le palier est enregistré avec la machine', () => {

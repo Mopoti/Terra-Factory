@@ -1028,7 +1028,7 @@ export class FactoryView {
     if (key !== this.ghostKey) {
       this.ghostKey = key;
       const mb = new MeshBuilder();
-      for (const g of list) {
+      for (const [i, g] of list.entries()) {
         const color = g.ok ? GREEN : RED;
         const first = mb.positions.length;
         const { w, d } = dims(g.type, g.rot);
@@ -1036,11 +1036,21 @@ export class FactoryView {
         const z = (g.gz + d / 2) * CELL_SIZE_M;
         if (g.type === 'conveyor') {
           // Tapis droit au sol : le vrai modèle ; pentes et surélevés : la forme simple.
-          const [dx, dz] = RISE_DIR[g.rot];
-          const straight = { ex: -dx, ez: -dz, curved: false };
-          const shape = { tier: 1, rot: g.rot, gx: g.gx, gz: g.gz, broken: false } as Machine;
-          if (!((g.lift ?? 0) === 0 && addBeltModel(mb, shape, straight, 0, color)))
+          const shape = {
+            type: 'conveyor',
+            tier: 1,
+            rot: g.rot,
+            gx: g.gx,
+            gz: g.gz,
+            lift: 0,
+            broken: false,
+          } as Machine;
+          // Dans un angle, le patron prend la forme du virage (comme le tapis posé).
+          const entry = this.ghostBeltEntry(list, i, shape);
+          if (!((g.lift ?? 0) === 0 && addBeltModel(mb, shape, entry, 0, color)))
             ghostBelt(mb, x, z, g.rot, g.lift ?? 0, color);
+        } else if (g.type === 'pipe' && (g.lift ?? 0) === 0 && this.ghostPipe(mb, list, i, color)) {
+          // Tuyau : modèle d'après les côtés raccordés (coude, té, croix…).
         } else {
           // Le patron est l'objet lui-même (son modèle ou ses formes), teinté de vert ou de rouge.
           addMachineBody(mb, g.type, g.gx, g.gz, g.rot, [], g.lift ?? 0);
@@ -1059,6 +1069,48 @@ export class FactoryView {
       this.ghost.geometry = geometryOf(mb);
     }
     this.ghost.visible = true;
+  }
+
+  /** Côté d'où arrive le tapis du patron : le tapis précédent du tracé, sinon ce qui est déjà posé. */
+  private ghostBeltEntry(
+    list: { type: MachineType; gx: number; gz: number; rot: number; lift?: number }[],
+    i: number,
+    m: Machine,
+  ): { ex: number; ez: number; curved: boolean } {
+    const prev = list[i - 1];
+    if (prev && prev.type === 'conveyor' && (prev.lift ?? 0) === 0 && prev.rot !== m.rot) {
+      const { w, d } = dims('conveyor', prev.rot);
+      const [px, pz] = RISE_DIR[prev.rot];
+      if (prev.gx + px * w === m.gx && prev.gz + pz * d === m.gz && prev.rot !== (m.rot + 2) % 4)
+        return { ex: -px, ez: -pz, curved: true };
+    }
+    if (prev && prev.type === 'conveyor' && prev.rot === m.rot) {
+      const [dx, dz] = RISE_DIR[m.rot];
+      return { ex: -dx, ez: -dz, curved: false };
+    }
+    return beltEntry(this.factory, m);
+  }
+
+  /** Patron de tuyau en modèle, raccordé aux tuyaux voisins du tracé et à ceux déjà posés. */
+  private ghostPipe(
+    mb: MeshBuilder,
+    list: { type: MachineType; gx: number; gz: number; rot: number; lift?: number }[],
+    i: number,
+    color: Rgb,
+  ): boolean {
+    const g = list[i];
+    const { w, d } = dims('pipe', 0);
+    const sides: number[] = [];
+    for (let side = 0; side < 4; side++) {
+      const [dx, dz] = RISE_DIR[side];
+      const gx = g.gx + dx * w;
+      const gz = g.gz + dz * d;
+      const same = (o: { type: MachineType; gx: number; gz: number; lift?: number }): boolean =>
+        o.type === 'pipe' && o.gx === gx && o.gz === gz && (o.lift ?? 0) === 0;
+      if (list.some(same) || this.factory.machines.some(same)) sides.push(side);
+    }
+    const shape = { type: 'pipe', tier: 1, rot: g.rot, gx: g.gx, gz: g.gz, lift: 0 } as Machine;
+    return addPipeModel(mb, shape, sides, color);
   }
 
   hideGhost(): void {

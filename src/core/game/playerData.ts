@@ -12,6 +12,7 @@ import type { MultiplayerOptions } from '../save/saveIndex';
 export const PLAYER_KEYS = [
   'hotbar',
   'tools',
+  'toolsHeld',
   'equipment',
   'ammo',
   'rifleAmmo',
