@@ -306,13 +306,13 @@ export function startGameView(
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
-    firstArm.root.position.set(0.02, -0.55, 0.12);
+    firstArm.root.position.set(0.4, -0.7, 0.12);
     firstArm.root.scale.setScalar(0.8);
     firstArm.root.rotation.y = Math.PI;
     firstArm.clip([firstClip]);
     renderer.localClippingEnabled = true;
     camera.add(firstArm.root);
-    firstArm.attachHandTool(hand);
+    firstArm.attachHandTool(hand, 1.15, Math.PI / 2);
     bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
@@ -3406,7 +3406,9 @@ export function startGameView(
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
-    hand.visible = rig.view === 'first' && views.first.showHands && usingTool;
+    // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
+    const holdsTool = toolId !== null && !armedNow;
+    hand.visible = rig.view === 'first' && views.first.showHands && holdsTool;
     bodyTool.visible = rig.view !== 'first' && usingTool;
     miner?.update(
       dt,
@@ -3419,11 +3421,11 @@ export function startGameView(
       camera.getWorldDirection(clipDir);
       camera.getWorldPosition(clipPos).addScaledVector(clipDir, 0.12);
       firstClip.setFromNormalAndCoplanarPoint(clipDir, clipPos);
-      firstArm.root.visible = rig.view === 'first' && views.first.showHands && !gun.visible;
+      firstArm.root.visible =
+        rig.view === 'first' && views.first.showHands && holdsTool && !gun.visible;
       firstArm.update(dt, 0, interaction.working !== null);
-    } else
-      bareHand.visible =
-        rig.view === 'first' && views.first.showHands && !usingTool && !gun.visible;
+      if (firstArm instanceof Avatar) firstArm.root.position.x = 0.4 - 0.16 * firstArm.windup;
+    } else bareHand.visible = false; // pas de main nue en vue subjective
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();
     crosshair.hidden = rig.view !== 'first' || views.first.crosshairStyle === 'none';

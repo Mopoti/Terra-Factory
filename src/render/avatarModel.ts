@@ -24,6 +24,9 @@ export type { Silhouette };
 const MODEL_HEIGHT_M = 1.82;
 /** Hauteur des hanches dans le fichier (m) : de là partent les jambes. */
 const HIP_HEIGHT_M = 0.9;
+/** Vue subjective : élévation du bras (radians) au repos et au plus haut du coup. */
+const FIRST_REST_RAISE = 1.3;
+const FIRST_STRIKE_RAISE = 2.0;
 
 const sources = new Map<Silhouette, THREE.Group>();
 let loading: Promise<boolean> | null = null;
@@ -103,6 +106,7 @@ export class Avatar {
   private readonly baseHeight: number;
   private readonly joints = new Map<string, Joint>();
   private readonly firstPerson: boolean;
+  private fpRaise = FIRST_REST_RAISE;
   private phase = 0;
   private strike = 0;
   private amount = 0;
@@ -271,7 +275,7 @@ export class Avatar {
    * Place un outil dans la main droite (`tool` : ~0,7 m de long, tête vers +z, pointe vers -y) : il suit le bras et,
    * au moment du coup (bras tendu vers l'avant), la tête pointe vers l'avant et la pointe vers le bas.
    */
-  attachHandTool(tool: THREE.Object3D, size = 1.15): void {
+  attachHandTool(tool: THREE.Object3D, size = 1.15, roll = 0): void {
     const j = this.joints.get(ARM.d[2]) ?? this.joints.get(ARM.d[1]);
     const hand = this.handBone();
     if (!j || !hand) return;
@@ -297,10 +301,16 @@ export class Avatar {
     holder.position.set(0, (0.07 * rootScale.x) / scale.x, 0);
     holder.scale.setScalar(rootScale.x / scale.x);
     tool.position.set(0, 0, 0.21 * size);
-    tool.rotation.set(0, 0, 0);
+    // `roll` : quart de tour autour du manche (0 : la tête à plat ; π/2 : la tête debout).
+    tool.rotation.set(0, 0, roll);
     tool.scale.setScalar(size);
     holder.add(tool);
     hand.add(holder);
+  }
+
+  /** Vue subjective : 0 au repos, 1 au plus haut de l'élan (le bras se rapproche alors du centre de l'écran). */
+  get windup(): number {
+    return (this.fpRaise - FIRST_REST_RAISE) / (FIRST_STRIKE_RAISE - FIRST_REST_RAISE);
   }
 
   private handBone(): THREE.Bone | null {
@@ -320,8 +330,14 @@ export class Avatar {
     if (this.firstPerson) {
       const t = 0.5 + 0.5 * Math.sin(this.strike);
       const bob = Math.sin(this.phase * 0.5) * 0.04 * this.amount;
+      // Au repos le bras reste bas, hors du champ : on ne voit que le bout de l'outil. À l'élan il monte et la main
+      // apparaît un instant, puis le coup part vers l'avant.
+      const raise = striking
+        ? FIRST_REST_RAISE + (FIRST_STRIKE_RAISE - FIRST_REST_RAISE) * t
+        : FIRST_REST_RAISE;
+      this.fpRaise += (raise - this.fpRaise) * Math.min(1, dt * 14);
       this.arm('g', 0);
-      this.arm('d', 0, -(striking ? 1.5 + 1.0 * t : 1.7) + bob, striking ? 0.6 : 0.9);
+      this.arm('d', 0, -this.fpRaise + bob, striking ? 0.6 : 0.9);
       return;
     }
     this.leg('g', s);
