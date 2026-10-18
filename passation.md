@@ -1,7 +1,7 @@
 # Passation — Terra Factory
 
 > Fichier de transmission entre discussions. Mettre à jour à chaque fin de session.
-> Dernière mise à jour : 2026-10-17
+> Dernière mise à jour : 2026-10-18
 
 ## Rôles
 - **Utilisateur = Product Owner** : décide de l'avancement et donne les directives. Non développeur (aucun langage maîtrisé).
@@ -171,7 +171,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 
 ## Prochaines étapes
 - **Mode Créatif (octobre 2026)** : onglet « Ressources » (poser minerais, arbres, rochers, buissons, eau), aperçu avant la pose et remplacement, destruction au clic droit maintenu 1 s, corbeille dans le sac, vol libre (double Saut), portée de 24 m ; voir [`docs/refonte-objets.md`](docs/refonte-objets.md) (fin). Idées « mode dieu » proposées au PO, à valider.
-- **Modèles 3D (octobre 2026)** : dernières machines, arbres, buissons, sol, rochers et amas de minerai faits (voir [`docs/modeles3d.md`](docs/modeles3d.md)) ; personnage du joueur : étape 1 faite (modèles homme et femme sur squelette commun, dans le jeu), tête agrandie (cou plus court) et 10 coupes de cheveux faites ; suite selon [`docs/personnage.md`](docs/personnage.md) (formes de déformation, écran de personnalisation, animations). **Objets au sol** : 17 formes maison (`blender/scripts/objets.py`, `objet_*.glb` : bûches, minerai, lingot, plaque, baril, paquet de science…) teintées à la couleur de l'objet, et les machines posées au sol en miniature (`src/render/dropModels.ts`).
+- **Modèles 3D (octobre 2026)** : dernières machines, arbres, buissons, sol, rochers et amas de minerai faits (voir [`docs/modeles3d.md`](docs/modeles3d.md)) ; personnage du joueur : étape 1 faite (modèles homme et femme sur squelette commun, dans le jeu), tête agrandie (cou plus court) et 10 coupes de cheveux faites ; suite selon [`docs/personnage.md`](docs/personnage.md) (formes de déformation, écran de personnalisation, animations). **Objets au sol** : 17 formes maison (`blender/scripts/objets.py`, `objet_*.glb` : bûches, minerai, lingot, plaque, baril, paquet de science…) teintées à la couleur de l'objet, et les machines posées au sol en miniature (`src/render/dropModels.ts`). **Construction** : murs, sols / plafonds, portes, escaliers et piliers en modèles maison bois et pierre (`blender/scripts/construction.py`, `addPieceModel` dans `buildingView.ts`). Reste en formes simples : tourelle de base, balise, presse à plastique (kit), ennemis et nids, dépouilles, outils autres que le piolet, armures.
 0. Finir la discussion de cadrage (`docs/risques.md`) avant de coder.
 1. Périmètre du prototype : menu d'accueil complet (Continuer/Nouvelle/Charger/Paramètres/Quitter), édition de partie, sol plat, 3 vues.
 2. Prototype : scène Three.js, sol plat, caméra 3 vues, contrôles remappables.

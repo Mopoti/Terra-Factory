@@ -522,7 +522,10 @@ export function startGameView(
   // Modèles 3D du kit : chargés en arrière-plan, les machines les prennent dès qu'ils sont prêts.
   let viewAlive = true;
   void loadModels().then(() => {
-    if (viewAlive) factoryView.rebuild();
+    if (!viewAlive) return;
+    factoryView.rebuild();
+    // Les pièces de construction prennent leurs modèles 3D.
+    buildingView.rebuild(options.state.changes.pieces);
   });
   // Arbres et cailloux du décor : les chunks déjà construits sont refaits une fois le chargement terminé.
   void loadNature().then(() => {

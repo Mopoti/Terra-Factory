@@ -46,6 +46,7 @@ export class MeshBuilder {
     mix = 0,
     mirror = false,
     scaleY = scale,
+    scaleZ = scale,
   ): void {
     const a = (turns * Math.PI) / 2;
     const c = Math.cos(a);
@@ -56,7 +57,7 @@ export class MeshBuilder {
       const flip = mirror ? -1 : 1;
       const px = (m.positions[i * 3] - cx) * scale * flip;
       const py = (m.positions[i * 3 + 1] - m.min.y) * scaleY;
-      const pz = (m.positions[i * 3 + 2] - cz) * scale;
+      const pz = (m.positions[i * 3 + 2] - cz) * scaleZ;
       this.positions.push(x + px * c + pz * s, y + py, z - px * s + pz * c);
       const nx = m.normals[i * 3] * flip;
       const nz = m.normals[i * 3 + 2];

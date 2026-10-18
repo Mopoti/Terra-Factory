@@ -337,6 +337,16 @@ const MINERAL_NAMES = [
   ),
 ];
 
+/** Pièces de construction (`blender/scripts/construction.py`), utilisées par `buildingView.ts`. */
+export const CONSTRUCTION_NAMES = ['bois', 'pierre'].flatMap((m) => [
+  `mur_${m}`,
+  `dalle_${m}`,
+  `porte_${m}`,
+  `porte_${m}_battant`,
+  `escalier_${m}`,
+  ...['bas', 'fut', 'haut', 'seul'].map((p) => `pilier_${m}_${p}`),
+]);
+
 const TERRA_NAMES = [
   ...new Set([
     ...PIPE_NAMES,
@@ -344,6 +354,7 @@ const TERRA_NAMES = [
     ...NATURE_NAMES,
     ...MINERAL_NAMES,
     ...OBJET_NAMES,
+    ...CONSTRUCTION_NAMES,
     ...Object.values(TERRA_MODELS),
     ...Object.values(TERRA_BELT_MODELS)
       .flat()

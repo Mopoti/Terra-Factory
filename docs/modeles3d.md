@@ -126,3 +126,9 @@ Faits : foreuses (foret, volant, poulies, gyrophare), chevalet (manivelle, balan
 - Utilisé par `refreshDrops` (`interaction.ts`) ; carapace et tissu vivant gardent leur forme à part. Tant que les modèles ne sont pas chargés, l'ancien petit bloc coloré reste.
 - Ajouter une forme : la fabriquer dans `objets.py`, l'ajouter à `DROP_SHAPES` (`models.ts`) et à `dropShape`, exporter puis `node scripts/sync-modeles.mjs`.
 
+## Pièces de construction (octobre 2026)
+- **Modèles maison** : `blender/scripts/construction.py` (`construction.blend`), bois et pierre : `mur_<mat>` (bloc de 50 cm, planches ou moellons), `dalle_<mat>` (sol et plafond : lames ou dalles 2 × 2), `porte_<mat>` (cadre sur tout l'étage) et `porte_<mat>_battant` (battant seul, tourné quand la porte est ouverte), `escalier_<mat>` (3 marches dans la pièce de 50 cm), `pilier_<mat>_bas` / `_fut` / `_haut` / `_seul` (tronçons de 50 cm empilés selon la hauteur du pilier).
+- **Dans le jeu** : `addPieceModel` dans `src/render/buildingView.ts` ; l'aperçu de pose (vert / rouge) garde les formes simples, comme les pièces tant que les modèles ne sont pas chargés (le maillage est refait à la fin du chargement).
+- **Pas de recouvrement** : un bloc de mur va de bord de case à bord de case ; un bout libre déborde de 5 cm pour fermer l'angle. Dans un angle, seul le mur le long de x déborde (2 mm de plus), celui le long de z s'arrête dedans. Les montants de porte sont un peu plus épais que le mur et recouvrent le bout du mur voisin ; le battant ouvert est décollé de 3 mm. Sans cela, les faces confondues scintillent.
+- Plafond qui déborde sur un mur : la dalle est étirée (même règle que la forme simple).
+

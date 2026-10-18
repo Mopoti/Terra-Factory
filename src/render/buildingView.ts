@@ -15,6 +15,7 @@ import { aimBuild, aimExisting } from '../core/build/aim';
 import type { PlanItem } from '../core/build/plan';
 import { propsMaterial } from './chunkMesh';
 import { MeshBuilder, hexToRgb, shade, type Rgb } from './meshBuilder';
+import { bakedModel, type BakedModel } from './models';
 
 const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
@@ -25,6 +26,180 @@ const JOIN_M = 0.002;
 const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
+/** Nom du matériau dans les fichiers de modèles (`blender/scripts/construction.py`). */
+const MODEL_MATERIAL: Record<string, string> = { wood: 'bois', stone: 'pierre' };
+
+/**
+ * Pose le modèle `name` (centré sur x, z, le bas à y), tourné de `turns` quarts de tour, étiré de sx, sy, sz ;
+ * false tant que le modèle n'est pas chargé.
+ */
+function putModel(
+  mb: MeshBuilder,
+  name: string,
+  x: number,
+  y: number,
+  z: number,
+  turns: number,
+  sx = 1,
+  sy = 1,
+  sz = 1,
+): boolean {
+  const m = bakedModel(name);
+  if (!m) return false;
+  mb.model(m, x, y, z, turns, sx, undefined, 0, false, sy, sz);
+  return true;
+}
+
+/** Quarts de tour pour que l'axe +x d'un modèle pointe vers (dx, dz) (voir `MeshBuilder.model`). */
+const turnsToward = (dx: number, dz: number): number =>
+  dx > 0.5 ? 0 : dz < -0.5 ? 1 : dx < -0.5 ? 2 : 3;
+
+/** Les modèles des pièces sont-ils tous chargés ? */
+const modelsOf = (mat: string, names: string[]): (BakedModel | null)[] =>
+  names.map((n) => bakedModel(`${n.replace('#', mat)}`));
+
+/**
+ * Pièce en modèle 3D (murs, sols, plafonds, portes, escaliers, piliers) ; false si le modèle manque (forme simple).
+ * L'aperçu de pose (teinté) garde toujours les formes simples.
+ */
+function addPieceModel(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, pieces?: Pieces): boolean {
+  const def = pieceDef(kind);
+  const mat = MODEL_MATERIAL[def.material];
+  if (!mat) return false;
+  const y0 = pos.level * STOREY_HEIGHT_M;
+  const cx = (pos.gx + 0.5) * CELL_SIZE_M;
+  const cz = (pos.gz + 0.5) * CELL_SIZE_M;
+  const T = THICKNESS_M;
+  if (def.type === 'stairs') {
+    const [dx, dz] = RISE_DIR[pos.rot ?? 0];
+    return putModel(
+      mb,
+      `escalier_${mat}`,
+      cx,
+      y0 + (pos.layer ?? 0) * LAYER_HEIGHT_M,
+      cz,
+      turnsToward(dx, dz),
+    );
+  }
+  if (def.type === 'pillar') {
+    const n = (pos.layer ?? LAYERS_PER_STOREY - 1) + 1;
+    const parts =
+      n === 1 ? ['seul'] : ['bas', ...Array.from({ length: n - 2 }, () => 'fut'), 'haut'];
+    if (
+      modelsOf(
+        mat,
+        parts.map((p) => `pilier_#_${p}`),
+      ).some((m) => !m)
+    )
+      return false;
+    const k = (n * LAYER_HEIGHT_M - 0.01) / (n * LAYER_HEIGHT_M);
+    parts.forEach((p, i) =>
+      putModel(mb, `pilier_${mat}_${p}`, cx, y0 + i * LAYER_HEIGHT_M * k, cz, 0, 1, k, 1),
+    );
+    return true;
+  }
+  if (def.type === 'floor' || def.type === 'ceiling') {
+    const m = bakedModel(`dalle_${mat}`);
+    if (!m) return false;
+    if (def.type === 'floor')
+      return putModel(
+        mb,
+        `dalle_${mat}`,
+        cx,
+        y0,
+        cz,
+        0,
+        CELL_SIZE_M / m.size.x,
+        T / m.size.y,
+        CELL_SIZE_M / m.size.z,
+      );
+    const layer = pos.layer ?? LAYERS_PER_STOREY - 1;
+    const topY = y0 + (layer + 1) * LAYER_HEIGHT_M + SLAB_LIFT_M;
+    // Même débord sur les murs que la forme simple (voir `addPiece`).
+    const over = (axis: 'x' | 'z', gx: number, gz: number, nx: number, nz: number): number => {
+      const wall = pieces?.[pieceKey({ slot: 'edge', level: pos.level, gx, gz, axis, layer })];
+      if (!wall?.startsWith('wall')) return 0;
+      const neighbour =
+        pieces?.[pieceKey({ slot: 'ceiling', level: pos.level, gx: nx, gz: nz, layer })];
+      return neighbour ? 0 : T / 2 + JOIN_M;
+    };
+    const west = over('z', pos.gx, pos.gz, pos.gx - 1, pos.gz);
+    const east = over('z', pos.gx + 1, pos.gz, pos.gx + 1, pos.gz);
+    const north = over('x', pos.gx, pos.gz, pos.gx, pos.gz - 1);
+    const south = over('x', pos.gx, pos.gz + 1, pos.gx, pos.gz + 1);
+    const w = CELL_SIZE_M + west + east;
+    const d = CELL_SIZE_M + north + south;
+    return putModel(
+      mb,
+      `dalle_${mat}`,
+      cx + (east - west) / 2,
+      topY - T,
+      cz + (south - north) / 2,
+      0,
+      w / m.size.x,
+      T / m.size.y,
+      d / m.size.z,
+    );
+  }
+  // Bord de case : murs et portes, centrés sur la ligne du bord.
+  const alongX = pos.axis === 'x';
+  const mx = alongX ? cx : pos.gx * CELL_SIZE_M;
+  const mz = alongX ? pos.gz * CELL_SIZE_M : cz;
+  if (def.type === 'wall') {
+    const m = bakedModel(`mur_${mat}`);
+    if (!m) return false;
+    // Le bloc va de bord de case à bord de case ; un bout libre déborde de T/2 pour fermer l'angle. Dans un angle,
+    // seul le mur le long de x déborde (un peu plus, pour que les faces ne se confondent pas) : le mur le long de z
+    // s'arrête dedans. Ainsi deux blocs ne se recouvrent jamais (pas de scintillement).
+    const layer = pos.layer ?? 0;
+    const has = (axis: 'x' | 'z', gx: number, gz: number): boolean => {
+      if (
+        pieces?.[pieceKey({ slot: 'edge', level: pos.level, gx, gz, axis, layer })]?.startsWith(
+          'wall',
+        )
+      )
+        return true;
+      return !!pieces?.[
+        pieceKey({ slot: 'edge', level: pos.level, gx, gz, axis, layer: 0 })
+      ]?.startsWith('door');
+    };
+    const free = T / 2 + JOIN_M;
+    let lo: number;
+    let hi: number;
+    if (alongX) {
+      lo = has('x', pos.gx - 1, pos.gz) ? 0 : free;
+      hi = has('x', pos.gx + 1, pos.gz) ? 0 : free;
+    } else {
+      const xAt = (gz: number): boolean => has('x', pos.gx - 1, gz) || has('x', pos.gx, gz);
+      lo = has('z', pos.gx, pos.gz - 1) || xAt(pos.gz) ? 0 : T / 2;
+      hi = has('z', pos.gx, pos.gz + 1) || xAt(pos.gz + 1) ? 0 : T / 2;
+    }
+    const shift = (hi - lo) / 2;
+    return putModel(
+      mb,
+      `mur_${mat}`,
+      alongX ? mx + shift : mx,
+      y0 + layer * LAYER_HEIGHT_M,
+      alongX ? mz : mz + shift,
+      alongX ? 0 : 1,
+      (CELL_SIZE_M + lo + hi) / m.size.x,
+    );
+  }
+  if (def.type !== 'door') return false;
+  if (!bakedModel(`porte_${mat}`) || !bakedModel(`porte_${mat}_battant`)) return false;
+  putModel(mb, `porte_${mat}`, mx, y0, mz, alongX ? 0 : 1);
+  // Battant : gonds du côté -x du modèle. Fermé, il remplit le passage ; ouvert, il pivote à angle droit.
+  const W = DOOR_WIDTH_M;
+  const th = 0.04;
+  const open = !!pieces?.[doorOpenKey(pos)];
+  const leaf = `porte_${mat}_battant`;
+  if (!open) putModel(mb, leaf, mx, y0, mz, alongX ? 0 : 3);
+  // Ouvert : décollé de 3 mm du montant, pour que leurs faces ne se confondent pas.
+  else if (alongX) putModel(mb, leaf, mx - W / 2 + th / 2 + 0.003, y0, mz + W / 2, 3);
+  else putModel(mb, leaf, mx + W / 2, y0, mz - W / 2 + th / 2 + 0.003, 0);
+  return true;
+}
+
 /** Ajoute le volume d'une pièce au maillage. Les positions sont en mètres. */
 export function addPiece(
   mb: MeshBuilder,
@@ -33,6 +208,7 @@ export function addPiece(
   tint?: Rgb,
   pieces?: Pieces,
 ): void {
+  if (!tint && addPieceModel(mb, kind, pos, pieces)) return;
   const def = pieceDef(kind);
   const color = tint ?? hexToRgb(def.color);
   const y0 = pos.level * STOREY_HEIGHT_M;
