@@ -1409,6 +1409,28 @@ export class GameState {
     return 'ok';
   }
 
+  /** Démonte un véhicule, même attelé : il revient dans le sac avec sa soute, le reste du convoi se scinde. */
+  removeCar(carId: number): boolean {
+    const i = this.changes.trains.findIndex((c) => c.cars.some((k) => k.id === carId));
+    if (i < 0) return false;
+    const c = this.changes.trains[i];
+    const graph = this.railGraph();
+    const idx = c.cars.findIndex((k) => k.id === carId);
+    const pose = carPoses(graph, c)[idx];
+    const at = { x: pose?.x ?? 0, z: pose?.z ?? 0 };
+    // Derrière le véhicule : un nouveau convoi ; devant : le convoi d'origine, raccourci.
+    if (idx + 1 < c.cars.length) {
+      const rear = splitConsist(graph, c, idx + 1, this.newConsistId());
+      if (rear) this.changes.trains.push(rear);
+    }
+    const [car] = c.cars.splice(idx, 1);
+    if (c.cars.length === 0) this.changes.trains.splice(this.changes.trains.indexOf(c), 1);
+    this.giveBack(CARS[car.kind].item, 1, at);
+    if (car.fuel) this.giveBack(car.fuel.item, car.fuel.count, at);
+    this.railsChanged();
+    return true;
+  }
+
   /** Remplit la soute d'une locomotive avec du charbon ou du bois du sac (renvoie le nombre de pièces chargées). */
   refuelLocomotive(car: Car): number {
     if (!CARS[car.kind].loco) return 0;

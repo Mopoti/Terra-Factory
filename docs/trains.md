@@ -28,6 +28,8 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 
 - Une pièce de voie ne se démonte pas tant qu'un convoi roule ou stationne dessus.
 
+- Clic droit maintenu sur un véhicule : il est démonté (même attelé, le reste du convoi se scinde) et revient dans le sac avec sa soute.
+
 ## Soute et attelage
 - Tab en conduisant ouvre la fenêtre de la locomotive : on y glisse du charbon ou du bois depuis le sac (soute de 50 pièces). La chaudière brûle la soute selon la puissance demandée ; la jauge montre la chaleur.
 - C attèle (wagon à moins de 1,6 m derrière) ou dételle ; la ligne de HUD et un bouton tactile le rappellent.

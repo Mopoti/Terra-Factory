@@ -254,6 +254,37 @@ export class TrainView {
     return best;
   }
 
+  /** Véhicule que le rayon touche (sphère de 1,4 m autour de son milieu et de ses extrémités), avec la distance. */
+  pickCar(
+    o: THREE.Vector3,
+    d: THREE.Vector3,
+    maxDist: number,
+  ): { car: Car; t: number; x: number; y: number; z: number; len: number } | null {
+    const graph = this.host.state.railGraph();
+    let best: { car: Car; t: number; x: number; y: number; z: number; len: number } | null = null;
+    for (const consist of this.host.state.changes.trains) {
+      for (const pose of carPoses(graph, consist)) {
+        const len = CARS[pose.car.kind].lengthM;
+        const sx = Math.sin(pose.yaw);
+        const cz = Math.cos(pose.yaw);
+        for (const k of [-0.35, 0, 0.35]) {
+          const px = pose.x + sx * len * k - o.x;
+          const py = pose.y + 1.2 - o.y;
+          const pz = pose.z + cz * len * k - o.z;
+          const t0 = px * d.x + py * d.y + pz * d.z;
+          if (t0 < 0 || t0 > maxDist) continue;
+          const rx = px - t0 * d.x;
+          const ry = py - t0 * d.y;
+          const rz = pz - t0 * d.z;
+          if (rx * rx + ry * ry + rz * rz > 1.5 * 1.5) continue;
+          if (!best || t0 < best.t)
+            best = { car: pose.car, t: t0, x: pose.x, y: pose.y, z: pose.z, len };
+        }
+      }
+    }
+    return best;
+  }
+
   /** Boîte (centre et dimensions, m) qui entoure une pièce de voie : pour la surbrillance. */
   railBox(piece: RailPiece): {
     x: number;

@@ -54,6 +54,25 @@ describe('voies et trains dans la partie', () => {
     expect(s.inventory.train_wagon_freight).toBe(2);
   });
 
+  it('un véhicule se démonte même attelé, le convoi se scinde', () => {
+    const s = start();
+    laidLine(s, 40);
+    const loco = s.placeCar('locomotive_steam', { piece: s.changes.rails[10].id, u: 0.5, dir: 1 })!;
+    const graph = s.railGraph();
+    const rear = graph.advance({ ...loco.head, dir: -1 }, 6.45 + 1.0 + 2.7).pos;
+    s.placeCar('wagon_freight', { piece: rear.piece, u: rear.u, dir: -1 });
+    s.coupleTrain(loco.id);
+    expect(s.changes.trains[0].cars).toHaveLength(2);
+    const wagonId = s.changes.trains[0].cars[1].id;
+    const before = s.inventory.train_wagon_freight ?? 0;
+    expect(s.removeCar(wagonId)).toBe(true);
+    expect(s.changes.trains).toHaveLength(1);
+    expect(s.changes.trains[0].cars).toHaveLength(1);
+    expect(s.inventory.train_wagon_freight).toBe(before + 1);
+    expect(s.removeCar(s.changes.trains[0].cars[0].id)).toBe(true);
+    expect(s.changes.trains).toHaveLength(0);
+  });
+
   it('une voie sous un convoi ne se démonte pas', () => {
     const s = start();
     laidLine(s, 40);

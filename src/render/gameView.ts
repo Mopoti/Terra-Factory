@@ -1,6 +1,6 @@
 import { TrainView } from './trainView';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
-import { isLocoWindow } from '../core/data/trains';
+import { CARS, isLocoWindow } from '../core/data/trains';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
@@ -925,6 +925,23 @@ export function startGameView(
     const piece = pickPiece(options.state.changes.pieces, o, d, 80);
     const hitM = pickMachine(factory, o, d, 80);
     const hitRail = trains.pickRail(o, d, 30);
+    const hitCar = trains.pickCar(o, d, 30);
+    if (
+      hitCar &&
+      (!hitM || hitCar.t < hitM.t) &&
+      (!piece || hitCar.t < piece.t) &&
+      (!hitRail || hitCar.t <= hitRail.t + 0.5)
+    ) {
+      const side = Math.max(hitCar.len, 2.6);
+      return {
+        id: `car:${hitCar.car.id}`,
+        name: t(`item.${CARS[hitCar.car.kind].item}` as TranslationKey),
+        seconds: 0.8,
+        usable: false,
+        distance: hitCar.t,
+        box: { x: hitCar.x, y: hitCar.y + 1.6, z: hitCar.z, sx: side, sy: 3.4, sz: side },
+      };
+    }
     if (hitRail && (!hitM || hitRail.t < hitM.t) && (!piece || hitRail.t < piece.t)) {
       return {
         id: `rail:${hitRail.piece.id}`,
@@ -964,6 +981,8 @@ export function startGameView(
     const at = { x: playerX, z: playerZ };
     if (id.startsWith('piece:')) {
       options.state.removeKeys([id.slice(6)], at);
+    } else if (id.startsWith('car:')) {
+      options.state.removeCar(Number(id.slice(4)));
     } else if (id.startsWith('rail:')) {
       if (!options.state.removeRail(Number(id.slice(5)), at)) {
         options.onMessage?.(t('train.railOccupied'));
