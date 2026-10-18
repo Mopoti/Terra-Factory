@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { carIdOfWindow, locoWindowId } from '../data/trains';
+import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
 import { planRails } from './plan';
 import { TILE_CELLS } from './track';
@@ -50,6 +52,22 @@ describe('voies et trains dans la partie', () => {
     expect(s.inventory.train_wagon_freight).toBe(1);
     expect(s.pickUpCar(wagon!.id)).toBe('ok');
     expect(s.inventory.train_wagon_freight).toBe(2);
+  });
+
+  it('la fenêtre de la locomotive charge la soute jusqu’à 50 pièces', () => {
+    const s = start();
+    s.creative = true;
+    s.inventory.coal = 80;
+    const car = { id: 7, kind: 'locomotive_steam', rev: false, heatKJ: 0, fuel: null } as never as {
+      fuel: { item: string; count: number } | null;
+    };
+    const m = emptyMachine(locoWindowId(7), 'chest_wood', 0, 0, 0);
+    Object.defineProperty(m, 'fuel', { get: () => car.fuel, set: (x) => (car.fuel = x) });
+    expect(carIdOfWindow(m.id)).toBe(7);
+    expect(s.loadMachine(m, 'fuel', 'coal', 80)).toBe(50);
+    expect(car.fuel).toEqual({ item: 'coal', count: 50 });
+    expect(s.loadMachine(m, 'fuel', 'coal', 10)).toBe(0);
+    expect(s.loadMachine(m, 'fuel', 'iron_ingot', 1)).toBe(0);
   });
 
   it('la locomotive se ravitaille depuis le sac, s’attelle à un wagon et se dételle', () => {

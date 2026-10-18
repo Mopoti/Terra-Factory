@@ -3,7 +3,15 @@
  * conduite de la locomotive, attelage et dételage, simulation du convoi (voir `docs/trains.md`).
  */
 import * as THREE from 'three';
-import { CARS, RAIL_ITEM, carKindOfItem, type CarKind } from '../core/data/trains';
+import {
+  CARS,
+  RAIL_ITEM,
+  carIdOfWindow,
+  carKindOfItem,
+  locoWindowId,
+  type CarKind,
+} from '../core/data/trains';
+import { emptyMachine, type Machine } from '../core/factory/factory';
 import type { GameState } from '../core/game/state';
 import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from '../core/rail/plan';
 import {
@@ -145,6 +153,7 @@ export class TrainView {
   >();
   private mountedCar: number | null = null;
   private attach: TrainAttach | null = null;
+  private locoProxies = new Map<number, Machine>();
   private exit: { x: number; z: number; y: number } | null = null;
   private wasDown = false;
   private readonly hud = document.createElement('div');
@@ -167,6 +176,36 @@ export class TrainView {
   /** Siège du joueur quand il conduit, sinon null. */
   mounted(): TrainAttach | null {
     return this.attach;
+  }
+
+  /** Identifiant de la fenêtre (soute) de la locomotive qu'on conduit, sinon null. */
+  mountedWindowId(): number | null {
+    return this.mountedCar === null ? null : locoWindowId(this.mountedCar);
+  }
+
+  /** La locomotive vue comme une machine : sa soute est la case de combustible, la chaudière sa chaleur. */
+  locoMachine(windowId: number): Machine | null {
+    const carId = carIdOfWindow(windowId);
+    const car = this.host.state.changes.trains
+      .flatMap((c) => c.cars)
+      .find((k) => k.id === carId && k.kind === 'locomotive_steam');
+    if (!car) return null;
+    let m = this.locoProxies.get(carId);
+    if (!m) {
+      m = emptyMachine(windowId, 'chest_wood', 0, 0, 0);
+      this.locoProxies.set(carId, m);
+    }
+    Object.defineProperty(m, 'fuel', {
+      configurable: true,
+      get: () => car.fuel,
+      set: (x) => (car.fuel = x),
+    });
+    Object.defineProperty(m, 'fuelLeft', {
+      configurable: true,
+      get: () => car.heatKJ,
+      set: (x) => (car.heatKJ = x),
+    });
+    return m;
   }
 
   isMounted(): boolean {
@@ -875,6 +914,8 @@ export class TrainView {
               : t('train.hud.rev'),
         fuel: String(loco?.fuel?.count ?? 0),
         heat: String(heat),
-      }) + brake;
+      }) +
+      brake +
+      (c.cars.length > 1 ? ` · ${t('train.uncoupleHint')}` : ` · ${t('train.coupleHint')}`);
   }
 }

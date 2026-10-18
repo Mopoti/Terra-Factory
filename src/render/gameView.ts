@@ -1,5 +1,6 @@
 import { TrainView } from './trainView';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
+import { isLocoWindow } from '../core/data/trains';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
@@ -2367,6 +2368,7 @@ export function startGameView(
   const vehicleChests = new Map<number, Machine>();
   /** Le coffre d'un buggy, vu comme un coffre en bois qui partage le contenu du buggy. */
   function vehicleMachine(id: number): Machine | null {
+    if (isLocoWindow(id)) return trains.locoMachine(id);
     const v = options.state.changes.vehicles.find((x) => x.id === -id);
     if (!v) return null;
     let m = vehicleChests.get(v.id);
@@ -3767,7 +3769,7 @@ export function startGameView(
         ? guest.client.players.filter((p) => p.id !== guest.client.you.id)
         : (hostSession?.players().filter((p) => p.id !== HOST_ID) ?? []),
     vehicleMachine,
-    mountedMachineId: () => (mounted ? -mounted.id : null),
+    mountedMachineId: () => (mounted ? -mounted.id : trains.mountedWindowId()),
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.
       const heading = rig.view === 'first' ? rig.yaw : facing + Math.PI;

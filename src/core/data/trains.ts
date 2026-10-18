@@ -71,3 +71,9 @@ export const carKindOfItem = (item: string): CarKind | null =>
 export const RAIL_ITEM = 'rail';
 /** Rails consommés par chaque forme de pièce : le virage (2,4 m) en vaut 3, la rampe (4 m) en vaut 4. */
 export const RAIL_COST = { straight: 1, curve: 3, ramp: 4 } as const;
+
+/** Identifiants (négatifs) de la fenêtre d'une locomotive : −(base + identifiant du véhicule), hors de ceux des buggys. */
+export const LOCO_WINDOW_BASE = 1_000_000;
+export const locoWindowId = (carId: number): number => -(LOCO_WINDOW_BASE + carId);
+export const isLocoWindow = (id: number): boolean => id <= -LOCO_WINDOW_BASE;
+export const carIdOfWindow = (id: number): number => -id - LOCO_WINDOW_BASE;

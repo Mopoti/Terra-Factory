@@ -26,6 +26,10 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - **Chocs** : deux convois qui se touchent sans être attelés se transmettent leur vitesse (choc mou). Au bout de la voie, un butoir arrête le convoi.
 - Les convois sont enregistrés avec la partie (`changes.rails`, `changes.trains`).
 
+## Soute et attelage
+- Tab en conduisant ouvre la fenêtre de la locomotive : on y glisse du charbon ou du bois depuis le sac (soute de 50 pièces). La chaudière brûle la soute selon la puissance demandée ; la jauge montre la chaleur.
+- C attèle (wagon à moins de 1,6 m derrière) ou dételle ; la ligne de HUD et un bouton tactile le rappellent.
+
 ## À faire / à discuter
 - Multijoueur : un invité ne peut pas encore poser de voie ni conduire (seul l'hôte simule les convois).
 - Aiguillages et croisements ; signalisation ; locomotive électrique ; chargement des wagons (coffre de fret, citerne à fluides, peinture de la citerne) ; sifflet, bruit de roulement, fumée ; démolition d'une voie sous un convoi ; tunnels (non prévus par les modèles).

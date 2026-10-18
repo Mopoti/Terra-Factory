@@ -1,5 +1,5 @@
 import { VEHICLES, type VehicleKind } from '../data/vehicles';
-import { CARS, RAIL_COST, RAIL_ITEM, type CarKind } from '../data/trains';
+import { CARS, RAIL_COST, RAIL_ITEM, isLocoWindow, type CarKind } from '../data/trains';
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
@@ -1739,7 +1739,8 @@ export class GameState {
     count: number,
     bagIndex?: number,
   ): number {
-    const max = slotCap(machineDef(m.type), slot);
+    // Soute d'une locomotive (fenêtre à identifiant spécial) : 50 pièces ; sinon la capacité de la machine.
+    const max = isLocoWindow(m.id) ? SOUTE_MAX : slotCap(machineDef(m.type), slot);
     if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).energyMJ))
       return 0;
     if (

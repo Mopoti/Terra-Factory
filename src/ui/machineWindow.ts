@@ -1,4 +1,6 @@
 import { VEHICLES } from '../core/data/vehicles';
+import { SOUTE_MAX } from '../core/rail/normalize';
+import { isLocoWindow } from '../core/data/trains';
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import {
@@ -99,7 +101,12 @@ export function mountMachineWindow(
   let current: number | null = null;
   /** Nom du véhicule dont le coffre s'ouvre (identifiant négatif = −identifiant du véhicule). */
   const vehicleName = (id: number): string =>
-    itemName(VEHICLES[state.changes.vehicles.find((v) => v.id === -id)?.kind ?? 'buggy'].item);
+    isLocoWindow(id)
+      ? itemName('train_locomotive')
+      : itemName(VEHICLES[state.changes.vehicles.find((v) => v.id === -id)?.kind ?? 'buggy'].item);
+  /** Capacité d'une case : la soute d'une locomotive en a une à elle. */
+  const capOf = (m: Machine, slot: SlotName): number =>
+    isLocoWindow(m.id) ? SOUTE_MAX : slotCap(machineDef(m.type), slot);
   let timer = 0;
   /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
   let barTimer = 0;
@@ -155,7 +162,7 @@ export function mountMachineWindow(
       playSfx('deny');
       return;
     }
-    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input');
+    const max = capOf(m, slot);
     playSfx(
       state.loadMachine(m, slot as 'fuel' | 'input', item, max, bagIndex) > 0 ? 'pickup' : 'deny',
     );
@@ -169,7 +176,7 @@ export function mountMachineWindow(
       playSfx('deny');
       return;
     }
-    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input');
+    const max = capOf(m, slot);
     const moved = state.useHand((item, n) =>
       state.loadMachine(m, slot as 'fuel' | 'input', item, Math.min(n, max)),
     );
@@ -183,7 +190,7 @@ export function mountMachineWindow(
     label: string,
     stack: Stack | null,
   ): HTMLElement {
-    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input' | 'stock' | 'extra');
+    const max = capOf(m, slot);
     const row = el('div', 'mach-row');
     row.append(el('span', 'mach-label', label));
     const box = el('span', stack ? 'mach-slot' : 'mach-slot empty');
@@ -342,7 +349,8 @@ export function mountMachineWindow(
   /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
   function quickLoad(m: Machine, item: string, count: number, bagIndex?: number): void {
     let moved = 0;
-    if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count, bagIndex);
+    if ((isChest(m.type) || hasSlotStore(m.type)) && !isLocoWindow(m.id))
+      moved = state.putInChest(m, item, count, bagIndex);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
       moved = actions.bus.dispatch<'loadIngredient'>({
         type: 'loadIngredient',
@@ -354,13 +362,7 @@ export function mountMachineWindow(
     else {
       for (const slot of ['input', 'fuel'] as const) {
         if (accepts(m, slot, item)) {
-          moved = state.loadMachine(
-            m,
-            slot,
-            item,
-            Math.min(count, slotCap(machineDef(m.type), slot)),
-            bagIndex,
-          );
+          moved = state.loadMachine(m, slot, item, Math.min(count, capOf(m, slot)), bagIndex);
           break;
         }
       }
@@ -764,14 +766,26 @@ export function mountMachineWindow(
     render();
   }
 
+  /** Remplissage de la jauge de combustible : chaleur de la chaudière pour une locomotive. */
+  const fuelFill01 = (m: Machine): number | null =>
+    isLocoWindow(m.id)
+      ? m.fuelLeft > 0
+        ? Math.min(1, m.fuelLeft / 9000)
+        : null
+      : factory.fuelFraction(m);
   const fuelText = (m: Machine): string =>
-    t('factory.fuel', {
-      v: m.fuel ? `${m.fuel.count}` : '0',
-      time: duration(factory.fuelSecondsLeft(m)),
-    }) +
-    (machineDef(m.type).burnKw
-      ? ` · ${t('factory.burn', { v: String(machineDef(m.type).burnKw) })}`
-      : '');
+    isLocoWindow(m.id)
+      ? t('train.fuelInfo', {
+          n: String(m.fuel?.count ?? 0),
+          heat: String(Math.round(Math.min(100, (m.fuelLeft / 9000) * 100))),
+        })
+      : t('factory.fuel', {
+          v: m.fuel ? `${m.fuel.count}` : '0',
+          time: duration(factory.fuelSecondsLeft(m)),
+        }) +
+        (machineDef(m.type).burnKw
+          ? ` · ${t('factory.burn', { v: String(machineDef(m.type).burnKw) })}`
+          : '');
 
   /** Mise à jour douce : seuls les nombres qui bougent changent, les éléments ne sont pas remplacés. */
   function refresh(): void {
@@ -785,7 +799,7 @@ export function mountMachineWindow(
     }
     setCycleBar(live.cycle, factory.cycleFraction(m));
     if (live.fuel) live.fuel.textContent = fuelText(m);
-    setCycleBar(live.fuelBar, factory.fuelFraction(m));
+    setCycleBar(live.fuelBar, fuelFill01(m));
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
     m.slots.forEach((stack, i) => {
       const node = live.chest[i];
@@ -799,7 +813,8 @@ export function mountMachineWindow(
     }
     for (const [name, node] of live.counts) {
       const stack = m[name];
-      if (stack) node.textContent = `${stack.count} / ${slotCap(def, name)}`;
+      if (stack)
+        node.textContent = `${stack.count} / ${isLocoWindow(m.id) ? SOUTE_MAX : slotCap(def, name)}`;
     }
   }
 
@@ -874,7 +889,7 @@ export function mountMachineWindow(
       rows.append(note, button, out);
     }
     if (m.type === 'waypoint') rows.append(...waypointRows(m));
-    if (isChest(m.type) || hasSlotStore(m.type))
+    if ((isChest(m.type) || hasSlotStore(m.type)) && !isLocoWindow(m.id))
       rows.append(
         chestGrid(m),
         el(
@@ -922,7 +937,7 @@ export function mountMachineWindow(
       const fuelFill = el('div');
       fuelBar.append(fuelFill);
       live.fuelBar = fuelFill;
-      setCycleBar(fuelFill, factory.fuelFraction(m));
+      setCycleBar(fuelFill, fuelFill01(m));
       rows.append(fuelInfo, fuelBar);
     }
     if (isAssembler(m.type)) rows.append(...assemblerRows(m));
