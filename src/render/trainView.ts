@@ -31,6 +31,7 @@ import {
 } from '../core/rail/track';
 import {
   IDLE,
+  CAR_HALF_WIDTH_M,
   carPoses,
   collide,
   findCoupling,
@@ -53,6 +54,8 @@ const RED: Rgb = hexToRgb('#ff5a4a');
 const STEP = 1 / 60;
 /** Portée (m) pour monter dans une locomotive ou reprendre un véhicule (en plus de sa demi-longueur). */
 const REACH_M = 4;
+/** Hauteur d'un véhicule (m) tant que son modèle n'est pas chargé. */
+const CAR_HEIGHT_M = 3.8;
 /** Distance (m) à laquelle un bout de voie libre attire la pièce qu'on pose. */
 const SNAP_M = 7;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
@@ -139,10 +142,7 @@ export class TrainView {
     }),
   );
   private ghostKey = '';
-  private readonly meshes = new Map<
-    number,
-    { mesh: VehicleMesh; kind: CarKind }
-  >();
+  private readonly meshes = new Map<number, { mesh: VehicleMesh; kind: CarKind }>();
   private mountedCar: number | null = null;
   private attach: TrainAttach | null = null;
   private locoProxies = new Map<number, Machine>();
@@ -198,6 +198,34 @@ export class TrainView {
       set: (x) => (car.heatKJ = x),
     });
     return m;
+  }
+
+  /** Boîtes de collision des véhicules (mises à jour à chaque image). */
+  private readonly solids: {
+    x: number;
+    z: number;
+    y0: number;
+    y1: number;
+    ux: number;
+    uz: number;
+    hl: number;
+    hw: number;
+  }[] = [];
+
+  /**
+   * Le point (x, z) est-il dans la caisse d'un véhicule, entre les hauteurs y0 et y1 (le joueur) ? Sert à empêcher de
+   * traverser les locomotives et les wagons à pied.
+   */
+  solidAt(x: number, z: number, y0: number, y1: number): boolean {
+    for (const b of this.solids) {
+      if (y1 <= b.y0 || y0 >= b.y1) continue;
+      const dx = x - b.x;
+      const dz = z - b.z;
+      if (Math.abs(dx * b.ux + dz * b.uz) > b.hl) continue;
+      if (Math.abs(dx * b.uz - dz * b.ux) > b.hw) continue;
+      return true;
+    }
+    return false;
   }
 
   isMounted(): boolean {
@@ -391,10 +419,22 @@ export class TrainView {
   /** Les véhicules : un modèle par véhicule, posé sur la voie. */
   private syncCars(graph: TrackGraph, dt: number): void {
     const seen = new Set<number>();
+    this.solids.length = 0;
     for (const consist of this.host.state.changes.trains) {
       for (const pose of carPoses(graph, consist)) {
         const spec = CARS[pose.car.kind];
         seen.add(pose.car.id);
+        // Boîte de collision : la caisse, de tampon à tampon, sur toute la largeur, du rail au toit.
+        this.solids.push({
+          x: pose.x,
+          z: pose.z,
+          y0: pose.y + RAIL_TOP_M,
+          y1: pose.y + RAIL_TOP_M + (bakedModel(spec.model)?.size.y ?? CAR_HEIGHT_M),
+          ux: Math.sin(pose.yaw),
+          uz: Math.cos(pose.yaw),
+          hl: spec.lengthM / 2,
+          hw: CAR_HALF_WIDTH_M,
+        });
         let entry = this.meshes.get(pose.car.id);
         const model = bakedModel(spec.model);
         if (!entry && model) {

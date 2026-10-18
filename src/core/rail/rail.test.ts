@@ -25,6 +25,7 @@ import {
   splitConsist,
   stepConsist,
   carPoses,
+  overlapBetween,
   type Car,
   type Consist,
 } from './train';
@@ -203,6 +204,37 @@ describe('trains : traction, freins, pente', () => {
     expect(gap).toBeCloseTo((CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2, 2);
     // La locomotive regarde vers −z (sens de marche sur cette voie).
     expect(Math.cos(poses[0].yaw)).toBeLessThan(-0.99);
+  });
+});
+
+describe('véhicules en courbe', () => {
+  it('les tampons ne se chevauchent pas dans un virage (pas d’effet portefeuille)', () => {
+    const pieces = line(10);
+    const end = freePorts(pieces).find((p) => p.piece === 10)!;
+    const g = new TrackGraph([...pieces, { id: 50, kind: 'curve', ...matesFor('curve', end.at)[0] }]);
+    const cars = [car(1, 'locomotive_steam'), car(2, 'wagon_freight'), car(3, 'wagon_tanker')];
+    // Tête au milieu du virage, la rame à cheval sur le virage et la ligne droite.
+    for (const u of [1, 2.5, 4, 5.5]) {
+      const c = consist(1, cars, 50, u);
+      const at = (i: number) => {
+        const p = carPoses(g, c)[i];
+        return { x: p.x, z: p.z, ux: Math.sin(p.yaw), uz: Math.cos(p.yaw) };
+      };
+      for (let i = 1; i < cars.length; i++) {
+        const d = overlapBetween(at(i - 1), CARS[cars[i - 1].kind].lengthM, at(i), CARS[cars[i].kind].lengthM);
+        expect(d).toBeLessThan(0.01);
+      }
+    }
+  });
+
+  it('en ligne droite, les véhicules restent bout à bout', () => {
+    const g = new TrackGraph(line(20));
+    const c = consist(1, [car(1, 'locomotive_steam'), car(2, 'wagon_freight')], 18, 0.5);
+    const [a, b] = carPoses(g, c);
+    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeCloseTo(
+      (CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2,
+      3,
+    );
   });
 });
 

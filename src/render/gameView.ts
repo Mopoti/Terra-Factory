@@ -1983,6 +1983,18 @@ export function startGameView(
           s.top > playerY + STEP_UP_M + stepSlack * BELT_SLACK &&
           s.bottom < playerY + PLAYER_HEIGHT_M,
       );
+  /**
+   * Les locomotives et les wagons barrent le passage (boîtes de collision de `trains`). Si le joueur est déjà dedans
+   * (un train lui est arrivé dessus), il peut en sortir : on ne le bloque pas.
+   */
+  let trainSolid: ((x: number, z: number, y0: number, y1: number) => boolean) | null = null;
+  const trainBlocked = (x: number, z: number): boolean => {
+    if (!trainSolid) return false;
+    const top = playerY + PLAYER_HEIGHT_M;
+    return (
+      trainSolid(x, z, playerY + 0.05, top) && !trainSolid(playerX, playerZ, playerY + 0.05, top)
+    );
+  };
   const canStand = (x: number, z: number): boolean => {
     const pieces = options.state.changes.pieces;
     for (const dx of [-PLAYER_RADIUS_M, 0, PLAYER_RADIUS_M]) {
@@ -1990,6 +2002,7 @@ export function startGameView(
         if (isBlockedAt(x + dx, z + dz)) return false;
         if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M, stepSlack)) return false;
         if (beltBlocked(x + dx, z + dz)) return false;
+        if (trainBlocked(x + dx, z + dz)) return false;
       }
     }
     return true;
@@ -2263,6 +2276,8 @@ export function startGameView(
     message: (text) => options.onMessage?.(text),
     sfx: (name) => playSfx(name),
   });
+  // Boîtes de collision des trains (voir `trainBlocked`) ; pas quand on conduit (on est dans la cabine).
+  trainSolid = (x, z, y0, y1) => !trains.isMounted() && trains.solidAt(x, z, y0, y1);
   let trainUse = false;
   let trainCouple = false;
   let trainRotate = false;

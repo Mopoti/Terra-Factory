@@ -30,6 +30,11 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 
 - Clic droit maintenu sur un véhicule : il est démonté (même attelé, le reste du convoi se scinde) et revient dans le sac avec sa soute.
 
+## Collisions et courbes
+- **Boîtes de collision** : chaque locomotive et chaque wagon est une boîte (de tampon à tampon, 2,6 m de large, du rail au toit) que le joueur ne traverse pas à pied (`TrainView.solidAt`, utilisé par `canStand` dans `gameView.ts`). Si un train arrive sur le joueur, celui-ci peut en sortir. Rien ne bloque quand on conduit.
+- **Pas d'« effet portefeuille »** : en courbe, des caisses droites se rapprocheraient du côté intérieur et leurs tampons se chevaucheraient. `carPoses` (`src/core/rail/train.ts`) recule chaque véhicule juste assez pour que les coins de ses tampons restent derrière ceux du précédent (`overlapBetween`) : l'attelage s'allonge de quelques dizaines de centimètres dans le virage, comme le jeu des tampons, et redevient bout à bout en ligne droite. Seul l'affichage (et la collision) est concerné : la simulation garde les longueurs nominales.
+- Limite connue : dans le virage de 3,75 m de rayon, l'essieu du milieu de la locomotive (empattement rigide de 3 m) sort d'environ 30 cm du rail.
+
 ## Soute et attelage
 - Tab en conduisant ouvre la fenêtre de la locomotive : on y glisse du charbon ou du bois depuis le sac (soute de 50 pièces). La chaudière brûle la soute selon la puissance demandée ; la jauge montre la chaleur.
 - C attèle (wagon à moins de 1,6 m derrière) ou dételle ; la ligne de HUD et un bouton tactile le rappellent.

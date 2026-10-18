@@ -84,28 +84,97 @@ export interface CarPose {
 }
 
 /** Place les véhicules : le centre est entre les deux essieux, qui suivent la voie (les courbes se prennent bien). */
+/** Demi-largeur (m) des caisses et des traverses de tête, pour l'écart en courbe (voir `carPoses`). */
+export const CAR_HALF_WIDTH_M = 1.3;
+
+/** Pose d'un véhicule dont le centre est à `offset` mètres derrière la tête, et son avant (sens du convoi). */
+function poseAt(
+  graph: TrackGraph,
+  c: Consist,
+  car: Car,
+  offset: number,
+): { x: number; y: number; z: number; yaw: number; pitch: number; ux: number; uz: number } | null {
+  const hb = CARS[car.kind].halfBaseM;
+  const centre = graph.advance(flip(c.head), offset).pos; // regarde vers l'arrière du convoi
+  const rear = graph.advance(centre, hb).pos;
+  const front = graph.advance(flip(centre), hb).pos;
+  const pf = graph.pose(front);
+  const pr = graph.pose(rear);
+  const pc = graph.pose(flip(centre));
+  if (!pf || !pr || !pc) return null;
+  const dx = pf.x - pr.x;
+  const dz = pf.z - pr.z;
+  const run = Math.hypot(dx, dz);
+  const yaw = run > 1e-3 ? Math.atan2(dx, dz) : pc.yaw;
+  const pitch = Math.atan2(pf.y - pr.y, Math.max(run, 1e-3));
+  return {
+    x: (pf.x + pr.x) / 2,
+    y: (pf.y + pr.y) / 2,
+    z: (pf.z + pr.z) / 2,
+    yaw,
+    pitch,
+    ux: Math.sin(yaw),
+    uz: Math.cos(yaw),
+  };
+}
+
+/**
+ * Recouvrement (m) entre l'arrière du véhicule `a` et l'avant du véhicule `b` qui le suit : en courbe, les caisses
+ * droites se rapprochent du côté intérieur et se chevaucheraient (« effet portefeuille »). On mesure de combien les
+ * coins de l'avant de `b` dépassent le plan arrière de `a`, et inversement ; 0 s'ils ne se touchent pas.
+ */
+export function overlapBetween(
+  a: { x: number; z: number; ux: number; uz: number },
+  la: number,
+  b: { x: number; z: number; ux: number; uz: number },
+  lb: number,
+): number {
+  const hw = CAR_HALF_WIDTH_M;
+  // Plans : arrière de a (normale vers l'arrière de a), avant de b (normale vers l'avant de b).
+  const ar = { x: a.x - a.ux * (la / 2), z: a.z - a.uz * (la / 2) };
+  const bf = { x: b.x + b.ux * (lb / 2), z: b.z + b.uz * (lb / 2) };
+  let d = 0;
+  for (const s of [-1, 1]) {
+    // Coins de l'avant de b : en avant du plan arrière de a ?
+    const cbx = bf.x + b.uz * s * hw;
+    const cbz = bf.z - b.ux * s * hw;
+    d = Math.max(d, (cbx - ar.x) * a.ux + (cbz - ar.z) * a.uz);
+    // Coins de l'arrière de a : en arrière du plan avant de b ?
+    const cax = ar.x + a.uz * s * hw;
+    const caz = ar.z - a.ux * s * hw;
+    d = Math.max(d, -((cax - bf.x) * b.ux + (caz - bf.z) * b.uz));
+  }
+  return d;
+}
+
+/**
+ * Pose de chaque véhicule : centre entre ses essieux, cap de la corde qui les relie. En courbe, chaque véhicule est
+ * reculé juste assez pour que ses tampons ne rentrent pas dans ceux du précédent (l'attelage s'allonge un peu, comme
+ * le jeu des tampons d'un vrai train) ; en ligne droite rien ne change.
+ */
 export function carPoses(graph: TrackGraph, c: Consist): CarPose[] {
   const offsets = carOffsets(c);
-  const back = flip(c.head);
+  let extra = 0;
+  let prev: { pose: NonNullable<ReturnType<typeof poseAt>>; len: number } | null = null;
   return c.cars.map((car, i) => {
-    const hb = CARS[car.kind].halfBaseM;
-    const centre = graph.advance(back, offsets[i]).pos; // regarde vers l'arrière du convoi
-    const rear = graph.advance(centre, hb).pos;
-    const front = graph.advance(flip(centre), hb).pos;
-    const pf = graph.pose(front);
-    const pr = graph.pose(rear);
-    const pc = graph.pose(flip(centre));
-    if (!pf || !pr || !pc) return { car, x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
-    const dx = pf.x - pr.x;
-    const dz = pf.z - pr.z;
-    const run = Math.hypot(dx, dz);
-    let yaw = run > 1e-3 ? Math.atan2(dx, dz) : pc.yaw;
-    let pitch = Math.atan2(pf.y - pr.y, Math.max(run, 1e-3));
+    const len = lengthOfCar(car);
+    let p = poseAt(graph, c, car, offsets[i] + extra);
+    if (p && prev) {
+      for (let k = 0; k < 4; k++) {
+        const d = overlapBetween(prev.pose, prev.len, p, len);
+        if (d < 1e-3) break;
+        extra += d;
+        p = poseAt(graph, c, car, offsets[i] + extra) ?? p;
+      }
+    }
+    if (!p) return { car, x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
+    prev = { pose: p, len };
+    let { yaw, pitch } = p;
     if (car.rev) {
       yaw += Math.PI;
       pitch = -pitch;
     }
-    return { car, x: (pf.x + pr.x) / 2, y: (pf.y + pr.y) / 2, z: (pf.z + pr.z) / 2, yaw, pitch };
+    return { car, x: p.x, y: p.y, z: p.z, yaw, pitch };
   });
 }
 
