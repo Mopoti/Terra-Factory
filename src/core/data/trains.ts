@@ -1,6 +1,6 @@
 /**
  * Matériel roulant : locomotive à vapeur et wagons (modèles de `blender/scripts/ferroviaire.py`). Les nombres sont ceux
- * d'une voie étroite industrielle, ramenés à l'échelle du jeu : masses en kg, efforts en N, puissances en kW.
+ * de petites machines de voie normale (écartement 1,5 m, comme la voie posée) : masses en kg, efforts en N, puissances en kW.
  */
 export const CAR_KINDS = ['locomotive_steam', 'wagon_freight', 'wagon_tanker'] as const;
 export type CarKind = (typeof CAR_KINDS)[number];
@@ -34,8 +34,8 @@ export const CARS: Record<CarKind, CarSpec> = {
   locomotive_steam: {
     item: 'train_locomotive',
     model: 'locomotive_vapeur',
-    lengthM: 6.45,
-    halfBaseM: 2.17,
+    lengthM: 7.2,
+    halfBaseM: 1.5,
     massKg: 22000,
     loco: {
       powerKw: 140,

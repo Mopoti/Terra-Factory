@@ -4,7 +4,7 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 
 ## Matériel
 - **Rail** (onglet « Rail ») : un seul objet, `rail` = une tuile de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce. **Échelle réelle** : les modèles de voie (faits pour 60 cm) sont agrandis ×2,5 (`RAIL_SCALE`), écartement de 1,5 m comme les trains. Tuile droite de 2,5 m (5 × 5 cases, 1 rail) ; virage de 3 × 3 tuiles à chaque coin, quart de cercle de 3,75 m de rayon (3 rails) ; rampe de 1 × 4 tuiles (10 m) qui monte de 2,5 m (4 rails). Une voie posée avant l'agrandissement (version 1) est abandonnée au chargement.
-- **Véhicules** : locomotive à vapeur (`train_locomotive`, 6,45 m), wagon de fret, wagon-citerne (5,4 m). La locomotive électrique (modèle prêt) viendra avec les caténaires.
+- **Véhicules** (à l'échelle de la voie : roues sur les rails à ±0,75 m, tampons à 1,05 m, caisses de 2,6 m de large) : locomotive à vapeur (`train_locomotive`, type 030T, 7,2 m, essieux extrêmes à ±1,5 m), wagon de fret couvert et wagon-citerne (5,4 m, deux essieux à ±1,7 m). La locomotive électrique (modèle prêt) viendra avec les caténaires.
 
 ## Pose (comme les convoyeurs et les tuyaux)
 - Rail en main : **maintenir le clic et glisser** de tuile en tuile ; un aperçu vert / rouge montre ce qui sera posé ; on relâche pour poser. Un coin dans le tracé devient un virage (il faut au moins 3 tuiles entre deux coins). Revenir en arrière dans le glissé raccourcit le tracé.
@@ -14,7 +14,7 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - Véhicule en main : viser la voie, clic ; il regarde du côté où regarde le joueur. **Maj + F** reprend un véhicule (seul, pas attelé).
 
 ## Conduite
-- **Pare-brise** : la façade de la cabine est découpée à l'écran (plans de coupe sur le matériau de la locomotive, `CAB_WINDOWS` dans `src/render/trainView.ts`) et fermée par une vitre translucide : en vue subjective on voit la voie par-dessus la chaudière. Quand le modèle Blender aura de vraies fenêtres vitrées, cette découpe se retirera.
+- **Vitres** : la façade de l'abri a deux vraies fenêtres, de part et d'autre de la chaudière (modèle `locomotive_vapeur`) ; le jeu les ferme par une vitre translucide (`CAB_GLASS` dans `src/render/trainView.ts`). Assis à gauche, le mécanicien voit la voie par la fenêtre gauche, au-dessus de la caisse à eau et à côté de la chaudière.
 - **F** près de la locomotive : monter ; F de nouveau : descendre. Le joueur est assis dans la cabine.
 - **Z / S** (avancer / reculer), le levier est dans le sens où regarde la locomotive ; **Espace** : frein ; la locomotive prend le charbon ou le bois du sac quand sa soute est vide.
 - **C** : attelle au véhicule dont l'attelage est à moins de 1,6 m (on recule vers un wagon, on s'arrête, on appuie) ; sinon, dételle derrière la locomotive (devant elle si elle est en queue). Un convoi dételé est garé (frein à main).
