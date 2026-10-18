@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
+import { planRails } from './plan';
 import { TILE_CELLS } from './track';
 
 const free = (): boolean => false;
@@ -80,6 +81,34 @@ describe('voies et trains dans la partie', () => {
       c.gx === corner.gx && c.gz === corner.gz;
     s.inventory.rail = 10;
     expect(s.placeRail('curve', 0, 0, 0, 0, blocked)).toBe('ok');
+  });
+
+  it('un tracé avec coins se pose en entier, dans les huit combinaisons de sens', () => {
+    const dirs: [number, number][] = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ];
+    for (const a of dirs)
+      for (const b of dirs) {
+        if (a[0] * b[0] + a[1] * b[1] !== 0) continue;
+        const s = start();
+        s.inventory.rail = 500;
+        const first = Array.from({ length: 5 }, (_, i) => ({
+          tx: 20 + a[0] * i,
+          tz: 20 + a[1] * i,
+        }));
+        const c = first[4];
+        const second = Array.from({ length: 5 }, (_, i) => ({
+          tx: c.tx + b[0] * (i + 1),
+          tz: c.tz + b[1] * (i + 1),
+        }));
+        const plan = planRails([...first, ...second], { level: 0, tilt: 0, lead: 0 });
+        for (const p of plan)
+          expect(s.placeRail(p.kind, p.gx, p.gz, p.turns, p.level, free)).toBe('ok');
+        expect(s.changes.rails).toHaveLength(plan.length);
+      }
   });
 
   it('l’état se relit sans erreur et ignore ce qui est invalide', () => {

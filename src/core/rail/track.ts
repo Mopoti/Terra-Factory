@@ -334,6 +334,7 @@ export function cellsOf(p: RailPiece): [number, number][] {
 export function trackCellsOf(p: RailPiece): [number, number][] {
   if (p.kind !== 'curve') return cellsOf(p);
   const keep = new Set<string>();
+  const { w, d } = footprintOf(p.kind, p.turns);
   const len = lengthOf('curve');
   const reach = 1.6; // demi-écartement + marge (m)
   const span = Math.ceil(reach / CELL_SIZE_M);
@@ -345,6 +346,8 @@ export function trackCellsOf(p: RailPiece): [number, number][] {
       for (let dz = -span; dz <= span; dz++) {
         const gx = cx + dx;
         const gz = cz + dz;
+        // Jamais hors du bloc : les cases au-delà des bords appartiennent à la pièce voisine.
+        if (gx < p.gx || gx >= p.gx + w || gz < p.gz || gz >= p.gz + d) continue;
         if (Math.hypot((gx + 0.5) * CELL_SIZE_M - q.x, (gz + 0.5) * CELL_SIZE_M - q.z) <= reach)
           keep.add(`${gx},${gz}`);
       }
