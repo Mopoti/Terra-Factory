@@ -3,11 +3,14 @@
 Première version (octobre 2026) : le joueur pose des rails, des véhicules, conduit la locomotive, attelle et dételle. Pas encore de signalisation ni d'aiguillages ; plus tard les trains seront automatisés par des signaux.
 
 ## Matériel
-- **Rails** (onglet « Rail ») : `rail_straight` (tuile 2 × 2 cases = 1 m), `rail_curve` (6 × 6 cases, quart de cercle de 1,5 m de rayon), `rail_ramp` (2 × 8 cases, monte d'un mètre ; la descente est la même pièce tournée). Sans sens : un train roule dans les deux sens.
+- **Rail** (onglet « Rail ») : un seul objet, `rail` = 1 m de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce : tuile droite de 2 × 2 cases (1 rail), virage de 6 × 6 cases à chaque coin, quart de cercle de 1,5 m de rayon (3 rails), rampe de 2 × 8 cases qui monte d'un mètre (4 rails).
 - **Véhicules** : locomotive à vapeur (`train_locomotive`, 6,45 m), wagon de fret, wagon-citerne (5,4 m). La locomotive électrique (modèle prêt) viendra avec les caténaires.
 
-## Pose
-- Rail en main : la pièce se raccorde toute seule au bout de voie libre le plus proche (à moins de 4 m) ; **R** change la pose possible ; clic gauche pose, **X** reprend la voie visée. Loin de toute voie, la pièce se pose librement (R tourne).
+## Pose (comme les convoyeurs et les tuyaux)
+- Rail en main : **maintenir le clic et glisser** de tuile en tuile ; un aperçu vert / rouge montre ce qui sera posé ; on relâche pour poser. Un coin dans le tracé devient un virage (il faut au moins 3 tuiles entre deux coins). Revenir en arrière dans le glissé raccourcit le tracé.
+- La voie se **raccorde toute seule** au bout de voie libre le plus proche (à moins de 4 m) et suit sa hauteur.
+- **PageUp / PageDown** : la voie commence par une rampe qui monte / descend (4 tuiles droites, puis la voie continue au niveau atteint) ; une autre pression revient à plat.
+- **Clic droit maintenu** sur la voie : la démolit (les rails reviennent dans le sac), comme les autres constructions.
 - Véhicule en main : viser la voie, clic ; il regarde du côté où regarde le joueur. **Maj + F** reprend un véhicule (seul, pas attelé).
 
 ## Conduite

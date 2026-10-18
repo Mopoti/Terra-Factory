@@ -67,13 +67,7 @@ export const isCarKind = (x: unknown): x is CarKind =>
 export const carKindOfItem = (item: string): CarKind | null =>
   CAR_KINDS.find((k) => CARS[k].item === item) ?? null;
 
-/** Objet du sac qui pose chaque pièce de voie. */
-export const RAIL_ITEMS = {
-  straight: 'rail_straight',
-  curve: 'rail_curve',
-  ramp: 'rail_ramp',
-} as const;
-
-export const railKindOfItem = (item: string): 'straight' | 'curve' | 'ramp' | null =>
-  (Object.keys(RAIL_ITEMS) as (keyof typeof RAIL_ITEMS)[]).find((k) => RAIL_ITEMS[k] === item) ??
-  null;
+/** Objet du sac qui pose la voie : 1 rail = 1 m de voie (une tuile droite). */
+export const RAIL_ITEM = 'rail';
+/** Rails consommés par chaque forme de pièce : le virage (2,4 m) en vaut 3, la rampe (4 m) en vaut 4. */
+export const RAIL_COST = { straight: 1, curve: 3, ramp: 4 } as const;

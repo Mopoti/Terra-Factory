@@ -923,6 +923,17 @@ export function startGameView(
   function structureAt(o: THREE.Vector3, d: THREE.Vector3): Structure | null {
     const piece = pickPiece(options.state.changes.pieces, o, d, 80);
     const hitM = pickMachine(factory, o, d, 80);
+    const hitRail = trains.pickRail(o, d, 30);
+    if (hitRail && (!hitM || hitRail.t < hitM.t) && (!piece || hitRail.t < piece.t)) {
+      return {
+        id: `rail:${hitRail.piece.id}`,
+        name: t('item.rail'),
+        seconds: 0.4,
+        usable: false,
+        distance: hitRail.t,
+        box: trains.railBox(hitRail.piece),
+      };
+    }
     if (!piece && !hitM) return null;
     if (hitM && (!piece || hitM.t < piece.t)) {
       const m = hitM.machine;
@@ -952,6 +963,8 @@ export function startGameView(
     const at = { x: playerX, z: playerZ };
     if (id.startsWith('piece:')) {
       options.state.removeKeys([id.slice(6)], at);
+    } else if (id.startsWith('rail:')) {
+      options.state.removeRail(Number(id.slice(5)), at);
     } else if (id.startsWith('machine:')) {
       bus.dispatch<'removeMachine'>({ type: 'removeMachine', id: Number(id.slice(8)), at });
     }
@@ -2229,6 +2242,8 @@ export function startGameView(
   let trainUse = false;
   let trainCouple = false;
   let trainRotate = false;
+  let trainLevelUp = false;
+  let trainLevelDown = false;
   let placeWasDown = false;
   /** Mode Créatif : dernière case où l'on a posé une ressource pendant ce clic (on peint case après case). */
   let lastCreativeCell: string | null = null;
@@ -3478,6 +3493,10 @@ export function startGameView(
       trainUse = useKey;
       trainCouple = pressed('couple');
       trainRotate = !building && pressed('rotate');
+      if (options.state.selectedItem() === 'rail') {
+        trainLevelUp = pressed('levelUp');
+        trainLevelDown = pressed('levelDown');
+      }
       vehicleTick(dt, useKey);
       bodyTick(useKey);
       motion = trains.isMounted() ? { speed: 0, strafe: 0 } : step(dt);
@@ -3494,6 +3513,8 @@ export function startGameView(
         use: trainUse,
         couple: trainCouple,
         rotate: trainRotate,
+        levelUp: trainLevelUp,
+        levelDown: trainLevelDown,
         aimed: interaction.aimed,
         facing,
       },
@@ -3502,6 +3523,8 @@ export function startGameView(
     trainUse = false;
     trainCouple = false;
     trainRotate = false;
+    trainLevelUp = false;
+    trainLevelDown = false;
     const trainSeat = trains.mounted();
     if (trainSeat) {
       playerX = trainSeat.x;

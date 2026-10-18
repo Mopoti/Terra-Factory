@@ -3,16 +3,18 @@
  * conduite de la locomotive, attelage et dételage, simulation du convoi (voir `docs/trains.md`).
  */
 import * as THREE from 'three';
-import { CARS, carKindOfItem, railKindOfItem, type CarKind } from '../core/data/trains';
+import { CARS, RAIL_ITEM, carKindOfItem, type CarKind } from '../core/data/trains';
 import type { GameState } from '../core/game/state';
+import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from '../core/rail/plan';
 import {
   RAIL_TOP_M,
   centerOf,
-  cornerFor,
+  cellsOf,
   freePorts,
+  footprintOf,
   lengthOf,
-  matesFor,
   poseOn,
+  type Port,
   type RailKind,
   type RailPiece,
   type TrackGraph,
@@ -46,6 +48,8 @@ const REACH_M = 4;
 const SNAP_M = 4;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
 const CAR_AIM_M = 1.4;
+/** Longueur maximale d'un tracé (tuiles). */
+const MAX_PATH = 150;
 
 export interface TrainHost {
   scene: THREE.Scene;
@@ -56,7 +60,7 @@ export interface TrainHost {
   aim(): { x: number; z: number } | null;
   /** Case (gx, gz) bloquée par le terrain, une machine ou une construction ? */
   blocked(gx: number, gz: number): boolean;
-  held(action: 'forward' | 'backward' | 'jump' | 'interact' | 'remove' | 'sprint'): boolean;
+  held(action: 'forward' | 'backward' | 'jump' | 'interact' | 'sprint'): boolean;
   message(text: string): void;
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
 }
@@ -70,6 +74,9 @@ export interface TrainFrame {
   use: boolean;
   couple: boolean;
   rotate: boolean;
+  /** PageUp / PageDown : monter / descendre (rampe en tête de tracé). */
+  levelUp: boolean;
+  levelDown: boolean;
   /** Le joueur vise déjà autre chose (ressource, machine…). */
   aimed: boolean;
   /** Cap du joueur (rad) : sert à choisir le sens d'un véhicule qu'on pose. */
@@ -104,9 +111,7 @@ export class TrainView {
   private mountedCar: number | null = null;
   private attach: TrainAttach | null = null;
   private exit: { x: number; z: number; y: number } | null = null;
-  private railRot = 0;
   private wasDown = false;
-  private wasRemove = false;
   private readonly hud = document.createElement('div');
   private lastGraph: TrackGraph | null = null;
   private hintShown = '';
@@ -147,6 +152,47 @@ export class TrainView {
     this.rails.geometry.dispose();
     this.ghost.geometry.dispose();
     this.hud.remove();
+  }
+
+  /** Pièce de voie que le rayon touche (à moins de 50 cm de la voie), avec la distance. */
+  pickRail(
+    o: THREE.Vector3,
+    d: THREE.Vector3,
+    maxDist: number,
+  ): { piece: RailPiece; t: number } | null {
+    let best: { piece: RailPiece; t: number } | null = null;
+    for (const piece of this.host.state.changes.rails) {
+      const len = lengthOf(piece.kind);
+      for (let u = 0; u <= len + 1e-6; u += 0.4) {
+        const p = poseOn(piece, Math.min(u, len));
+        const wx = p.x - o.x;
+        const wy = p.y + RAIL_TOP_M - o.y;
+        const wz = p.z - o.z;
+        const t0 = wx * d.x + wy * d.y + wz * d.z;
+        if (t0 < 0 || t0 > maxDist) continue;
+        const rx = wx - t0 * d.x;
+        const ry = wy - t0 * d.y;
+        const rz = wz - t0 * d.z;
+        if (rx * rx + ry * ry + rz * rz > 0.45 * 0.45) continue;
+        if (!best || t0 < best.t) best = { piece, t: t0 };
+      }
+    }
+    return best;
+  }
+
+  /** Boîte (centre et dimensions, m) qui entoure une pièce de voie : pour la surbrillance. */
+  railBox(piece: RailPiece): {
+    x: number;
+    y: number;
+    z: number;
+    sx: number;
+    sy: number;
+    sz: number;
+  } {
+    const { w, d } = footprintOf(piece.kind, piece.turns);
+    const c = centerOf(piece);
+    const sy = piece.kind === 'ramp' ? 1.3 : 0.3;
+    return { x: c.x, y: piece.level + sy / 2, z: c.z, sx: w * 0.5, sy, sz: d * 0.5 };
   }
 
   // --- Dessin ------------------------------------------------------------------------------------
@@ -421,6 +467,13 @@ export class TrainView {
 
   // --- Pose ---------------------------------------------------------------------------------------
 
+  private tilt: -1 | 0 | 1 = 0;
+  /** Tracé en cours (tuiles de 1 m), comme celui d'un convoyeur : on glisse, on relâche, tout est posé. */
+  private path: Tile[] = [];
+  private pathLead = 0;
+  private pathLevel = 0;
+  private railTurn = 0;
+
   private handlePlacing(
     graph: TrackGraph,
     frame: TrainFrame,
@@ -428,33 +481,39 @@ export class TrainView {
   ): void {
     const { state } = this.host;
     const item = state.selectedItem();
-    const railKind = item ? railKindOfItem(item) : null;
+    const rail = item === RAIL_ITEM;
     const carKind = item ? carKindOfItem(item) : null;
     const down = this.host.held('interact');
     const edge = down && !this.wasDown;
-    const removeNow = this.host.held('remove');
-    const removeEdge = removeNow && !this.wasRemove;
+    const release = !down && this.wasDown;
     this.wasDown = down;
-    this.wasRemove = removeNow;
-    if (this.mountedCar !== null || (!railKind && !carKind)) {
+    if (this.mountedCar !== null || (!rail && !carKind)) {
       this.setGhost([]);
       this.hintShown = '';
+      this.path = [];
+      if (!rail) this.tilt = 0;
       return;
     }
     const aim = this.host.aim();
-    if (!aim) {
-      this.setGhost([]);
-      return;
-    }
-    if (railKind) {
-      if (frame.rotate) this.railRot++;
-      this.placeRail(graph, railKind, aim, edge, removeEdge, frame.aimed, player);
+    if (rail) {
+      if (frame.levelUp) this.setTilt(Math.min(1, this.tilt + 1) as -1 | 0 | 1);
+      if (frame.levelDown) this.setTilt(Math.max(-1, this.tilt - 1) as -1 | 0 | 1);
+      if (frame.rotate) this.railTurn++;
+      this.trace(graph, aim, edge, release, down, frame, player);
       this.showHint('train.railHint');
-    } else if (carKind) {
+    } else if (carKind && aim) {
       this.setGhost([]);
       this.placeCar(graph, carKind, aim, edge, frame.facing, frame.aimed);
       this.showHint('train.carHint');
     }
+  }
+
+  private setTilt(next: -1 | 0 | 1): void {
+    if (next === this.tilt) return;
+    this.tilt = next;
+    this.host.message(
+      t(next > 0 ? 'train.tiltUp' : next < 0 ? 'train.tiltDown' : 'train.tiltFlat'),
+    );
   }
 
   private showHint(key: 'train.railHint' | 'train.carHint'): void {
@@ -463,63 +522,176 @@ export class TrainView {
     this.host.message(t(key));
   }
 
-  private placeRail(
+  /** Bout de voie libre le plus proche du point visé, s'il est assez près pour prolonger la voie. */
+  private nearestFreePort(aim: { x: number; z: number }): Port | null {
+    let best: { port: Port; d: number } | null = null;
+    for (const p of freePorts(this.host.state.changes.rails)) {
+      const d = Math.hypot(p.at.x - aim.x, p.at.z - aim.z);
+      if (d <= SNAP_M && (!best || d < best.d)) best = { port: p.at, d };
+    }
+    return best?.port ?? null;
+  }
+
+  /** Les pièces du tracé avec ce qu'on peut vraiment poser (terrain libre, rails en stock). */
+  private evaluate(
+    planned: PlannedPiece[],
+  ): { piece: RailPiece; ok: boolean; plan: PlannedPiece }[] {
+    const { state } = this.host;
+    const taken = new Set<string>();
+    for (const p of state.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
+    let stock = state.inventory[RAIL_ITEM] ?? 0;
+    return planned.map((plan) => {
+      const piece: RailPiece = {
+        id: -1,
+        kind: plan.kind,
+        gx: plan.gx,
+        gz: plan.gz,
+        turns: plan.turns,
+        level: plan.level,
+      };
+      const cells = cellsOf(piece);
+      const free = cells.every(([x, z]) => !taken.has(`${x},${z}`) && !this.host.blocked(x, z));
+      const ok = free && stock >= plan.cost;
+      if (ok) {
+        stock -= plan.cost;
+        for (const [x, z] of cells) taken.add(`${x},${z}`);
+      }
+      return { piece, ok, plan };
+    });
+  }
+
+  private trace(
     graph: TrackGraph,
-    kind: RailKind,
-    aim: { x: number; z: number },
+    aim: { x: number; z: number } | null,
     edge: boolean,
-    removeEdge: boolean,
-    aimed: boolean,
+    release: boolean,
+    down: boolean,
+    frame: TrainFrame,
     player: { x: number; z: number },
   ): void {
+    void graph;
     const { state } = this.host;
     const blocked = (c: { gx: number; gz: number }): boolean => this.host.blocked(c.gx, c.gz);
-    // Reprendre : la voie visée.
-    if (removeEdge) {
-      const near = this.nearestTrack(graph, aim.x, aim.z);
-      if (near && near.dist < 1.2 && state.removeRail(near.piece.id, player)) {
-        this.host.sfx('pickup');
-        this.host.message(t('train.railRemoved'));
-        this.setGhost([]);
-        return;
+    if (!aim) {
+      this.setGhost([]);
+      return;
+    }
+    const here = tileOf(aim.x, aim.z);
+    const port = this.nearestFreePort(aim);
+    // Début du tracé : au bout de la voie la plus proche (la voie se prolonge), sinon sur la tuile visée.
+    const startFor = (): { tiles: Tile[]; lead: number; level: number } => {
+      if (port) {
+        const lead = leadTile(port);
+        const dx = Math.round(port.dx);
+        const dz = Math.round(port.dz);
+        return { tiles: [lead, { tx: lead.tx + dx, tz: lead.tz + dz }], lead: 1, level: port.y };
+      }
+      return { tiles: [here], lead: 0, level: 0 };
+    };
+    if (edge && !frame.aimed) {
+      const s = startFor();
+      this.path = s.tiles;
+      this.pathLead = s.lead;
+      this.pathLevel = s.level;
+    }
+    if (this.path.length > 0 && down) {
+      const back = this.path.findIndex(
+        (p, i) => i >= this.pathLead && p.tx === here.tx && p.tz === here.tz,
+      );
+      if (back >= 0 && back >= this.pathLead)
+        this.path.length = Math.max(back + 1, this.pathLead + 1);
+      else {
+        const cur = { ...this.path[this.path.length - 1] };
+        for (
+          let guard = 0;
+          guard < MAX_PATH && (cur.tx !== here.tx || cur.tz !== here.tz);
+          guard++
+        ) {
+          const dx = here.tx - cur.tx;
+          const dz = here.tz - cur.tz;
+          const prev = this.path[this.path.length - 2];
+          const horizontal = Math.abs(dx) >= Math.abs(dz);
+          let step = horizontal ? { tx: Math.sign(dx), tz: 0 } : { tx: 0, tz: Math.sign(dz) };
+          // Jamais de demi-tour sur soi-même : on prend l'autre axe, ou on s'arrête.
+          if (prev && cur.tx + step.tx === prev.tx && cur.tz + step.tz === prev.tz) {
+            const other = horizontal ? { tx: 0, tz: Math.sign(dz) } : { tx: Math.sign(dx), tz: 0 };
+            if (other.tx === 0 && other.tz === 0) break;
+            step = other;
+          }
+          cur.tx += step.tx;
+          cur.tz += step.tz;
+          this.path.push({ ...cur });
+        }
+        if (this.path.length > MAX_PATH) this.path.length = MAX_PATH;
       }
     }
-    // Où poser : se raccorder au bout de voie libre le plus proche, sinon là où l'on vise.
-    let candidates: { gx: number; gz: number; turns: number; level: number }[] = [];
-    const ports = freePorts(state.changes.rails)
-      .map((p) => ({ p, d: Math.hypot(p.at.x - aim.x, p.at.z - aim.z) }))
-      .filter((x) => x.d <= SNAP_M)
-      .sort((a, b) => a.d - b.d);
-    for (const { p } of ports) {
-      candidates = matesFor(kind, p.at).filter((m) =>
-        state.railFits({ id: -1, kind, ...m }, blocked),
-      );
-      if (candidates.length > 0) break;
+    // Aperçu : le tracé en cours, ou une seule tuile (ou rampe) sous le curseur.
+    let tiles = this.path;
+    let lead = this.pathLead;
+    let level = this.pathLevel;
+    let single = false;
+    if (tiles.length === 0) {
+      const s = startFor();
+      tiles = s.tiles;
+      lead = s.lead;
+      level = s.level;
+      if (!port) {
+        const dirs = [
+          { tx: 0, tz: -1 },
+          { tx: 1, tz: 0 },
+          { tx: 0, tz: 1 },
+          { tx: -1, tz: 0 },
+        ];
+        const base = Math.round((((-frame.facing / (Math.PI / 2)) % 4) + 4) % 4);
+        const d = dirs[(base + this.railTurn) % 4];
+        const len = this.tilt !== 0 ? 4 : 2;
+        tiles = Array.from({ length: len }, (_, i) => ({
+          tx: here.tx + d.tx * i,
+          tz: here.tz + d.tz * i,
+        }));
+        single = this.tilt === 0;
+      } else if (this.tilt !== 0) {
+        const lastDir = { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz };
+        tiles = [
+          tiles[0],
+          ...Array.from({ length: 4 }, (_, i) => ({
+            tx: tiles[0].tx + lastDir.tx * (i + 1),
+            tz: tiles[0].tz + lastDir.tz * (i + 1),
+          })),
+        ];
+      } else single = true;
     }
-    let pick: { gx: number; gz: number; turns: number; level: number };
-    if (candidates.length > 0)
-      pick =
-        candidates[((this.railRot % candidates.length) + candidates.length) % candidates.length];
-    else {
-      const turns = ((this.railRot % 4) + 4) % 4;
-      pick = { ...cornerFor(kind, turns, aim.x, aim.z), turns, level: 0 };
-    }
-    const piece: RailPiece = { id: -1, kind, ...pick };
-    const c = centerOf(piece);
-    const reach = Math.hypot(c.x - player.x, c.z - player.z) <= 40;
-    const ok =
-      reach && state.railFits(piece, blocked) && (state.inventory[`rail_${kind}`] ?? 0) > 0;
-    this.setGhost([{ piece, ok }]);
-    if (edge && !aimed) {
-      if (ok && state.placeRail(kind, pick.gx, pick.gz, pick.turns, pick.level, blocked) === 'ok') {
+    let planned = planRails(tiles, { level, tilt: this.tilt, lead });
+    if (single) planned = planned.slice(0, 1);
+    const checked = this.evaluate(planned);
+    this.setGhost(checked.map(({ piece, ok }) => ({ piece, ok })));
+    if (release && this.path.length > 0) {
+      let placed = 0;
+      for (const c of checked) {
+        if (!c.ok) continue;
+        if (
+          state.placeRail(
+            c.plan.kind,
+            c.plan.gx,
+            c.plan.gz,
+            c.plan.turns,
+            c.plan.level,
+            blocked,
+          ) === 'ok'
+        )
+          placed++;
+      }
+      this.path = [];
+      this.ghostKey = '';
+      if (placed > 0) {
         this.host.sfx('placeStone');
         this.host.message(t('train.railPlaced'));
-        this.ghostKey = '';
       } else {
         this.host.sfx('deny');
         this.host.message(t('train.railBlocked'));
       }
     }
+    void player;
   }
 
   private placeCar(

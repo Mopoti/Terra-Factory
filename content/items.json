@@ -1330,41 +1330,16 @@
       }
     },
     {
-      "id": "rail_straight",
-      "stack": 50,
+      "id": "rail",
+      "stack": 100,
       "category": "rail",
-      "weightKg": 3,
-      "volumeL": 4,
+      "weightKg": 1.5,
+      "volumeL": 2,
       "color": "#8e969e",
       "yield": 2,
       "recipe": {
         "iron_ingot": 2,
         "wood": 1
-      }
-    },
-    {
-      "id": "rail_curve",
-      "stack": 50,
-      "category": "rail",
-      "weightKg": 8,
-      "volumeL": 10,
-      "color": "#8e969e",
-      "recipe": {
-        "iron_ingot": 6,
-        "wood": 3
-      }
-    },
-    {
-      "id": "rail_ramp",
-      "stack": 20,
-      "category": "rail",
-      "weightKg": 12,
-      "volumeL": 16,
-      "color": "#7d776e",
-      "recipe": {
-        "iron_ingot": 8,
-        "wood": 6,
-        "stone": 4
       }
     },
     {

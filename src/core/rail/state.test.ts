@@ -7,8 +7,7 @@ describe('voies et trains dans la partie', () => {
   const start = (): GameState => {
     const s = new GameState({
       inventory: {
-        rail_straight: 60,
-        rail_curve: 2,
+        rail: 200,
         train_locomotive: 1,
         train_wagon_freight: 2,
         coal: 30,
@@ -24,12 +23,13 @@ describe('voies et trains dans la partie', () => {
   it('poser une voie consomme l’objet et refuse de recouvrir une autre pièce', () => {
     const s = start();
     expect(s.placeRail('straight', 0, 0, 0, 0, free)).toBe('ok');
-    expect(s.inventory.rail_straight).toBe(59);
+    expect(s.inventory.rail).toBe(199);
     expect(s.placeRail('straight', 1, 1, 0, 0, free)).toBe('blocked'); // recouvre une case
     expect(s.placeRail('straight', 10, 0, 0, 0, () => true)).toBe('blocked'); // terrain bloqué
-    expect(s.placeRail('ramp', 20, 0, 0, 0, free)).toBe('missing'); // pas de rampe dans le sac
+    s.inventory.rail = 2;
+    expect(s.placeRail('ramp', 20, 0, 0, 0, free)).toBe('missing'); // une rampe coûte 4 rails
     expect(s.removeRail(s.changes.rails[0].id, { x: 0, z: 0 })).toBe(true);
-    expect(s.inventory.rail_straight).toBe(60);
+    expect(s.inventory.rail).toBe(3); // 2 en stock + 1 rendu
   });
 
   it('on pose une locomotive et des wagons sur la voie, sans qu’ils se chevauchent', () => {

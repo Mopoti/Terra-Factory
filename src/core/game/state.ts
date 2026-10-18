@@ -1,5 +1,5 @@
 import { VEHICLES, type VehicleKind } from '../data/vehicles';
-import { CARS, RAIL_ITEMS, type CarKind } from '../data/trains';
+import { CARS, RAIL_COST, RAIL_ITEM, type CarKind } from '../data/trains';
 import { SOUTE_MAX } from '../rail/normalize';
 import { TrackGraph, cellsOf, type RailKind, type RailPiece, type TrackPos } from '../rail/track';
 import {
@@ -1306,12 +1306,12 @@ export class GameState {
     level: number,
     blocked: (c: Cell) => boolean,
   ): 'ok' | 'missing' | 'blocked' {
-    const item = RAIL_ITEMS[kind];
-    if ((this.inventory[item] ?? 0) < 1) return 'missing';
+    const cost = RAIL_COST[kind];
+    if ((this.inventory[RAIL_ITEM] ?? 0) < cost) return 'missing';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
     const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
     if (!this.railFits(piece, blocked)) return 'blocked';
-    this.inventory = remove(this.inventory, item, 1).inventory;
+    this.inventory = remove(this.inventory, RAIL_ITEM, cost).inventory;
     this.changes.rails.push(piece);
     this.railsChanged();
     return 'ok';
@@ -1322,7 +1322,7 @@ export class GameState {
     const i = this.changes.rails.findIndex((p) => p.id === id);
     if (i < 0) return false;
     const [piece] = this.changes.rails.splice(i, 1);
-    this.giveBack(RAIL_ITEMS[piece.kind], 1, at);
+    this.giveBack(RAIL_ITEM, RAIL_COST[piece.kind], at);
     this.railsChanged();
     return true;
   }
