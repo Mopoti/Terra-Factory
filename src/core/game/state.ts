@@ -11,6 +11,7 @@ import {
 import {
   carPoses,
   coupleConsists,
+  piecesUnder,
   findCoupling,
   splitConsist,
   type Car,
@@ -1326,10 +1327,16 @@ export class GameState {
     return 'ok';
   }
 
-  /** Reprend une pièce de voie (l'objet revient dans le sac). Les convois posés dessus restent où ils sont. */
+  /** Un convoi roule ou stationne-t-il sur cette pièce ? */
+  railOccupied(id: number): boolean {
+    const graph = this.railGraph();
+    return this.changes.trains.some((c) => piecesUnder(graph, c).has(id));
+  }
+
+  /** Reprend une pièce de voie (l'objet revient dans le sac) ; refusé tant qu'un convoi est dessus. */
   removeRail(id: number, at: { x: number; z: number }): boolean {
     const i = this.changes.rails.findIndex((p) => p.id === id);
-    if (i < 0) return false;
+    if (i < 0 || this.railOccupied(id)) return false;
     const [piece] = this.changes.rails.splice(i, 1);
     this.giveBack(RAIL_ITEM, RAIL_COST[piece.kind], at);
     this.railsChanged();

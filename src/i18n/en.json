@@ -94,6 +94,7 @@
   "train.tiltDown": "Track: ramp goes down.",
   "train.tiltFlat": "Track: flat.",
   "touch.couple": "Couple",
+  "train.railOccupied": "A train is on this rail: move it first.",
   "train.fuelInfo": "Tender: {n} · boiler: {heat} %",
   "train.coupleHint": "C: couple",
   "train.uncoupleHint": "C: uncouple",

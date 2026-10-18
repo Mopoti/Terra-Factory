@@ -54,6 +54,17 @@ describe('voies et trains dans la partie', () => {
     expect(s.inventory.train_wagon_freight).toBe(2);
   });
 
+  it('une voie sous un convoi ne se démonte pas', () => {
+    const s = start();
+    laidLine(s, 40);
+    const piece = s.changes.rails[10];
+    s.placeCar('locomotive_steam', { piece: piece.id, u: 0.5, dir: 1 });
+    expect(s.removeRail(piece.id, { x: 0, z: 0 })).toBe(false);
+    expect(s.changes.rails).toContain(piece);
+    const far = s.changes.rails[s.changes.rails.length - 1];
+    expect(s.removeRail(far.id, { x: 0, z: 0 })).toBe(true);
+  });
+
   it('la fenêtre de la locomotive charge la soute jusqu’à 50 pièces', () => {
     const s = start();
     s.creative = true;

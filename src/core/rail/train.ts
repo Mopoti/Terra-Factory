@@ -193,6 +193,15 @@ export function stepConsist(graph: TrackGraph, c: Consist, dt: number, ctrl: Con
   if (moved.blocked) c.v = -c.v * RESTITUTION;
 }
 
+/** Identifiants des pièces de voie sous le convoi (échantillonné tous les 0,5 m, tête et queue comprises). */
+export function piecesUnder(graph: TrackGraph, c: Consist): Set<number> {
+  const out = new Set<number>([c.head.piece]);
+  const back = flip(c.head);
+  const len = consistLength(c) + 1;
+  for (let d = 0.5; d <= len; d += 0.5) out.add(graph.advance(back, d).pos.piece);
+  return out;
+}
+
 /** Point du monde d'un attelage. */
 function endPoint(
   graph: TrackGraph,

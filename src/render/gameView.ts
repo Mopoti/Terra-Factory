@@ -965,7 +965,10 @@ export function startGameView(
     if (id.startsWith('piece:')) {
       options.state.removeKeys([id.slice(6)], at);
     } else if (id.startsWith('rail:')) {
-      options.state.removeRail(Number(id.slice(5)), at);
+      if (!options.state.removeRail(Number(id.slice(5)), at)) {
+        options.onMessage?.(t('train.railOccupied'));
+        return;
+      }
     } else if (id.startsWith('machine:')) {
       bus.dispatch<'removeMachine'>({ type: 'removeMachine', id: Number(id.slice(8)), at });
     }

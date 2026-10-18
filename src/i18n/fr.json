@@ -94,6 +94,7 @@
   "train.tiltDown": "Voie : la rampe descend.",
   "train.tiltFlat": "Voie : à plat.",
   "touch.couple": "Atteler",
+  "train.railOccupied": "Un convoi est sur ce rail : déplace-le d’abord.",
   "train.fuelInfo": "Soute : {n} · chaudière : {heat} %",
   "train.coupleHint": "C : atteler",
   "train.uncoupleHint": "C : dételer",
