@@ -204,3 +204,35 @@ describe('formes des tuyaux', () => {
     expect(pipeShape([], 5, 0)).toEqual({ form: 'regard', turns: 1 });
   });
 });
+
+describe('icônes des objets', () => {
+  it('chaque objet a son modèle 3D, sauf ceux qui n’en ont pas encore (liste explicite)', async () => {
+    const { ITEMS } = await import('../core/data/items');
+    const { machineForItem } = await import('../core/data/machines');
+    const { HELD_MODELS, NO_MODEL_ITEMS, dropShape, iconModelName } = await import('./dropModels');
+    const crates = ITEMS.filter(
+      (i) =>
+        !i.id.startsWith('res_') &&
+        !machineForItem(i.id) &&
+        !iconModelName(i.id) &&
+        !HELD_MODELS[i.id] &&
+        dropShape(i.id) === 'caisse',
+    ).map((i) => i.id);
+    expect(crates.sort()).toEqual([...NO_MODEL_ITEMS].sort());
+  });
+});
+
+describe('icônes des machines', () => {
+  it('chaque machine du jeu a un modèle prévu (ou une forme à plusieurs modèles : tapis, tuyau)', async () => {
+    const { ITEMS } = await import('../core/data/items');
+    const { machineForItem } = await import('../core/data/machines');
+    const { hasModelPlanned } = await import('./models');
+    const missing = ITEMS.flatMap((i) => {
+      const m = machineForItem(i.id);
+      return m && m.id !== 'conveyor' && m.id !== 'pipe' && !hasModelPlanned(m.id as never)
+        ? [m.id]
+        : [];
+    });
+    expect([...new Set(missing)]).toEqual([]);
+  });
+});

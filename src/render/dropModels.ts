@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { itemById } from '../core/data/items';
+import { CARS, RAIL_ITEM, carKindOfItem } from '../core/data/trains';
 import { VEHICLES, vehicleKindOfItem } from '../core/data/vehicles';
 import { machineForItem, type MachineType } from '../core/data/machines';
 import { MeshBuilder } from './meshBuilder';
@@ -19,7 +20,8 @@ export function dropShape(item: string): DropShape {
   if (item === 'living_tissue') return 'tissu_vivant';
   if (item === 'wood') return 'bois';
   if (item === 'stone' || item === 'crushed_stone' || item === 'slag') return 'caillou';
-  if (/_ore(_washed)?$/.test(item) || item === 'uraninite' || item === 'coal') return 'minerai';
+  if (/_ore(_washed)?$/.test(item) || item === 'uraninite' || item === 'coal' || item === 'bauxite')
+    return 'minerai';
   if (item === 'silica_sand' || item === 'silicon_raw') return 'sable';
   if (item.endsWith('_ingot')) return 'lingot';
   if (item === 'iron_gear' || item === 'mould_gear') return 'engrenage';
@@ -40,10 +42,63 @@ export function dropShape(item: string): DropShape {
 /** Taille (m) de la plus grande dimension d'une machine posée au sol. */
 export const MINI_MACHINE_M = 0.45;
 
+const MATERIAL_FILE: Record<string, string> = { wood: 'bois', stone: 'pierre' };
+
+/**
+ * Modèle maison propre à un objet qui n'est ni une machine ni une forme générique : véhicule, matériel roulant, rail,
+ * tuyau, pièce de construction. Null pour les autres.
+ */
+export function iconModelName(item: string): string | null {
+  const vehicle = vehicleKindOfItem(item);
+  if (vehicle) return VEHICLES[vehicle].model;
+  const car = carKindOfItem(item);
+  if (car) return CARS[car].model;
+  if (item === RAIL_ITEM) return 'rail_droit';
+  const pipe = /^machine_pipe(?:_(\d))?$/.exec(item);
+  if (pipe) return `tuyau_droit_t${pipe[1] ?? '1'}`;
+  const piece = /^piece_(wall|door|stairs|slab|pillar)_(wood|stone)$/.exec(item);
+  if (piece) {
+    const mat = MATERIAL_FILE[piece[2]];
+    return {
+      wall: `mur_${mat}`,
+      door: `porte_${mat}`,
+      stairs: `escalier_${mat}`,
+      slab: `dalle_${mat}`,
+      pillar: `pilier_${mat}_seul`,
+    }[piece[1] as 'wall'];
+  }
+  return null;
+}
+
+/** Objets sans modèle 3D pour l'instant (vêtements, munitions, outils de couchage…) : ils gardent la caisse. */
+export const NO_MODEL_ITEMS: readonly string[] = [
+  'compass',
+  'backpack',
+  'hood',
+  'trousers',
+  'boots',
+  'gloves',
+  'sleeping_bag',
+  'bed',
+  'magazine',
+  'rifle_magazine',
+  ...['armor1', 'armor2', 'armor4'].flatMap((a) =>
+    ['head', 'torso', 'legs', 'feet'].map((s) => `${a}_${s}`),
+  ),
+];
+
+/** Outils et armes tenus : fichier du modèle et façon de le charger. */
+export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string }> = {
+  tool_stone: { kind: 'pick', file: 'terra/pioche_pierre' },
+  tool_iron: { kind: 'pick', file: 'terra/pioche_fer' },
+  pistol: { kind: 'weapon', file: 'pistolet' },
+  rifle: { kind: 'weapon', file: 'fusil' },
+};
+
 /** Modèle (en miniature) d'une machine, du buggy ou d'une balise posés au sol ; null si ce n'est pas une machine. */
 export function dropMachine(item: string): BakedModel | null {
-  const kind = vehicleKindOfItem(item);
-  if (kind) return bakedModel(VEHICLES[kind].model);
+  const own = iconModelName(item);
+  if (own) return bakedModel(own);
   const def = machineForItem(item);
   if (!def) return null;
   const type = def.id as MachineType;

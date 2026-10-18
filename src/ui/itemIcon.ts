@@ -3,11 +3,9 @@
  * isométrique, dessiné une fois puis gardé en image. Tant que les modèles ne sont pas chargés, la case garde sa couleur.
  */
 import * as THREE from 'three';
-import { itemById } from '../core/data/items';
-import { vehicleKindOfItem } from '../core/data/vehicles';
 import { machineForItem } from '../core/data/machines';
-import { dropGeometry, dropMachine } from '../render/dropModels';
-import { loadPickModel } from '../render/toolModel';
+import { HELD_MODELS, dropGeometry, dropMachine, iconModelName } from '../render/dropModels';
+import { loadPickModel, loadWeaponModel } from '../render/toolModel';
 
 const SIZE = 96;
 const RETRY_MS = 400;
@@ -22,8 +20,6 @@ interface Studio {
 
 let studio: Studio | null | undefined;
 const cache = new Map<string, string>();
-let pick: THREE.Object3D | null = null;
-let pickRequested = false;
 
 function getStudio(): Studio | null {
   if (studio !== undefined) return studio;
@@ -77,26 +73,39 @@ function snapshot(object: THREE.Object3D, fit = 0.82): string | null {
   return url;
 }
 
+const held = new Map<string, THREE.Object3D | null>();
+const heldRequested = new Set<string>();
+
+/** Outil ou arme tenu : son modèle, chargé à la demande. */
+function heldObject(item: string): THREE.Object3D | null {
+  const spec = HELD_MODELS[item];
+  if (!spec) return null;
+  if (!heldRequested.has(item)) {
+    heldRequested.add(item);
+    const load = spec.kind === 'pick' ? loadPickModel(spec.file) : loadWeaponModel(spec.file);
+    void load.then((m) => held.set(item, m));
+  }
+  return held.get(item) ?? null;
+}
+
 /** Image de l'icône de cet objet, ou null tant que son modèle n'est pas prêt. */
 export function itemIconUrl(item: string): string | null {
   const known = cache.get(item);
   if (known) return known;
   let url: string | null = null;
-  if (itemById(item).tool) {
-    if (!pickRequested) {
-      pickRequested = true;
-      void loadPickModel().then((m) => (pick = m));
-    }
-    if (pick) {
-      const copy = pick.clone();
-      copy.rotation.y = -Math.PI / 4;
+  if (HELD_MODELS[item]) {
+    const model = heldObject(item);
+    if (model) {
+      const copy = model.clone();
+      copy.rotation.y = HELD_MODELS[item].kind === 'pick' ? -Math.PI / 4 : -Math.PI / 5;
       const holder = new THREE.Group();
       holder.add(copy);
-      url = snapshot(holder, 0.4);
+      url = snapshot(holder, HELD_MODELS[item].kind === 'pick' ? 0.4 : 0.6);
     }
   } else {
-    // Une machine dont le modèle n'est pas encore chargé n'a pas d'icône (et pas la caisse par défaut).
-    const waiting = (machineForItem(item) || vehicleKindOfItem(item)) && !dropMachine(item);
+    // Un objet dont le modèle n'est pas encore chargé n'a pas d'icône (et pas la caisse par défaut).
+    const own = iconModelName(item);
+    const waiting = (machineForItem(item) || own) && !dropMachine(item);
     const geometry = waiting ? null : dropGeometry(item, 1);
     const s = geometry ? getStudio() : null;
     if (geometry && s) url = snapshot(new THREE.Mesh(geometry, s.material));

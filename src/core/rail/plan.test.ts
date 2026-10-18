@@ -126,6 +126,53 @@ describe('tracé de la voie', () => {
     expect(links(all)).toBe(all.length - 1);
   });
 
+  it('on peut prolonger une voie juste après un virage, dans les quatre sens', () => {
+    const dirs: [number, number][] = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ];
+    for (const a of dirs)
+      for (const b of dirs) {
+        if (a[0] * b[0] + a[1] * b[1] !== 0) continue;
+        const first = line(10, 10, a[0], a[1], 4);
+        const corner = first[first.length - 1];
+        const base = planRails(
+          [...first, ...line(corner.tx + b[0], corner.tz + b[1], b[0], b[1], 2)],
+          {
+            level: 0,
+            tilt: 0,
+            lead: 0,
+          },
+        );
+        const pieces = asPieces(base);
+        const g = new TrackGraph(pieces);
+        // Le bout libre qui regarde dans la direction b.
+        const open = pieces
+          .flatMap((p) =>
+            ([0, 1] as const).map((i) => ({
+              p,
+              port: portsOf(p)[i],
+              linked: g.neighbour(p.id, i),
+            })),
+          )
+          .filter(
+            (x) => !x.linked && Math.round(x.port.dx) === b[0] && Math.round(x.port.dz) === b[1],
+          );
+        expect(open).toHaveLength(1);
+        const lead = leadTile(open[0].port);
+        const more = planRails([lead, ...line(lead.tx + b[0], lead.tz + b[1], b[0], b[1], 3)], {
+          level: 0,
+          tilt: 0,
+          lead: 1,
+        });
+        expect(more).toHaveLength(3);
+        const all = asPieces([...base, ...more]);
+        expect(links(all)).toBe(all.length - 1);
+      }
+  });
+
   it('tileOf : la tuile qui contient un point', () => {
     expect(tileOf(3.4, -0.2)).toEqual({ tx: 3, tz: -1 });
   });

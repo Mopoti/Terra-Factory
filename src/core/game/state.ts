@@ -1336,12 +1336,33 @@ export class GameState {
     return max + 1;
   }
 
+  /** Un véhicule de ce type peut-il se poser là : un en stock, sur la voie, sans toucher un autre ? */
+  canPlaceCar(kind: CarKind, pos: TrackPos): boolean {
+    const spec = CARS[kind];
+    if ((this.inventory[spec.item] ?? 0) < 1) return false;
+    const graph = this.railGraph();
+    if (!graph.has(pos.piece)) return false;
+    const head = graph.advance(pos, spec.lengthM / 2).pos;
+    const mine = carPoses(graph, {
+      id: -1,
+      head,
+      v: 0,
+      cars: [{ id: -1, kind, rev: false, heatKJ: 0, fuel: null }],
+    })[0];
+    for (const other of this.changes.trains)
+      for (const p of carPoses(graph, other)) {
+        const need = (spec.lengthM + CARS[p.car.kind].lengthM) / 2 - 0.1;
+        if (Math.hypot(p.x - mine.x, p.z - mine.z) < need && Math.abs(p.y - mine.y) < 1.5)
+          return false;
+      }
+    return true;
+  }
+
   /** Pose un véhicule sur la voie, au centre de `pos`, l'avant dans le sens `pos.dir` ; refuse s'il touche un autre. */
   placeCar(kind: CarKind, pos: TrackPos): Consist | null {
+    if (!this.canPlaceCar(kind, pos)) return null;
     const spec = CARS[kind];
-    if ((this.inventory[spec.item] ?? 0) < 1) return null;
     const graph = this.railGraph();
-    if (!graph.has(pos.piece)) return null;
     const head = graph.advance(pos, spec.lengthM / 2).pos;
     const consist: Consist = {
       id: this.newConsistId(),
@@ -1349,14 +1370,6 @@ export class GameState {
       v: 0,
       cars: [{ id: this.newCarId(), kind, rev: false, heatKJ: 0, fuel: null }],
     };
-    // Pas de chevauchement : le centre doit être à plus d'une demi-longueur de chaque autre véhicule.
-    const mine = carPoses(graph, consist)[0];
-    for (const other of this.changes.trains)
-      for (const p of carPoses(graph, other)) {
-        const need = (spec.lengthM + CARS[p.car.kind].lengthM) / 2 - 0.1;
-        if (Math.hypot(p.x - mine.x, p.z - mine.z) < need && Math.abs(p.y - mine.y) < 1.5)
-          return null;
-      }
     this.inventory = remove(this.inventory, spec.item, 1).inventory;
     this.changes.trains.push(consist);
     this.railsChanged();

@@ -248,6 +248,50 @@ export class TrainView {
     this.ghost.geometry = this.geometryOf(mb);
   }
 
+  private carGhost: { kind: CarKind; mesh: VehicleMesh } | null = null;
+
+  /** Patron du véhicule en main, sur la voie visée (vert : on peut le poser, rouge : non). */
+  private setCarGhost(at: { kind: CarKind; pos: TrackPos } | null, ok: boolean): void {
+    if (!at) {
+      if (this.carGhost) this.carGhost.mesh.group.visible = false;
+      return;
+    }
+    const model = bakedModel(CARS[at.kind].model);
+    if (!model) return;
+    if (!this.carGhost || this.carGhost.kind !== at.kind) {
+      if (this.carGhost) this.host.scene.remove(this.carGhost.mesh.group);
+      const material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.65,
+        depthWrite: false,
+      });
+      const mesh = vehicleFromModel(model, material);
+      mesh.group.rotation.order = 'YXZ';
+      mesh.group.renderOrder = 6;
+      this.host.scene.add(mesh.group);
+      this.carGhost = { kind: at.kind, mesh };
+    }
+    const { mesh } = this.carGhost;
+    const graph = this.host.state.railGraph();
+    const spec = CARS[at.kind];
+    const head = graph.advance(at.pos, spec.lengthM / 2).pos;
+    const pose = carPoses(graph, {
+      id: -1,
+      head,
+      v: 0,
+      cars: [{ id: -1, kind: at.kind, rev: false, heatKJ: 0, fuel: null }],
+    })[0];
+    mesh.group.visible = true;
+    mesh.group.position.set(pose.x, pose.y + RAIL_TOP_M, pose.z);
+    mesh.group.rotation.y = pose.yaw;
+    mesh.group.rotation.x = -pose.pitch;
+    mesh.group.traverse((o) => {
+      const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+      if (m && 'color' in m) m.color.setRGB(ok ? 0.55 : 1, ok ? 1 : 0.45, ok ? 0.6 : 0.4);
+    });
+  }
+
   /** Les véhicules : un modèle par véhicule, posé sur la voie. */
   private syncCars(graph: TrackGraph, dt: number): void {
     const seen = new Set<number>();
@@ -487,6 +531,7 @@ export class TrainView {
     const edge = down && !this.wasDown;
     const release = !down && this.wasDown;
     this.wasDown = down;
+    if (!carKind) this.setCarGhost(null, false);
     if (this.mountedCar !== null || (!rail && !carKind)) {
       this.setGhost([]);
       this.hintShown = '';
@@ -501,9 +546,10 @@ export class TrainView {
       if (frame.rotate) this.railTurn++;
       this.trace(graph, aim, edge, release, down, frame, player);
       this.showHint('train.railHint');
-    } else if (carKind && aim) {
+    } else if (carKind && !aim) this.setCarGhost(null, false);
+    else if (carKind && aim) {
       this.setGhost([]);
-      this.placeCar(graph, carKind, aim, edge, frame.facing, frame.aimed);
+      this.placeCar(graph, carKind, aim, edge, frame.facing);
       this.showHint('train.carHint');
     }
   }
@@ -588,7 +634,8 @@ export class TrainView {
       }
       return { tiles: [here], lead: 0, level: 0 };
     };
-    if (edge && !frame.aimed) {
+    // Rails et véhicules : poser prime sur le reste (les rails déjà posés sont eux-mêmes une cible visée).
+    if (edge) {
       const s = startFor();
       this.path = s.tiles;
       this.pathLead = s.lead;
@@ -700,19 +747,23 @@ export class TrainView {
     aim: { x: number; z: number },
     edge: boolean,
     facing: number,
-    aimed: boolean,
   ): void {
-    if (!edge || aimed) return;
     const near = this.nearestTrack(graph, aim.x, aim.z);
     if (!near || near.dist > CAR_AIM_M) {
-      this.host.sfx('deny');
-      this.host.message(t('train.cannotPlace'));
+      this.setCarGhost(null, false);
+      if (edge) {
+        this.host.sfx('deny');
+        this.host.message(t('train.cannotPlace'));
+      }
       return;
     }
     // Le véhicule regarde du côté où regarde le joueur.
     const fwd = poseOn(near.piece, near.u, 1);
     const along = Math.sin(fwd.yaw) * Math.sin(facing) + Math.cos(fwd.yaw) * Math.cos(facing);
     const pos: TrackPos = { piece: near.piece.id, u: near.u, dir: along >= 0 ? 1 : -1 };
+    const free = this.host.state.canPlaceCar(kind, pos);
+    this.setCarGhost({ kind, pos }, free);
+    if (!edge) return;
     if (this.host.state.placeCar(kind, pos)) {
       this.host.sfx('placeStone');
       this.host.message(t('train.placed'));
