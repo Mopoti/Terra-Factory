@@ -52,6 +52,37 @@ const CAR_AIM_M = 2.2;
 /** Longueur maximale d'un tracé (tuiles). */
 const MAX_PATH = 150;
 
+/**
+ * Ouvertures vitrées de la cabine (coordonnées du modèle, m) : la façade est découpée à l'écran (plans de coupe) et une
+ * vitre translucide la ferme, pour voir la voie depuis le siège. Les hublots du modèle sont dans cette ouverture.
+ */
+const CAB_WINDOWS: Partial<
+  Record<CarKind, { min: [number, number, number]; max: [number, number, number]; glassZ: number }>
+> = {
+  locomotive_steam: { min: [-0.8, 1.84, -0.9], max: [0.8, 2.32, -0.5], glassZ: -0.705 },
+};
+const glassMaterial = new THREE.MeshStandardMaterial({
+  color: 0x9fd3ec,
+  transparent: true,
+  opacity: 0.22,
+  roughness: 0.08,
+  metalness: 0.1,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+});
+
+/** Plans (repère du véhicule) dont l'intersection est la boîte à retirer ; la normale pointe vers l'extérieur. */
+function boxPlanes(min: THREE.Vector3, max: THREE.Vector3): THREE.Plane[] {
+  return [
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -max.x),
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), min.x),
+    new THREE.Plane(new THREE.Vector3(0, 1, 0), -max.y),
+    new THREE.Plane(new THREE.Vector3(0, -1, 0), min.y),
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -max.z),
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), min.z),
+  ];
+}
+
 export interface TrainHost {
   scene: THREE.Scene;
   state: GameState;
@@ -108,7 +139,10 @@ export class TrainView {
     }),
   );
   private ghostKey = '';
-  private readonly meshes = new Map<number, { mesh: VehicleMesh; kind: CarKind }>();
+  private readonly meshes = new Map<
+    number,
+    { mesh: VehicleMesh; kind: CarKind; windows?: { local: THREE.Plane[]; world: THREE.Plane[] } }
+  >();
   private mountedCar: number | null = null;
   private attach: TrainAttach | null = null;
   private exit: { x: number; z: number; y: number } | null = null;
@@ -302,10 +336,46 @@ export class TrainView {
         let entry = this.meshes.get(pose.car.id);
         const model = bakedModel(spec.model);
         if (!entry && model) {
-          const mesh = vehicleFromModel(model, this.host.material);
+          const win = CAB_WINDOWS[pose.car.kind];
+          let material = this.host.material;
+          let windows: { local: THREE.Plane[]; world: THREE.Plane[] } | undefined;
+          if (win) {
+            // Matériau à part : la façade de la cabine est découpée (voir CAB_WINDOWS).
+            material = this.host.material.clone();
+            material.onBeforeCompile = this.host.material.onBeforeCompile;
+            material.customProgramCacheKey = this.host.material.customProgramCacheKey;
+            // Le modèle est recentré sur sa boîte : on passe du repère du fichier à celui du véhicule.
+            const cx = model.min.x + model.size.x / 2;
+            const cz = model.min.z + model.size.z / 2;
+            const shift = new THREE.Vector3(cx, model.min.y, cz);
+            const local = boxPlanes(
+              new THREE.Vector3(...win.min).sub(shift),
+              new THREE.Vector3(...win.max).sub(shift),
+            );
+            const world = local.map((p) => p.clone());
+            material.clippingPlanes = world;
+            material.clipIntersection = true;
+            windows = { local, world };
+          }
+          const mesh = vehicleFromModel(model, material);
           mesh.group.rotation.order = 'YXZ';
+          if (win) {
+            const cz = model.min.z + model.size.z / 2;
+            const cx = model.min.x + model.size.x / 2;
+            const glass = new THREE.Mesh(
+              new THREE.PlaneGeometry(win.max[0] - win.min[0], win.max[1] - win.min[1]),
+              glassMaterial,
+            );
+            glass.position.set(
+              0 - cx,
+              (win.min[1] + win.max[1]) / 2 - model.min.y,
+              win.glassZ - cz,
+            );
+            glass.renderOrder = 4;
+            mesh.group.add(glass);
+          }
           this.host.scene.add(mesh.group);
-          entry = { mesh, kind: pose.car.kind };
+          entry = { mesh, kind: pose.car.kind, windows };
           this.meshes.set(pose.car.id, entry);
         }
         if (!entry) continue;
@@ -313,6 +383,12 @@ export class TrainView {
         group.position.set(pose.x, pose.y + RAIL_TOP_M, pose.z);
         group.rotation.y = pose.yaw;
         group.rotation.x = -pose.pitch;
+        if (entry.windows) {
+          group.updateMatrixWorld(true);
+          entry.windows.local.forEach((p, i) =>
+            entry.windows!.world[i].copy(p).applyMatrix4(group.matrixWorld),
+          );
+        }
         // Les roues tournent de la distance parcourue, dans le sens du véhicule.
         rollWheels(entry.mesh, consist.v * dt * (pose.car.rev ? -1 : 1));
       }

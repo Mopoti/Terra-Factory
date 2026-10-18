@@ -2222,7 +2222,8 @@ export function startGameView(
   vehicleBox.className = 'ammo-box';
   vehicleBox.hidden = true;
   container.appendChild(vehicleBox);
-  // Voies ferrées et trains (voir `trainView.ts`).
+  // Voies ferrées et trains (voir `trainView.ts`) : la façade de la cabine est découpée par des plans de coupe.
+  renderer.localClippingEnabled = true;
   const trains = new TrainView({
     scene,
     state: options.state,

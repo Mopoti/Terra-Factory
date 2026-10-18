@@ -14,6 +14,7 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - Véhicule en main : viser la voie, clic ; il regarde du côté où regarde le joueur. **Maj + F** reprend un véhicule (seul, pas attelé).
 
 ## Conduite
+- **Pare-brise** : la façade de la cabine est découpée à l'écran (plans de coupe sur le matériau de la locomotive, `CAB_WINDOWS` dans `src/render/trainView.ts`) et fermée par une vitre translucide : en vue subjective on voit la voie par-dessus la chaudière. Quand le modèle Blender aura de vraies fenêtres vitrées, cette découpe se retirera.
 - **F** près de la locomotive : monter ; F de nouveau : descendre. Le joueur est assis dans la cabine.
 - **Z / S** (avancer / reculer), le levier est dans le sens où regarde la locomotive ; **Espace** : frein ; la locomotive prend le charbon ou le bois du sac quand sa soute est vide.
 - **C** : attelle au véhicule dont l'attelage est à moins de 1,6 m (on recule vers un wagon, on s'arrête, on appuie) ; sinon, dételle derrière la locomotive (devant elle si elle est en queue). Un convoi dételé est garé (frein à main).
