@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { itemById } from '../core/data/items';
+import { VEHICLES, vehicleKindOfItem } from '../core/data/vehicles';
 import { machineForItem, type MachineType } from '../core/data/machines';
 import { MeshBuilder } from './meshBuilder';
 import { DROP_SHAPES, bakedModel, beltModel, modelFor, type BakedModel } from './models';
@@ -41,7 +42,8 @@ export const MINI_MACHINE_M = 0.45;
 
 /** Modèle (en miniature) d'une machine, du buggy ou d'une balise posés au sol ; null si ce n'est pas une machine. */
 export function dropMachine(item: string): BakedModel | null {
-  if (item === 'vehicle_buggy') return bakedModel('buggy');
+  const kind = vehicleKindOfItem(item);
+  if (kind) return bakedModel(VEHICLES[kind].model);
   const def = machineForItem(item);
   if (!def) return null;
   const type = def.id as MachineType;

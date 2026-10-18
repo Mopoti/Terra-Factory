@@ -1,3 +1,4 @@
+import { VEHICLES, type VehicleKind } from '../data/vehicles';
 import { CELL_SIZE_M } from '../constants';
 import {
   chestPut,
@@ -36,7 +37,6 @@ import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings
 import {
   BAG_LIMITS,
   ITEMS,
-  VEHICLE_BURN_KW,
   energyKJ,
   itemById,
   type BagLimits,
@@ -1245,22 +1245,23 @@ export class GameState {
     this.emit({ type: 'factory' });
   }
 
-  placeVehicle(x: number, z: number, yaw: number): Vehicle | null {
-    if ((this.inventory.vehicle_buggy ?? 0) < 1) return null;
-    this.inventory = remove(this.inventory, 'vehicle_buggy', 1).inventory;
+  placeVehicle(x: number, z: number, yaw: number, kind: VehicleKind = 'buggy'): Vehicle | null {
+    const item = VEHICLES[kind].item;
+    if ((this.inventory[item] ?? 0) < 1) return null;
+    this.inventory = remove(this.inventory, item, 1).inventory;
     const id = this.changes.vehicles.reduce((m, v) => Math.max(m, v.id), 0) + 1;
-    const v: Vehicle = { id, x, z, yaw, fuel: 0, fuelStack: null, slots: [] };
+    const v: Vehicle = { id, kind, x, z, yaw, fuel: 0, fuelStack: null, slots: [] };
     this.changes.vehicles.push(v);
     this.emit({ type: 'inventory' });
     return v;
   }
 
-  /** Range un buggy dans le sac (ou au sol s'il est plein). */
+  /** Range un véhicule dans le sac (ou au sol s'il est plein). */
   pickUpVehicle(id: number): boolean {
     const i = this.changes.vehicles.findIndex((v) => v.id === id);
     if (i < 0) return false;
     const [v] = this.changes.vehicles.splice(i, 1);
-    this.giveBack('vehicle_buggy', 1, { x: v.x, z: v.z });
+    this.giveBack(VEHICLES[v.kind].item, 1, { x: v.x, z: v.z });
     for (const st of [v.fuelStack, ...v.slots])
       if (st) this.giveBack(st.item, st.count, { x: v.x, z: v.z });
     this.emit({ type: 'inventory' });
@@ -1269,16 +1270,17 @@ export class GameState {
 
   /** Remplit le réservoir du buggy avec un combustible du sac (renvoie les secondes de route ajoutées, 0 s'il n'y en a pas). */
   refuelVehicle(v: Vehicle): number {
+    const burn = VEHICLES[v.kind].burnKw;
     // D'abord la case de carburant, puis le coffre du buggy, puis le sac.
     const take = (): { seconds: number } | null => {
       const f = v.fuelStack;
       if (f && itemById(f.item).energyMJ) {
         f.count--;
         if (f.count <= 0) v.fuelStack = null;
-        return { seconds: energyKJ(f.item) / VEHICLE_BURN_KW };
+        return { seconds: energyKJ(f.item) / burn };
       }
       for (const item of ['coal', 'wood']) {
-        const seconds = energyKJ(item) / VEHICLE_BURN_KW;
+        const seconds = energyKJ(item) / burn;
         const stack = v.slots.find((x) => x.item === item);
         if (stack) {
           stack.count--;
@@ -1287,7 +1289,7 @@ export class GameState {
         }
       }
       for (const item of ['coal', 'wood']) {
-        const seconds = energyKJ(item) / VEHICLE_BURN_KW;
+        const seconds = energyKJ(item) / burn;
         if ((this.inventory[item] ?? 0) >= 1) {
           this.inventory = remove(this.inventory, item, 1).inventory;
           return { seconds };

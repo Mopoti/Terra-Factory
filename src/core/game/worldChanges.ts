@@ -1,3 +1,4 @@
+import { isVehicleKind, type VehicleKind } from '../data/vehicles';
 import { normalizePieces, type Pieces } from '../build/pieces';
 import { CELL_SIZE_M, CHUNK_CELLS } from '../constants';
 import { footprint, normalizeMachines, type Machine } from '../factory/factory';
@@ -37,6 +38,8 @@ export const MAX_EXTRA_NESTS = 60;
 /** Un véhicule posé dans le monde : position, cap (rad) et carburant (secondes de marche). */
 export interface Vehicle {
   id: number;
+  /** Buggy (par défaut dans les anciennes sauvegardes), quad ou char. */
+  kind: VehicleKind;
   x: number;
   z: number;
   yaw: number;
@@ -510,6 +513,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       if (!isNum(v.id) || !isNum(v.x) || !isNum(v.z)) continue;
       result.vehicles.push({
         id: v.id,
+        kind: isVehicleKind(v.kind) ? v.kind : 'buggy',
         x: v.x,
         z: v.z,
         yaw: isNum(v.yaw) ? v.yaw : 0,

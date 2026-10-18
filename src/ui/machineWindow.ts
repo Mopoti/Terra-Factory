@@ -1,3 +1,4 @@
+import { VEHICLES } from '../core/data/vehicles';
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import {
@@ -96,6 +97,9 @@ export function mountMachineWindow(
   },
 ): MachineWindow {
   let current: number | null = null;
+  /** Nom du véhicule dont le coffre s'ouvre (identifiant négatif = −identifiant du véhicule). */
+  const vehicleName = (id: number): string =>
+    itemName(VEHICLES[state.changes.vehicles.find((v) => v.id === -id)?.kind ?? 'buggy'].item);
   let timer = 0;
   /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
   let barTimer = 0;
@@ -821,7 +825,7 @@ export function mountMachineWindow(
       el(
         'h2',
         undefined,
-        current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
+        current !== null && current < 0 ? vehicleName(current) : itemName(def.item),
       ),
     );
     const status = factory.status(m);
@@ -851,7 +855,7 @@ export function mountMachineWindow(
       el(
         'h3',
         undefined,
-        current !== null && current < 0 ? itemName('vehicle_buggy') : itemName(def.item),
+        current !== null && current < 0 ? vehicleName(current) : itemName(def.item),
       ),
     );
     if (machineDef(m.type).coolBoost)

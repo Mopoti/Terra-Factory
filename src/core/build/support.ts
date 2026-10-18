@@ -60,6 +60,31 @@ const cellEdges = (level: number, gx: number, gz: number): Edge[] => [
 const edgeMid = (e: Edge): [number, number] =>
   e.axis === 'x' ? [e.gx + 0.5, e.gz] : [e.gx, e.gz + 0.5];
 
+/** Les bords qui se rejoignent aux deux bouts de ce bord (le prolongement et les murs perpendiculaires). */
+function touching(e: Edge): Edge[] {
+  const ends: [number, number][] =
+    e.axis === 'x'
+      ? [
+          [e.gx, e.gz],
+          [e.gx + 1, e.gz],
+        ]
+      : [
+          [e.gx, e.gz],
+          [e.gx, e.gz + 1],
+        ];
+  const out: Edge[] = [];
+  for (const [vx, vz] of ends) {
+    for (const n of [
+      { level: e.level, gx: vx - 1, gz: vz, axis: 'x' as const },
+      { level: e.level, gx: vx, gz: vz, axis: 'x' as const },
+      { level: e.level, gx: vx, gz: vz - 1, axis: 'z' as const },
+      { level: e.level, gx: vx, gz: vz, axis: 'z' as const },
+    ])
+      if (!(n.axis === e.axis && n.gx === e.gx && n.gz === e.gz)) out.push(n);
+  }
+  return out;
+}
+
 /** Clé d'un pilier dont le dessus est à la face `top` dans la case. */
 export function pillarKey(top: number, gx: number, gz: number): string {
   const level = Math.ceil(top / L) - 1;
@@ -92,7 +117,11 @@ export class SupportMap {
       if (!wallBlock(this.pieces, e, b)) return false;
       if (b === 0) return true;
       if (wallBlock(this.pieces, e, b - 1) && this.wallGrounded(e, b - 1)) return true;
-      return edgeCells(e).some(([cx, cz]) => this.slabHeld(b, cx, cz));
+      if (edgeCells(e).some(([cx, cz]) => this.slabHeld(b, cx, cz))) return true;
+      // Un mur accroché sous une dalle soutenue (un plafond posé dessus) ou contre un mur soutenu, dans un angle ou
+      // dans le prolongement, tient sans pilier.
+      if (edgeCells(e).some(([cx, cz]) => this.slabHeld(b + 1, cx, cz))) return true;
+      return touching(e).some((n) => this.wallGrounded(n, b));
     });
   }
 

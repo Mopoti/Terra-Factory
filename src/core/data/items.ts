@@ -134,5 +134,3 @@ export function itemById(id: string): ItemDef {
 
 /** Énergie d'une unité de combustible en kilojoules (0 si l'objet ne brûle pas). */
 export const energyKJ = (item: string): number => (itemById(item).energyMJ ?? 0) * 1000;
-/** Puissance consommée par un buggy qui roule (kW) : un charbon (9 MJ) = 50 s de route. */
-export const VEHICLE_BURN_KW = 180;

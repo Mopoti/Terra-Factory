@@ -1,3 +1,4 @@
+import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
@@ -170,8 +171,6 @@ const FLY_VERTICAL_M_S = 8;
 const FLY_MAX_HEIGHT_M = 120;
 /** Deux appuis sur Saut en moins de ce délai (s) : on décolle ou on se pose. */
 const FLY_DOUBLE_TAP_S = 0.35;
-/** Buggy : vitesse (par rapport à la marche) avec / sans carburant. */
-const BUGGY_FACTOR = 2.6;
 const PLAYER_RADIUS_M = 0.25;
 const PLAYER_HEIGHT_M = 1.7;
 const CAMERA_YAW_SPEED = 1.8;
@@ -2100,7 +2099,7 @@ export function startGameView(
       return { speed: 0, strafe: 0 };
     }
     buggyWarned = false;
-    const base = mounted ? BUGGY_FACTOR : 1;
+    const base = mounted ? VEHICLES[mounted.kind].speedFactor : 1;
     if (mounted && driving) mounted.fuel = Math.max(0, mounted.fuel - dt);
     const speed =
       WALK_SPEED_M_S *
@@ -2200,8 +2199,8 @@ export function startGameView(
     });
     return g;
   }
-  function buggyView(): VehicleView {
-    const model = bakedModel('buggy');
+  function vehicleView(kind: VehicleKind): VehicleView {
+    const model = bakedModel(VEHICLES[kind].model);
     const own = model ? vehicleFromModel(model, propsMaterial) : null;
     return { group: own ? own.group : makeBuggy(), own, x: NaN, z: NaN };
   }
@@ -2358,12 +2357,13 @@ export function startGameView(
     computeRay();
     const cx = v.x - rayOrigin.x;
     // Le buggy est à l'échelle du personnage (2,7 m × 1,7 m) : on le vise autour de son centre, à 70 cm du sol.
-    const cy = 0.7 - rayOrigin.y;
+    const spec = VEHICLES[v.kind];
+    const cy = spec.aimHeight - rayOrigin.y;
     const cz = v.z - rayOrigin.z;
     const along = cx * rayDir.x + cy * rayDir.y + cz * rayDir.z;
     if (along < 0 || along > 8) return false;
     const d2 = cx * cx + cy * cy + cz * cz - along * along;
-    return d2 <= 1.3 * 1.3;
+    return d2 <= spec.aimRadius * spec.aimRadius;
   }
   /** Duvet : rouleau vert ; lit : cadre de métal et matelas. */
   function makeSpawnModel(kind: 'bag' | 'bed'): THREE.Group {
@@ -2430,12 +2430,12 @@ export function startGameView(
     for (const v of list) {
       let view = vehicleMeshes.get(v.id);
       // Le modèle maison arrive après coup (chargement) : il remplace les boîtes de secours.
-      if (view && !view.own && bakedModel('buggy')) {
+      if (view && !view.own && bakedModel(VEHICLES[v.kind].model)) {
         scene.remove(view.group);
         view = undefined;
       }
       if (!view) {
-        view = buggyView();
+        view = vehicleView(v.kind);
         scene.add(view.group);
         vehicleMeshes.set(v.id, view);
       }
@@ -2484,7 +2484,7 @@ export function startGameView(
       down &&
       !placeWasDown &&
       !building &&
-      options.state.selectedItem() === 'vehicle_buggy' &&
+      vehicleKindOfItem(options.state.selectedItem() ?? '') !== null &&
       !interaction.aimed
     ) {
       computeRay();
@@ -2493,7 +2493,14 @@ export function startGameView(
         const x = center(cell.gx);
         const z = center(cell.gz);
         if (!isBlockedAt(x, z) && Math.hypot(x - playerX, z - playerZ) <= 12) {
-          if (options.state.placeVehicle(x, z, facing)) {
+          if (
+            options.state.placeVehicle(
+              x,
+              z,
+              facing,
+              vehicleKindOfItem(options.state.selectedItem() ?? '') ?? 'buggy',
+            )
+          ) {
             playSfx('placeStone');
             options.onMessage?.(t('vehicle.placed'));
           }
@@ -2555,7 +2562,8 @@ export function startGameView(
       // Écraser les ennemis sur la route.
       runOverCooldown = Math.max(0, runOverCooldown - dt);
       if (runOverCooldown <= 0 && mounted.fuel > 0 && threat.enemies.length > 0) {
-        const result = threat.hit(playerX, playerZ, 1.8, 20);
+        const spec = VEHICLES[mounted.kind];
+        const result = threat.hit(playerX, playerZ, spec.runOver.radius, spec.runOver.damage);
         if (result) {
           runOverCooldown = 0.4;
           playSfx(result === 'kill' ? 'rockBreak' : 'enemyHurt');

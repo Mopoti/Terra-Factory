@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { itemById } from '../core/data/items';
+import { vehicleKindOfItem } from '../core/data/vehicles';
 import { machineForItem } from '../core/data/machines';
 import { dropGeometry, dropMachine } from '../render/dropModels';
 import { loadPickModel } from '../render/toolModel';
@@ -95,7 +96,7 @@ export function itemIconUrl(item: string): string | null {
     }
   } else {
     // Une machine dont le modèle n'est pas encore chargé n'a pas d'icône (et pas la caisse par défaut).
-    const waiting = (machineForItem(item) || item === 'vehicle_buggy') && !dropMachine(item);
+    const waiting = (machineForItem(item) || vehicleKindOfItem(item)) && !dropMachine(item);
     const geometry = waiting ? null : dropGeometry(item, 1);
     const s = geometry ? getStudio() : null;
     if (geometry && s) url = snapshot(new THREE.Mesh(geometry, s.material));

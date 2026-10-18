@@ -54,7 +54,7 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
   group.add(body);
   const wheels: THREE.Object3D[] = [];
   let radius = 0;
-  for (const part of Object.values(model.groups ?? {})) {
+  for (const [name, part] of Object.entries(model.groups ?? {})) {
     const pivot = new THREE.Object3D();
     pivot.position.set(part.pivot.x - cx, part.pivot.y - y0, part.pivot.z - cz);
     const wheel = new THREE.Mesh(
@@ -72,6 +72,8 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
     wheel.castShadow = true;
     pivot.add(wheel);
     group.add(pivot);
+    // Seules les roues roulent ; chenilles et tourelle du char restent en place.
+    if (!name.startsWith('roue')) continue;
     wheels.push(pivot);
     // Rayon : sommet le plus éloigné de l'axe (dans le plan y, z), crampons compris.
     for (let i = 0; i < part.positions.length; i += 3)

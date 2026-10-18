@@ -1292,7 +1292,7 @@
     {
       "id": "vehicle_buggy",
       "stack": 1,
-      "category": "tools",
+      "category": "equipment",
       "weightKg": 30,
       "volumeL": 40,
       "color": "#c9a227",
@@ -1300,6 +1300,33 @@
         "iron_ingot": 24,
         "copper_ingot": 8,
         "wood": 6
+      }
+    },
+    {
+      "id": "vehicle_quad",
+      "stack": 1,
+      "category": "equipment",
+      "weightKg": 20,
+      "volumeL": 30,
+      "color": "#4f8f5a",
+      "recipe": {
+        "iron_ingot": 14,
+        "copper_ingot": 4,
+        "wood": 3
+      }
+    },
+    {
+      "id": "vehicle_tank",
+      "stack": 1,
+      "category": "equipment",
+      "weightKg": 48,
+      "volumeL": 55,
+      "color": "#6b7a4a",
+      "recipe": {
+        "steel_ingot": 24,
+        "iron_ingot": 30,
+        "iron_gear": 10,
+        "copper_ingot": 8
       }
     },
     {

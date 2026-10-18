@@ -289,6 +289,8 @@ export const pipeModel = (form: PipeForm, tier: number): BakedModel | null =>
  */
 const EXTRA_GROUPS: Record<string, string[]> = {
   buggy: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
+  quad: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
+  tank: ['chenille_g', 'chenille_d', 'tourelle'],
 };
 /** Biomes des modèles de végétation maison (noms de fichiers) : `arbre_<biome>_<1-3>`, `buisson_<biome>_<1-3>`. */
 export const NATURE_FILE_BIOMES = ['prairie', 'foret', 'desert', 'toundra'] as const;

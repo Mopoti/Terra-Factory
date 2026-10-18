@@ -79,6 +79,21 @@ describe('supports : piliers automatiques à 2,5 m', () => {
     expect(new SupportMap(p).supportNear(10, 9, 8)).toBe(true);
   });
 
+  it('un mur posé sous un plafond ou contre un mur soutenu ne reçoit pas de pilier', () => {
+    const p: Pieces = {};
+    // Un mur de 3 m sur le sol, une dalle de plafond posée dessus (face 5).
+    wall(p, 0, 0, 0, 'x', ALL);
+    wall(p, 0, 0, 0, 'z', ALL);
+    slab(p, 5, 0, 0);
+    // Mur perpendiculaire posé seulement sous le plafond (couche 4) : accroché au plafond et au mur voisin.
+    p[pieceKey(posFor('wall_stone', 0, 1, 0, 'z', 4))] = 'wall_stone';
+    const add = pillarsFor(p, posFor('wall_stone', 0, 1, 0, 'z', 4), 'stone');
+    expect(Object.keys(add)).toEqual([]);
+    // Un mur de même couche contre un mur déjà soutenu (dans le prolongement ou un angle) tient aussi.
+    p[pieceKey(posFor('wall_stone', 0, 1, 0, 'x', 3))] = 'wall_stone';
+    expect(new SupportMap(p).wallGrounded({ level: 0, gx: 1, gz: 0, axis: 'x' }, 3)).toBe(true);
+  });
+
   it('une grande dalle posée case par case reçoit un pilier tous les ≈ 3 m', () => {
     const p: Pieces = {};
     wall(p, 0, 0, 0, 'x', ALL);

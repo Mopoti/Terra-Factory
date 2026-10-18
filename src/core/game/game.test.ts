@@ -957,7 +957,7 @@ describe('ennemis et temps enregistrés', () => {
     expect(c.enemies[0].home).toEqual({ x: 1, z: 2 });
     expect(c.time).toBe(125.5);
     expect(c.vehicles).toEqual([
-      { id: 1, x: 2, z: 3, yaw: 1, fuel: 40, fuelStack: null, slots: [] },
+      { id: 1, kind: 'buggy', x: 2, z: 3, yaw: 1, fuel: 40, fuelStack: null, slots: [] },
     ]);
   });
 });
@@ -976,6 +976,27 @@ describe('carburant du buggy', () => {
     expect(s.refuelVehicle(v)).toBeGreaterThan(0); // le sac (charbon, puis bois)
     expect(s.refuelVehicle(v)).toBeGreaterThan(0);
     expect(s.refuelVehicle(v)).toBe(0);
+  });
+});
+
+describe('quad et char', () => {
+  it('chaque véhicule se pose depuis son objet, se range et consomme à son rythme', () => {
+    const s = new GameState({ inventory: { vehicle_quad: 1, vehicle_tank: 1, coal: 4 } });
+    expect(s.placeVehicle(0, 0, 0, 'buggy')).toBeNull(); // pas de buggy dans le sac
+    const quad = s.placeVehicle(0, 0, 0, 'quad')!;
+    const tank = s.placeVehicle(5, 0, 0, 'tank')!;
+    expect(quad.kind).toBe('quad');
+    expect(tank.kind).toBe('tank');
+    const q = s.refuelVehicle(quad);
+    const t = s.refuelVehicle(tank);
+    expect(q).toBeGreaterThan(t); // le quad est sobre, le char gourmand
+    expect(s.pickUpVehicle(tank.id)).toBe(true);
+    expect(s.inventory.vehicle_tank).toBe(1);
+    expect(s.inventory.vehicle_quad ?? 0).toBe(0);
+  });
+  it('un type de véhicule inconnu devient un buggy au chargement', () => {
+    const c = normalizeChanges({ vehicles: [{ id: 1, x: 0, z: 0, kind: 'zeppelin' }] });
+    expect(c.vehicles[0].kind).toBe('buggy');
   });
 });
 

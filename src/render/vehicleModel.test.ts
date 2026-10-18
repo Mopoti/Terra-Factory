@@ -35,6 +35,16 @@ describe('buggy en modèle maison', () => {
     expect(pos.getX(0)).toBeCloseTo(0);
   });
 
+  it('seules les roues roulent : la tourelle d’un char reste en place', () => {
+    const tank: BakedModel = {
+      ...model,
+      groups: { chenille_g: roue(-0.4, 0), tourelle: roue(0, 0), roue_avg: roue(0.4, 0.5) },
+    };
+    const v = vehicleFromModel(tank, new THREE.MeshBasicMaterial());
+    expect(v.wheels).toHaveLength(1);
+    expect(v.group.children).toHaveLength(4); // carrosserie + 3 pivots
+  });
+
   it('fait rouler les roues de la distance parcourue', () => {
     const v = vehicleFromModel(model, new THREE.MeshBasicMaterial());
     rollWheels(v, 0.2 * Math.PI);
