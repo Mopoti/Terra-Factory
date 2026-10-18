@@ -71,6 +71,7 @@ export const ACTIONS = [
   { id: 'use', category: 'interaction', defaults: ['L:F', null] },
   { id: 'secondary', category: 'interaction', defaults: ['Mouse2', null] },
   { id: 'drop', category: 'interaction', defaults: ['L:G', null] },
+  { id: 'couple', category: 'interaction', defaults: ['L:C', null] },
   { id: 'inventory', category: 'ui', defaults: ['Tab', 'L:I'] },
   { id: 'map', category: 'ui', defaults: ['L:M', null] },
   { id: 'techTree', category: 'ui', defaults: ['L:T', null] },

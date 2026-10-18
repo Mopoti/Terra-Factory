@@ -1290,6 +1290,13 @@ export class GameState {
     this.emit({ type: 'inventory' });
   }
 
+  /** La pièce tient-elle là : aucune de ses cases n'est prise par la voie ni bloquée par le terrain ? */
+  railFits(piece: RailPiece, blocked: (c: Cell) => boolean): boolean {
+    const taken = new Set<string>();
+    for (const p of this.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
+    return cellsOf(piece).every(([x, z]) => !taken.has(`${x},${z}`) && !blocked({ gx: x, gz: z }));
+  }
+
   /** Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la voie. */
   placeRail(
     kind: RailKind,
@@ -1303,10 +1310,7 @@ export class GameState {
     if ((this.inventory[item] ?? 0) < 1) return 'missing';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
     const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
-    const taken = new Set<string>();
-    for (const p of this.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
-    for (const [x, z] of cellsOf(piece))
-      if (taken.has(`${x},${z}`) || blocked({ gx: x, gz: z })) return 'blocked';
+    if (!this.railFits(piece, blocked)) return 'blocked';
     this.inventory = remove(this.inventory, item, 1).inventory;
     this.changes.rails.push(piece);
     this.railsChanged();

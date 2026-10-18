@@ -291,6 +291,13 @@ const EXTRA_GROUPS: Record<string, string[]> = {
   buggy: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   quad: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   tank: ['chenille_g', 'chenille_d', 'tourelle'],
+  // Voies et trains (voir `docs/trains.md`) : les roues des trains tournent par groupes.
+  rail_droit: [],
+  rail_virage: [],
+  rail_rampe: [],
+  locomotive_vapeur: ['roues_av', 'roues_ar', 'roues_motrices'],
+  wagon_fret: ['roues_av', 'roues_ar'],
+  wagon_citerne: ['roues_av', 'roues_ar'],
 };
 /** Biomes des modèles de végétation maison (noms de fichiers) : `arbre_<biome>_<1-3>`, `buisson_<biome>_<1-3>`. */
 export const NATURE_FILE_BIOMES = ['prairie', 'foret', 'desert', 'toundra'] as const;

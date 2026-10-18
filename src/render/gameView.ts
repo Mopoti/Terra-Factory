@@ -1,3 +1,4 @@
+import { TrainView } from './trainView';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
@@ -2208,6 +2209,26 @@ export function startGameView(
   vehicleBox.className = 'ammo-box';
   vehicleBox.hidden = true;
   container.appendChild(vehicleBox);
+  // Voies ferrées et trains (voir `trainView.ts`).
+  const trains = new TrainView({
+    scene,
+    state: options.state,
+    material: propsMaterial,
+    container,
+    aim: () => {
+      computeRay();
+      if (rayDir.y >= -1e-4) return null;
+      const t0 = -rayOrigin.y / rayDir.y;
+      return { x: rayOrigin.x + rayDir.x * t0, z: rayOrigin.z + rayDir.z * t0 };
+    },
+    blocked: (gx, gz) => isBlockedAt(center(gx), center(gz)) || !!factory.machineAt(gx, gz),
+    held: (action) => input.isActionActive(action),
+    message: (text) => options.onMessage?.(text),
+    sfx: (name) => playSfx(name),
+  });
+  let trainUse = false;
+  let trainCouple = false;
+  let trainRotate = false;
   let placeWasDown = false;
   /** Mode Créatif : dernière case où l'on a posé une ressource pendant ce clic (on peint case après case). */
   let lastCreativeCell: string | null = null;
@@ -3454,11 +3475,48 @@ export function startGameView(
       }
       updateSeason();
       const useKey = pressed('use');
+      trainUse = useKey;
+      trainCouple = pressed('couple');
+      trainRotate = !building && pressed('rotate');
       vehicleTick(dt, useKey);
       bodyTick(useKey);
-      motion = step(dt);
+      motion = trains.isMounted() ? { speed: 0, strafe: 0 } : step(dt);
       stepBody(dt);
       carryByBelt(dt);
+    }
+    // Voies et trains : simulation, dessin, pose, conduite. Au volant, le joueur est assis dans la locomotive.
+    trains.update(
+      {
+        dt,
+        paused,
+        uiOpen,
+        guest: !!guest,
+        use: trainUse,
+        couple: trainCouple,
+        rotate: trainRotate,
+        aimed: interaction.aimed,
+        facing,
+      },
+      { x: playerX, z: playerZ },
+    );
+    trainUse = false;
+    trainCouple = false;
+    trainRotate = false;
+    const trainSeat = trains.mounted();
+    if (trainSeat) {
+      playerX = trainSeat.x;
+      playerZ = trainSeat.z;
+      playerY = trainSeat.y;
+      velY = 0;
+      onGround = true;
+      facing = trainSeat.yaw;
+    }
+    const trainExit = trains.takeExit();
+    if (trainExit) {
+      playerX = trainExit.x;
+      playerZ = trainExit.z;
+      playerY = Math.max(0, trainExit.y);
+      velY = 0;
     }
 
     updateWanted(
@@ -3474,7 +3532,11 @@ export function startGameView(
         : { x: 0, y: 0 };
     // Au volant : le personnage s'assied sur le siège du véhicule (nœud `siege` du modèle), ses hanches 8 cm au-dessus
     // du coussin ; la caméra descend d'autant.
-    const seat = mounted ? (vehicleMeshes.get(mounted.id)?.own?.seat ?? null) : null;
+    const seat = mounted
+      ? (vehicleMeshes.get(mounted.id)?.own?.seat ?? null)
+      : trainSeat
+        ? { x: 0, y: trainSeat.seatY, z: 0 }
+        : null;
     let seatDrop = 0;
     if (miner instanceof Avatar) {
       miner.seated = seat !== null;
@@ -3725,6 +3787,7 @@ export function startGameView(
       interaction.dispose();
       unsubscribeBuild();
       buildingView.dispose();
+      trains.dispose();
       viewAlive = false;
       factoryView.dispose();
       machinePanel.remove();
