@@ -91,6 +91,7 @@ import {
   beltSpeed,
   visualHeight,
   type MachineDef,
+  slotCap,
 } from '../core/data/machines';
 import {
   Factory,
@@ -1598,7 +1599,7 @@ export function startGameView(
     if (def.fuel) {
       const secs = factory.fuelSecondsLeft(m);
       rows.push(
-        `<div>${t('factory.fuel', { v: stackText(m.fuel, def.stockMax), time: duration(secs) })}</div>`,
+        `<div>${t('factory.fuel', { v: stackText(m.fuel, slotCap(def, 'fuel')), time: duration(secs) })}</div>`,
       );
       if (def.burnKw)
         rows.push(`<div class="sub">${t('factory.burn', { v: String(def.burnKw) })}</div>`);
@@ -3288,6 +3289,18 @@ export function startGameView(
     updateCraftHud();
 
     let motion = { speed: 0, strafe: 0 };
+    // Sac ouvert : une touche 1 à 9 range l'objet choisi (ou sous le curseur) dans cette case de la barre.
+    if (!paused && uiOpen) {
+      const chosen = options.state.carried ?? options.state.pointed;
+      if (chosen) {
+        for (let i = 1; i <= 9; i++) {
+          if (pressed(`hotbar${i}` as ActionId)) {
+            options.state.assignSlot(i - 1, chosen);
+            playSfx('select');
+          }
+        }
+      }
+    }
     if (!paused) {
       if (!uiOpen) {
         if (pressed('cycleView')) switchView('cycle');

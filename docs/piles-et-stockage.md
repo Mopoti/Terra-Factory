@@ -1,4 +1,10 @@
-# Taille des piles et stockage : propositions (rien n'est modifié)
+# Taille des piles et stockage
+
+**Appliqué (18 octobre 2026) à l'essai** : les propositions 1 et 2 ci-dessous sont en place (piles par objet via `stack` dans `content/items.json`, `fuelMax` / `stockMax` dans `content/machines.json`, `ingredientCap = max(5, besoin × 2)`). Les valeurs se règlent dans ces fichiers. Les anciennes sauvegardes gardent leur contenu : les piles se redécoupent à l'ouverture du sac (il peut dépasser 30 cases, accepté) et une machine qui a plus de combustible que sa nouvelle limite le garde, sans en recevoir plus.
+
+---
+
+## Propositions d'origine
 
 Constat (17 octobre 2026) : **100 partout, pour tout**. Le joueur n'a presque jamais plus d'une pile de chaque objet, et
 une machine garde une réserve énorme.

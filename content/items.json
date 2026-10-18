@@ -10,6 +10,7 @@
   "items": [
     {
       "id": "wood",
+      "stack": 20,
       "weightKg": 0.8,
       "volumeL": 3,
       "color": "#8b5a2b",
@@ -17,60 +18,70 @@
     },
     {
       "id": "stone",
+      "stack": 20,
       "weightKg": 1.2,
       "volumeL": 0.6,
       "color": "#8a8f98"
     },
     {
       "id": "iron_ore",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.3,
       "color": "#8d6e63"
     },
     {
       "id": "copper_ore",
+      "stack": 50,
       "weightKg": 0.45,
       "volumeL": 0.3,
       "color": "#d2793b"
     },
     {
       "id": "zinc_ore",
+      "stack": 50,
       "weightKg": 0.5,
       "volumeL": 0.3,
       "color": "#b7a54a"
     },
     {
       "id": "bauxite",
+      "stack": 50,
       "weightKg": 0.35,
       "volumeL": 0.3,
       "color": "#b5532f"
     },
     {
       "id": "silica_sand",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.3,
       "color": "#e3d49a"
     },
     {
       "id": "silicon_raw",
+      "stack": 50,
       "weightKg": 0.3,
       "volumeL": 0.2,
       "color": "#6b7480"
     },
     {
       "id": "crude_oil",
+      "stack": 20,
       "weightKg": 0.9,
       "volumeL": 1,
       "color": "#1c1c22"
     },
     {
       "id": "uraninite",
+      "stack": 50,
       "weightKg": 0.9,
       "volumeL": 0.3,
       "color": "#2f7d46"
     },
     {
       "id": "coal",
+      "stack": 50,
       "weightKg": 0.25,
       "volumeL": 0.3,
       "color": "#2b2b2f",
@@ -78,6 +89,7 @@
     },
     {
       "id": "piece_wall_wood",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.0,
       "volumeL": 1.0,
@@ -88,6 +100,7 @@
     },
     {
       "id": "piece_door_wood",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 4.0,
       "volumeL": 4.0,
@@ -98,6 +111,7 @@
     },
     {
       "id": "piece_door_stone",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 4.0,
       "volumeL": 4.0,
@@ -108,6 +122,7 @@
     },
     {
       "id": "piece_wall_stone",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.0,
       "volumeL": 1.0,
@@ -118,6 +133,7 @@
     },
     {
       "id": "piece_stairs_wood",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.5,
       "volumeL": 1.5,
@@ -128,6 +144,7 @@
     },
     {
       "id": "piece_stairs_stone",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.5,
       "volumeL": 1.5,
@@ -138,6 +155,7 @@
     },
     {
       "id": "piece_slab_wood",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.0,
       "volumeL": 1.0,
@@ -148,6 +166,7 @@
     },
     {
       "id": "piece_slab_stone",
+      "stack": 50,
       "category": "buildings",
       "weightKg": 1.0,
       "volumeL": 1.0,
@@ -158,108 +177,126 @@
     },
     {
       "id": "piece_pillar_wood",
+      "stack": 50,
       "weightKg": 2,
       "volumeL": 2,
       "color": "#8a5f36"
     },
     {
       "id": "piece_pillar_stone",
+      "stack": 50,
       "weightKg": 3,
       "volumeL": 2,
       "color": "#6f747a"
     },
     {
       "id": "iron_ingot",
+      "stack": 50,
       "weightKg": 0.35,
       "volumeL": 0.15,
       "color": "#c3c8cf"
     },
     {
       "id": "copper_ingot",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.15,
       "color": "#e08a4a"
     },
     {
       "id": "zinc_ingot",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.15,
       "color": "#9fb2c6"
     },
     {
       "id": "crushed_stone",
+      "stack": 20,
       "weightKg": 1.1,
       "volumeL": 0.6,
       "color": "#a89f94"
     },
     {
       "id": "cast_iron_ingot",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.15,
       "color": "#4a4d52"
     },
     {
       "id": "steel_ingot",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.15,
       "color": "#c8d0d8"
     },
     {
       "id": "slag",
+      "stack": 20,
       "weightKg": 0.6,
       "volumeL": 0.5,
       "color": "#5d5a58"
     },
     {
       "id": "concrete_block",
+      "stack": 20,
       "weightKg": 2.0,
       "volumeL": 1,
       "color": "#9a9a96"
     },
     {
       "id": "iron_plate",
+      "stack": 50,
       "weightKg": 0.5,
       "volumeL": 0.2,
       "color": "#8d9298"
     },
     {
       "id": "copper_plate",
+      "stack": 50,
       "weightKg": 0.55,
       "volumeL": 0.2,
       "color": "#c97a3a"
     },
     {
       "id": "iron_gear",
+      "stack": 100,
       "weightKg": 0.4,
       "volumeL": 0.2,
       "color": "#767b81"
     },
     {
       "id": "copper_wire",
+      "stack": 100,
       "weightKg": 0.1,
       "volumeL": 0.1,
       "color": "#d98a3d"
     },
     {
       "id": "mould_plate",
+      "stack": 10,
       "weightKg": 1.5,
       "volumeL": 1,
       "color": "#3a3c40"
     },
     {
       "id": "mould_gear",
+      "stack": 10,
       "weightKg": 1.5,
       "volumeL": 1,
       "color": "#3a3c40"
     },
     {
       "id": "mould_wire",
+      "stack": 10,
       "weightKg": 1.5,
       "volumeL": 1,
       "color": "#3a3c40"
     },
     {
       "id": "machine_drill",
+      "stack": 10,
       "category": "extraction",
       "weightKg": 8,
       "volumeL": 15,
@@ -271,6 +308,7 @@
     },
     {
       "id": "machine_furnace",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 10,
       "volumeL": 12,
@@ -281,6 +319,7 @@
     },
     {
       "id": "machine_stamper",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 14,
       "volumeL": 22,
@@ -292,6 +331,7 @@
     },
     {
       "id": "machine_crusher",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 12,
       "volumeL": 20,
@@ -303,6 +343,7 @@
     },
     {
       "id": "machine_bessemer",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 40,
       "volumeL": 45,
@@ -315,6 +356,7 @@
     },
     {
       "id": "machine_mixer",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 26,
       "volumeL": 35,
@@ -327,6 +369,7 @@
     },
     {
       "id": "machine_conveyor",
+      "stack": 50,
       "category": "logistics",
       "weightKg": 0.3,
       "volumeL": 0.3,
@@ -337,6 +380,7 @@
     },
     {
       "id": "machine_conveyor_2",
+      "stack": 50,
       "category": "logistics",
       "weightKg": 0.5,
       "volumeL": 0.4,
@@ -349,6 +393,7 @@
     },
     {
       "id": "machine_conveyor_3",
+      "stack": 50,
       "category": "logistics",
       "weightKg": 0.7,
       "volumeL": 0.5,
@@ -362,6 +407,7 @@
     },
     {
       "id": "machine_chest_wood",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 6,
       "volumeL": 20,
@@ -372,6 +418,7 @@
     },
     {
       "id": "machine_chest_iron",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 12,
       "volumeL": 20,
@@ -382,6 +429,7 @@
     },
     {
       "id": "machine_generator",
+      "stack": 10,
       "category": "energy",
       "weightKg": 12,
       "volumeL": 20,
@@ -393,6 +441,7 @@
     },
     {
       "id": "machine_waterwheel",
+      "stack": 10,
       "category": "energy",
       "weightKg": 16,
       "volumeL": 28,
@@ -405,6 +454,7 @@
     },
     {
       "id": "machine_crank",
+      "stack": 10,
       "category": "energy",
       "weightKg": 6,
       "volumeL": 8,
@@ -416,6 +466,7 @@
     },
     {
       "id": "machine_pole",
+      "stack": 10,
       "category": "energy",
       "weightKg": 2,
       "volumeL": 6,
@@ -427,6 +478,7 @@
     },
     {
       "id": "machine_drill_electric",
+      "stack": 10,
       "category": "extraction",
       "weightKg": 9,
       "volumeL": 15,
@@ -439,6 +491,7 @@
     },
     {
       "id": "machine_drill_eco",
+      "stack": 10,
       "category": "extraction",
       "weightKg": 14,
       "volumeL": 22,
@@ -451,6 +504,7 @@
     },
     {
       "id": "machine_splitter",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 2,
       "volumeL": 4,
@@ -461,6 +515,7 @@
     },
     {
       "id": "machine_merger",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 2,
       "volumeL": 4,
@@ -471,6 +526,7 @@
     },
     {
       "id": "machine_arm",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 3,
       "volumeL": 6,
@@ -481,6 +537,7 @@
     },
     {
       "id": "machine_arm_electric",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 4,
       "volumeL": 6,
@@ -492,6 +549,7 @@
     },
     {
       "id": "machine_arm_filter",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 5,
       "volumeL": 8,
@@ -504,6 +562,7 @@
     },
     {
       "id": "machine_sorter",
+      "stack": 10,
       "category": "logistics",
       "weightKg": 4,
       "volumeL": 6,
@@ -516,6 +575,7 @@
     },
     {
       "id": "machine_assembler",
+      "stack": 10,
       "category": "machining",
       "weightKg": 15,
       "volumeL": 30,
@@ -527,6 +587,7 @@
     },
     {
       "id": "fiber",
+      "stack": 100,
       "weightKg": 0.05,
       "volumeL": 0.3,
       "color": "#9bbf5a",
@@ -534,6 +595,7 @@
     },
     {
       "id": "compass",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 0.2,
       "volumeL": 0.2,
@@ -545,6 +607,7 @@
     },
     {
       "id": "cloth",
+      "stack": 50,
       "category": "equipment",
       "weightKg": 0.1,
       "volumeL": 0.3,
@@ -555,6 +618,7 @@
     },
     {
       "id": "backpack",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 1.5,
       "volumeL": 6,
@@ -573,6 +637,7 @@
     },
     {
       "id": "hood",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 0.2,
       "volumeL": 1,
@@ -586,6 +651,7 @@
     },
     {
       "id": "trousers",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 0.4,
       "volumeL": 2,
@@ -599,6 +665,7 @@
     },
     {
       "id": "boots",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 0.5,
       "volumeL": 2,
@@ -613,6 +680,7 @@
     },
     {
       "id": "sleeping_bag",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 1.5,
       "volumeL": 6,
@@ -623,6 +691,7 @@
     },
     {
       "id": "bed",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 14,
       "volumeL": 45,
@@ -634,6 +703,7 @@
     },
     {
       "id": "gloves",
+      "stack": 1,
       "category": "equipment",
       "weightKg": 0.15,
       "volumeL": 0.6,
@@ -647,6 +717,7 @@
     },
     {
       "id": "science_pack",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
@@ -658,6 +729,7 @@
     },
     {
       "id": "cable_insulated",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.05,
       "volumeL": 0.1,
@@ -670,6 +742,7 @@
     },
     {
       "id": "silicon_chip",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.02,
       "volumeL": 0.05,
@@ -681,6 +754,7 @@
     },
     {
       "id": "science_pack_3",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
@@ -692,12 +766,14 @@
     },
     {
       "id": "steel_plate",
+      "stack": 50,
       "weightKg": 0.5,
       "volumeL": 0.2,
       "color": "#aab4bd"
     },
     {
       "id": "science_pack_2",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
@@ -709,6 +785,7 @@
     },
     {
       "id": "machine_lab",
+      "stack": 10,
       "category": "science",
       "weightKg": 12,
       "volumeL": 25,
@@ -720,6 +797,7 @@
     },
     {
       "id": "machine_pipe",
+      "stack": 50,
       "category": "fluids",
       "weightKg": 0.8,
       "volumeL": 1,
@@ -731,6 +809,7 @@
     },
     {
       "id": "machine_pump",
+      "stack": 10,
       "category": "extraction",
       "weightKg": 6,
       "volumeL": 8,
@@ -742,6 +821,7 @@
     },
     {
       "id": "machine_barreler",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 12,
       "volumeL": 20,
@@ -754,6 +834,7 @@
     },
     {
       "id": "barrel_empty",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 8,
       "volumeL": 120,
@@ -764,24 +845,28 @@
     },
     {
       "id": "barrel_water",
+      "stack": 10,
       "weightKg": 108,
       "volumeL": 120,
       "color": "#4a8fc4"
     },
     {
       "id": "machine_pipe_2",
+      "stack": 50,
       "weightKg": 1,
       "volumeL": 1,
       "color": "#d9b44a"
     },
     {
       "id": "machine_pipe_3",
+      "stack": 50,
       "weightKg": 1.5,
       "volumeL": 1,
       "color": "#aab4bd"
     },
     {
       "id": "machine_builder",
+      "stack": 10,
       "category": "machining",
       "weightKg": 25,
       "volumeL": 40,
@@ -794,6 +879,7 @@
     },
     {
       "id": "machine_heavy_press",
+      "stack": 10,
       "category": "machining",
       "weightKg": 60,
       "volumeL": 60,
@@ -806,6 +892,7 @@
     },
     {
       "id": "machine_washer",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 30,
       "volumeL": 50,
@@ -818,24 +905,28 @@
     },
     {
       "id": "iron_ore_washed",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.3,
       "color": "#a1887f"
     },
     {
       "id": "copper_ore_washed",
+      "stack": 50,
       "weightKg": 0.45,
       "volumeL": 0.3,
       "color": "#e08a4b"
     },
     {
       "id": "zinc_ore_washed",
+      "stack": 50,
       "weightKg": 0.5,
       "volumeL": 0.3,
       "color": "#d1c060"
     },
     {
       "id": "machine_booster",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 15,
       "volumeL": 20,
@@ -849,6 +940,7 @@
     },
     {
       "id": "machine_cooling_tower",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 40,
       "volumeL": 60,
@@ -861,6 +953,7 @@
     },
     {
       "id": "machine_furnace_electric",
+      "stack": 10,
       "category": "smelting",
       "weightKg": 50,
       "volumeL": 70,
@@ -873,6 +966,7 @@
     },
     {
       "id": "machine_pumpjack",
+      "stack": 10,
       "category": "extraction",
       "weightKg": 60,
       "volumeL": 80,
@@ -886,12 +980,14 @@
     },
     {
       "id": "barrel_oil",
+      "stack": 10,
       "weightKg": 98,
       "volumeL": 120,
       "color": "#26262c"
     },
     {
       "id": "machine_refinery",
+      "stack": 10,
       "category": "machining",
       "weightKg": 80,
       "volumeL": 120,
@@ -905,6 +1001,7 @@
     },
     {
       "id": "machine_plastic_press",
+      "stack": 10,
       "category": "machining",
       "weightKg": 45,
       "volumeL": 60,
@@ -917,36 +1014,42 @@
     },
     {
       "id": "plastic_insulator",
+      "stack": 100,
       "weightKg": 0.05,
       "volumeL": 0.1,
       "color": "#26262c"
     },
     {
       "id": "aluminium_ingot",
+      "stack": 50,
       "weightKg": 0.3,
       "volumeL": 0.15,
       "color": "#c9d3dc"
     },
     {
       "id": "zamak_ingot",
+      "stack": 50,
       "weightKg": 0.5,
       "volumeL": 0.15,
       "color": "#8d98a3"
     },
     {
       "id": "uranium_enriched",
+      "stack": 10,
       "weightKg": 1.5,
       "volumeL": 0.2,
       "color": "#7be07b"
     },
     {
       "id": "uranium_depleted",
+      "stack": 10,
       "weightKg": 2,
       "volumeL": 0.2,
       "color": "#6b8f6b"
     },
     {
       "id": "uranium_rod",
+      "stack": 10,
       "category": "energy",
       "weightKg": 6,
       "volumeL": 2,
@@ -959,12 +1062,14 @@
     },
     {
       "id": "nuclear_waste",
+      "stack": 10,
       "weightKg": 8,
       "volumeL": 3,
       "color": "#b6e03a"
     },
     {
       "id": "science_pack_4",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
@@ -977,6 +1082,7 @@
     },
     {
       "id": "machine_centrifuge",
+      "stack": 10,
       "category": "machining",
       "weightKg": 60,
       "volumeL": 80,
@@ -990,6 +1096,7 @@
     },
     {
       "id": "machine_fission_reactor",
+      "stack": 10,
       "category": "energy",
       "weightKg": 400,
       "volumeL": 600,
@@ -1004,12 +1111,14 @@
     },
     {
       "id": "contaminated_glass",
+      "stack": 10,
       "weightKg": 40,
       "volumeL": 20,
       "color": "#9b6fd0"
     },
     {
       "id": "machine_evaporation_tower",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 60,
       "volumeL": 90,
@@ -1022,6 +1131,7 @@
     },
     {
       "id": "machine_vitrifier",
+      "stack": 10,
       "category": "fluids",
       "weightKg": 90,
       "volumeL": 100,
@@ -1035,6 +1145,7 @@
     },
     {
       "id": "machine_accumulator",
+      "stack": 10,
       "category": "energy",
       "weightKg": 80,
       "volumeL": 60,
@@ -1048,6 +1159,7 @@
     },
     {
       "id": "machine_fusion_reactor",
+      "stack": 10,
       "category": "energy",
       "weightKg": 3000,
       "volumeL": 4000,
@@ -1062,6 +1174,7 @@
     },
     {
       "id": "machine_relay",
+      "stack": 10,
       "category": "energy",
       "weightKg": 40,
       "volumeL": 50,
@@ -1074,6 +1187,7 @@
     },
     {
       "id": "machine_antenna",
+      "stack": 10,
       "category": "energy",
       "weightKg": 120,
       "volumeL": 200,
@@ -1087,6 +1201,7 @@
     },
     {
       "id": "machine_boiler",
+      "stack": 10,
       "category": "energy",
       "weightKg": 20,
       "volumeL": 30,
@@ -1098,6 +1213,7 @@
     },
     {
       "id": "machine_turbine",
+      "stack": 10,
       "category": "energy",
       "weightKg": 18,
       "volumeL": 25,
@@ -1109,6 +1225,7 @@
     },
     {
       "id": "pistol",
+      "stack": 1,
       "category": "tools",
       "weightKg": 1.1,
       "volumeL": 1.2,
@@ -1119,6 +1236,7 @@
     },
     {
       "id": "magazine",
+      "stack": 50,
       "category": "tools",
       "weightKg": 0.3,
       "volumeL": 0.3,
@@ -1129,6 +1247,7 @@
     },
     {
       "id": "tool_stone",
+      "stack": 1,
       "category": "tools",
       "weightKg": 1.2,
       "volumeL": 2,
@@ -1144,6 +1263,7 @@
     },
     {
       "id": "tool_iron",
+      "stack": 1,
       "category": "tools",
       "weightKg": 2,
       "volumeL": 2,
@@ -1159,6 +1279,7 @@
     },
     {
       "id": "machine_turret",
+      "stack": 10,
       "category": "tools",
       "weightKg": 8,
       "volumeL": 10,
@@ -1170,6 +1291,7 @@
     },
     {
       "id": "vehicle_buggy",
+      "stack": 1,
       "category": "tools",
       "weightKg": 30,
       "volumeL": 40,
@@ -1182,18 +1304,21 @@
     },
     {
       "id": "carapace",
+      "stack": 50,
       "weightKg": 0.3,
       "volumeL": 0.4,
       "color": "#6b4f3a"
     },
     {
       "id": "living_tissue",
+      "stack": 50,
       "weightKg": 0.4,
       "volumeL": 0.4,
       "color": "#b0457a"
     },
     {
       "id": "combat_pack",
+      "stack": 100,
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
@@ -1206,6 +1331,7 @@
     },
     {
       "id": "rifle",
+      "stack": 1,
       "category": "tools",
       "weightKg": 3.2,
       "volumeL": 4,
@@ -1218,6 +1344,7 @@
     },
     {
       "id": "rifle_magazine",
+      "stack": 50,
       "category": "tools",
       "weightKg": 0.5,
       "volumeL": 0.5,
@@ -1229,6 +1356,7 @@
     },
     {
       "id": "machine_turret_heavy",
+      "stack": 10,
       "category": "tools",
       "weightKg": 22,
       "volumeL": 18,
@@ -1241,6 +1369,7 @@
     },
     {
       "id": "machine_turret_laser",
+      "stack": 10,
       "category": "tools",
       "weightKg": 26,
       "volumeL": 20,
@@ -1253,6 +1382,7 @@
     },
     {
       "id": "machine_turret_plasma",
+      "stack": 10,
       "category": "tools",
       "weightKg": 40,
       "volumeL": 28,
@@ -1265,6 +1395,7 @@
     },
     {
       "id": "armor1_head",
+      "stack": 1,
       "category": "armor",
       "weightKg": 1.2,
       "volumeL": 3.5999999999999996,
@@ -1280,6 +1411,7 @@
     },
     {
       "id": "armor1_torso",
+      "stack": 1,
       "category": "armor",
       "weightKg": 3.5,
       "volumeL": 10.5,
@@ -1296,6 +1428,7 @@
     },
     {
       "id": "armor1_legs",
+      "stack": 1,
       "category": "armor",
       "weightKg": 2.4,
       "volumeL": 7.199999999999999,
@@ -1312,6 +1445,7 @@
     },
     {
       "id": "armor1_feet",
+      "stack": 1,
       "category": "armor",
       "weightKg": 1.6,
       "volumeL": 4.800000000000001,
@@ -1328,6 +1462,7 @@
     },
     {
       "id": "armor2_head",
+      "stack": 1,
       "category": "armor",
       "weightKg": 2,
       "volumeL": 6,
@@ -1343,6 +1478,7 @@
     },
     {
       "id": "armor2_torso",
+      "stack": 1,
       "category": "armor",
       "weightKg": 6,
       "volumeL": 18,
@@ -1358,6 +1494,7 @@
     },
     {
       "id": "armor2_legs",
+      "stack": 1,
       "category": "armor",
       "weightKg": 4,
       "volumeL": 12,
@@ -1373,6 +1510,7 @@
     },
     {
       "id": "armor2_feet",
+      "stack": 1,
       "category": "armor",
       "weightKg": 2.8,
       "volumeL": 8.399999999999999,
@@ -1388,6 +1526,7 @@
     },
     {
       "id": "armor4_head",
+      "stack": 1,
       "category": "armor",
       "weightKg": 3,
       "volumeL": 9,
@@ -1404,6 +1543,7 @@
     },
     {
       "id": "armor4_torso",
+      "stack": 1,
       "category": "armor",
       "weightKg": 9,
       "volumeL": 27,
@@ -1420,6 +1560,7 @@
     },
     {
       "id": "armor4_legs",
+      "stack": 1,
       "category": "armor",
       "weightKg": 6,
       "volumeL": 18,
@@ -1436,6 +1577,7 @@
     },
     {
       "id": "armor4_feet",
+      "stack": 1,
       "category": "armor",
       "weightKg": 4,
       "volumeL": 12,
@@ -1452,6 +1594,7 @@
     },
     {
       "id": "waypoint",
+      "stack": 1,
       "category": "buildings",
       "weightKg": 2,
       "volumeL": 4,

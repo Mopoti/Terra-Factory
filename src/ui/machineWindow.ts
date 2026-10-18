@@ -8,6 +8,7 @@ import {
   isSmith,
   isTurret,
   machineDef,
+  slotCap,
   turretSpec,
 } from '../core/data/machines';
 import {
@@ -150,7 +151,7 @@ export function mountMachineWindow(
       playSfx('deny');
       return;
     }
-    const max = machineDef(m.type).stockMax ?? 100;
+    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input');
     playSfx(
       state.loadMachine(m, slot as 'fuel' | 'input', item, max, bagIndex) > 0 ? 'pickup' : 'deny',
     );
@@ -164,7 +165,7 @@ export function mountMachineWindow(
       playSfx('deny');
       return;
     }
-    const max = machineDef(m.type).stockMax ?? 100;
+    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input');
     const moved = state.useHand((item, n) =>
       state.loadMachine(m, slot as 'fuel' | 'input', item, Math.min(n, max)),
     );
@@ -178,7 +179,7 @@ export function mountMachineWindow(
     label: string,
     stack: Stack | null,
   ): HTMLElement {
-    const max = machineDef(m.type).stockMax ?? 100;
+    const max = slotCap(machineDef(m.type), slot as 'fuel' | 'input' | 'stock' | 'extra');
     const row = el('div', 'mach-row');
     row.append(el('span', 'mach-label', label));
     const box = el('span', stack ? 'mach-slot' : 'mach-slot empty');
@@ -336,7 +337,6 @@ export function mountMachineWindow(
 
   /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
   function quickLoad(m: Machine, item: string, count: number, bagIndex?: number): void {
-    const max = machineDef(m.type).stockMax ?? 100;
     let moved = 0;
     if (isChest(m.type) || hasSlotStore(m.type)) moved = state.putInChest(m, item, count, bagIndex);
     else if (m.type === 'assembler' || (isSmith(m.type) && recipeOf(m)?.[item]))
@@ -350,7 +350,13 @@ export function mountMachineWindow(
     else {
       for (const slot of ['input', 'fuel'] as const) {
         if (accepts(m, slot, item)) {
-          moved = state.loadMachine(m, slot, item, Math.min(count, max), bagIndex);
+          moved = state.loadMachine(
+            m,
+            slot,
+            item,
+            Math.min(count, slotCap(machineDef(m.type), slot)),
+            bagIndex,
+          );
           break;
         }
       }
@@ -781,7 +787,7 @@ export function mountMachineWindow(
       const node = live.chest[i];
       if (node) node.textContent = String(stack.count);
     });
-    const max = machineDef(m.type).stockMax ?? 100;
+    const def = machineDef(m.type);
     const need = recipeOf(m);
     for (const [item, node] of live.ingredients) {
       const have = m.slots.find((x) => x.item === item)?.count ?? 0;
@@ -789,7 +795,7 @@ export function mountMachineWindow(
     }
     for (const [name, node] of live.counts) {
       const stack = m[name];
-      if (stack) node.textContent = `${stack.count} / ${max}`;
+      if (stack) node.textContent = `${stack.count} / ${slotCap(def, name)}`;
     }
   }
 

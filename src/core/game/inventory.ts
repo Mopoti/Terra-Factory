@@ -14,19 +14,24 @@ export function totals(inv: Inventory): { weightG: number; volumeMl: number } {
   return { weightG, volumeMl };
 }
 
+/** Taille d'une pile de cet objet dans le sac (jamais plus que la limite générale du sac). */
+export const stackOf = (itemId: string, limits: BagLimits): number =>
+  Math.max(1, Math.min(limits.stackMax, itemById(itemId).stack));
+
 /** Cases occupées : chaque objet remplit ceil(quantité / taille de pile) cases. */
 export function slotsUsed(inv: Inventory, limits: BagLimits): number {
   let n = 0;
-  for (const count of Object.values(inv)) n += Math.ceil(count / limits.stackMax);
+  for (const [id, count] of Object.entries(inv)) n += Math.ceil(count / stackOf(id, limits));
   return n;
 }
 
 /** Place restante en nombre de cases, pour cet objet (piles entamées + cases libres). */
 function slotRoom(inv: Inventory, itemId: string, limits: BagLimits): number {
   const count = inv[itemId] ?? 0;
-  const ownSlots = Math.ceil(count / limits.stackMax);
+  const max = stackOf(itemId, limits);
+  const ownSlots = Math.ceil(count / max);
   const free = limits.maxSlots - slotsUsed(inv, limits);
-  return ownSlots * limits.stackMax - count + free * limits.stackMax;
+  return ownSlots * max - count + free * max;
 }
 
 /** Combien d'unités de cet objet le sac peut encore recevoir (limité par le poids ET le volume). */

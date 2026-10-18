@@ -343,11 +343,12 @@ describe('fabrication et cases du sac', () => {
     expect(s.craft('stone', 1).made).toBe(0);
     expect(s.craft('piece_door_wood', 1)).toEqual({ made: 0, stopped: 'resources' });
   });
-  it('une pile fait 100 au plus et les cases du sac sont limitées', () => {
+  it('une pile a la taille de son objet et les cases du sac sont limitées', () => {
     const limits = { maxWeightG: 1e9, maxVolumeMl: 1e9, maxSlots: 2, stackMax: 100 };
-    expect(maxAddable({}, 'coal', limits)).toBe(200);
-    expect(maxAddable(add({}, 'coal', 150), 'coal', limits)).toBe(50);
-    expect(maxAddable(add({}, 'coal', 150), 'wood', limits)).toBe(0); // les 2 cases sont prises
+    expect(maxAddable({}, 'coal', limits)).toBe(100); // 2 cases de 50
+    expect(maxAddable({}, 'wood', limits)).toBe(40); // 2 cases de 20
+    expect(maxAddable(add({}, 'coal', 80), 'coal', limits)).toBe(20);
+    expect(maxAddable(add({}, 'coal', 80), 'wood', limits)).toBe(0); // les 2 cases sont prises
   });
 });
 
@@ -421,11 +422,11 @@ describe('barre de raccourcis et orientation', () => {
     s.assignSlot(3, null);
     expect(s.selectedSlot).toBeNull();
   });
-  it('fabriquer une pièce la range dans la première case libre', () => {
+  it('fabriquer une pièce ne la range pas toute seule dans la barre', () => {
     const s = new GameState({ inventory: { stone: 3 } });
     s.assignSlot(0, 'coal');
     s.craft('piece_wall_stone', 1);
-    expect(s.changes.hotbar[1]).toBe('piece_wall_stone');
+    expect(s.changes.hotbar.includes('piece_wall_stone')).toBe(false);
   });
   it('la barre et les orientations sont enregistrées', () => {
     const s = new GameState({ inventory: { piece_wall_stone: 2 } });
@@ -544,7 +545,8 @@ describe('coffre dans la partie', () => {
     const c = s.changes.machines[0];
     expect(s.putInChest(c, 'stone', 100)).toBe(30);
     expect(s.inventory).toEqual({ wood: 5 });
-    expect(s.takeFromChest(c, 0)).toBe(30);
+    expect(s.takeFromChest(c, 0)).toBe(20); // une pile de pierre : 20
+    expect(s.takeFromChest(c, 0)).toBe(10);
     expect(c.slots).toHaveLength(0);
     s.putInChest(c, 'wood', 3);
     expect(s.removeMachine(f, c.id, { x: 0, z: 0 })).toBe(true);
@@ -582,11 +584,11 @@ describe('prendre une quantité', () => {
     const f = new Factory(s.changes.machines, noWorld);
     s.placeMachine(f, 'chest_wood', 2, 2, 0, () => false);
     const c = s.changes.machines[0];
-    s.putInChest(c, 'stone', 30);
+    s.putInChest(c, 'stone', 20);
     expect(s.takeFromChest(c, 0, 15)).toBe(15);
-    expect(c.slots[0].count).toBe(15);
-    expect(s.inventory.stone).toBe(15);
-    expect(s.takeFromChest(c, 0)).toBe(15);
+    expect(c.slots[0].count).toBe(5);
+    expect(s.inventory.stone).toBe(10 + 15);
+    expect(s.takeFromChest(c, 0)).toBe(5);
   });
 });
 
@@ -606,10 +608,11 @@ describe('pile au bout du curseur', () => {
     s.placeMachine(f, 'furnace', 4, 4, 0, () => false);
     const m = s.changes.machines[0];
     s.takeToHand('coal', 40);
-    // la case de combustible accepte 100 : tout passe
-    expect(s.useHand((item, n) => s.loadMachine(m, 'fuel', item, n))).toBe(40);
-    expect(s.hand).toBeNull();
-    expect(m.fuel?.count).toBe(40);
+    // la case de combustible du four accepte 10 : le reste revient en main
+    expect(s.useHand((item, n) => s.loadMachine(m, 'fuel', item, n))).toBe(10);
+    expect(s.hand).toEqual({ item: 'coal', count: 30 });
+    expect(m.fuel?.count).toBe(10);
+    s.returnHand();
     // un objet refusé reste en main
     s.inventory = { iron_ingot: 5 };
     s.takeToHand('iron_ingot', 5);
@@ -632,8 +635,8 @@ describe('assembleur dans la partie', () => {
     s.changes.unlocked.push('logistics');
     expect(s.setRecipe(m, 'machine_conveyor')).toBe(true);
     expect(s.loadIngredient(m, 'copper_ingot', 4)).toBe(0); // pas un ingrédient
-    expect(s.loadIngredient(m, 'iron_ingot', 100)).toBe(10); // plafonné à 10 pour 1 par objet
-    expect(s.inventory.iron_ingot ?? 0).toBe(0);
+    expect(s.loadIngredient(m, 'iron_ingot', 100)).toBe(5); // plafonné à 5 pour 1 par objet
+    expect(s.inventory.iron_ingot ?? 0).toBe(5);
     expect(s.setRecipe(m, 'stone')).toBe(false); // une matière brute ne se fabrique pas
     expect(s.setRecipe(m, null)).toBe(true);
     expect(s.inventory.iron_ingot).toBe(10);
@@ -799,21 +802,21 @@ describe('anciennes parties : emprises des machines', () => {
 
 describe('piles du sac, objet en main et outils', () => {
   it('on peut avoir plusieurs piles du même objet, déplacées et jetées au choix', () => {
-    const s = new GameState({ inventory: { stone: 40 } });
-    expect(s.bagSlots().filter(Boolean)).toEqual([{ item: 'stone', count: 40 }]);
-    s.takeToHand('stone', 20, 0);
-    expect(s.bagSlots()[0]).toEqual({ item: 'stone', count: 20 });
+    const s = new GameState({ inventory: { iron_ore: 40 } });
+    expect(s.bagSlots().filter(Boolean)).toEqual([{ item: 'iron_ore', count: 40 }]);
+    s.takeToHand('iron_ore', 20, 0);
+    expect(s.bagSlots()[0]).toEqual({ item: 'iron_ore', count: 20 });
     expect(s.placeHand(5)).toBe(1);
     expect(s.hand).toBeNull();
-    expect(s.bagSlots()[5]).toEqual({ item: 'stone', count: 20 });
-    expect(s.inventory.stone).toBe(40);
+    expect(s.bagSlots()[5]).toEqual({ item: 'iron_ore', count: 20 });
+    expect(s.inventory.iron_ore).toBe(40);
     s.moveBagSlot(5, 7);
     expect(s.bagSlots()[7]?.count).toBe(20);
     s.moveBagSlot(7, 0); // fusion
     expect(s.bagSlots()[0]?.count).toBe(40);
     const cleared = s.clearBagSlot(0);
     expect(cleared?.count).toBe(40);
-    s.drop('stone', 40, 0, 0);
+    s.drop('iron_ore', 40, 0, 0);
     expect(s.bagSlots().filter(Boolean)).toHaveLength(0);
   });
 

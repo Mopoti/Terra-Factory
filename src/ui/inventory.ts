@@ -105,10 +105,12 @@ export function mountInventory(
         cell.append(itemIcon(id));
         cell.addEventListener('mouseenter', () => {
           hovered = id;
+          state.pointed = hovered;
           showTooltip();
         });
         cell.addEventListener('mouseleave', () => {
           hovered = null;
+          state.pointed = hovered;
           showTooltip();
         });
       }
@@ -405,10 +407,12 @@ export function mountInventory(
         });
         cell.addEventListener('mouseenter', () => {
           hovered = slot.item;
+          state.pointed = hovered;
           showTooltip();
         });
         cell.addEventListener('mouseleave', () => {
           hovered = null;
+          state.pointed = hovered;
           showTooltip();
         });
       } else {
@@ -485,6 +489,7 @@ export function mountInventory(
       tab.addEventListener('click', () => {
         craftTab = category;
         hovered = null;
+        state.pointed = hovered;
         render();
       });
       tabs.append(tab);
@@ -510,10 +515,12 @@ export function mountInventory(
       });
       cell.addEventListener('mouseenter', () => {
         hovered = def.id;
+        state.pointed = hovered;
         showTooltip();
       });
       cell.addEventListener('mouseleave', () => {
         hovered = null;
+        state.pointed = hovered;
         showTooltip();
       });
       catalog.append(cell);
@@ -562,6 +569,7 @@ export function mountInventory(
     // Fenêtre fermée : l'objet choisi n'est plus au bout du curseur (s'il est posable, il est en main).
     updateHandCursor(state, null);
     hovered = null;
+    state.pointed = hovered;
     message = '';
     root.hidden = true;
     root.replaceChildren();

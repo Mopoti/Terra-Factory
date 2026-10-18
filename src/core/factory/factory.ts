@@ -28,6 +28,7 @@ import {
   drillCanMine,
   visualHeight,
   type MachineType,
+  slotCap,
 } from '../data/machines';
 import {
   emptyFluid,
@@ -167,15 +168,12 @@ export const productOf = (m: Machine): { item: string; count: number } | null =>
   return { item: m.recipe, count: itemById(m.recipe).yield };
 };
 
-/** Assembleur : combien d'unités d'un ingrédient il garde en attente au plus. */
-export const ingredientCap = (need: number): number => Math.max(10, need * 4);
+/** Assembleur : combien d'unités d'un ingrédient il garde en attente au plus (deux fournées d'avance). */
+export const ingredientCap = (need: number): number => Math.max(5, need * 2);
 
-/** Taille d'une pile dans un coffre. */
-export const CHEST_STACK = 100;
-
-/** Taille d'une pile : 100 dans un coffre, `stockMax` (20) dans un laboratoire. */
-export const stackLimit = (m: Machine): number =>
-  hasSlotStore(m.type) ? (machineDef(m.type).stockMax ?? 20) : CHEST_STACK;
+/** Taille d'une pile : celle de l'objet dans un coffre, `stockMax` (20) dans un laboratoire. */
+export const stackLimit = (m: Machine, item: string): number =>
+  hasSlotStore(m.type) ? (machineDef(m.type).stockMax ?? 20) : itemById(item).stack;
 
 /** Machine dont les `slots` reçoivent des objets précis (laboratoire : paquets ; réacteur à fusion : déchets). */
 export const hasSlotStore = (type: MachineType): boolean =>
@@ -188,7 +186,7 @@ export function chestRoom(m: Machine, item: string): number {
   if (isLab(m.type) && !isSciencePack(item)) return 0;
   if (m.type === 'fusion_reactor' && !(FUSION_FUEL as readonly string[]).includes(item)) return 0;
   const cap = machineDef(m.type).slots ?? 0;
-  const limit = stackLimit(m);
+  const limit = stackLimit(m, item);
   let room = Math.max(0, cap - m.slots.length) * limit;
   for (const s of m.slots) if (s.item === item) room += limit - s.count;
   return room;
@@ -200,13 +198,13 @@ export function chestPut(m: Machine, item: string, count: number): number {
   const stored = left;
   for (const s of m.slots) {
     if (left <= 0) break;
-    if (s.item !== item || s.count >= stackLimit(m)) continue;
-    const n = Math.min(left, stackLimit(m) - s.count);
+    if (s.item !== item || s.count >= stackLimit(m, item)) continue;
+    const n = Math.min(left, stackLimit(m, item) - s.count);
     s.count += n;
     left -= n;
   }
   while (left > 0) {
-    const n = Math.min(left, stackLimit(m));
+    const n = Math.min(left, stackLimit(m, item));
     m.slots.push({ item, count: n });
     left -= n;
   }
@@ -568,7 +566,10 @@ export function normalizeMachines(raw: unknown): Machine[] {
       if (recipeById(m.recipe)?.machine === machine.type) machine.recipe = m.recipe;
     }
     if (oldPacks && isSciencePack(oldPacks.item) && machine.slots.length === 0)
-      machine.slots.push({ ...oldPacks, count: Math.min(oldPacks.count, stackLimit(machine)) });
+      machine.slots.push({
+        ...oldPacks,
+        count: Math.min(oldPacks.count, stackLimit(machine, oldPacks.item)),
+      });
     machine.broken =
       m.broken === true &&
       (machine.type === 'pipe' ||
@@ -586,7 +587,10 @@ export function normalizeMachines(raw: unknown): Machine[] {
       for (const st of m.slots) {
         const stack = normalizeStack(st);
         if (stack)
-          machine.slots.push({ ...stack, count: Math.min(stack.count, stackLimit(machine)) });
+          machine.slots.push({
+            ...stack,
+            count: Math.min(stack.count, stackLimit(machine, stack.item)),
+          });
       }
       machine.slots.length = Math.min(
         machine.slots.length,
@@ -1185,7 +1189,8 @@ export class Factory {
     const def = machineDef(m.type);
     if (isChest(m.type)) {
       const full =
-        m.slots.length >= (def.slots ?? 0) && m.slots.every((x) => x.count >= CHEST_STACK);
+        m.slots.length >= (def.slots ?? 0) &&
+        m.slots.every((x) => x.count >= stackLimit(m, x.item));
       return full ? 'full' : m.slots.length > 0 ? 'running' : 'idle';
     }
     if (m.type === 'sorter' && this.powerFactor(m) <= 0) return 'noPower';
@@ -2189,7 +2194,7 @@ export class Factory {
 
   private fuelRoom(target: Machine, item: string): boolean {
     if (!machineDef(target.type).fuel || !itemById(item).energyMJ) return false;
-    const max = machineDef(target.type).stockMax ?? 100;
+    const max = slotCap(machineDef(target.type), 'fuel');
     return !target.fuel || (target.fuel.item === item && target.fuel.count < max);
   }
 

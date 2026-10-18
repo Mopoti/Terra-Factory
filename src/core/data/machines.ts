@@ -70,6 +70,8 @@ export interface MachineDef {
   mineSeconds?: number;
   /** Capacité de la case de stockage. */
   stockMax?: number;
+  /** Capacité de la case de combustible (défaut : `stockMax`). */
+  fuelMax?: number;
   /** Puissance consommée (kW) quand la machine travaille. */
   consumesKw?: number;
   /** Puissance produite (kW) à pleine charge. */
@@ -267,3 +269,9 @@ export const drillCanMine = (type: MachineType, item: string): boolean =>
   type === 'pumpjack'
     ? item === 'crude_oil'
     : item !== 'crude_oil' && !(type === 'drill' && item === 'silica_sand');
+
+/** Capacité d'une case de machine : combustible (`fuelMax`) ou entrée / sortie (`stockMax`). */
+export const slotCap = (
+  def: { stockMax?: number; fuelMax?: number },
+  slot: 'fuel' | 'input' | 'stock' | 'extra',
+): number => (slot === 'fuel' ? (def.fuelMax ?? def.stockMax ?? 100) : (def.stockMax ?? 100));

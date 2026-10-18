@@ -192,21 +192,21 @@ describe('enregistrement', () => {
 });
 
 describe('coffres', () => {
-  it("rangent des piles de 100, par type, jusqu'au nombre de cases", () => {
+  it("rangent des piles de la taille de l'objet, par type, jusqu'au nombre de cases", () => {
     const c = emptyMachine(1, 'chest_wood', 0, 0, 0);
-    expect(chestRoom(c, 'iron_ore')).toBe(1600); // 16 cases
-    expect(chestPut(c, 'iron_ore', 250)).toBe(250);
+    expect(chestRoom(c, 'iron_ore')).toBe(800); // 16 cases de 50
+    expect(chestPut(c, 'iron_ore', 120)).toBe(120);
     expect(c.slots).toEqual([
-      { item: 'iron_ore', count: 100 },
-      { item: 'iron_ore', count: 100 },
       { item: 'iron_ore', count: 50 },
+      { item: 'iron_ore', count: 50 },
+      { item: 'iron_ore', count: 20 },
     ]);
     expect(chestPut(c, 'coal', 100)).toBe(100);
-    expect(chestRoom(c, 'iron_ore')).toBe(50 + 12 * 100);
+    expect(chestRoom(c, 'iron_ore')).toBe(30 + 11 * 50);
     const big = emptyMachine(2, 'chest_iron', 0, 0, 0);
-    expect(chestRoom(big, 'coal')).toBe(3200); // 32 cases
+    expect(chestRoom(big, 'coal')).toBe(1600); // 32 cases de 50
     const full = emptyMachine(3, 'chest_wood', 0, 0, 0);
-    chestPut(full, 'stone', 1600);
+    chestPut(full, 'stone', 320); // 16 cases de 20
     expect(chestPut(full, 'stone', 5)).toBe(0);
     expect(new Factory([full], makeWorld().world).status(full)).toBe('full');
   });
@@ -254,15 +254,15 @@ describe('électricité', () => {
   });
   it('le générateur alimente la foreuse électrique, qui mine plus vite', () => {
     const { f, gen, drill } = setup();
-    run(f, 12);
-    expect(drill.stock?.count).toBe(48); // 4 minerais / s pendant 12 s
+    run(f, 4);
+    expect(drill.stock?.count).toBe(16); // 4 minerais / s (la sortie est plafonnée à 20)
     expect(f.status(drill)).toBe('running');
     const g = f.gridInfo(drill)!;
     expect(g.demandKw).toBe(90);
     expect(g.capacityKw).toBe(300);
     expect(g.satisfaction).toBe(1);
-    // Charge de 30 % : le générateur ne brûle que 30 % de ses 900 kW, soit environ 270 kW (3,2 MJ en 12 s).
-    const burntKJ = 12 * 0.3 * 900;
+    // Charge de 30 % : le générateur ne brûle que 30 % de ses 900 kW, soit environ 270 kW (1,1 MJ en 4 s).
+    const burntKJ = 4 * 0.3 * 900;
     expect(f.fuelSecondsLeft(gen)).toBeGreaterThan((2 * 9000 - burntKJ * 1.1) / 900);
     expect(gen.fuelLeft).toBeLessThan(9000);
   });
@@ -1110,11 +1110,11 @@ describe('métallurgie T1 : fourneau à recette et estampeuse à moules', () => 
       b.belt.push({ item: 'coal', pos: 1 });
       return b;
     };
-    stock(furnace, 'coal', 9); // 10 = plafond de la recette (max(10, 4 × 1))
+    stock(furnace, 'coal', 4); // 5 = plafond de la recette (max(5, 2 × 1))
     const b1 = feeder();
     const f = new Factory([b1, furnace], makeWorld().world);
     run(f, 1);
-    expect(furnace.slots.find((s) => s.item === 'coal')?.count).toBe(10);
+    expect(furnace.slots.find((s) => s.item === 'coal')?.count).toBe(5);
     const b2 = feeder();
     const g = new Factory([b2, furnace], makeWorld().world);
     run(g, 1);
@@ -1398,8 +1398,8 @@ describe('point 5a : tapis et foreuses par palier', () => {
     const f = grid(t1, t2, t3);
     run(f, 10);
     expect(t1.stock?.count).toBe(5);
-    expect(t2.stock?.count).toBe(40);
-    expect(t3.stock?.count).toBe(100);
+    expect(t2.stock?.count).toBe(20); // sortie plafonnée à 20
+    expect(t3.stock?.count).toBe(20);
     expect(machineDef('drill_eco').consumesKw).toBe(
       0.75 * (machineDef('drill_electric').consumesKw ?? 0),
     );

@@ -83,10 +83,10 @@ describe('mode Créatif : ressources posées', () => {
 
 describe('corbeille', () => {
   it('détruit une pile du sac ou la pile tenue', () => {
-    const s = new GameState({ inventory: { wood: 30, stone: 10 } });
+    const s = new GameState({ inventory: { wood: 15, stone: 10 } });
     const slots = s.bagSlots();
     const i = slots.findIndex((x) => x?.item === 'wood');
-    expect(s.trashBagSlot(i)).toBe(30);
+    expect(s.trashBagSlot(i)).toBe(15);
     expect(s.inventory.wood ?? 0).toBe(0);
     s.takeToHand('stone', 4);
     expect(s.trashHand()).toBe(4);

@@ -10,7 +10,8 @@
       "fuel": true,
       "mineSeconds": 2,
       "burnKw": 90,
-      "stockMax": 100,
+      "stockMax": 20,
+      "fuelMax": 10,
       "height": 2.0,
       "pollution": 0.6,
       "pollutionKind": "ground"
@@ -23,7 +24,8 @@
       "color": "#7a6a63",
       "fuel": true,
       "burnKw": 90,
-      "stockMax": 100,
+      "stockMax": 20,
+      "fuelMax": 10,
       "height": 1.0,
       "pollution": 0.5,
       "pollutionKind": "air"
@@ -36,7 +38,8 @@
       "color": "#7a5a44",
       "fuel": true,
       "burnKw": 60,
-      "stockMax": 100,
+      "stockMax": 20,
+      "fuelMax": 10,
       "height": 1.5,
       "pollution": 0.3,
       "pollutionKind": "ground"
@@ -49,7 +52,8 @@
       "color": "#6e6a64",
       "fuel": true,
       "burnKw": 60,
-      "stockMax": 100,
+      "stockMax": 20,
+      "fuelMax": 10,
       "height": 1.0,
       "pollution": 0.4,
       "pollutionKind": "ground"
@@ -62,7 +66,7 @@
       "color": "#7b4a3a",
       "fuel": false,
       "consumesKw": 90,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 1.5,
       "pollution": 0.8,
       "pollutionKind": "air"
@@ -75,7 +79,7 @@
       "color": "#7c7f82",
       "fuel": false,
       "consumesKw": 30,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 1.0,
       "pollution": 0.2,
       "pollutionKind": "ground"
@@ -157,7 +161,7 @@
       "height": 2.0,
       "fuel": false,
       "mineSeconds": 0.25,
-      "stockMax": 100,
+      "stockMax": 20,
       "consumesKw": 90,
       "pollution": 0.3,
       "pollutionKind": "ground"
@@ -171,7 +175,7 @@
       "fuel": false,
       "consumesKw": 67.5,
       "mineSeconds": 0.1,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 2.0,
       "pollution": 0.15,
       "pollutionKind": "ground"
@@ -247,7 +251,7 @@
       "fuel": false,
       "consumesKw": 60,
       "craftSeconds": 3,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 1.5,
       "pollution": 0.2,
       "pollutionKind": "ground"
@@ -314,7 +318,7 @@
       "color": "#7a8fa5",
       "fuel": false,
       "consumesKw": 40,
-      "stockMax": 100,
+      "stockMax": 20,
       "fluidCap": 100,
       "startBar": 2,
       "coolBoost": 0.5,
@@ -329,7 +333,7 @@
       "color": "#5a5f66",
       "fuel": false,
       "consumesKw": 150,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 1.5
     },
     {
@@ -340,7 +344,7 @@
       "color": "#4a7f9f",
       "fuel": false,
       "consumesKw": 25,
-      "stockMax": 100,
+      "stockMax": 20,
       "fluidCap": 200,
       "height": 1.0
     },
@@ -376,7 +380,7 @@
       "color": "#8a5f4a",
       "fuel": false,
       "consumesKw": 200,
-      "stockMax": 100,
+      "stockMax": 20,
       "fluidCap": 100,
       "startBar": 2,
       "coolBoost": 0.5,
@@ -421,7 +425,7 @@
       "color": "#4a5a6a",
       "fuel": false,
       "consumesKw": 80,
-      "stockMax": 100,
+      "stockMax": 20,
       "fluidCap": 100,
       "height": 1.0
     },
@@ -433,7 +437,7 @@
       "color": "#6a7a70",
       "fuel": false,
       "consumesKw": 120,
-      "stockMax": 100,
+      "stockMax": 20,
       "height": 1.5
     },
     {

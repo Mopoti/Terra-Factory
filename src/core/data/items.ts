@@ -26,6 +26,8 @@ export interface ItemDef {
   tool: { speed: number; yield: number } | null;
   /** Objet du mode Créatif seulement (onglet « Ressources ») : invisible et non fabricable en Survie. */
   creativeOnly: boolean;
+  /** Taille d'une pile (sac et coffres). */
+  stack: number;
 }
 
 export type EquipSlot = 'head' | 'torso' | 'back' | 'legs' | 'feet' | 'hands';
@@ -51,6 +53,8 @@ interface RawItem {
   energyMJ?: number;
   tool?: { speed: number; yield: number };
   creative?: boolean;
+  /** Taille d'une pile dans le sac et les coffres (défaut : celle du sac). */
+  stack?: number;
   equip?: {
     slot: EquipSlot;
     bag?: { slots?: number; weightKg?: number; volumeL?: number };
@@ -69,6 +73,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
   energyMJ: i.energyMJ ?? null,
   tool: i.tool ?? null,
   creativeOnly: i.creative === true,
+  stack: Math.max(1, Math.floor(i.stack ?? raw.bag.stackMax)),
   equip: i.equip
     ? {
         slot: i.equip.slot,

@@ -23,6 +23,7 @@ import {
   machineDef,
   turretSpec,
   type MachineType,
+  slotCap,
 } from '../data/machines';
 import { buyPrice, sellPrice } from './trade';
 import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from './playerData';
@@ -47,6 +48,7 @@ import {
   normalizeInventory,
   remove,
   slotsUsed,
+  stackOf,
   totals,
   type Inventory,
 } from './inventory';
@@ -136,6 +138,8 @@ export class GameState {
   selectedSlot: number | null = null;
   /** Objet « en main » depuis le sac, à poser dans une case de la barre au prochain clic. */
   carried: string | null = null;
+  /** Objet sous le curseur dans le sac ou la fabrication : une touche 1 à 9 le range dans cette case de la barre. */
+  pointed: string | null = null;
   /** Objet posable tenu en main (choisi dans le sac) : clic droit = mains vides. */
   held: string | null = null;
   /** Pile tenue au bout du curseur (retirée du sac) pour la déplacer dans une case de machine ou un coffre. */
@@ -263,7 +267,6 @@ export class GameState {
   /** Les cases du sac, remises d'accord avec le contenu (ajouts : piles entamées d'abord, puis cases libres). */
   bagSlots(): ({ item: string; count: number } | null)[] {
     const n = this.limits.maxSlots;
-    const max = this.limits.stackMax;
     while (this.bag.length < n) this.bag.push(null);
     for (let i = n; i < this.bag.length; i++) this.bag[i] = null;
     this.bag.length = n;
@@ -283,6 +286,7 @@ export class GameState {
     }
     // Pas assez : on complète les piles entamées, puis on prend des cases libres (dans l'ordre du catalogue).
     for (const def of ITEMS) {
+      const max = stackOf(def.id, this.limits);
       let need =
         (this.inventory[def.id] ?? 0) -
         this.bag.reduce((a, s) => a + (s && s.item === def.id ? s.count : 0), 0);
@@ -311,12 +315,12 @@ export class GameState {
 
   /** Regroupe les piles du même objet (quand il n'y a plus de case libre). */
   private compactBag(): void {
-    const max = this.limits.stackMax;
     const totals = new Map<string, number>();
     for (const s of this.bag) if (s) totals.set(s.item, (totals.get(s.item) ?? 0) + s.count);
     this.bag = this.bag.map(() => null);
     let i = 0;
     for (const [item, total] of totals) {
+      const max = stackOf(item, this.limits);
       for (let left = total; left > 0; left -= max)
         this.bag[i++] = { item, count: Math.min(left, max) };
     }
@@ -328,7 +332,7 @@ export class GameState {
     const a = bag[from];
     if (!a || from === to || to < 0 || to >= bag.length) return;
     const b = bag[to];
-    const max = this.limits.stackMax;
+    const max = stackOf(a.item, this.limits);
     if (!b) {
       bag[to] = a;
       bag[from] = null;
@@ -378,7 +382,7 @@ export class GameState {
     if (!h) return 0;
     const bag = this.bagSlots();
     if (index < 0 || index >= bag.length) return 0;
-    const max = this.limits.stackMax;
+    const max = stackOf(h.item, this.limits);
     const slot = bag[index];
     const room = maxAddable(this.inventory, h.item, this.limits);
     if (slot && slot.item !== h.item) {
@@ -1016,13 +1020,6 @@ export class GameState {
     this.inventory = add(this.inventory, item, per);
     this.changes.produced[item] = (this.changes.produced[item] ?? 0) + per;
     this.checkDiscoveries('produce');
-    if (item.startsWith('piece_') && !this.changes.hotbar.includes(item)) {
-      const free = this.changes.hotbar.indexOf(null);
-      if (free >= 0) {
-        this.changes.hotbar[free] = item;
-        this.emit({ type: 'hotbar' });
-      }
-    }
     this.emit({ type: 'inventory' });
   }
 
@@ -1080,14 +1077,6 @@ export class GameState {
     if (made > 0) {
       this.changes.produced[item] = (this.changes.produced[item] ?? 0) + made;
       this.checkDiscoveries('produce');
-      // Une pièce de construction fabriquée prend la première case libre de la barre.
-      if (item.startsWith('piece_') && !this.changes.hotbar.includes(item)) {
-        const free = this.changes.hotbar.indexOf(null);
-        if (free >= 0) {
-          this.changes.hotbar[free] = item;
-          this.emit({ type: 'hotbar' });
-        }
-      }
       this.emit({ type: 'inventory' });
     }
     return { made, stopped };
@@ -1561,7 +1550,7 @@ export class GameState {
     count: number,
     bagIndex?: number,
   ): number {
-    const max = machineDef(m.type).stockMax ?? 100;
+    const max = slotCap(machineDef(m.type), slot);
     if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).energyMJ))
       return 0;
     if (
