@@ -72,6 +72,16 @@ describe('voies et trains dans la partie', () => {
     expect(rest.cars.map((c) => c.id)).toContain(wagon.cars[0].id);
   });
 
+  it('un virage ne prend que les cases de son arc : un obstacle dans le coin du bloc ne gêne pas', () => {
+    const s = start();
+    // Un obstacle au coin du bloc, loin de l'arc (le coin opposé au centre du cercle).
+    const corner = { gx: 0, gz: 0 };
+    const blocked = (c: { gx: number; gz: number }): boolean =>
+      c.gx === corner.gx && c.gz === corner.gz;
+    s.inventory.rail = 10;
+    expect(s.placeRail('curve', 0, 0, 0, 0, blocked)).toBe('ok');
+  });
+
   it('l’état se relit sans erreur et ignore ce qui est invalide', () => {
     const s = start();
     laidLine(s, 5);

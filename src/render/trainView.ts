@@ -10,7 +10,7 @@ import {
   RAIL_SCALE,
   RAIL_TOP_M,
   centerOf,
-  cellsOf,
+  trackCellsOf,
   freePorts,
   footprintOf,
   lengthOf,
@@ -660,7 +660,8 @@ export class TrainView {
   ): { piece: RailPiece; ok: boolean; plan: PlannedPiece }[] {
     const { state } = this.host;
     const taken = new Set<string>();
-    for (const p of state.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
+    for (const p of state.changes.rails)
+      for (const [x, z] of trackCellsOf(p)) taken.add(`${x},${z}`);
     let stock = state.inventory[RAIL_ITEM] ?? 0;
     return planned.map((plan) => {
       const piece: RailPiece = {
@@ -671,7 +672,7 @@ export class TrainView {
         turns: plan.turns,
         level: plan.level,
       };
-      const cells = cellsOf(piece);
+      const cells = trackCellsOf(piece);
       const free = cells.every(([x, z]) => !taken.has(`${x},${z}`) && !this.host.blocked(x, z));
       const ok = free && stock >= plan.cost;
       if (ok) {

@@ -1,7 +1,13 @@
 import { VEHICLES, type VehicleKind } from '../data/vehicles';
 import { CARS, RAIL_COST, RAIL_ITEM, type CarKind } from '../data/trains';
 import { SOUTE_MAX } from '../rail/normalize';
-import { TrackGraph, cellsOf, type RailKind, type RailPiece, type TrackPos } from '../rail/track';
+import {
+  TrackGraph,
+  trackCellsOf,
+  type RailKind,
+  type RailPiece,
+  type TrackPos,
+} from '../rail/track';
 import {
   carPoses,
   coupleConsists,
@@ -1293,8 +1299,11 @@ export class GameState {
   /** La pièce tient-elle là : aucune de ses cases n'est prise par la voie ni bloquée par le terrain ? */
   railFits(piece: RailPiece, blocked: (c: Cell) => boolean): boolean {
     const taken = new Set<string>();
-    for (const p of this.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
-    return cellsOf(piece).every(([x, z]) => !taken.has(`${x},${z}`) && !blocked({ gx: x, gz: z }));
+    for (const p of this.changes.rails)
+      for (const [x, z] of trackCellsOf(p)) taken.add(`${x},${z}`);
+    return trackCellsOf(piece).every(
+      ([x, z]) => !taken.has(`${x},${z}`) && !blocked({ gx: x, gz: z }),
+    );
   }
 
   /** Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la voie. */

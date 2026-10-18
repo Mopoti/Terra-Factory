@@ -326,3 +326,28 @@ export function cellsOf(p: RailPiece): [number, number][] {
   for (let x = 0; x < w; x++) for (let z = 0; z < d; z++) out.push([p.gx + x, p.gz + z]);
   return out;
 }
+
+/**
+ * Cases réellement prises par la voie : toute l'emprise pour une tuile droite et une rampe, mais pour un virage
+ * seulement les cases proches de l'arc (le reste du bloc de 3 × 3 tuiles est libre : arbres, rochers, autre voie).
+ */
+export function trackCellsOf(p: RailPiece): [number, number][] {
+  if (p.kind !== 'curve') return cellsOf(p);
+  const keep = new Set<string>();
+  const len = lengthOf('curve');
+  const reach = 1.6; // demi-écartement + marge (m)
+  const span = Math.ceil(reach / CELL_SIZE_M);
+  for (let u = 0; u <= len + 1e-6; u += CELL_SIZE_M / 2) {
+    const q = poseOn(p, Math.min(u, len));
+    const cx = Math.floor(q.x / CELL_SIZE_M);
+    const cz = Math.floor(q.z / CELL_SIZE_M);
+    for (let dx = -span; dx <= span; dx++)
+      for (let dz = -span; dz <= span; dz++) {
+        const gx = cx + dx;
+        const gz = cz + dz;
+        if (Math.hypot((gx + 0.5) * CELL_SIZE_M - q.x, (gz + 0.5) * CELL_SIZE_M - q.z) <= reach)
+          keep.add(`${gx},${gz}`);
+      }
+  }
+  return [...keep].map((k) => k.split(',').map(Number) as [number, number]);
+}
