@@ -76,7 +76,6 @@
   "action.map": "Carte",
   "action.techTree": "Arbre technologique",
   "action.debug": "Débogage",
-  "debug.adminWarn": "Mode débogage : les succès sont désactivés pour cette partie.",
   "threat.nestDestroyed": "Nid détruit",
   "action.screenshot": "Capture d'écran",
   "action.pause": "Menu / pause",

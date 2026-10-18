@@ -76,7 +76,6 @@
   "action.map": "Map",
   "action.techTree": "Technology tree",
   "action.debug": "Debug",
-  "debug.adminWarn": "Debug mode: achievements are disabled for this game.",
   "threat.nestDestroyed": "Nest destroyed",
   "action.screenshot": "Screenshot",
   "action.pause": "Menu / pause",

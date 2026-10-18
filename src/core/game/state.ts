@@ -125,7 +125,9 @@ export const CRAFT_SECONDS_PER_INGREDIENT = 0.5;
 export const CREATIVE_ORE_MIN = 300;
 export const CREATIVE_ORE_MAX = 3000;
 /** Mode Créatif : durée pour détruire une ressource au clic droit maintenu (s). */
-export const CREATIVE_DESTROY_SECONDS = 1;
+export const CREATIVE_DESTROY_SECONDS = 0.4;
+/** Mode Créatif : une construction se démolit en ce quotient du temps normal. */
+export const CREATIVE_DEMOLISH_FACTOR = 0.3;
 
 export class GameState {
   inventory: Inventory;

@@ -107,6 +107,8 @@ export class Avatar {
   private readonly joints = new Map<string, Joint>();
   private readonly firstPerson: boolean;
   private fpRaise = FIRST_REST_RAISE;
+  /** Vrai quand le joueur tient un outil : le bras droit le porte devant lui au lieu de balancer. */
+  holding = false;
   private phase = 0;
   private strike = 0;
   private amount = 0;
@@ -347,6 +349,7 @@ export class Avatar {
     if (striking) {
       const t = 0.5 + 0.5 * Math.sin(this.strike);
       this.arm('d', 0, -(0.6 + 1.9 * t));
-    } else this.arm('d', s * 0.8);
+    } else if (this.holding) this.arm('d', 0, -0.75 + s * 0.15, 0.7);
+    else this.arm('d', s * 0.8);
   }
 }

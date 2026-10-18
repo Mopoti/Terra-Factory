@@ -3175,6 +3175,9 @@ export function startGameView(
     const gz = Math.floor(playerZ / CELL_SIZE_M);
     const biome = generator.biomeAt(playerX, playerZ);
     const info = renderer.info;
+    // En survie : l'essentiel (graine, date, vue, position, biome) ; en Créatif : toutes les informations.
+    const full = options.state.creative;
+    const only = (...keep: string[]): string[] => keep;
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,
       (() => {
@@ -3185,16 +3188,24 @@ export function startGameView(
       })(),
       `${t('debug.view')} : ${t(`view.${rig.view}` as TranslationKey)}`,
       `${t('debug.position')} : ${playerX.toFixed(1)} m, ${playerZ.toFixed(1)} m · ${t('debug.height')} ${playerY.toFixed(2)} m`,
-      `${t('debug.cell')} : ${gx}, ${gz}`,
-      `${t('debug.chunk')} : ${Math.floor(gx / CHUNK_CELLS)}, ${Math.floor(gz / CHUNK_CELLS)}`,
+      ...(full
+        ? [
+            `${t('debug.cell')} : ${gx}, ${gz}`,
+            `${t('debug.chunk')} : ${Math.floor(gx / CHUNK_CELLS)}, ${Math.floor(gz / CHUNK_CELLS)}`,
+          ]
+        : only()),
       `${t('debug.biome')} : ${t(`biome.${biome}` as TranslationKey)}`,
-      `${t('debug.chunks')} : ${chunks.size} / ${wanted.length}`,
-      `${t('debug.draw')} : ${info.render.calls} · ${t('debug.tris')} : ${info.render.triangles}`,
-      `${t('debug.starter')} :`,
-      ...starterSites.map((site) => {
-        const d = Math.hypot(site.xM - playerX, site.zM - playerZ);
-        return `  ${t(`res.${site.id}` as TranslationKey)} : ${Math.round(site.xM)}, ${Math.round(site.zM)} (${Math.round(d)} m)`;
-      }),
+      ...(full
+        ? [
+            `${t('debug.chunks')} : ${chunks.size} / ${wanted.length}`,
+            `${t('debug.draw')} : ${info.render.calls} · ${t('debug.tris')} : ${info.render.triangles}`,
+            `${t('debug.starter')} :`,
+            ...starterSites.map((site) => {
+              const d = Math.hypot(site.xM - playerX, site.zM - playerZ);
+              return `  ${t(`res.${site.id}` as TranslationKey)} : ${Math.round(site.xM)}, ${Math.round(site.zM)} (${Math.round(d)} m)`;
+            }),
+          ]
+        : only()),
     ];
     debugBox.textContent = lines.join('\n');
   }
@@ -3269,10 +3280,6 @@ export function startGameView(
     if (pressed('debug')) {
       debugOn = !debugOn;
       applyDebug();
-      if (debugOn && !options.state.changes.admin) {
-        options.state.changes.admin = true;
-        options.onMessage?.(t('debug.adminWarn'));
-      }
     }
     if (pressed('techTree')) options.onToggleTech?.();
     updateTutorial(dt);
@@ -3401,15 +3408,14 @@ export function startGameView(
     player.position.set(playerX, playerY + PLAYER_HEIGHT_M / 2, playerZ);
     player.rotation.y = facing;
     const armedNow = pistolReady() && !building;
-    // L'outil n'apparaît dans les mains que pendant l'action qui en a besoin (couper, casser, miner).
-    const usingTool = interaction.working === 'tool' && !armedNow;
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
     // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
-    const holdsTool = toolId !== null && !armedNow;
+    const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow;
     hand.visible = rig.view === 'first' && views.first.showHands && holdsTool;
-    bodyTool.visible = rig.view !== 'first' && usingTool;
+    bodyTool.visible = rig.view !== 'first' && holdsTool;
+    if (miner instanceof Avatar) miner.holding = holdsTool;
     miner?.update(
       dt,
       Math.hypot(playerX - lastX, playerZ - lastZ) / Math.max(dt, 1e-3),

@@ -36,6 +36,7 @@ import type { CommandBus } from '../core/game/commands';
 import type { GameState } from '../core/game/state';
 import { onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
+import { itemIcon } from './itemIcon';
 import {
   BAG_SLOT_TYPE,
   askAmount,
@@ -418,10 +419,7 @@ export function mountMachineWindow(
       if (slot) {
         cell.style.setProperty('--item', itemById(slot.item).color);
         cell.classList.toggle('selected', selectedSlot === i);
-        cell.append(
-          el('span', 'slot-name', itemName(slot.item)),
-          el('span', 'slot-count', String(slot.count)),
-        );
+        cell.append(itemIcon(slot.item), el('span', 'slot-count', String(slot.count)));
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
           dragging = true;
@@ -510,7 +508,7 @@ export function mountMachineWindow(
         const count = el('span', 'slot-count', String(stack.count));
         live.chest[i] = count;
         cell.title = itemName(stack.item);
-        cell.append(el('span', 'slot-name', itemName(stack.item)), count);
+        cell.append(itemIcon(stack.item), count);
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
           dragging = true;
@@ -637,7 +635,8 @@ export function mountMachineWindow(
         cell.style.setProperty('--item', itemById(item).color);
         const count = el('span', 'slot-count', `${have} / ${ingredientCap(n)}`);
         live.ingredients.set(item, count);
-        cell.append(el('span', 'slot-name', `${n} × ${itemName(item)}`), count);
+        cell.title = `${n} × ${itemName(item)}`;
+        cell.append(itemIcon(item), count);
         cell.addEventListener('click', () => {
           if (state.hand) return putIngredient(m, state.hand.item);
           if (selected) return putIngredient(m, selected, selectedSlot ?? undefined);

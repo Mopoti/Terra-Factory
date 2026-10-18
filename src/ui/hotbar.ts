@@ -1,4 +1,5 @@
 import { playSfx } from '../audio/sfx';
+import { itemIcon } from './itemIcon';
 import { itemById } from '../core/data/items';
 import type { GameState } from '../core/game/state';
 import { HOTBAR_SLOTS } from '../core/game/worldChanges';
@@ -39,13 +40,10 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
         const count = state.inventory[item] ?? 0;
         slot.style.setProperty('--item', def.color);
         slot.classList.toggle('poor', count === 0);
-        const name = document.createElement('span');
-        name.className = 'hot-name';
-        name.textContent = t(`item.${item}` as TranslationKey);
         const qty = document.createElement('span');
         qty.className = 'hot-count';
         qty.textContent = String(count);
-        slot.append(name, qty);
+        slot.append(itemIcon(item), qty);
         slot.title = t(`item.${item}` as TranslationKey);
       } else {
         slot.classList.add('empty');
@@ -88,10 +86,7 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
     slot.append(key);
     if (id) {
       slot.style.setProperty('--item', itemById(id).color);
-      const name = document.createElement('span');
-      name.className = 'hot-name';
-      name.textContent = t(`item.${id}` as TranslationKey);
-      slot.append(name);
+      slot.append(itemIcon(id));
       slot.title = t(`item.${id}` as TranslationKey);
     } else {
       slot.classList.add('empty');

@@ -8,6 +8,7 @@ import {
   itemById,
   type EquipSlot,
 } from '../core/data/items';
+import { itemIcon } from './itemIcon';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
 import { formatMass } from '../core/units';
@@ -101,7 +102,7 @@ export function mountInventory(
       cell.append(el('span', 'equip-label', t(`equip.${slot}` as TranslationKey)));
       if (id) {
         cell.style.setProperty('--item', itemById(id).color);
-        cell.append(el('span', 'slot-name', itemName(id)));
+        cell.append(itemIcon(id));
         cell.addEventListener('mouseenter', () => {
           hovered = id;
           showTooltip();
@@ -358,10 +359,7 @@ export function mountInventory(
         const def = itemById(slot.item);
         cell.style.setProperty('--item', def.color);
         cell.classList.toggle('selected', slot.item === selected);
-        cell.append(
-          el('span', 'slot-name', itemName(slot.item)),
-          el('span', 'slot-count', String(slot.count)),
-        );
+        cell.append(itemIcon(slot.item), el('span', 'slot-count', String(slot.count)));
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
           e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item);
@@ -502,7 +500,7 @@ export function mountInventory(
         recipe !== null &&
         Object.entries(recipe).every(([id, n]) => (state.inventory[id] ?? 0) >= n);
       cell.classList.toggle('lack', def.recipe !== null && !canCraft);
-      cell.append(el('span', 'slot-name', itemName(def.id)));
+      cell.append(itemIcon(def.id));
       cell.draggable = true;
       cell.addEventListener('dragstart', (e) => e.dataTransfer?.setData(ITEM_DRAG_TYPE, def.id));
       cell.addEventListener('click', () => def.recipe && craft(def.id, 1));

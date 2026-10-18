@@ -3,7 +3,11 @@ import { CELL_SIZE_M, CHUNK_CELLS } from '../core/constants';
 import { REACH_M, itemById } from '../core/data/items';
 import { resourceById, type DepositResource, type ObjectResource } from '../core/data/resources';
 import { distanceToFootprint, isWithinReach } from '../core/game/reach';
-import { CREATIVE_DESTROY_SECONDS, type GameState } from '../core/game/state';
+import {
+  CREATIVE_DEMOLISH_FACTOR,
+  CREATIVE_DESTROY_SECONDS,
+  type GameState,
+} from '../core/game/state';
 import { cellKey, type DroppedStack } from '../core/game/worldChanges';
 import type { ChunkData } from '../core/world/worldgen';
 import { playSfx } from '../audio/sfx';
@@ -495,7 +499,7 @@ export class Interaction {
       : hit.type === 'drop'
         ? PICKUP_SECONDS
         : hit.type === 'structure'
-          ? hit.structure.seconds
+          ? hit.structure.seconds * (this.state.creative ? CREATIVE_DEMOLISH_FACTOR : 1)
           : needsTool
             ? (hit.target.secondsPerUnit * BARE_HANDS_FACTOR) / (tool?.speed ?? 1)
             : hit.target.secondsPerUnit;

@@ -1138,17 +1138,44 @@
   color: #8fa0b0;
   font-size: 11px;
 }
-.hot-name {
-  line-height: 1.1;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+/* Icône 3D d'un objet : remplit la case, le nombre reste en bas à droite. */
+.slot-icon {
+  position: absolute;
+  inset: 4px 4px 4px 9px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+}
+.hot-slot .slot-icon {
+  inset: 3px;
+}
+.slot-icon:not(.ready) {
+  background: radial-gradient(circle, var(--item, #33414f) 0, transparent 62%);
+  opacity: 0.55;
+}
+.slot:has(.slot-icon),
+.mach-slot:has(.slot-icon) {
+  position: relative;
+  min-height: 56px;
+}
+.slot:has(.slot-icon) .slot-count {
+  position: absolute;
+  right: 5px;
+  bottom: 3px;
+  z-index: 1;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000;
 }
 .hot-count {
   position: absolute;
-  top: 3px;
+  bottom: 3px;
   right: 5px;
+  z-index: 1;
+  text-shadow:
+    0 0 3px #000,
+    0 0 3px #000;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
