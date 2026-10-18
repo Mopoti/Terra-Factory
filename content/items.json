@@ -1330,6 +1330,84 @@
       }
     },
     {
+      "id": "rail_straight",
+      "stack": 50,
+      "category": "rail",
+      "weightKg": 3,
+      "volumeL": 4,
+      "color": "#8e969e",
+      "yield": 2,
+      "recipe": {
+        "iron_ingot": 2,
+        "wood": 1
+      }
+    },
+    {
+      "id": "rail_curve",
+      "stack": 50,
+      "category": "rail",
+      "weightKg": 8,
+      "volumeL": 10,
+      "color": "#8e969e",
+      "recipe": {
+        "iron_ingot": 6,
+        "wood": 3
+      }
+    },
+    {
+      "id": "rail_ramp",
+      "stack": 20,
+      "category": "rail",
+      "weightKg": 12,
+      "volumeL": 16,
+      "color": "#7d776e",
+      "recipe": {
+        "iron_ingot": 8,
+        "wood": 6,
+        "stone": 4
+      }
+    },
+    {
+      "id": "train_locomotive",
+      "stack": 1,
+      "category": "rail",
+      "weightKg": 48,
+      "volumeL": 55,
+      "color": "#c9572e",
+      "recipe": {
+        "steel_ingot": 20,
+        "iron_ingot": 30,
+        "copper_ingot": 10,
+        "iron_gear": 12
+      }
+    },
+    {
+      "id": "train_wagon_freight",
+      "stack": 1,
+      "category": "rail",
+      "weightKg": 40,
+      "volumeL": 55,
+      "color": "#5a6b4a",
+      "recipe": {
+        "iron_ingot": 30,
+        "wood": 20,
+        "iron_gear": 4
+      }
+    },
+    {
+      "id": "train_wagon_tanker",
+      "stack": 1,
+      "category": "rail",
+      "weightKg": 42,
+      "volumeL": 55,
+      "color": "#d8dde3",
+      "recipe": {
+        "steel_ingot": 14,
+        "iron_ingot": 20,
+        "iron_gear": 4
+      }
+    },
+    {
       "id": "carapace",
       "stack": 50,
       "weightKg": 0.3,

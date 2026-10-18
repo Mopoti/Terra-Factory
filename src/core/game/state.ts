@@ -1,4 +1,15 @@
 import { VEHICLES, type VehicleKind } from '../data/vehicles';
+import { CARS, RAIL_ITEMS, type CarKind } from '../data/trains';
+import { SOUTE_MAX } from '../rail/normalize';
+import { TrackGraph, cellsOf, type RailKind, type RailPiece, type TrackPos } from '../rail/track';
+import {
+  carPoses,
+  coupleConsists,
+  findCoupling,
+  splitConsist,
+  type Car,
+  type Consist,
+} from '../rail/train';
 import { CELL_SIZE_M } from '../constants';
 import {
   chestPut,
@@ -74,6 +85,7 @@ export type StateEvent = (
   | { type: 'build' }
   | { type: 'hotbar' }
   | { type: 'factory' }
+  | { type: 'rails' }
   | { type: 'discovery'; id: string }
 ) & {
   /** L'événement vient d'un autre joueur (invité) : la vue locale doit se mettre à jour. */
@@ -1254,6 +1266,155 @@ export class GameState {
     this.changes.vehicles.push(v);
     this.emit({ type: 'inventory' });
     return v;
+  }
+
+  // --- Voies ferrées et trains -------------------------------------------------------------------
+
+  private graph: TrackGraph | null = null;
+  private graphFor = '';
+
+  /** Les voies posées et leurs raccords (recalculés quand la voie change). */
+  railGraph(): TrackGraph {
+    const rails = this.changes.rails;
+    const key = `${rails.length}:${rails.length > 0 ? rails[rails.length - 1].id : 0}:${this.railRevision}`;
+    if (!this.graph || key !== this.graphFor) {
+      this.graph = new TrackGraph(rails);
+      this.graphFor = key;
+    }
+    return this.graph;
+  }
+  private railRevision = 0;
+  private railsChanged(): void {
+    this.railRevision++;
+    this.emit({ type: 'rails' });
+    this.emit({ type: 'inventory' });
+  }
+
+  /** Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la voie. */
+  placeRail(
+    kind: RailKind,
+    gx: number,
+    gz: number,
+    turns: number,
+    level: number,
+    blocked: (c: Cell) => boolean,
+  ): 'ok' | 'missing' | 'blocked' {
+    const item = RAIL_ITEMS[kind];
+    if ((this.inventory[item] ?? 0) < 1) return 'missing';
+    const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
+    const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
+    const taken = new Set<string>();
+    for (const p of this.changes.rails) for (const [x, z] of cellsOf(p)) taken.add(`${x},${z}`);
+    for (const [x, z] of cellsOf(piece))
+      if (taken.has(`${x},${z}`) || blocked({ gx: x, gz: z })) return 'blocked';
+    this.inventory = remove(this.inventory, item, 1).inventory;
+    this.changes.rails.push(piece);
+    this.railsChanged();
+    return 'ok';
+  }
+
+  /** Reprend une pièce de voie (l'objet revient dans le sac). Les convois posés dessus restent où ils sont. */
+  removeRail(id: number, at: { x: number; z: number }): boolean {
+    const i = this.changes.rails.findIndex((p) => p.id === id);
+    if (i < 0) return false;
+    const [piece] = this.changes.rails.splice(i, 1);
+    this.giveBack(RAIL_ITEMS[piece.kind], 1, at);
+    this.railsChanged();
+    return true;
+  }
+
+  private newConsistId(): number {
+    return this.changes.trains.reduce((m, c) => Math.max(m, c.id), 0) + 1;
+  }
+  private newCarId(): number {
+    let max = 0;
+    for (const c of this.changes.trains) for (const k of c.cars) max = Math.max(max, k.id);
+    return max + 1;
+  }
+
+  /** Pose un véhicule sur la voie, au centre de `pos`, l'avant dans le sens `pos.dir` ; refuse s'il touche un autre. */
+  placeCar(kind: CarKind, pos: TrackPos): Consist | null {
+    const spec = CARS[kind];
+    if ((this.inventory[spec.item] ?? 0) < 1) return null;
+    const graph = this.railGraph();
+    if (!graph.has(pos.piece)) return null;
+    const head = graph.advance(pos, spec.lengthM / 2).pos;
+    const consist: Consist = {
+      id: this.newConsistId(),
+      head,
+      v: 0,
+      cars: [{ id: this.newCarId(), kind, rev: false, heatKJ: 0, fuel: null }],
+    };
+    // Pas de chevauchement : le centre doit être à plus d'une demi-longueur de chaque autre véhicule.
+    const mine = carPoses(graph, consist)[0];
+    for (const other of this.changes.trains)
+      for (const p of carPoses(graph, other)) {
+        const need = (spec.lengthM + CARS[p.car.kind].lengthM) / 2 - 0.1;
+        if (Math.hypot(p.x - mine.x, p.z - mine.z) < need && Math.abs(p.y - mine.y) < 1.5)
+          return null;
+      }
+    this.inventory = remove(this.inventory, spec.item, 1).inventory;
+    this.changes.trains.push(consist);
+    this.railsChanged();
+    return consist;
+  }
+
+  /** Reprend un véhicule seul (pas attelé) : l'objet et la soute reviennent dans le sac. */
+  pickUpCar(consistId: number): 'ok' | 'coupled' | 'none' {
+    const i = this.changes.trains.findIndex((c) => c.id === consistId);
+    if (i < 0) return 'none';
+    const c = this.changes.trains[i];
+    if (c.cars.length !== 1) return 'coupled';
+    this.changes.trains.splice(i, 1);
+    const graph = this.railGraph();
+    const p = graph.pose(c.head);
+    const at = { x: p?.x ?? 0, z: p?.z ?? 0 };
+    this.giveBack(CARS[c.cars[0].kind].item, 1, at);
+    const fuel = c.cars[0].fuel;
+    if (fuel) this.giveBack(fuel.item, fuel.count, at);
+    this.railsChanged();
+    return 'ok';
+  }
+
+  /** Remplit la soute d'une locomotive avec du charbon ou du bois du sac (renvoie le nombre de pièces chargées). */
+  refuelLocomotive(car: Car): number {
+    if (!CARS[car.kind].loco) return 0;
+    for (const item of ['coal', 'wood']) {
+      const have = this.inventory[item] ?? 0;
+      if (have < 1 || (car.fuel && car.fuel.item !== item)) continue;
+      const room = SOUTE_MAX - (car.fuel?.count ?? 0);
+      const n = Math.min(have, room, 20);
+      if (n <= 0) continue;
+      this.inventory = remove(this.inventory, item, n).inventory;
+      car.fuel = { item, count: (car.fuel?.count ?? 0) + n };
+      this.emit({ type: 'inventory' });
+      return n;
+    }
+    return 0;
+  }
+
+  /** Attelle le convoi à celui dont l'attelage est tout près ; renvoie le convoi réuni, ou null s'il n'y en a pas. */
+  coupleTrain(consistId: number): Consist | null {
+    const c = this.changes.trains.find((x) => x.id === consistId);
+    if (!c) return null;
+    const graph = this.railGraph();
+    const found = findCoupling(graph, this.changes.trains, c);
+    if (!found) return null;
+    const merged = coupleConsists(graph, c, found.mine, found.other, found.theirs);
+    this.changes.trains.splice(this.changes.trains.indexOf(found.other), 1);
+    this.railsChanged();
+    return merged;
+  }
+
+  /** Dételle entre le véhicule `index − 1` et le véhicule `index` ; le convoi arrière est garé. */
+  uncoupleTrain(consistId: number, index: number): Consist | null {
+    const c = this.changes.trains.find((x) => x.id === consistId);
+    if (!c) return null;
+    const rear = splitConsist(this.railGraph(), c, index, this.newConsistId());
+    if (!rear) return null;
+    this.changes.trains.push(rear);
+    this.railsChanged();
+    return rear;
   }
 
   /** Range un véhicule dans le sac (ou au sol s'il est plein). */

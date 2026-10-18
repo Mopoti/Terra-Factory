@@ -1,3 +1,6 @@
+import { normalizeRails, normalizeTrains } from '../rail/normalize';
+import type { RailPiece } from '../rail/track';
+import type { Consist } from '../rail/train';
 import { isVehicleKind, type VehicleKind } from '../data/vehicles';
 import { normalizePieces, type Pieces } from '../build/pieces';
 import { CELL_SIZE_M, CHUNK_CELLS } from '../constants';
@@ -160,6 +163,10 @@ export interface WorldChanges {
   time: number;
   /** Véhicules posés dans le monde. */
   vehicles: Vehicle[];
+  /** Voies ferrées posées (voir `core/rail`). */
+  rails: RailPiece[];
+  /** Convois posés sur la voie : locomotive et wagons attelés. */
+  trains: Consist[];
   /** Nids nés de l'expansion des colonies (les nids d'origine viennent du monde généré). */
   nests: ExtraNest[];
   /** Balles dans le pistolet. */
@@ -224,6 +231,8 @@ export function emptyChanges(): WorldChanges {
     enemies: [],
     time: 0,
     vehicles: [],
+    rails: [],
+    trains: [],
     nests: [],
     ammo: 0,
     rifleAmmo: 0,
@@ -544,6 +553,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       });
     }
   }
+  result.rails = normalizeRails(r.rails);
+  result.trains = normalizeTrains(r.trains, result.rails);
   if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));
   if (isNum(r.rifleAmmo))
     result.rifleAmmo = Math.max(0, Math.min(WEAPONS.rifle.rounds, Math.floor(r.rifleAmmo)));

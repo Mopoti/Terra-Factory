@@ -107,6 +107,7 @@ export const ITEM_CATEGORIES = [
   'equipment',
   'armor',
   'tools',
+  'rail',
   'resources',
 ] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];

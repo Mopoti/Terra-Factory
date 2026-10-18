@@ -1,0 +1,89 @@
+import { describe, expect, it } from 'vitest';
+import { GameState } from '../game/state';
+
+const free = (): boolean => false;
+
+describe('voies et trains dans la partie', () => {
+  const start = (): GameState => {
+    const s = new GameState({
+      inventory: {
+        rail_straight: 60,
+        rail_curve: 2,
+        train_locomotive: 1,
+        train_wagon_freight: 2,
+        coal: 30,
+      },
+    });
+    s.creative = true; // sac sans limite de poids : les véhicules sont lourds
+    return s;
+  };
+  const laidLine = (s: GameState, n: number): void => {
+    for (let k = 0; k < n; k++) expect(s.placeRail('straight', 0, -2 * k, 0, 0, free)).toBe('ok');
+  };
+
+  it('poser une voie consomme l’objet et refuse de recouvrir une autre pièce', () => {
+    const s = start();
+    expect(s.placeRail('straight', 0, 0, 0, 0, free)).toBe('ok');
+    expect(s.inventory.rail_straight).toBe(59);
+    expect(s.placeRail('straight', 1, 1, 0, 0, free)).toBe('blocked'); // recouvre une case
+    expect(s.placeRail('straight', 10, 0, 0, 0, () => true)).toBe('blocked'); // terrain bloqué
+    expect(s.placeRail('ramp', 20, 0, 0, 0, free)).toBe('missing'); // pas de rampe dans le sac
+    expect(s.removeRail(s.changes.rails[0].id, { x: 0, z: 0 })).toBe(true);
+    expect(s.inventory.rail_straight).toBe(60);
+  });
+
+  it('on pose une locomotive et des wagons sur la voie, sans qu’ils se chevauchent', () => {
+    const s = start();
+    laidLine(s, 30);
+    const graph = s.railGraph();
+    expect(graph.neighbour(s.changes.rails[0].id, 1)).not.toBeNull();
+    const loco = s.placeCar('locomotive_steam', { piece: s.changes.rails[20].id, u: 0.5, dir: 1 });
+    expect(loco).not.toBeNull();
+    expect(
+      s.placeCar('wagon_freight', { piece: s.changes.rails[20].id, u: 0.5, dir: 1 }),
+    ).toBeNull();
+    const wagon = s.placeCar('wagon_freight', { piece: s.changes.rails[10].id, u: 0.5, dir: 1 });
+    expect(wagon).not.toBeNull();
+    expect(s.inventory.train_wagon_freight).toBe(1);
+    expect(s.pickUpCar(wagon!.id)).toBe('ok');
+    expect(s.inventory.train_wagon_freight).toBe(2);
+  });
+
+  it('la locomotive se ravitaille depuis le sac, s’attelle à un wagon et se dételle', () => {
+    const s = start();
+    laidLine(s, 40);
+    const loco = s.placeCar('locomotive_steam', { piece: s.changes.rails[10].id, u: 0.5, dir: 1 })!;
+    expect(s.refuelLocomotive(loco.cars[0])).toBe(20);
+    expect(loco.cars[0].fuel).toEqual({ item: 'coal', count: 20 });
+    expect(s.inventory.coal).toBe(10);
+    // Un wagon à 1 m de l'arrière de la locomotive : attelage.
+    const graph = s.railGraph();
+    const rear = graph.advance({ ...loco.head, dir: -1 }, 6.45 + 1.0 + 2.7).pos;
+    const wagon = s.placeCar('wagon_freight', { piece: rear.piece, u: rear.u, dir: -1 })!;
+    expect(s.coupleTrain(loco.id)).not.toBeNull();
+    expect(s.changes.trains).toHaveLength(1);
+    const train = s.changes.trains[0];
+    expect(train.cars).toHaveLength(2);
+    expect(s.pickUpCar(train.id)).toBe('coupled');
+    const rest = s.uncoupleTrain(train.id, 1)!;
+    expect(s.changes.trains).toHaveLength(2);
+    expect(rest.cars.map((c) => c.id)).toContain(wagon.cars[0].id);
+  });
+
+  it('l’état se relit sans erreur et ignore ce qui est invalide', () => {
+    const s = start();
+    laidLine(s, 5);
+    s.placeCar('locomotive_steam', { piece: s.changes.rails[2].id, u: 0.5, dir: 1 });
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.rails).toHaveLength(5);
+    expect(copy.changes.trains).toHaveLength(1);
+    const broken = new GameState({
+      changes: {
+        rails: [{ id: 1, kind: 'monorail', gx: 0, gz: 0 }],
+        trains: [{ id: 1, head: { piece: 9, u: 0 }, cars: [] }],
+      },
+    });
+    expect(broken.changes.rails).toEqual([]);
+    expect(broken.changes.trains).toEqual([]);
+  });
+});

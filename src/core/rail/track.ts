@@ -177,20 +177,37 @@ export class TrackGraph {
   constructor(pieces: readonly RailPiece[]) {
     for (const p of pieces) this.byId.set(p.id, p);
     const ports = new Map<number, [Port, Port]>();
-    for (const p of pieces) ports.set(p.id, portsOf(p));
+    // Grille de 25 cm : on ne compare un port qu'à ceux des cases voisines (la voie peut compter des milliers de pièces).
+    const BUCKET = 0.25;
+    const bucket = new Map<string, { piece: number; port: 0 | 1 }[]>();
+    const keyOf = (x: number, z: number): string =>
+      `${Math.round(x / BUCKET)},${Math.round(z / BUCKET)}`;
+    for (const p of pieces) {
+      const pp = portsOf(p);
+      ports.set(p.id, pp);
+      for (const i of [0, 1] as const) {
+        const k = keyOf(pp[i].x, pp[i].z);
+        const list = bucket.get(k) ?? [];
+        list.push({ piece: p.id, port: i });
+        bucket.set(k, list);
+      }
+    }
     for (const p of pieces) {
       const mine = ports.get(p.id) as [Port, Port];
       const out: [PortLink | null, PortLink | null] = [null, null];
       for (const i of [0, 1] as const) {
-        search: for (const q of pieces) {
-          if (q.id === p.id) continue;
-          const theirs = ports.get(q.id) as [Port, Port];
-          for (const j of [0, 1] as const)
-            if (portsMeet(mine[i], theirs[j])) {
-              out[i] = { piece: q.id, port: j };
-              break search;
+        const cx = Math.round(mine[i].x / BUCKET);
+        const cz = Math.round(mine[i].z / BUCKET);
+        search: for (let dx = -1; dx <= 1; dx++)
+          for (let dz = -1; dz <= 1; dz++)
+            for (const cand of bucket.get(`${cx + dx},${cz + dz}`) ?? []) {
+              if (cand.piece === p.id) continue;
+              const theirs = ports.get(cand.piece) as [Port, Port];
+              if (portsMeet(mine[i], theirs[cand.port])) {
+                out[i] = { piece: cand.piece, port: cand.port };
+                break search;
+              }
             }
-        }
       }
       this.links.set(p.id, out);
     }

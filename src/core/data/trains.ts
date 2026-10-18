@@ -66,3 +66,14 @@ export const isCarKind = (x: unknown): x is CarKind =>
 
 export const carKindOfItem = (item: string): CarKind | null =>
   CAR_KINDS.find((k) => CARS[k].item === item) ?? null;
+
+/** Objet du sac qui pose chaque pièce de voie. */
+export const RAIL_ITEMS = {
+  straight: 'rail_straight',
+  curve: 'rail_curve',
+  ramp: 'rail_ramp',
+} as const;
+
+export const railKindOfItem = (item: string): 'straight' | 'curve' | 'ramp' | null =>
+  (Object.keys(RAIL_ITEMS) as (keyof typeof RAIL_ITEMS)[]).find((k) => RAIL_ITEMS[k] === item) ??
+  null;
