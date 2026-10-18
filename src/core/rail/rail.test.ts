@@ -24,6 +24,8 @@ import {
   findCoupling,
   splitConsist,
   stepConsist,
+  bodyEnd,
+  carOffsets,
   carPoses,
   overlapBetween,
   type Car,
@@ -50,6 +52,10 @@ const car = (id: number, kind: Car['kind'], fuel = 0): Car => ({
 });
 
 /** Un convoi dont la tête est à `u` mètres du port 0 de la tuile `piece` (marche vers le port 1 : vers −z). */
+/** Entre les centres d'une locomotive et du wagon attelé derrière elle (m), points d'attelage l'un contre l'autre. */
+const LOCO_WAGON_GAP =
+  CARS.locomotive_steam.lengthM - CARS.locomotive_steam.frontM + CARS.wagon_freight.frontM;
+
 const consist = (id: number, cars: Car[], piece: number, u = 0.5): Consist => ({
   id,
   head: { piece, u, dir: 1 },
@@ -201,40 +207,116 @@ describe('trains : traction, freins, pente', () => {
     const c = consist(1, [car(1, 'locomotive_steam'), car(2, 'wagon_freight')], 18, 0.5);
     const poses = carPoses(g, c);
     const gap = Math.hypot(poses[0].x - poses[1].x, poses[0].z - poses[1].z);
-    expect(gap).toBeCloseTo((CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2, 2);
+    expect(gap).toBeCloseTo(LOCO_WAGON_GAP, 2);
     // La locomotive regarde vers −z (sens de marche sur cette voie).
     expect(Math.cos(poses[0].yaw)).toBeLessThan(-0.99);
   });
 });
 
 describe('véhicules en courbe', () => {
-  it('les tampons ne se chevauchent pas dans un virage (pas d’effet portefeuille)', () => {
-    const pieces = line(10);
-    const end = freePorts(pieces).find((p) => p.piece === 10)!;
-    const g = new TrackGraph([...pieces, { id: 50, kind: 'curve', ...matesFor('curve', end.at)[0] }]);
-    const cars = [car(1, 'locomotive_steam'), car(2, 'wagon_freight'), car(3, 'wagon_tanker')];
-    // Tête au milieu du virage, la rame à cheval sur le virage et la ligne droite.
-    for (const u of [1, 2.5, 4, 5.5]) {
-      const c = consist(1, cars, 50, u);
-      const at = (i: number) => {
-        const p = carPoses(g, c)[i];
-        return { x: p.x, z: p.z, ux: Math.sin(p.yaw), uz: Math.cos(p.yaw) };
+  /** Ligne droite, puis virages (chacun prend le premier ou le second sens possible). */
+  const track = (turns: (0 | 1)[]): { g: TrackGraph; last: number } => {
+    const pieces = line(14);
+    let id = 50;
+    for (const t of turns) {
+      const end = freePorts(pieces).find((p) => p.piece === (id === 50 ? 14 : id - 1))!;
+      const mates = matesFor('curve', end.at);
+      pieces.push({ id, kind: 'curve', ...mates[Math.min(t, mates.length - 1)] });
+      id++;
+    }
+    return { g: new TrackGraph(pieces), last: id - 1 };
+  };
+  const train = () => [
+    car(1, 'locomotive_steam'),
+    car(2, 'wagon_freight'),
+    car(3, 'wagon_tanker'),
+    car(4, 'wagon_freight'),
+  ];
+  /** Les caisses des véhicules (vues du dessus), dans le sens du convoi. */
+  const boxes = (g: TrackGraph, c: Consist) =>
+    carPoses(g, c).map((p, i) => {
+      const yaw = p.yaw + (c.cars[i].rev ? Math.PI : 0);
+      const k = c.cars[i];
+      return {
+        x: p.x,
+        z: p.z,
+        ux: Math.sin(yaw),
+        uz: Math.cos(yaw),
+        lead: bodyEnd(k, 'lead'),
+        tail: bodyEnd(k, 'tail'),
       };
-      for (let i = 1; i < cars.length; i++) {
-        const d = overlapBetween(at(i - 1), CARS[cars[i - 1].kind].lengthM, at(i), CARS[cars[i].kind].lengthM);
-        expect(d).toBeLessThan(0.01);
+    });
+  const check = (g: TrackGraph, c: Consist): void => {
+    const b = boxes(g, c);
+    for (let i = 1; i < b.length; i++) expect(overlapBetween(b[i - 1], b[i])).toBeLessThan(0.01);
+  };
+  /** Convoi dont la tête est sur `piece` à `u`, la rame derrière elle sur la voie (et pas au-delà du bout). */
+  const placed = (g: TrackGraph, cars: Car[], piece: number, u: number): Consist => {
+    const dir =
+      ([1, -1] as const).find((d) => !g.advance({ piece, u, dir: -d as 1 | -1 }, 30).blocked) ?? 1;
+    return { id: 1, head: { piece, u, dir }, v: 0, cars };
+  };
+
+  it('les caisses ne se chevauchent pas dans un virage (pas d’effet portefeuille)', () => {
+    const { g, last } = track([0]);
+    for (const u of [0.5, 1.5, 2.5, 3.5, 4.5, 5.5]) check(g, placed(g, train(), last, u));
+  });
+
+  it('ni dans un S (virage à droite puis à gauche), ni dans un demi-tour', () => {
+    for (const turns of [
+      [0, 1],
+      [1, 0],
+      [0, 0],
+      [0, 1, 0],
+    ] as (0 | 1)[][]) {
+      const { g, last } = track(turns);
+      const len = lengthOf('curve');
+      for (let k = 0; k <= 8; k++) {
+        // Tête dans le dernier virage, puis (u négatif) dans le précédent.
+        const u = (k / 8) * len;
+        check(g, placed(g, train(), last, u));
+        check(g, placed(g, train(), last - 1, u));
       }
     }
   });
 
-  it('en ligne droite, les véhicules restent bout à bout', () => {
+  it('la distance entre véhicules attelés par leurs attelages automatiques ne change pas en courbe', () => {
+    for (const turns of [[0], [0, 0], [0, 1]] as (0 | 1)[][])
+      for (const u of [0.5, 2, 3.5, 5]) {
+        const { g, last } = track(turns);
+        const c = placed(g, train(), last, u);
+        const poses = carPoses(g, c);
+        const offsets = carOffsets(c);
+        c.cars.forEach((k, i) => {
+          // Le même véhicule posé seul à sa place nominale : même pose (pas de recul ajouté).
+          const back = g.advance(
+            { ...c.head, dir: -c.head.dir as 1 | -1 },
+            offsets[i] - CARS[k.kind].frontM,
+          ).pos;
+          const alone = carPoses(g, {
+            id: 9,
+            head: { ...back, dir: -back.dir as 1 | -1 },
+            v: 0,
+            cars: [k],
+          })[0];
+          expect(Math.hypot(alone.x - poses[i].x, alone.z - poses[i].z)).toBeLessThan(1e-6);
+        });
+      }
+  });
+
+  it('une locomotive à l’envers (tampons avant contre le wagon) est écartée juste assez en courbe', () => {
+    const { g, last } = track([0, 1, 0]);
+    const cars = train();
+    cars[0].rev = true;
+    for (let k = 0; k <= 12; k++)
+      check(g, placed(g, cars, last - (k % 3), (k / 12) * lengthOf('curve')));
+  });
+
+  it('en ligne droite, les véhicules restent bout à bout, attelage contre attelage', () => {
     const g = new TrackGraph(line(20));
     const c = consist(1, [car(1, 'locomotive_steam'), car(2, 'wagon_freight')], 18, 0.5);
     const [a, b] = carPoses(g, c);
-    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeCloseTo(
-      (CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2,
-      3,
-    );
+    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeCloseTo(LOCO_WAGON_GAP, 3);
   });
 });
 
@@ -279,7 +361,7 @@ describe('attelage, dételage, chocs', () => {
     expect(merged.cars[0].rev).toBe(false);
     const poses = carPoses(g, merged);
     const gap = Math.hypot(poses[0].x - poses[1].x, poses[0].z - poses[1].z);
-    expect(gap).toBeCloseTo((CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2, 2);
+    expect(gap).toBeCloseTo(LOCO_WAGON_GAP, 2);
   });
 
   it('trop loin, pas d’attelage', () => {
@@ -304,7 +386,7 @@ describe('attelage, dételage, chocs', () => {
     const poses = carPoses(g, rear);
     const loco = carPoses(g, c)[0];
     const gap = Math.hypot(poses[0].x - loco.x, poses[0].z - loco.z);
-    expect(gap).toBeCloseTo((CARS.locomotive_steam.lengthM + CARS.wagon_freight.lengthM) / 2, 2);
+    expect(gap).toBeCloseTo(LOCO_WAGON_GAP, 2);
   });
 
   it('un choc entre convois non attelés transmet la vitesse sans les traverser', () => {

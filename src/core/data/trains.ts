@@ -22,8 +22,15 @@ export interface CarSpec {
   item: string;
   /** Fichier du modèle (`public/models/terra/<model>.glb`). */
   model: string;
-  /** Longueur d'attelage à attelage (m) : deux wagons attelés se touchent par leurs tampons. */
+  /**
+   * Longueur d'attelage à attelage (m) : deux véhicules attelés se touchent par la tête de leurs attelages
+   * automatiques, toujours à la même distance (en courbe comme en ligne droite).
+   */
   lengthM: number;
+  /** Du centre (milieu des essieux, origine du modèle) au point d'attelage avant (m) ; l'arrière est à `lengthM - frontM`. */
+  frontM: number;
+  /** Du centre aux bouts de la caisse sans les attelages (tampons, traverses de tête), avant et arrière (m). */
+  bodyM: { front: number; rear: number };
   /** Demi-empattement (m) : distance du centre à chaque essieu / bogie, pour suivre les courbes. */
   halfBaseM: number;
   massKg: number;
@@ -34,7 +41,10 @@ export const CARS: Record<CarKind, CarSpec> = {
   locomotive_steam: {
     item: 'train_locomotive',
     model: 'locomotive_vapeur',
-    lengthM: 7.2,
+    // Tampons à l'avant (3,6 m du centre), attelage automatique de 1,1 m à l'arrière (traverse à 2,8 m).
+    lengthM: 7.5,
+    frontM: 3.6,
+    bodyM: { front: 3.6, rear: 2.85 },
     halfBaseM: 1.5,
     massKg: 22000,
     loco: {
@@ -48,14 +58,20 @@ export const CARS: Record<CarKind, CarSpec> = {
   wagon_freight: {
     item: 'train_wagon_freight',
     model: 'wagon_fret',
-    lengthM: 5.4,
+    // Caisse de 5 m (traverses de tête à 2,5 m du centre), attelage automatique de 0,8 m à chaque bout.
+    lengthM: 6.6,
+    frontM: 3.3,
+    bodyM: { front: 2.55, rear: 2.55 },
     halfBaseM: 1.7,
     massKg: 9000,
   },
   wagon_tanker: {
     item: 'train_wagon_tanker',
     model: 'wagon_citerne',
-    lengthM: 5.4,
+    // Caisse de 5 m (traverses de tête à 2,5 m du centre), attelage automatique de 0,8 m à chaque bout.
+    lengthM: 6.6,
+    frontM: 3.3,
+    bodyM: { front: 2.55, rear: 2.55 },
     halfBaseM: 1.7,
     massKg: 9500,
   },

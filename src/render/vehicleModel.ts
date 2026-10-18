@@ -14,6 +14,8 @@ export interface VehicleMesh {
   radius: number;
   /** Coussin du siège du conducteur dans le repère du groupe (m), si le modèle en a un (nœud `siege`). */
   seat: { x: number; y: number; z: number } | null;
+  /** Pivot de chaque groupe mobile, par nom (roues comprises) : attelages des trains, tourelle du char… */
+  parts: Map<string, THREE.Object3D>;
 }
 
 function geometry(
@@ -40,10 +42,18 @@ function geometry(
   return g;
 }
 
-/** Construit le buggy (posé au sol, centré sur son enveloppe) et ses roues mobiles. */
-export function vehicleFromModel(model: BakedModel, material: THREE.Material): VehicleMesh {
-  const cx = model.min.x + model.size.x / 2;
-  const cz = model.min.z + model.size.z / 2;
+/**
+ * Construit le véhicule (posé au sol, centré sur son enveloppe) et ses roues mobiles. `atOrigin` : centré sur l'origine
+ * du modèle et non sur son enveloppe (trains : l'origine est au milieu des essieux, les attelages ne sont pas
+ * symétriques).
+ */
+export function vehicleFromModel(
+  model: BakedModel,
+  material: THREE.Material,
+  atOrigin = false,
+): VehicleMesh {
+  const cx = atOrigin ? 0 : model.min.x + model.size.x / 2;
+  const cz = atOrigin ? 0 : model.min.z + model.size.z / 2;
   const y0 = model.min.y;
   const group = new THREE.Group();
   const body = new THREE.Mesh(
@@ -53,6 +63,7 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
   body.castShadow = true;
   group.add(body);
   const wheels: THREE.Object3D[] = [];
+  const parts = new Map<string, THREE.Object3D>();
   let radius = 0;
   for (const [name, part] of Object.entries(model.groups ?? {})) {
     const pivot = new THREE.Object3D();
@@ -72,6 +83,7 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
     wheel.castShadow = true;
     pivot.add(wheel);
     group.add(pivot);
+    parts.set(name, pivot);
     // Seules les roues roulent ; chenilles et tourelle du char restent en place.
     if (!name.startsWith('roue')) continue;
     wheels.push(pivot);
@@ -85,7 +97,7 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
   const seat = model.seat
     ? { x: model.seat.x - cx, y: model.seat.y - y0, z: model.seat.z - cz }
     : null;
-  return { group, wheels, radius: radius || 0.2, seat };
+  return { group, wheels, radius: radius || 0.2, seat, parts };
 }
 
 /** Fait rouler les roues de `distance` mètres vers l'avant (négatif : en arrière). */

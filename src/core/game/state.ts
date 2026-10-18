@@ -1358,7 +1358,7 @@ export class GameState {
     if ((this.inventory[spec.item] ?? 0) < 1) return false;
     const graph = this.railGraph();
     if (!graph.has(pos.piece)) return false;
-    const head = graph.advance(pos, spec.lengthM / 2).pos;
+    const head = graph.advance(pos, spec.frontM).pos;
     const mine = carPoses(graph, {
       id: -1,
       head,
@@ -1379,7 +1379,7 @@ export class GameState {
     if (!this.canPlaceCar(kind, pos)) return null;
     const spec = CARS[kind];
     const graph = this.railGraph();
-    const head = graph.advance(pos, spec.lengthM / 2).pos;
+    const head = graph.advance(pos, spec.frontM).pos;
     const consist: Consist = {
       id: this.newConsistId(),
       head,

@@ -55,12 +55,25 @@ export const massOfCar = (c: Car): number => CARS[c.kind].massKg;
 export const consistLength = (c: Consist): number => c.cars.reduce((a, k) => a + lengthOfCar(k), 0);
 export const consistMass = (c: Consist): number => c.cars.reduce((a, k) => a + massOfCar(k), 0);
 
-/** Distance de la tête au centre de chaque véhicule, en descendant le convoi. */
+/** Du centre du véhicule à son attelage côté tête du convoi (m) : l'avant du modèle, ou l'arrière s'il est retourné. */
+export const leadOfCar = (c: Car): number =>
+  c.rev ? CARS[c.kind].lengthM - CARS[c.kind].frontM : CARS[c.kind].frontM;
+
+/** Du centre du véhicule au bout de sa caisse (sans l'attelage), côté tête ou côté queue du convoi (m). */
+export const bodyEnd = (c: Car, side: 'lead' | 'tail'): number => {
+  const b = CARS[c.kind].bodyM;
+  return (side === 'lead') !== c.rev ? b.front : b.rear;
+};
+
+/**
+ * Distance de la tête au centre de chaque véhicule, en descendant le convoi : les points d'attelage se touchent, la
+ * distance entre deux véhicules est donc fixe (le long de la voie).
+ */
 export function carOffsets(c: Consist): number[] {
   const out: number[] = [];
   let at = 0;
   for (const car of c.cars) {
-    out.push(at + lengthOfCar(car) / 2);
+    out.push(at + leadOfCar(car));
     at += lengthOfCar(car);
   }
   return out;
@@ -118,57 +131,91 @@ function poseAt(
   };
 }
 
-/**
- * Recouvrement (m) entre l'arrière du véhicule `a` et l'avant du véhicule `b` qui le suit : en courbe, les caisses
- * droites se rapprochent du côté intérieur et se chevaucheraient (« effet portefeuille »). On mesure de combien les
- * coins de l'avant de `b` dépassent le plan arrière de `a`, et inversement ; 0 s'ils ne se touchent pas.
- */
-export function overlapBetween(
-  a: { x: number; z: number; ux: number; uz: number },
-  la: number,
-  b: { x: number; z: number; ux: number; uz: number },
-  lb: number,
-): number {
-  const hw = CAR_HALF_WIDTH_M;
-  // Plans : arrière de a (normale vers l'arrière de a), avant de b (normale vers l'avant de b).
-  const ar = { x: a.x - a.ux * (la / 2), z: a.z - a.uz * (la / 2) };
-  const bf = { x: b.x + b.ux * (lb / 2), z: b.z + b.uz * (lb / 2) };
-  let d = 0;
-  for (const s of [-1, 1]) {
-    // Coins de l'avant de b : en avant du plan arrière de a ?
-    const cbx = bf.x + b.uz * s * hw;
-    const cbz = bf.z - b.ux * s * hw;
-    d = Math.max(d, (cbx - ar.x) * a.ux + (cbz - ar.z) * a.uz);
-    // Coins de l'arrière de a : en arrière du plan avant de b ?
-    const cax = ar.x + a.uz * s * hw;
-    const caz = ar.z - a.ux * s * hw;
-    d = Math.max(d, -((cax - bf.x) * b.ux + (caz - bf.z) * b.uz));
-  }
-  return d;
+/** Caisse d'un véhicule vue du dessus : centre (entre les essieux), sens du convoi, bouts côté tête et côté queue. */
+export interface CarBox {
+  x: number;
+  z: number;
+  /** Sens du convoi (vers la tête). */
+  ux: number;
+  uz: number;
+  /** Du centre au bout de la caisse côté tête et côté queue (m). */
+  lead: number;
+  tail: number;
 }
 
 /**
- * Pose de chaque véhicule : centre entre ses essieux, cap de la corde qui les relie. En courbe, chaque véhicule est
- * reculé juste assez pour que ses tampons ne rentrent pas dans ceux du précédent (l'attelage s'allonge un peu, comme
- * le jeu des tampons d'un vrai train) ; en ligne droite rien ne change.
+ * Recouvrement (m) de deux caisses vues du dessus (rectangles de `2 × CAR_HALF_WIDTH_M` de large) : la plus petite
+ * profondeur de pénétration sur les quatre axes des rectangles (théorème des axes séparateurs), 0 s'ils ne se touchent
+ * pas. En courbe, des caisses droites trop proches se chevaucheraient du côté intérieur (« effet portefeuille »).
+ */
+export function overlapBetween(a: CarBox, b: CarBox): number {
+  const hw = CAR_HALF_WIDTH_M;
+  const corners = (k: CarBox): [number, number][] => {
+    const out: [number, number][] = [];
+    for (const l of [k.lead, -k.tail])
+      for (const s of [-1, 1])
+        out.push([k.x + k.ux * l + k.uz * s * hw, k.z + k.uz * l - k.ux * s * hw]);
+    return out;
+  };
+  const ca = corners(a);
+  const cb = corners(b);
+  let best = Infinity;
+  for (const [ax, az] of [
+    [a.ux, a.uz],
+    [a.uz, -a.ux],
+    [b.ux, b.uz],
+    [b.uz, -b.ux],
+  ]) {
+    const span = (cs: [number, number][]): [number, number] => {
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (const [x, z] of cs) {
+        const d = x * ax + z * az;
+        lo = Math.min(lo, d);
+        hi = Math.max(hi, d);
+      }
+      return [lo, hi];
+    };
+    const [a0, a1] = span(ca);
+    const [b0, b1] = span(cb);
+    const depth = Math.min(a1, b1) - Math.max(a0, b0);
+    if (depth <= 0) return 0;
+    best = Math.min(best, depth);
+  }
+  return best;
+}
+
+/**
+ * Pose de chaque véhicule : centre entre ses essieux, cap de la corde qui les relie. Les attelages automatiques
+ * (longs bras à l'arrière de la locomotive et aux deux bouts des wagons) écartent assez les caisses pour qu'elles ne
+ * se touchent pas dans les virages : la distance entre véhicules reste fixe. Seul cas restant, un wagon attelé aux
+ * tampons de l'avant d'une locomotive (sans long attelage) : il est alors reculé juste assez en courbe pour que les
+ * caisses ne se chevauchent pas.
  */
 export function carPoses(graph: TrackGraph, c: Consist): CarPose[] {
   const offsets = carOffsets(c);
   let extra = 0;
-  let prev: { pose: NonNullable<ReturnType<typeof poseAt>>; len: number } | null = null;
+  let prev: CarBox | null = null;
   return c.cars.map((car, i) => {
-    const len = lengthOfCar(car);
     let p = poseAt(graph, c, car, offsets[i] + extra);
+    const box = (q: NonNullable<typeof p>): CarBox => ({
+      x: q.x,
+      z: q.z,
+      ux: q.ux,
+      uz: q.uz,
+      lead: bodyEnd(car, 'lead'),
+      tail: bodyEnd(car, 'tail'),
+    });
     if (p && prev) {
-      for (let k = 0; k < 4; k++) {
-        const d = overlapBetween(prev.pose, prev.len, p, len);
+      for (let k = 0; k < 8; k++) {
+        const d = overlapBetween(prev, box(p));
         if (d < 1e-3) break;
-        extra += d;
+        extra += Math.max(d, 0.05);
         p = poseAt(graph, c, car, offsets[i] + extra) ?? p;
       }
     }
     if (!p) return { car, x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
-    prev = { pose: p, len };
+    prev = box(p);
     let { yaw, pitch } = p;
     if (car.rev) {
       yaw += Math.PI;

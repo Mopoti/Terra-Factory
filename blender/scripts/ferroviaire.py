@@ -17,15 +17,20 @@ dessus des rails à 0,3 m.
 
 Trains — dessinés à l'échelle de la voie posée (voie normale) et du personnage (1,7 m) : bandes de roulement des roues
 sur l'axe des rails (±1,5 unité), bas des roues à Z = 0 (le jeu le pose sur le dessus des rails), tampons et attelage
-à 2,1 unités (1,05 m), caisses de 2,6 m de large ; roues en groupes (un par essieu, tournent autour de X) ; nœud vide
-`siege` (coussin du conducteur) dans les locomotives :
-- `locomotive_vapeur` : locomotive à combustible, locomotive-tender à vapeur type 030T, 7,2 m de tampon à tampon,
-  essieux à -1,5 / 0 / +1,5 m : roues rouges à rayons, bielles et cylindres, chaudière, cheminée, dôme, caisses à eau,
-  abri à deux vraies fenêtres frontales (le jeu y met une vitre), soute à charbon ;
+à 2,1 unités (1,05 m), caisses de 2,6 m de large ; origine au milieu des essieux ; roues en groupes (un par essieu,
+tournent autour de X) ; nœud vide `siege` (coussin du conducteur) dans les locomotives.
+Attelages automatiques à mâchoire (groupes `attelage_av` / `attelage_ar`, pivot vertical `pivot_attelage_*` sur la
+traverse de tête) : longs bras qui écartent les caisses pour qu'elles ne se touchent pas en courbe ; le jeu les tourne
+l'un vers l'autre et les véhicules restent à distance constante (voir `docs/trains.md`) :
+- `locomotive_vapeur` : locomotive à combustible, locomotive-tender à vapeur type 030T, essieux à -1,5 / 0 / +1,5 m,
+  tampons à l'avant (-3,6 m), attelage automatique à l'arrière (+3,9 m) : roues rouges à rayons, bielles et
+  cylindres, chaudière, cheminée, dôme, caisses à eau, abri à deux vraies fenêtres frontales (le jeu y met une vitre)
+  et deux à l'arrière, soute à charbon au fond de l'abri ;
 - `locomotive_electrique` : locomotive électrique moderne, 8 m (encore à l'ancienne échelle de voie : à reprendre quand
   elle entrera dans le jeu, avec les caténaires) ;
-- `wagon_fret` : wagon couvert à porte coulissante, 5,4 m, deux essieux à ±1,7 m ;
-- `wagon_citerne` : citerne pour liquides et gaz, 5,4 m, deux essieux à ±1,7 m ; sa bande et son dôme sont de la
+- `wagon_fret` : wagon couvert à porte coulissante, caisse de 5 m, deux essieux à ±1,7 m, attelages automatiques
+  aux deux bouts (points d'attelage à ±3,3 m : 6,6 m d'attelage à attelage) ;
+- `wagon_citerne` : citerne pour liquides et gaz, mêmes châssis et attelages ; sa bande et son dôme sont de la
   teinte `teinte` (magenta dans le fichier) : le jeu les peindra de la couleur du fluide transporté.
 
 Lancer :  blender --background --python blender/scripts/ferroviaire.py
@@ -346,9 +351,45 @@ def _tampons(lot, y_bout, s, sg, traverse='rouge'):
     lot.barre('noir', (0, s * (y_bout + 0.3), Z_TAMPON), (0, s * (y_bout + 0.3), Z_TAMPON - 0.5), 0.07)  # attelage
 
 
+def _attelage(coll, lot, y0, y1, nom, sg, traverse='acier_sombre'):
+    """Attelage automatique à mâchoire (type « knuckle ») au bout d'un véhicule : traverse de tête à `y0` et bras qui
+    y pivote (groupe `nom`, nœud `pivot_<nom>`, axe vertical) jusqu'au point d'attelage `y1`, où sa tête rejoint celle
+    du véhicule voisin. Le jeu tourne le bras vers le voisin en courbe (et l'allonge un peu) : les deux véhicules
+    restent à la même distance, assez loin pour que les caisses ne se touchent pas dans les virages.
+
+    La tête a son corps d'un côté et sa mâchoire de l'autre (côté opposé selon le sens du bras) : deux têtes face à
+    face s'emboîtent."""
+    s = 1 if y1 > y0 else -1
+    z = Z_TAMPON
+    # Traverse de tête (fixe), levier de dételage.
+    lot.cube(traverse, (5.0, 0.2, 0.8), (0, y0, z), 0.03)
+    lot.barre('acier', (-2.3, y0 + s * 0.16, z + 0.5), (0.2, y0 + s * 0.16, z + 0.5), 0.05)
+    lot.barre('acier', (-2.3, y0 + s * 0.16, z + 0.5), (-2.3, y0 + s * 0.16, z + 0.2), 0.05)
+    g = T.Lot(coll, nom)
+
+    def X(a):  # côté du corps de la tête (a > 0) ou de la mâchoire (a < 0)
+        return -s * a
+
+    def bloc(mat, xa, xb, ya, yb, za, zb, bev=0.03):
+        g.cube(mat, (abs(X(xb) - X(xa)), abs(yb - ya), zb - za), ((X(xa) + X(xb)) / 2, (ya + yb) / 2, (za + zb) / 2),
+               bev)
+
+    c = y1
+    bloc('acier_sombre', -0.35, 0.35, y0 + s * 0.1, y0 + s * 0.42, z - 0.28, z + 0.28)  # boîte d'attelage
+    bloc('noir', -0.15, 0.15, y0 + s * 0.42, c - s * 0.78, z - 0.15, z + 0.15, 0.02)  # bras (tige de traction)
+    bloc('noir', 0.02, 0.62, c - s * 0.8, c + s * 0.3, z - 0.3, z + 0.3, 0.06)  # corps de la tête
+    bloc('noir', -0.62, -0.02, c - s * 0.8, c - s * 0.34, z - 0.26, z + 0.26, 0.06)  # mâchoire (knuckle)
+    bloc('noir', -0.62, -0.38, c - s * 0.36, c - s * 0.12, z - 0.2, z + 0.2, 0.04)  # bec de la mâchoire
+    g.tube('acier', (X(-0.3), c - s * 0.6, z + 0.26), (X(-0.3), c - s * 0.6, z + 0.36), 0.08, sg)  # pivot de mâchoire
+    g.cube('jaune', (0.06, 0.3, 0.06), (X(0.32), c - s * 0.2, z + 0.31))  # verrou
+    g.finir()
+    T.pivot(coll, 'pivot_' + nom, (0, y0, z), (0, 0, 1))
+
+
 def _chassis_wagon(coll, lot, L, sg, couleur='acier_sombre'):
     """Wagon à deux essieux (empattement 3,4 m : essieux à ±3,4 unités) : longerons, boîtes d'essieu et ressorts à
-    lames à l'extérieur des roues, plancher, tampons."""
+    lames à l'extérieur des roues, plancher ; traverses de tête et attelages automatiques aux deux bouts (bras de 0,8 m
+    : points d'attelage à ±6,6 unités, 3,3 m du centre)."""
     r = 0.9
     for y, nom in ((-3.4, 'roues_av'), (3.4, 'roues_ar')):
         _essieu(coll, y, nom, r, sg)
@@ -361,23 +402,26 @@ def _chassis_wagon(coll, lot, L, sg, couleur='acier_sombre'):
                 lot.cube(couleur, (0.12, 0.12, 1.0), (x, y + dy, r + 0.3))
     for s in (-1, 1):
         lot.cube(couleur, (0.2, L, 0.6), (s * (VOIE + 0.45), 0, 2.0), 0.02)  # longerons
-        _tampons(lot, L / 2, s, sg, traverse=couleur)
+        _attelage(coll, lot, s * L / 2, s * (L / 2 + 1.6), 'attelage_av' if s < 0 else 'attelage_ar', sg,
+                  traverse=couleur)
     lot.cube(couleur, (4.2, L, 0.2), (0, 0, 2.1))  # plancher (dessous)
 
 
 def locomotive_vapeur(coll, leger=True):
-    """Locomotive à combustible : locomotive-tender à vapeur à trois essieux moteurs (type 030T), 7,2 m de tampon à
-    tampon, voie normale. Roues motrices rouges à rayons (un groupe par essieu : `roues_av`, `roues_motrices`, `roues_ar`) avec bielles et cylindres, longerons
+    """Locomotive à combustible : locomotive-tender à vapeur à trois essieux moteurs (type 030T), voie normale :
+    tampons à l'avant (3,6 m devant le milieu des essieux), attelage automatique `attelage_ar` à l'arrière (bras de
+    1,1 m, point d'attelage à 3,9 m derrière ; 7,5 m d'attelage à attelage). Roues motrices rouges à rayons (un groupe par essieu : `roues_av`, `roues_motrices`, `roues_ar`) avec bielles et cylindres, longerons
     rouges, tablier noir ; chaudière noire à cerclages laiton, boîte à fumée et porte, cheminée, dôme, soupapes, sifflet,
     caisses à eau latérales, sablières ; abri du mécanicien avec deux vitres frontales (ouvertures réelles, de chaque
     côté de la chaudière : le jeu y pose une vitre translucide, `CAB_GLASS` de `trainView.ts`), portes latérales
     ouvertes, toit bombé, siège `siege` à gauche (coussin à 2,25 m : les yeux passent au-dessus des caisses à eau,
-    à côté de la chaudière) ; soute à charbon à l'arrière, lanternes."""
+    à côté de la chaudière) ; façade arrière à deux fenêtres, soute à charbon au fond de l'abri, lanternes."""
     _couleurs()
     sg = 10 if leger else 16
     seg = 16 if leger else 28
     lot = T.Lot(coll, 'pieces')
-    yb = 6.8  # traverses de tête à ±6,8 unités, faces des tampons à ±7,2 (7,2 m)
+    yb = 6.8  # traverse avant à -6,8 unités, faces des tampons à -7,2 (3,6 m devant le milieu des essieux)
+    yr = 5.6  # traverse arrière (2,8 m derrière), attelage automatique jusqu'à +7,8 (3,9 m)
     # Roues motrices (r 0,625 m), espacées de 1,5 m.
     rm = 1.25
     ys = (-3.0, 0.0, 3.0)
@@ -390,10 +434,11 @@ def locomotive_vapeur(coll, leger=True):
         g.tube('acier_sombre', (-VOIE, y, rm), (VOIE, y, rm), 0.1, sg)
         g.finir()
         T.pivot(coll, 'pivot_' + nom, (0, y, rm), (1, 0, 0))
-    # Longerons (à l'intérieur des roues), traverses, tampons.
+    # Longerons (à l'intérieur des roues), traverse et tampons à l'avant, attelage automatique à l'arrière.
     for s in (-1, 1):
-        lot.cube('loco_rouge', (0.16, 2 * yb - 0.4, 1.6), (s * 1.05, 0, 1.9), 0.02)
-        _tampons(lot, yb, s, sg, traverse='loco_rouge')
+        lot.cube('loco_rouge', (0.16, yb + yr - 0.4, 1.6), (s * 1.05, (yr - yb) / 2, 1.9), 0.02)
+    _tampons(lot, yb, -1, sg, traverse='loco_rouge')
+    _attelage(coll, lot, yr, yr + 2.2, 'attelage_ar', sg, traverse='loco_rouge')
     # Bielles d'accouplement et motrices, glissières, cylindres.
     for s in (-1, 1):
         x = s * (VOIE + 0.3)
@@ -404,8 +449,8 @@ def locomotive_vapeur(coll, leger=True):
         lot.tube('laiton', (s * 2.0, -6.62, 1.75), (s * 2.0, -6.56, 1.75), 0.62, sg)
         lot.cube('loco_noir', (0.7, 1.6, 0.6), (s * 1.9, -5.6, 2.6), 0.04)  # boîte à tiroir
     # Tablier (passerelles) au-dessus des roues.
-    lot.cube('loco_noir', (5.2, 2 * yb, 0.14), (0, 0, 3.0))
-    lot.cube('loco_rouge', (5.22, 2 * yb, 0.12), (0, 0, 2.88))  # bord rouge
+    lot.cube('loco_noir', (5.2, yb + yr, 0.14), (0, (yr - yb) / 2, 3.0))
+    lot.cube('loco_rouge', (5.22, yb + yr, 0.12), (0, (yr - yb) / 2, 2.88))  # bord rouge
     # Chaudière, boîte à fumée, porte, cheminée, dôme, soupapes, sifflet, sablières.
     zc, rc = 4.6, 1.45
     lot.tube('loco_noir', (0, -5.6, zc), (0, 2.0, zc), rc, seg)
@@ -433,27 +478,29 @@ def locomotive_vapeur(coll, leger=True):
         lot.cube('loco_rouge', (0.03, 1.8, 0.6), (s * 2.61, -0.7, 4.0))  # plaque
         lot.tube('laiton', (s * 2.07, -2.6, 5.07), (s * 2.07, -2.6, 5.2), 0.22, 8)  # bouchon de remplissage
     # Lanternes à l'avant (sur la traverse) et à l'arrière.
-    for s in (-1, 1):
+    for s, yl in ((-1, yb), (1, yr)):
         for x in (-1.6, 1.6):
-            lot.cube('loco_noir', (0.36, 0.3, 0.4), (x, s * (yb - 0.2), Z_TAMPON + 0.75), 0.03)
-            lot.cube('blanc' if s < 0 else 'rouge', (0.26, 0.04, 0.26), (x, s * (yb - 0.02), Z_TAMPON + 0.75))
+            lot.cube('loco_noir', (0.36, 0.3, 0.4), (x, s * (yl - 0.2), Z_TAMPON + 0.75), 0.03)
+            lot.cube('blanc' if s < 0 else 'rouge', (0.26, 0.04, 0.26), (x, s * (yl - 0.02), Z_TAMPON + 0.75))
     # Abri du mécanicien : de y 2,0 à 5,4 ; plancher à 3,0 (1,5 m), toit à 7,6 (3,8 m).
     y0, y1, zp, zt = 2.0, 5.4, 3.0, 7.6
     W = 2.6  # demi-largeur
     # Façade avant avec deux fenêtres (x de 1,25 à 2,35 de chaque côté, z de 5,6 à 6,8) : faite de morceaux autour des
     # ouvertures (vraies ouvertures, pas de vitre opaque).
-    fy, fe = y0, 0.12
+    # La façade arrière (sans soute derrière l'abri) a les mêmes fenêtres : on voit l'attelage en reculant.
+    fe = 0.12
     xa, xb, za, zb2 = 1.25, 2.35, 5.6, 6.8
-    lot.cube('loco_noir', (2 * W, fe, za - zp), (0, fy, (zp + za) / 2))  # bas, sous les fenêtres
-    lot.cube('loco_noir', (2 * W, fe, zt - zb2), (0, fy, (zb2 + zt) / 2))  # haut, au-dessus
-    lot.cube('loco_noir', (2 * xa, fe, zb2 - za), (0, fy, (za + zb2) / 2))  # entre les deux fenêtres
-    for s in (-1, 1):
-        lot.cube('loco_noir', (W - xb, fe, zb2 - za), (s * (xb + W) / 2, fy, (za + zb2) / 2))  # bords
-        # Encadrement laiton de la fenêtre.
-        for z in (za, zb2):
-            lot.cube('laiton', (xb - xa + 0.1, fe + 0.04, 0.06), (s * (xa + xb) / 2, fy, z))
-        for x in (xa, xb):
-            lot.cube('laiton', (0.06, fe + 0.04, zb2 - za + 0.1), (s * x, fy, (za + zb2) / 2))
+    for fy in (y0, y1):
+        lot.cube('loco_noir', (2 * W, fe, za - zp), (0, fy, (zp + za) / 2))  # bas, sous les fenêtres
+        lot.cube('loco_noir', (2 * W, fe, zt - zb2), (0, fy, (zb2 + zt) / 2))  # haut, au-dessus
+        lot.cube('loco_noir', (2 * xa, fe, zb2 - za), (0, fy, (za + zb2) / 2))  # entre les deux fenêtres
+        for s in (-1, 1):
+            lot.cube('loco_noir', (W - xb, fe, zb2 - za), (s * (xb + W) / 2, fy, (za + zb2) / 2))  # bords
+            # Encadrement laiton de la fenêtre.
+            for z in (za, zb2):
+                lot.cube('laiton', (xb - xa + 0.1, fe + 0.04, 0.06), (s * (xa + xb) / 2, fy, z))
+            for x in (xa, xb):
+                lot.cube('laiton', (0.06, fe + 0.04, zb2 - za + 0.1), (s * x, fy, (za + zb2) / 2))
     # Flancs : bas jusqu'à 1,2 m au-dessus du plancher, porte ouverte (y 2,4 à 3,8), haut au-dessus.
     for s in (-1, 1):
         x = s * (W - 0.06)
@@ -476,17 +523,18 @@ def locomotive_vapeur(coll, leger=True):
     lot.cube('noir', (0.8, 0.7, 0.14), (-1.7, 3.2, 4.43), 0.03)
     lot.cube('noir', (0.8, 0.14, 0.9), (-1.7, 3.6, 4.95), 0.03)
     lot.tube('acier_sombre', (-1.7, 3.2, zp + 0.1), (-1.7, 3.2, 4.36), 0.08, sg)
-    # Soute à charbon derrière l'abri.
-    lot.cube('loco_noir', (2 * W - 0.2, yb - y1, 2.4), (0, (y1 + yb) / 2, zp + 1.2), 0.04)
-    lot.cube('laiton', (2 * W - 0.18, yb - y1 + 0.02, 0.07), (0, (y1 + yb) / 2, zp + 2.4))
-    for k in range(9):
-        lot.cube('charbon', (0.9, 0.7, 0.45), (-1.6 + (k % 4) * 1.05, y1 + 0.4 + (k // 4) * 0.4,
-                                              zp + 2.45 + (k % 2) * 0.12), 0.06, Matrix.Rotation(k * 0.7, 3, 'Z'))
+    # Soute à charbon au fond de l'abri, sous les fenêtres arrière.
+    ys0 = 4.3
+    lot.cube('loco_noir', (2 * W - 0.3, y1 - ys0 - 0.06, 1.3), (0, (ys0 + y1) / 2 - 0.03, zp + 0.65), 0.04)
+    lot.cube('laiton', (2 * W - 0.28, 0.07, 0.07), (0, ys0, zp + 1.3))
+    for k in range(8):
+        lot.cube('charbon', (0.8, 0.5, 0.35), (-1.65 + (k % 4) * 1.1, ys0 + 0.35 + (k // 4) * 0.45,
+                                              zp + 1.38 + (k % 2) * 0.1), 0.05, Matrix.Rotation(k * 0.7, 3, 'Z'))
     lot.finir()
 
 
 def wagon_fret(coll, leger=True):
-    """Wagon couvert (fret fermé), 5,4 m de tampon à tampon, deux essieux sur la voie : caisse brun-rouge à
+    """Wagon couvert (fret fermé), caisse de 5 m, attelages automatiques aux deux bouts, deux essieux sur la voie : caisse brun-rouge à
     montants, grande porte coulissante au milieu de chaque flanc, toit bombé, échelle, volant de frein."""
     _couleurs()
     sg = 8 if leger else 14
@@ -528,7 +576,7 @@ def wagon_fret(coll, leger=True):
 
 
 def wagon_citerne(coll, leger=True):
-    """Wagon-citerne pour liquides et gaz, 5,4 m de tampon à tampon, deux essieux sur la voie : cuve blanche, bande et
+    """Wagon-citerne pour liquides et gaz, caisse de 5 m, attelages automatiques aux deux bouts, deux essieux sur la voie : cuve blanche, bande et
     dôme de la teinte du fluide (`teinte`), berceaux, passerelle et garde-corps, échelle, vanne de vidange."""
     _couleurs()
     sg = 8 if leger else 14

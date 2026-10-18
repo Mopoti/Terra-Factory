@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carIdOfWindow, locoWindowId } from '../data/trains';
+import { CARS, carIdOfWindow, locoWindowId } from '../data/trains';
 import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
 import { planRails } from './plan';
@@ -59,7 +59,10 @@ describe('voies et trains dans la partie', () => {
     laidLine(s, 40);
     const loco = s.placeCar('locomotive_steam', { piece: s.changes.rails[10].id, u: 0.5, dir: 1 })!;
     const graph = s.railGraph();
-    const rear = graph.advance({ ...loco.head, dir: -1 }, 6.45 + 1.0 + 2.7).pos;
+    const rear = graph.advance(
+      { ...loco.head, dir: -1 },
+      CARS.locomotive_steam.lengthM + 1.0 + CARS.wagon_freight.frontM,
+    ).pos;
     s.placeCar('wagon_freight', { piece: rear.piece, u: rear.u, dir: -1 });
     s.coupleTrain(loco.id);
     expect(s.changes.trains[0].cars).toHaveLength(2);
@@ -109,7 +112,10 @@ describe('voies et trains dans la partie', () => {
     expect(s.inventory.coal).toBe(10);
     // Un wagon à 1 m de l'arrière de la locomotive : attelage.
     const graph = s.railGraph();
-    const rear = graph.advance({ ...loco.head, dir: -1 }, 6.45 + 1.0 + 2.7).pos;
+    const rear = graph.advance(
+      { ...loco.head, dir: -1 },
+      CARS.locomotive_steam.lengthM + 1.0 + CARS.wagon_freight.frontM,
+    ).pos;
     const wagon = s.placeCar('wagon_freight', { piece: rear.piece, u: rear.u, dir: -1 })!;
     expect(s.coupleTrain(loco.id)).not.toBeNull();
     expect(s.changes.trains).toHaveLength(1);

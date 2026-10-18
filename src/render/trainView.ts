@@ -56,6 +56,8 @@ const STEP = 1 / 60;
 const REACH_M = 4;
 /** Hauteur d'un véhicule (m) tant que son modèle n'est pas chargé. */
 const CAR_HEIGHT_M = 3.8;
+/** Hauteur des tampons et des attelages au-dessus du rail (m), comme dans `ferroviaire.py` (2,1 unités). */
+const CAR_COUPLER_Y_M = 1.05;
 /** Distance (m) à laquelle un bout de voie libre attire la pièce qu'on pose. */
 const SNAP_M = 7;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
@@ -390,7 +392,7 @@ export class TrainView {
         opacity: 0.65,
         depthWrite: false,
       });
-      const mesh = vehicleFromModel(model, material);
+      const mesh = vehicleFromModel(model, material, true);
       mesh.group.rotation.order = 'YXZ';
       mesh.group.renderOrder = 6;
       this.host.scene.add(mesh.group);
@@ -399,7 +401,7 @@ export class TrainView {
     const { mesh } = this.carGhost;
     const graph = this.host.state.railGraph();
     const spec = CARS[at.kind];
-    const head = graph.advance(at.pos, spec.lengthM / 2).pos;
+    const head = graph.advance(at.pos, spec.frontM).pos;
     const pose = carPoses(graph, {
       id: -1,
       head,
@@ -424,28 +426,32 @@ export class TrainView {
       for (const pose of carPoses(graph, consist)) {
         const spec = CARS[pose.car.kind];
         seen.add(pose.car.id);
-        // Boîte de collision : la caisse, de tampon à tampon, sur toute la largeur, du rail au toit.
+        // Boîte de collision : de l'avant à l'arrière du véhicule (attelages compris : on ne passe pas entre deux
+        // véhicules attelés), sur toute la largeur, du rail au toit. Le centre du modèle est entre ses essieux.
+        const ux = Math.sin(pose.yaw);
+        const uz = Math.cos(pose.yaw);
+        const mid = spec.frontM - spec.lengthM / 2;
         this.solids.push({
-          x: pose.x,
-          z: pose.z,
+          x: pose.x + ux * mid,
+          z: pose.z + uz * mid,
           y0: pose.y + RAIL_TOP_M,
           y1: pose.y + RAIL_TOP_M + (bakedModel(spec.model)?.size.y ?? CAR_HEIGHT_M),
-          ux: Math.sin(pose.yaw),
-          uz: Math.cos(pose.yaw),
+          ux,
+          uz,
           hl: spec.lengthM / 2,
           hw: CAR_HALF_WIDTH_M,
         });
         let entry = this.meshes.get(pose.car.id);
         const model = bakedModel(spec.model);
         if (!entry && model) {
-          const mesh = vehicleFromModel(model, this.host.material);
+          // Centré sur l'origine du modèle (milieu des essieux), comme la pose.
+          const mesh = vehicleFromModel(model, this.host.material, true);
           mesh.group.rotation.order = 'YXZ';
-          // Vitres translucides dans les ouvertures de la cabine (le modèle est recentré sur sa boîte).
-          const cx = model.min.x + model.size.x / 2;
-          const cz = model.min.z + model.size.z / 2;
+          for (const pivot of mesh.parts.values()) pivot.rotation.order = 'YXZ';
+          // Vitres translucides dans les ouvertures de la cabine.
           for (const g of CAB_GLASS[pose.car.kind] ?? []) {
             const glass = new THREE.Mesh(new THREE.PlaneGeometry(g.w, g.h), glassMaterial);
-            glass.position.set(g.x - cx, g.y - model.min.y, g.z - cz);
+            glass.position.set(g.x, g.y - model.min.y, g.z);
             glass.renderOrder = 4;
             mesh.group.add(glass);
           }
@@ -461,11 +467,77 @@ export class TrainView {
         // Les roues tournent de la distance parcourue, dans le sens du véhicule.
         rollWheels(entry.mesh, consist.v * dt * (pose.car.rev ? -1 : 1));
       }
+      this.alignCouplers(consist);
     }
     for (const [id, entry] of this.meshes) {
       if (seen.has(id)) continue;
       this.host.scene.remove(entry.mesh.group);
       this.meshes.delete(id);
+    }
+  }
+
+  /**
+   * Attelages automatiques : entre deux véhicules attelés, les deux bras (pivotant à la traverse de tête) se tournent
+   * l'un vers l'autre et leurs têtes se rejoignent, en courbe comme en ligne droite ; aux bouts du convoi ils restent
+   * droits. Un véhicule sans bras de ce côté (avant de la locomotive : tampons) offre son point d'attelage.
+   */
+  private alignCouplers(consist: Consist): void {
+    type End = {
+      pivot: THREE.Object3D | null;
+      group: THREE.Group;
+      z: number;
+      len: number;
+      sign: number;
+    };
+    const ends: { lead: End; tail: End }[] = [];
+    for (const car of consist.cars) {
+      const entry = this.meshes.get(car.id);
+      if (!entry) return;
+      const spec = CARS[car.kind];
+      const { group } = entry.mesh;
+      group.updateMatrixWorld(true);
+      const end = (name: 'attelage_av' | 'attelage_ar'): End => {
+        const front = name === 'attelage_av';
+        // Point d'attelage dans le repère du modèle (l'avant est vers +z).
+        const z = front ? spec.frontM : spec.frontM - spec.lengthM;
+        const pivot = entry.mesh.parts.get(name) ?? null;
+        if (pivot) {
+          pivot.rotation.set(0, 0, 0);
+          pivot.scale.set(1, 1, 1);
+        }
+        return {
+          pivot,
+          group,
+          z,
+          len: pivot ? Math.abs(z - pivot.position.z) : 0,
+          sign: front ? 1 : -1,
+        };
+      };
+      const av = end('attelage_av');
+      const ar = end('attelage_ar');
+      ends.push(car.rev ? { lead: ar, tail: av } : { lead: av, tail: ar });
+    }
+    const base = (e: End): THREE.Vector3 =>
+      e.pivot
+        ? e.group.localToWorld(e.pivot.position.clone())
+        : e.group.localToWorld(new THREE.Vector3(0, CAR_COUPLER_Y_M, e.z));
+    for (let i = 1; i < ends.length; i++) {
+      const a = ends[i - 1].tail;
+      const b = ends[i].lead;
+      if (!a.pivot && !b.pivot) continue;
+      // Les têtes se rejoignent en un point qui partage l'écart entre les deux bras selon leurs longueurs.
+      const pa = base(a);
+      const pb = base(b);
+      const meet = pa.clone().lerp(pb, a.len / (a.len + b.len));
+      for (const e of [a, b]) {
+        if (!e.pivot) continue;
+        const v = e.group.worldToLocal(meet.clone()).sub(e.pivot.position);
+        const h = Math.hypot(v.x, v.z);
+        // Le bras est le long de +z (avant) ou −z (arrière) du modèle.
+        e.pivot.rotation.y = Math.atan2(e.sign * v.x, e.sign * v.z);
+        e.pivot.rotation.x = -e.sign * Math.atan2(v.y, h);
+        e.pivot.scale.z = Math.hypot(h, v.y) / Math.max(e.len, 1e-3);
+      }
     }
   }
 
