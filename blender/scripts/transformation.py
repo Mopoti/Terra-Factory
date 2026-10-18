@@ -1607,9 +1607,102 @@ def presse_lourde_t3(coll, leger=True):
     T.poser_au_sol(coll, 1.5)
 
 
+def presse_plastique_t2(coll, leger=True):
+    """Presse à plastique (`plastic_press`, électrique, 80 kW) : 3 x 3 cases, 2,6 unités max (1,3 m). Sortie devant (-Y).
+
+    Presse à injection verticale : socle-armoire gris bleu, quatre colonnes chromées et plateau fixe en haut ; unité
+    d'injection debout sur le plateau (trémie de granulés, fourreau à colliers chauffants `lueur_*` qui rougeoient,
+    moteur) ; plateau mobile avec le demi-moule du haut (groupe `coulisseau_`, descend et remonte) au-dessus du
+    demi-moule du bas. Le polymère arrive par un raccord de fluide derrière (+Y) et une conduite qui monte à la trémie.
+    Devant : convoyeur commun avec les isolateurs moulés (groupe `sortie_`). À gauche : pupitre à écran ; à droite :
+    groupe de refroidissement du moule (bac, flexibles bleus).
+    """
+    seg = 16 if leger else 32
+    sg = 8 if leger else 14
+    lot = T.Lot(coll, 'pieces')
+    cadre = 'separateur'
+    zs = 0.7  # dessus du socle
+    # Socle-armoire.
+    T.box(coll, 'socle', (1.7, 1.5, zs), (0, 0.1, zs / 2), 'gris_clair', bevel=0.03)
+    lot.cube(cadre, (1.72, 1.52, 0.08), (0, 0.1, zs - 0.04), 0.01)
+    for x in (-0.42, 0.42):
+        lot.cube('acier', (0.74, 0.012, 0.5), (x, -0.656, 0.33), 0.005)  # portes
+        lot.cube('acier_sombre', (0.03, 0.02, 0.14), (x + (0.3 if x < 0 else -0.3), -0.665, 0.35))
+    lot.cube('jaune', (0.4, 0.012, 0.08), (0, -0.66, 0.62))
+    # Demi-moule du bas et table.
+    lot.cube('acier_sombre', (1.0, 0.9, 0.08), (0, 0.05, zs + 0.04), 0.01)
+    lot.cube('fonte', (0.6, 0.55, 0.16), (0, 0.05, zs + 0.16), 0.015)
+    for k in range(3):
+        lot.cube('noir', (0.1, 0.1, 0.02), (-0.18 + k * 0.18, 0.05, zs + 0.245))  # empreintes
+    # Colonnes et plateau fixe.
+    zf = 2.0
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            lot.tube('inox', (sx * 0.42, 0.05 + sy * 0.36, zs + 0.08), (sx * 0.42, 0.05 + sy * 0.36, zf), 0.05, sg)
+            lot.cube('acier_sombre', (0.13, 0.13, 0.06), (sx * 0.42, 0.05 + sy * 0.36, zf + 0.21))
+    T.box(coll, 'plateau_fixe', (1.08, 0.95, 0.18), (0, 0.05, zf + 0.09), cadre, bevel=0.02)
+    lot.cube('jaune', (0.6, 0.012, 0.08), (0, -0.428, zf + 0.09))
+    # Unité d'injection : fourreau, colliers chauffants, trémie, moteur.
+    lot.tube('acier', (0, 0.05, zf + 0.18), (0, 0.05, 2.45), 0.09, sg)
+    for k in range(3):
+        z = zf + 0.22 + k * 0.07
+        T.cylinder(coll, f'lueur_collier_{k}', 0.11, 0.04, (0, 0.05, z), 'braise', segments=sg)
+    T.cylinder(coll, 'tremie', 0.2, 0.18, (0, 0.05, 2.52), 'gris_clair', segments=sg, radius_top=0.24)
+    lot.tube('acier_sombre', (0, 0.05, 2.43), (0, 0.05, 2.46), 0.13, sg)
+    lot.tube('bleu', (0.3, 0.05, 2.3), (0.3, 0.05, 2.55), 0.1, sg)  # moteur
+    lot.cube('acier_sombre', (0.24, 0.12, 0.1), (0.16, 0.05, 2.38))
+    # Coulisseau (plateau mobile + demi-moule du haut).
+    co = T.Lot(coll, 'coulisseau')
+    zk = 1.45
+    co.cube(cadre, (0.98, 0.86, 0.14), (0, 0.05, zk), 0.015)
+    co.cube('fonte', (0.6, 0.55, 0.16), (0, 0.05, zk - 0.15), 0.015)
+    co.cube('jaune', (0.98, 0.012, 0.05), (0, -0.385, zk))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            co.tube('acier_sombre', (sx * 0.42, 0.05 + sy * 0.36, zk - 0.07), (sx * 0.42, 0.05 + sy * 0.36, zk + 0.07),
+                    0.08, sg)  # bagues sur les colonnes
+    co.tube('acier', (0, 0.05, zk + 0.07), (0, 0.05, zf), 0.08, sg)  # tige du vérin de fermeture
+    T.pivot(coll, 'pivot_coulisseau', (0, 0.05, zk - 0.23), (0, 0, 1))
+    # Raccord de polymère derrière et conduite jusqu'à la trémie.
+    a = T.raccord_fluide(lot, (0.0, 1.5), (0, 1, 0), sg=sg)
+    lot.tube('acier_sombre', a, (0, 0.85, 0.36), 0.08, sg)
+    lot.tube('acier_sombre', (0, 0.85, 0.36), (0, 0.85, 2.62), 0.06, sg)
+    lot.tube('acier_sombre', (0, 0.85, 2.62), (0, 0.2, 2.62), 0.06, sg)
+    lot.boule('acier_sombre', (0, 0.85, 2.62), 0.075)
+    lot.boule('acier_sombre', (0, 0.85, 0.36), 0.095)
+    # Convoyeur de sortie : isolateurs moulés (blanc ivoire, petites ailettes).
+    wb, rp = 0.36, 0.08
+    S0, S1 = Vector((0, -0.7, 0.36)), Vector((0, -1.42, 0.3))
+
+    def isolateur(g, k, p, d, w, n, rot):
+        q = p + n * 0.03
+        g.tube('blanc', q, q + n * 0.1, 0.04, sg)
+        for j in range(2):
+            g.tube('blanc', q + n * (0.03 + j * 0.04), q + n * (0.045 + j * 0.04), 0.065, sg)
+    T.convoyeur_charge(coll, 'sortie', lot, S0, S1, wb, rp, 0.24, isolateur, rouleaux=2, sg=sg)
+    for sx in (-1, 1):
+        lot.cube('acier', (0.05, 0.05, S1.z - rp - 0.02), (sx * (wb / 2 + 0.05), S1.y, (S1.z - rp - 0.02) / 2))
+    # Pupitre à gauche.
+    lot.cube('gris_clair', (0.36, 0.42, 0.95), (-1.2, -0.3, 0.475), 0.02)
+    lot.cube('panneau', (0.012, 0.3, 0.22), (-1.012, -0.3, 0.8))
+    lot.cube('cyan', (0.014, 0.24, 0.15), (-1.008, -0.3, 0.8))
+    for k, c in enumerate(('vert', 'rouge', 'jaune')):
+        lot.cube(c, (0.02, 0.05, 0.05), (-1.01, -0.42 + k * 0.12, 0.6))
+    # Groupe de refroidissement à droite.
+    lot.cube('bleu', (0.45, 0.6, 0.55), (1.15, 0.5, 0.275), 0.02)
+    lot.cube('acier_sombre', (0.47, 0.62, 0.04), (1.15, 0.5, 0.57))
+    for k in range(4):
+        lot.cube('acier_sombre', (0.012, 0.5, 0.02), (1.378, 0.5, 0.12 + k * 0.1))
+    for dy in (-0.1, 0.1):
+        lot.tube('bleu', (1.0, 0.5 + dy, 0.6), (0.6, 0.05 + dy, 0.8), 0.025, 6)
+    lot.finir()
+    co.finir()
+    T.poser_au_sol(coll, 1.5)
+
+
 MODELES = {'estampeuse_t1': estampeuse_t1, 'assembleur_t2': assembleur_t2, 'concasseur_t1': concasseur_t1,
            'betonniere_t2': betonniere_t2, 'station_lavage_t2': station_lavage_t2, 'constructeur_t2': constructeur_t2,
-           'presse_lourde_t3': presse_lourde_t3}
+           'presse_lourde_t3': presse_lourde_t3, 'presse_plastique_t2': presse_plastique_t2}
 
 
 

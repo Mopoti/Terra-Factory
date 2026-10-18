@@ -26,6 +26,8 @@ export interface BakedModel {
    * haut d'un poteau), dans le repère du modèle. Sans lui, le câble part du haut de la machine.
    */
   anchor?: { x: number; y: number; z: number };
+  /** Véhicule : coussin du siège du conducteur (nœud vide `siege` du `.glb`), dans le repère du modèle. */
+  seat?: { x: number; y: number; z: number };
 }
 
 /** Pièces d'un groupe mobile : maillage propre (repère du modèle) et pivot lu dans le nœud `pivot_<groupe>` du `.glb`. */
@@ -146,6 +148,9 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   cooling_tower: 'tour_refroidissement_t2',
   evaporation_tower: 'tour_evaporation_t4',
   vitrifier: 'station_vitrification_t4',
+  turret: 'tourelle_base',
+  waypoint: 'balise',
+  plastic_press: 'presse_plastique_t2',
   turret_heavy: 'tourelle_lourde',
   turret_laser: 'tourelle_laser',
   turret_plasma: 'tourelle_plasma',
@@ -183,6 +188,7 @@ export const ANIMATED_MESHES: Partial<Record<MachineType, readonly string[]>> = 
   cooling_tower: ['jet'],
   evaporation_tower: ['jet'],
   vitrifier: ['lueur'],
+  plastic_press: ['lueur'],
   turret_laser: ['voyant'],
   turret_plasma: ['voyant'],
 };
@@ -309,6 +315,8 @@ export const ORE_FILE_NAMES: Record<string, string> = {
 export const ORE_VARIANTS = 2;
 /** Formes des objets posés au sol (`blender/scripts/objets.py`, `objet_<forme>.glb`) ; voir `dropModels.ts`. */
 export const DROP_SHAPES = [
+  'carapace',
+  'tissu_vivant',
   'bois',
   'caillou',
   'minerai',
@@ -355,6 +363,8 @@ const TERRA_NAMES = [
     ...MINERAL_NAMES,
     ...OBJET_NAMES,
     ...CONSTRUCTION_NAMES,
+    // Nid des ennemis (`blender/scripts/creatures.py`) ; les ennemis eux-mêmes sont chargés par `enemyView.ts`.
+    'nid',
     ...Object.values(TERRA_MODELS),
     ...Object.values(TERRA_BELT_MODELS)
       .flat()
@@ -474,6 +484,13 @@ export function bake(
     const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
     anchor = { x: p.x, y: p.y, z: p.z };
   });
+  // Siège d'un véhicule : nœud vide `siege` (ou `siege.001`… : Blender numérote les noms en double).
+  let seat: { x: number; y: number; z: number } | undefined;
+  root.traverse((o) => {
+    if (seat || !o.name.toLowerCase().startsWith('siege')) return;
+    const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+    seat = { x: p.x, y: p.y, z: p.z };
+  });
   const byLength = [...groupNames].sort((a, b) => b.length - a.length);
   const parts = new Map<string, { pos: number[]; nor: number[]; col: number[]; idx: number[] }>();
   root.traverse((o) => {
@@ -574,6 +591,7 @@ export function bake(
     min,
   };
   if (anchor) model.anchor = anchor;
+  if (seat) model.seat = seat;
   if (parts.size > 0) {
     model.groups = {};
     for (const [name, g] of parts) {

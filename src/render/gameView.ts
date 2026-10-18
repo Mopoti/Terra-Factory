@@ -152,7 +152,7 @@ import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
-import { loadPickModel } from './toolModel';
+import { loadPickModel, loadWeaponModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -361,18 +361,37 @@ export function startGameView(
     });
     return tool;
   }
-  /** Remplace les formes simples de chaque outil par le piolet 3D (long d'environ 0,75 m, tête vers +z). */
-  void loadPickModel().then((model) => {
-    if (!model || !viewAlive) return;
-    for (const tool of tools) {
-      for (const child of [...tool.children]) tool.remove(child);
-      toolHeads.length = 0;
-      const pick = model.clone();
-      const material = (pick.getObjectByProperty('isMesh', true) as THREE.Mesh).material;
-      pickMaterials.push(material as THREE.MeshStandardMaterial);
-      tool.add(pick);
-    }
-  });
+  /**
+   * Remplace les formes simples de chaque outil par les pioches maison (pierre et fer, ~0,75 m, tête vers +z) : celle
+   * de l'outil équipé est visible. Si elles manquent, le piolet importé, teinté selon le matériau.
+   */
+  const pickPairs: { stone: THREE.Object3D; iron: THREE.Object3D }[] = [];
+  void Promise.all([loadPickModel('terra/pioche_pierre'), loadPickModel('terra/pioche_fer')]).then(
+    ([stone, iron]) => {
+      if (!viewAlive) return;
+      if (stone && iron) {
+        for (const tool of tools) {
+          for (const child of [...tool.children]) tool.remove(child);
+          const pair = { stone: stone.clone(), iron: iron.clone() };
+          tool.add(pair.stone, pair.iron);
+          pickPairs.push(pair);
+        }
+        toolHeads.length = 0;
+        return;
+      }
+      void loadPickModel().then((model) => {
+        if (!model || !viewAlive) return;
+        for (const tool of tools) {
+          for (const child of [...tool.children]) tool.remove(child);
+          toolHeads.length = 0;
+          const pick = model.clone();
+          const material = (pick.getObjectByProperty('isMesh', true) as THREE.Mesh).material;
+          pickMaterials.push(material as THREE.MeshStandardMaterial);
+          tool.add(pick);
+        }
+      });
+    },
+  );
   const hand = makeTool();
   // En main, la tête de la pioche est loin devant (vers -z de la caméra), le manche vers soi.
   hand.position.set(0.34, -0.36, -0.85);
@@ -2338,12 +2357,13 @@ export function startGameView(
   function aimsAt(v: Vehicle): boolean {
     computeRay();
     const cx = v.x - rayOrigin.x;
-    const cy = 0.5 - rayOrigin.y;
+    // Le buggy est à l'échelle du personnage (2,7 m × 1,7 m) : on le vise autour de son centre, à 70 cm du sol.
+    const cy = 0.7 - rayOrigin.y;
     const cz = v.z - rayOrigin.z;
     const along = cx * rayDir.x + cy * rayDir.y + cz * rayDir.z;
     if (along < 0 || along > 8) return false;
     const d2 = cx * cx + cy * cy + cz * cz - along * along;
-    return d2 <= 0.9 * 0.9;
+    return d2 <= 1.3 * 1.3;
   }
   /** Duvet : rouleau vert ; lit : cadre de métal et matelas. */
   function makeSpawnModel(kind: 'bag' | 'bed'): THREE.Group {
@@ -2876,6 +2896,24 @@ export function startGameView(
   gunBody.position.set(-0.3, 0.1, 0.4);
   gunBody.visible = false;
   player.add(gunBody);
+  /** Armes maison (pistolet, fusil), une fois chargées : remplacent les formes simples, en vraie grandeur. */
+  const gunModels: { pistol: THREE.Object3D; rifle: THREE.Object3D }[] = [];
+  void Promise.all([loadWeaponModel('pistolet'), loadWeaponModel('fusil')]).then(
+    ([pistol, rifle]) => {
+      if (!pistol || !rifle || !viewAlive) return;
+      for (const [g, firstPerson] of [
+        [gun, true],
+        [gunBody, false],
+      ] as const) {
+        for (const child of [...g.children]) g.remove(child);
+        const pair = { pistol: pistol.clone(), rifle: rifle.clone() };
+        // Le canon du fichier est vers +z ; en vue subjective, la caméra regarde vers -z.
+        if (firstPerson) for (const m of [pair.pistol, pair.rifle]) m.rotation.y = Math.PI;
+        g.add(pair.pistol, pair.rifle);
+        gunModels.push(pair);
+      }
+    },
+  );
   const ammoBox = document.createElement('div');
   ammoBox.className = 'ammo-box';
   ammoBox.hidden = true;
@@ -3020,8 +3058,17 @@ export function startGameView(
     const gunOut =
       armed && (isWeapon(options.state.selectedItem()) || input.isActionActive('interact'));
     const longGun = weapon?.id === 'rifle';
-    gun.scale.set(1, 1, longGun ? 1.7 : 1);
-    gunBody.scale.set(1.4, 1.4, longGun ? 2.4 : 1.4);
+    if (gunModels.length > 0) {
+      gun.scale.setScalar(1);
+      gunBody.scale.setScalar(1);
+      for (const p of gunModels) {
+        p.rifle.visible = longGun;
+        p.pistol.visible = !longGun;
+      }
+    } else {
+      gun.scale.set(1, 1, longGun ? 1.7 : 1);
+      gunBody.scale.set(1.4, 1.4, longGun ? 2.4 : 1.4);
+    }
     gun.visible = gunOut && rig.view === 'first';
     gunBody.visible = gunOut && rig.view !== 'first';
     if (armed) {
@@ -3417,7 +3464,24 @@ export function startGameView(
       rig.view === 'top' && views.top.edgeScroll && !paused && !uiOpen && !isLocked()
         ? edgePan(mouseX, mouseY, window.innerWidth, window.innerHeight)
         : { x: 0, y: 0 };
-    rig.update(dt, { x: playerX, y: playerY, z: playerZ }, motion, views, edge, obstacleAt);
+    // Au volant : le personnage s'assied sur le siège du véhicule (nœud `siege` du modèle), ses hanches 8 cm au-dessus
+    // du coussin ; la caméra descend d'autant.
+    const seat = mounted ? (vehicleMeshes.get(mounted.id)?.own?.seat ?? null) : null;
+    let seatDrop = 0;
+    if (miner instanceof Avatar) {
+      miner.seated = seat !== null;
+      if (seat) seatDrop = seat.y + 0.08 - PLAYER_HEIGHT_M / 2 - miner.hipOffset;
+      if (seat) miner.root.position.set(seat.x, seatDrop, seat.z);
+      else miner.root.position.set(0, 0, 0);
+    }
+    rig.update(
+      dt,
+      { x: playerX, y: playerY + seatDrop, z: playerZ },
+      motion,
+      views,
+      edge,
+      obstacleAt,
+    );
     tickWater(performance.now() / 1000);
 
     player.visible = rig.view !== 'first';
@@ -3427,8 +3491,12 @@ export function startGameView(
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
+    for (const p of pickPairs) {
+      p.iron.visible = toolId === 'tool_iron';
+      p.stone.visible = !p.iron.visible;
+    }
     // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
-    const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow;
+    const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow && !seat;
     hand.visible = rig.view === 'first' && views.first.showHands && holdsTool;
     bodyTool.visible = rig.view !== 'first' && holdsTool;
     if (miner instanceof Avatar) miner.holding = holdsTool;

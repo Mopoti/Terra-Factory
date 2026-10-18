@@ -686,7 +686,42 @@ def bras_t3(coll, leger=True):
     _bras_robot_tourelle(coll, leger, 'bras_t3', True)
 
 
+def balise(coll, leger=True):
+    """Balise (`waypoint`) : 1 case, jusqu'à 2,6 m (5,2 unités). Repère que le joueur pose et nomme.
+
+    Socle lesté en croix, mât gris clair, fanion et lanterne de la teinte `teinte` (magenta dans le fichier) : le jeu
+    les peint de la couleur choisie par le joueur. Le faisceau vertical et le nom sont dessinés par le jeu.
+    """
+    T.PALETTE.setdefault('teinte', '#ff00ff')
+    sg = 8 if leger else 14
+    lot = T.Lot(coll, 'balise')
+    for a in (0, math.pi / 2):
+        lot.cube('acier_sombre', (0.9, 0.16, 0.08), (0, 0, 0.04), 0.02, Matrix.Rotation(a, 3, 'Z'))
+    lot.tube('jaune', (0, 0, 0.08), (0, 0, 0.2), 0.2, sg)
+    lot.tube('noir', (0, 0, 0.2), (0, 0, 0.24), 0.14, sg)
+    lot.tube('gris_clair', (0, 0, 0.24), (0, 0, 4.4), 0.055, sg)
+    for z in (1.2, 2.4, 3.6):
+        lot.tube('acier_sombre', (0, 0, z), (0, 0, z + 0.06), 0.075, sg)
+    # Fanion en diagonale (pour rester dans la case), deux pans légèrement cassés comme s'il flottait.
+    d = Vector((math.cos(math.pi / 4), math.sin(math.pi / 4), 0))
+    for (l0, l1, h, da) in ((0.05, 0.36, 0.55, 0.1), (0.36, 0.62, 0.47, -0.12)):
+        c = d * ((l0 + l1) / 2) + Vector((0, 0, 3.95))
+        lot.cube('teinte', (l1 - l0, 0.03, h), tuple(c), 0, Matrix.Rotation(math.pi / 4 + da, 3, 'Z'))
+    lot.cube('acier_sombre', (0.06, 0.06, 0.62), tuple(d * 0.05 + Vector((0, 0, 3.95))))
+    # Lanterne au sommet.
+    lot.tube('acier_sombre', (0, 0, 4.4), (0, 0, 4.48), 0.14, sg)
+    lot.tube('teinte', (0, 0, 4.48), (0, 0, 4.82), 0.11, sg)
+    for k in range(4):
+        a = k * math.pi / 2
+        lot.barre('acier_sombre', (0.12 * math.cos(a), 0.12 * math.sin(a), 4.48),
+                  (0.12 * math.cos(a), 0.12 * math.sin(a), 4.82), 0.025)
+    lot.tube('acier_sombre', (0, 0, 4.82), (0, 0, 4.9), 0.14, sg)
+    lot.finir()
+    T.poser_au_sol(coll, 0.5)
+
+
 MODELES.update({
+    'balise': balise,
     'separateur': separateur,
     'groupeur': groupeur,
     'trieur': trieur,

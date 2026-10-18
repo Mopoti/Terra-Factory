@@ -152,6 +152,8 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     entree: loop(0.133, 1.5),
     sortie: loop(0.133, 1.5),
   },
+  // Presse à plastique : le demi-moule du haut se ferme sur celui du bas ; les isolateurs avancent.
+  plastic_press: { coulisseau: { kind: 'press', depth: 0.1 }, sortie: loop(0.12, 1.5) },
   centrifuge: {
     rotor: spin(25),
     ventilateur: spin(14),
@@ -203,6 +205,7 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
   cooling_tower: { ventilateur: spin(3) },
   vitrifier: { sortie: loop(0.2, 3) },
   // Tourelles : la tête balaye l'horizon tant qu'elles sont prêtes à tirer (munitions ou courant).
+  turret: { tourelle: { kind: 'swing', angle: 0.9, period: 5 } },
   turret_heavy: { tourelle: { kind: 'swing', angle: 0.7, period: 7 } },
   turret_laser: { tourelle: { kind: 'swing', angle: 0.8, period: 6 } },
   turret_plasma: { tourelle: { kind: 'swing', angle: 0.6, period: 8 } },

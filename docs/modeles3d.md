@@ -132,3 +132,24 @@ Faits : foreuses (foret, volant, poulies, gyrophare), chevalet (manivelle, balan
 - **Pas de recouvrement** : un bloc de mur va de bord de case à bord de case ; un bout libre déborde de 5 cm pour fermer l'angle. Dans un angle, seul le mur le long de x déborde (2 mm de plus), celui le long de z s'arrête dedans. Les montants de porte sont un peu plus épais que le mur et recouvrent le bout du mur voisin ; le battant ouvert est décollé de 3 mm. Sans cela, les faces confondues scintillent.
 - Plafond qui déborde sur un mur : la dalle est étirée (même règle que la forme simple).
 
+## Derniers modèles (octobre 2026)
+- **Machines** : tourelle de base `tourelle_base` (`defense.py` : plancher, sacs de sable, trépied ; groupe `tourelle_` qui balaye), balise `balise` (`logistique.py` : fanion et lanterne de la teinte magenta `teinte`, repeints à la couleur choisie par le joueur dans `addMachineBody`), presse à plastique `presse_plastique_t2` (`transformation.py` : presse à injection verticale, groupe `coulisseau_` qui descend, colliers chauffants `lueur_*`, isolateurs sur le convoyeur `sortie_`). Branchées dans `TERRA_MODELS`, animations dans `MOTIONS`.
+- **Ennemis** (`creatures.py`, chargés par `enemyView.ts`) : `ennemi_eclaireur` (~0,8 m), `ennemi_gardien` (~1,3 m, piquants et pinces), `ennemi_cracheur` (~1 m, sac d'acide). Pattes en deux trépieds `pattes_a_*` / `pattes_b_*` qui balancent en sens contraires quand l'ennemi avance ; le corps sautille. Mutant : ×1,4. Formes simples tant que les fichiers ne sont pas chargés.
+- **Nid** `nid` (`creatures.py`) : monticule de 2 m de diamètre pour 4 cases, agrandi selon la taille du nid (`chunkMesh.ts`).
+- **Dépouilles** : `objet_carapace`, `objet_tissu_vivant` (`objets.py`), formes d'objets au sol comme les autres.
+- **Outils et armes** (`outils.py`) : `pioche_pierre`, `pioche_fer` (celle de l'outil équipé est visible, `toolModel.ts`), `pistolet`, `fusil` (vraie grandeur, canon vers +z). Le piolet importé reste en secours.
+
+## Véhicules à l'échelle du personnage
+- `vehicules.py` : `buggy` (agrandi ×1,7 : 2,7 m × 1,7 m, arceau à 1,6 m, siège à 0,6 m), `quad` (2 m, selle à 0,85 m), `tank` (4,2 m ; le pilote se tient dans la trappe de la tourelle). Chaque véhicule a un nœud vide `siege` (coussin du conducteur), lu par `bake` (`BakedModel.seat`) et `vehicleFromModel` (`VehicleMesh.seat`).
+- **Au volant** (`gameView.ts`) : le personnage s'assied (`Avatar.seated` : cuisses à l'horizontale, genoux pliés, mains devant), ses hanches 8 cm au-dessus du coussin (`Avatar.hipOffset`) ; la caméra descend d'autant ; l'outil est rangé. On vise le buggy dans un rayon de 1,3 m.
+- Quad et tank ne sont pas encore des objets du jeu (modèles prêts). Le tank : ses chenilles (`chenille_g`, `chenille_d`) et sa tourelle (`tourelle`) sont des groupes ; `vehicleFromModel` les traiterait tous comme des roues : à adapter quand il entrera dans le jeu.
+
+## Voies ferrées et trains (anticipés, pas encore dans le jeu)
+- `ferroviaire.py` : voie étroite industrielle, écartement 60 cm, dessus des rails à 12 cm. Pièces sans sens (un train roule dans les deux sens) : `rail_droit` (tuile 2 × 2 cases), `rail_virage` (tuile 6 × 6 cases, rayon 1,5 m, du milieu d'un bord au milieu du bord voisin ; le virage à gauche est le virage à droite tourné), `rail_rampe` (2 × 8 cases, monte d'un niveau de 1 m ; la descente est la même pièce tournée). Pas de tunnel.
+- Trains (roues à Z = 0 du fichier, à poser sur le dessus des rails ; attelages à 45 cm ; roues en groupes `roues_av`, `roues_ar`, `roues_motrices`) : `locomotive_vapeur` (à combustible, 6 m : chaudière, cheminée, trois roues motrices rouges par côté avec bielle, abri du mécanicien, soute à charbon), `locomotive_electrique` (moderne, 8 m : caisse lisse, deux cabines à nez incliné, pantographes à un bras) — siège `siege` à 1,3 m dans chacune —, `wagon_fret` (wagon couvert à porte coulissante, 5 m, sur bogies), `wagon_citerne` (5 m, sur bogies ; bande et dôme de la teinte magenta `teinte`, à peindre de la couleur du fluide ou du gaz).
+- Ces fichiers ne sont pas chargés par le jeu tant qu'ils ne servent pas (pas dans `TERRA_NAMES`).
+
+## Tuyaux (octobre 2026)
+- `fluides.py`, une tuile de 2 × 2 cases par forme (`tuyau_<forme>_t<palier>` : droit, coude, té, croix, bout, seul, regard). La vanne du bout et le raccord vertical des jonctions sont retirés (on croyait voir une vanne sur chaque tuyau).
+- **Laiton (T2), dessin moderne** (`_tuyau_moderne`) : tube lisse un peu plus fin, manchons sertis au bord de chaque tuile (joint noir, sans boulons), bague orange du palier, coude cintré en quart de cercle, té et croix à manchon de jonction lisse, supports fins à collier, bouchon bombé. Cuivre (T1) et inox (T3) gardent les brides boulonnées.
+

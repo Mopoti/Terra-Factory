@@ -1,4 +1,4 @@
-"""Famille « défense » : tourelles lourde, laser et à plasma (et plus tard la tourelle de base).
+"""Famille « défense » : tourelles de base, lourde, laser et à plasma.
 
 Style low poly stylisé (voir blender/README.md) : relief et variations de teinte, pas d'image de texture.
 Deux niveaux de détail par modèle, dans le même .blend :
@@ -170,7 +170,65 @@ def tourelle_plasma(coll, leger=True):
     T.poser_au_sol(coll, 1.5)
 
 
+def tourelle_base(coll, leger=True):
+    """Tourelle de base (`turret`) : 3 x 2 cases, 1 m de haut (modèle jusqu'à 2,6 unités), munitions simples.
+
+    Premier palier, bricolée : plancher de madriers, ceinture de sacs de sable, caisse de munitions en bois ; trépied
+    en acier qui porte la tourelle (groupe `tourelle_`, balaye l'horizon quand elle est prête) : mitrailleuse à
+    manchon de refroidissement percé, bouclier d'acier, boîte de munitions et bande de cartouches.
+    """
+    sg = 8 if leger else 14
+    lot, tr = T.Lot(coll, 'pieces'), T.Lot(coll, 'tourelle')
+    # Plancher de madriers sur deux traverses.
+    for y in (-0.6, 0.6):
+        lot.cube('bois_sombre', (2.9, 0.18, 0.1), (0, y, 0.05), 0.01)
+    for k in range(7):
+        x = -1.29 + k * 0.43
+        lot.cube('bois' if k % 2 == 0 else 'bois_sec', (0.4, 1.9, 0.08), (x, 0, 0.14), 0.012)
+    # Sacs de sable en arc devant et sur les côtés (deux rangs).
+    for rang in range(2):
+        z = 0.27 + rang * 0.17
+        n = 9 if rang == 0 else 8
+        for k in range(n):
+            a = math.pi * (0.08 + 0.84 * (k + (0.5 if rang else 0)) / (n - 1 + (1 if rang else 0)))
+            x, y = 1.05 * math.cos(a), -0.12 - 0.72 * math.sin(a)
+            lot.cube('sable' if (k + rang) % 2 == 0 else 'herbe_seche', (0.36, 0.2, 0.16), (x, y, z), 0.06,
+                     Matrix.Rotation(a + math.pi / 2, 3, 'Z'))
+    # Caisse de munitions en bois à l'arrière.
+    lot.cube('bois', (0.55, 0.36, 0.3), (1.0, 0.62, 0.33), 0.02)
+    lot.cube('vert_fonce', (0.3, 0.012, 0.12), (1.0, 0.44, 0.35))
+    lot.cube('bois_sombre', (0.57, 0.38, 0.04), (1.0, 0.62, 0.47))
+    # Trépied et pivot.
+    zt = 0.95
+    c = Vector((0, 0.15, 0))
+    for k in range(3):
+        a = math.pi / 2 + k * 2 * math.pi / 3
+        lot.barre('acier_sombre', (c.x + 0.55 * math.cos(a), c.y + 0.55 * math.sin(a), 0.18), (c.x, c.y, zt - 0.1), 0.06)
+        lot.cube('fonte', (0.12, 0.12, 0.04), (c.x + 0.55 * math.cos(a), c.y + 0.55 * math.sin(a), 0.2))
+    lot.tube('acier_sombre', (c.x, c.y, zt - 0.2), (c.x, c.y, zt), 0.09, sg)
+    # Tourelle : berceau, mitrailleuse, bouclier.
+    tr.tube('fonte', (c.x, c.y, zt), (c.x, c.y, zt + 0.06), 0.16, sg)
+    tr.cube('acier_sombre', (0.24, 0.5, 0.2), (c.x, c.y - 0.05, zt + 0.16), 0.02)  # boîte de culasse
+    tr.tube('vert_fonce', (c.x, c.y - 0.3, zt + 0.18), (c.x, c.y - 0.85, zt + 0.18), 0.075, sg)  # manchon
+    for k in range(4 if leger else 7):
+        y = c.y - 0.38 - k * (0.4 / (3 if leger else 6))
+        tr.tube('noir', (c.x, y, zt + 0.18), (c.x, y - 0.03, zt + 0.18), 0.078, sg)  # trous du manchon
+    _canon(tr, (c.x, c.y - 0.85, zt + 0.18), (c.x, c.y - 1.0, zt + 0.18), 0.03, sg)
+    tr.cube('acier', (0.75, 0.04, 0.42), (c.x, c.y - 0.42, zt + 0.22), 0.01)  # bouclier
+    tr.cube('noir', (0.12, 0.05, 0.08), (c.x, c.y - 0.42, zt + 0.2))  # embrasure
+    tr.cube('vert_fonce', (0.18, 0.24, 0.16), (c.x + 0.2, c.y + 0.0, zt + 0.12), 0.015)  # boîte de munitions
+    for k in range(5):
+        tr.cube('laiton', (0.03, 0.05, 0.07), (c.x + 0.13 - k * 0.025, c.y - 0.08, zt + 0.22 - k * 0.01))
+    tr.barre('acier_sombre', (c.x, c.y + 0.2, zt + 0.15), (c.x, c.y + 0.42, zt + 0.05), 0.04)  # poignées
+    tr.cube('noir', (0.24, 0.05, 0.05), (c.x, c.y + 0.43, zt + 0.05))
+    T.pivot(coll, 'pivot_tourelle', (c.x, c.y, zt), (0, 0, 1))
+    for l in (lot, tr):
+        l.finir()
+    T.poser_au_sol(coll, 1.5, 1.0)
+
+
 MODELES = {
+    'tourelle_base': tourelle_base,
     'tourelle_lourde': tourelle_lourde,
     'tourelle_laser': tourelle_laser,
     'tourelle_plasma': tourelle_plasma,

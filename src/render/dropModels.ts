@@ -14,6 +14,8 @@ export { DROP_SHAPES };
 
 /** Forme d'un objet du sac posé au sol (les machines ne sont pas ici : voir `dropMachine`). */
 export function dropShape(item: string): DropShape {
+  if (item === 'carapace') return 'carapace';
+  if (item === 'living_tissue') return 'tissu_vivant';
   if (item === 'wood') return 'bois';
   if (item === 'stone' || item === 'crushed_stone' || item === 'slag') return 'caillou';
   if (/_ore(_washed)?$/.test(item) || item === 'uraninite' || item === 'coal') return 'minerai';

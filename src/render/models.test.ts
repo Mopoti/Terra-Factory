@@ -171,6 +171,16 @@ describe('groupes mobiles (pivot_*)', () => {
     expect(bake(scene())?.anchor).toBeUndefined();
   });
 
+  it('lit le siège d’un véhicule (nœud vide « siege »)', () => {
+    const g = scene();
+    const siege = new THREE.Object3D();
+    siege.name = 'siege';
+    siege.position.set(-0.23, 0.6, -0.2);
+    g.add(siege);
+    expect(bake(g)?.seat).toMatchObject({ x: -0.23, y: 0.6, z: -0.2 });
+    expect(bake(scene())?.seat).toBeUndefined();
+  });
+
   it('sans noms de groupes, le modèle est inchangé', () => {
     const a = bake(scene()) as BakedModel;
     expect(a.groups).toBeUndefined();

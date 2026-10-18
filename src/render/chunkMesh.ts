@@ -19,6 +19,7 @@ import {
   rockModelsFor,
   treeModelsFor,
 } from './nature';
+import { bakedModel } from './models';
 
 const TRUNK = hexToRgb('#6b4a2b');
 /** Épaisseur maximale d'une case de minerai : 10 cm. */
@@ -372,6 +373,11 @@ function buildProps(
           o.rotation + 1,
         );
       }
+    } else if (o.id === 'nest' && bakedModel('nid')) {
+      // Nid en modèle maison (4 unités = 2 m de diamètre pour 4 cases), agrandi selon sa taille.
+      const m = bakedModel('nid')!;
+      const k = (o.cells * 0.5) / Math.max(m.size.x, m.size.z);
+      b.model(m, cxm, 0, czm, Math.floor(hash01(3, o.gx, o.gz, 9) * 4), k);
     } else if (o.id === 'nest') {
       const radius = o.cells * 0.25;
       const k = radius; // 1 m de rayon pour l'emprise de départ (4 cases)

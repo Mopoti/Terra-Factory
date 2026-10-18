@@ -1503,6 +1503,20 @@ function addMachineBody(
     const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
     // Un modèle articulé n'a ici que sa partie basse : la partie haute est un objet mobile (voir `FactoryView.movers`).
     const body = staticOnly ? (animatedParts(type)?.low ?? model) : model;
+    if (type === 'waypoint') {
+      // Balise : fanion et lanterne (faces magenta du modèle) à la couleur choisie, le reste garde ses teintes.
+      const start = mb.colors.length;
+      mb.model(body, x, 0, z, MODEL_TURNS[rot % 4], scale);
+      const c = new THREE.Color(tint ?? def.color);
+      for (let i = start; i < mb.colors.length; i += 3) {
+        if (mb.colors[i] > 0.95 && mb.colors[i + 1] < 0.05 && mb.colors[i + 2] > 0.95) {
+          mb.colors[i] = c.r;
+          mb.colors[i + 1] = c.g;
+          mb.colors[i + 2] = c.b;
+        }
+      }
+      return;
+    }
     mb.model(body, x, 0, z, MODEL_TURNS[rot % 4], scale, color, 0.12);
     return;
   }

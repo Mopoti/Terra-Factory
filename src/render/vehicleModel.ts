@@ -12,6 +12,8 @@ export interface VehicleMesh {
   wheels: THREE.Object3D[];
   /** Rayon des roues (m), pour convertir la distance parcourue en angle. */
   radius: number;
+  /** Coussin du siège du conducteur dans le repère du groupe (m), si le modèle en a un (nœud `siege`). */
+  seat: { x: number; y: number; z: number } | null;
 }
 
 function geometry(
@@ -78,7 +80,10 @@ export function vehicleFromModel(model: BakedModel, material: THREE.Material): V
         Math.hypot(part.positions[i + 1] - part.pivot.y, part.positions[i + 2] - part.pivot.z),
       );
   }
-  return { group, wheels, radius: radius || 0.2 };
+  const seat = model.seat
+    ? { x: model.seat.x - cx, y: model.seat.y - y0, z: model.seat.z - cz }
+    : null;
+  return { group, wheels, radius: radius || 0.2, seat };
 }
 
 /** Fait rouler les roues de `distance` mètres vers l'avant (négatif : en arrière). */

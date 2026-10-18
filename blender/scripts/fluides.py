@@ -175,8 +175,11 @@ def pompe_eau(coll, leger=True):
 # ---------------------------------------------------------------------------------------------------------------------
 # Tuyaux (`pipe`) : une tuile (2 x 2 cases), axe à Z = 0,36 (hauteur des raccords des machines), bride au ras de chaque
 # côté raccordé. Une forme par nombre de raccords, tournée par le jeu : droit (-X, +X), coude (-X, -Y), té (-X, +X, -Y),
-# croix, bout (-X, bouchon et vanne), seul (aucun raccord) et regard (tuyau enterré : -X puis plonge dans le sol).
+# croix, bout (-X, bouchon), seul (aucun raccord) et regard (tuyau enterré : -X puis plonge dans le sol). Pas de vanne
+# ni de raccord vertical : sur une ligne de tuyaux, ils faisaient croire qu'il y avait une vanne partout.
 # Trois paliers : cuivre (T1), laiton (T2), inox (T3), avec une bague de la couleur du palier (comme les tapis).
+# Le laiton (T2) a un dessin plus moderne : manchons sertis lisses au lieu des brides boulonnées, coude cintré, pièces
+# de jonction lisses, supports fins à collier (`_tuyau_moderne`).
 
 PALIERS_TUYAU = {1: ('cuivre', 'rive_t1'), 2: ('laiton', 'rive_t2'), 3: ('inox', 'rive_t3')}
 DIRS = {'E': (1, 0, 0), 'O': (-1, 0, 0), 'N': (0, 1, 0), 'S': (0, -1, 0)}
@@ -190,7 +193,100 @@ def _support(lot, x, y):
     lot.cube('acier_sombre', (0.08, 0.46, Z_TUYAU - 0.12), (x, y, 0.12 + (Z_TUYAU - 0.12) / 2 - 0.04))
 
 
+def _support_fin(lot, x, y, z0, r, sg):
+    """Support moderne : platine, pied fin et collier autour du tuyau."""
+    lot.cube('acier_sombre', (0.26, 0.26, 0.03), (x, y, 0.015), 0.005)
+    lot.tube('gris_clair', (x, y, 0.03), (x, y, z0 - r - 0.02), 0.035, 8)
+    lot.cube('gris_clair', (0.06, 0.06, 0.05), (x, y, z0 - r - 0.03))
+
+
+def _collier(lot, a, d, r, sg):
+    """Collier fin (bande gris clair) autour du tuyau, au point `a`, axe `d`."""
+    lot.tube('gris_clair', a - d * 0.025, a + d * 0.025, r * 1.12, sg)
+
+
+def _tuyau_moderne(coll, leger, forme):
+    """Tuyau en laiton au dessin moderne (T2) : tube lisse un peu plus fin, manchons sertis au bord de la tuile (pas de
+    boulons), joint noir, bague orange du palier ; coude cintré en quart de cercle ; té et croix à manchon de jonction
+    lisse ; supports fins à collier ; bouchon bombé."""
+    sg = 12 if leger else 20
+    T.PALETTE.setdefault('laiton_sombre', '#a8862e')
+    lot = T.Lot(coll, 'pieces')
+    z0, r = Z_TUYAU, R_TUYAU * 0.85
+    c = Vector((0, 0, z0))
+    up = Vector((0, 0, 1))
+
+    def manchon(bord, d):
+        # Manchon serti au ras du bord (pas au ras exact : pas de face confondue avec la tuile voisine), joint noir.
+        lot.tube('laiton_sombre', bord - d * 0.2, bord - d * 0.012, r * 1.22, sg)
+        lot.tube('noir', bord - d * 0.215, bord - d * 0.2, r * 1.1, sg)
+        lot.tube('rive_t2', bord - d * 0.36, bord - d * 0.32, r * 1.03, sg)  # bague du palier
+
+    if forme == 'coude':
+        # Quart de cercle du bord -X au bord -Y, centre au coin (-1, -1), rayon 1.
+        cc = Vector((-1, -1, z0))
+        n = 8 if leger else 14
+        pts = [cc + Vector((math.sin(math.pi / 2 * k / n), math.cos(math.pi / 2 * k / n), 0)) for k in range(n + 1)]
+        for a, b in zip(pts, pts[1:]):
+            d = (b - a).normalized()
+            lot.tube('laiton', a - d * 0.01, b + d * 0.01, r, sg)
+        for p in pts[1:-1]:
+            lot.boule('laiton', p, r * 1.005)
+        manchon(Vector((-1, 0, z0)), Vector((-1, 0, 0)))
+        manchon(Vector((0, -1, z0)), Vector((0, -1, 0)))
+        m = cc + Vector((math.cos(math.pi / 4), math.cos(math.pi / 4), 0))
+        _collier(lot, m, Vector((1, -1, 0)).normalized(), r, sg)
+        _support_fin(lot, m.x, m.y, z0, r, sg)
+    else:
+        for p in FORMES_TUYAU[forme]:
+            d = Vector(DIRS[p])
+            bord = c + d * 1.0
+            lot.tube('laiton', c, bord - d * 0.05, r, sg)
+            manchon(bord, d)
+        if forme in ('te', 'croix'):
+            # Manchon de jonction lisse le long de X, et départs des branches.
+            lot.tube('laiton_sombre', c - Vector((0.32, 0, 0)), c + Vector((0.32, 0, 0)), r * 1.3, sg)
+            for p in FORMES_TUYAU[forme]:
+                d = Vector(DIRS[p])
+                if abs(d.y) > 0.5:
+                    lot.tube('laiton_sombre', c + d * (r * 1.2), c + d * 0.34, r * 1.18, sg)
+            lot.tube('noir', c - Vector((0.335, 0, 0)), c - Vector((0.32, 0, 0)), r * 1.2, sg)
+            lot.tube('noir', c + Vector((0.32, 0, 0)), c + Vector((0.335, 0, 0)), r * 1.2, sg)
+            _support_fin(lot, 0, 0, z0 - r * 0.3, r, sg)
+        elif forme == 'droit':
+            for x in (-0.45, 0.45):
+                _collier(lot, Vector((x, 0, z0)), Vector((1, 0, 0)), r, sg)
+                _support_fin(lot, x, 0, z0, r, sg)
+        elif forme == 'bout':
+            lot.tube('laiton_sombre', c - Vector((0.18, 0, 0)), c, r * 1.15, sg)  # bouchon bombé
+            lot.boule('laiton_sombre', c, r * 1.1)
+            _collier(lot, Vector((-0.45, 0, z0)), Vector((1, 0, 0)), r, sg)
+            _support_fin(lot, -0.45, 0, z0, r, sg)
+        elif forme == 'seul':
+            lot.tube('laiton', (-0.5, 0, z0), (0.5, 0, z0), r, sg)
+            for sx in (-1, 1):
+                lot.tube('laiton_sombre', (sx * 0.5, 0, z0), (sx * 0.62, 0, z0), r * 1.15, sg)
+                lot.boule('laiton_sombre', (sx * 0.62, 0, z0), r * 1.1)
+            lot.tube('rive_t2', (-0.02, 0, z0), (0.02, 0, z0), r * 1.03, sg)
+            for x in (-0.3, 0.3):
+                _collier(lot, Vector((x, 0, z0)), Vector((1, 0, 0)), r, sg)
+                _support_fin(lot, x, 0, z0, r, sg)
+        elif forme == 'regard':
+            lot.cube('gris_clair', (0.9, 0.9, 0.12), (0.15, 0, 0.06), 0.03)  # trappe de visite
+            lot.cube('acier_sombre', (0.7, 0.7, 0.02), (0.15, 0, 0.125))
+            for k in range(4):
+                lot.cube('acier', (0.6, 0.04, 0.012), (0.15, -0.21 + k * 0.14, 0.136))
+            lot.boule('laiton', c, r * 1.02)
+            lot.tube('laiton', c, (0, 0, 0.1), r, sg)  # plonge dans le sol
+            lot.tube('laiton_sombre', (0, 0, 0.12), (0, 0, 0.2), r * 1.2, sg)
+    lot.finir()
+    T.poser_au_sol(coll, 1.0)
+
+
 def _tuyau(coll, leger, palier, forme):
+    if palier == 2:
+        _tuyau_moderne(coll, leger, forme)
+        return
     sg = 10 if leger else 18
     mat, bague = PALIERS_TUYAU[palier]
     lot = T.Lot(coll, 'pieces')
@@ -208,7 +304,6 @@ def _tuyau(coll, leger, palier, forme):
         lot.tube(bague, bord - d * 0.32, bord - d * 0.27, r * 1.04, sg)  # bague du palier
     if forme in ('coude', 'te', 'croix'):
         lot.boule(mat, c, r * 1.12)
-        lot.tube('acier_sombre', c - Vector((0, 0, r * 1.25)), c + Vector((0, 0, r * 1.25)), r * 0.7, sg)  # raccord moulé
         _support(lot, 0, 0)
     elif forme == 'droit':
         for x in (-0.5, 0.5):
@@ -217,10 +312,6 @@ def _tuyau(coll, leger, palier, forme):
     elif forme == 'bout':
         lot.tube('acier_sombre', c, c + Vector((0.07, 0, 0)), r * 1.35, sg)  # bouchon
         lot.boule('acier_sombre', c + Vector((0.07, 0, 0)), r * 0.9)
-        xv = -0.45
-        lot.tube('acier', (xv, 0, z0 + r), (xv, 0, z0 + r + 0.2), 0.03, 6)  # vanne
-        lot.tube('rouge', (xv, 0, z0 + r + 0.2), (xv, 0, z0 + r + 0.23), 0.13, 12)
-        lot.cube('acier_sombre', (0.16, 0.16, 0.08), (xv, 0, z0 + r + 0.02), 0.01)
         _support(lot, -0.15, 0)
     elif forme == 'seul':
         lot.tube(mat, (-0.55, 0, z0), (0.55, 0, z0), r, sg)

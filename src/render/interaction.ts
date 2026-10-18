@@ -291,8 +291,7 @@ export class Interaction {
     }
     for (const d of this.state.changes.drops) {
       // Forme de l'objet (lingots, baril, paquet de science…) ou machine en miniature, dès que les modèles sont chargés.
-      const shell0 = d.item === 'carapace' || d.item === 'living_tissue';
-      const own = shell0 ? null : dropGeometry(d.item, d.count);
+      const own = dropGeometry(d.item, d.count);
       if (own) {
         const mesh = new THREE.Mesh(own, dropModelMaterial);
         mesh.position.set(d.x, 0, d.z);

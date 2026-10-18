@@ -109,6 +109,10 @@ export class Avatar {
   private fpRaise = FIRST_REST_RAISE;
   /** Vrai quand le joueur tient un outil : le bras droit le porte devant lui au lieu de balancer. */
   holding = false;
+  /** Vrai quand le joueur conduit un véhicule : assis, cuisses vers l'avant, genoux pliés, mains sur le volant. */
+  seated = false;
+  /** Hauteur des hanches par rapport au centre de `root` (m), selon la taille et la longueur des jambes. */
+  hipOffset = 0;
   private phase = 0;
   private strike = 0;
   private amount = 0;
@@ -187,6 +191,7 @@ export class Avatar {
     model.position.y = -height / 2;
     this.model = model;
     this.baseHeight = height;
+    this.hipOffset = -height / 2 + HIP_HEIGHT_M * k;
     this.root.add(model);
     this.showHair(options.hairStyle ?? DEFAULT_HAIR[silhouette]);
     if (options.appearance) this.look(options.appearance);
@@ -224,6 +229,7 @@ export class Avatar {
     this.model.scale.setScalar(k);
     // Des jambes plus longues descendent les pieds : on remonte le corps de la même longueur.
     this.model.position.y = -this.baseHeight / 2 + HIP_HEIGHT_M * (s.legs - 1) * k;
+    this.hipOffset = this.model.position.y + HIP_HEIGHT_M * s.legs * k;
     for (const key of FACE_KEYS) this.morph(FACE_MORPHS[key], a.face[key]);
   }
 
@@ -341,6 +347,17 @@ export class Avatar {
       this.fpRaise += (raise - this.fpRaise) * Math.min(1, dt * 14);
       this.arm('g', 0);
       this.arm('d', 0, -this.fpRaise + bob, striking ? 0.6 : 0.9);
+      return;
+    }
+    if (this.seated) {
+      // Assis : cuisses à l'horizontale vers l'avant, tibias à la verticale, mains devant (volant, guidon).
+      for (const side of ['g', 'd'] as const) {
+        const [thigh, shin] = LEG[side];
+        this.rotate(thigh, this.axis(X, -1.45));
+        this.rotate(shin, this.axis(X, 1.45));
+      }
+      this.arm('g', -0.75, 0, 0.55);
+      this.arm('d', -0.75, 0, 0.55);
       return;
     }
     this.leg('g', s);

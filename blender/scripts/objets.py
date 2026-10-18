@@ -297,10 +297,37 @@ def objet_caisse(coll, leger=True):
     _finir(coll, lot)
 
 
+def objet_carapace(coll, leger=True):
+    """Carapace d'ennemi (butin) : demi-coque bombée à plaques, bordeaux, arête et piquants couleur de corne."""
+    rnd = random.Random(41)
+    lot = T.Lot(coll, 'carapace')
+    T.PALETTE.setdefault('carapace', '#7a2d3a')
+    T.PALETTE.setdefault('carapace_sombre', '#4e1c26')
+    T.PALETTE.setdefault('corne', '#c9b89a')
+    for k, (y, r, h) in enumerate(((-0.14, 0.2, 0.13), (0.0, 0.25, 0.17), (0.15, 0.22, 0.14))):
+        _galet(lot, 'carapace' if k != 1 else 'carapace_sombre', (0, y, 0.0), (r, 0.16, h), rnd, 14 if leger else 22)
+    for y in (-0.12, 0.02, 0.16):
+        lot.barre('corne', (0, y, 0.14), (0, y + 0.04, 0.22), 0.035)
+    _finir(coll, lot)
+
+
+def objet_tissu_vivant(coll, leger=True):
+    """Tissu vivant (butin) : masse de chair rose luisante, quelques nodules plus clairs."""
+    rnd = random.Random(43)
+    T.PALETTE.setdefault('chair', '#c86a78')
+    T.PALETTE.setdefault('chair_claire', '#e89aa4')
+    lot = T.Lot(coll, 'tissu_vivant')
+    _galet(lot, 'chair', (0, 0, 0.0), (0.2, 0.17, 0.16), rnd, 14 if leger else 24)
+    for k in range(4):
+        a = k * math.pi / 2 + 0.4
+        _galet(lot, 'chair_claire', (0.14 * math.cos(a), 0.12 * math.sin(a), 0.08), (0.07, 0.06, 0.06), rnd, 8)
+    _finir(coll, lot)
+
+
 MODELES = {f.__name__: f for f in (
     objet_bois, objet_caillou, objet_minerai, objet_sable, objet_lingot, objet_plaque, objet_engrenage, objet_bobine,
     objet_fibre, objet_tissu, objet_baril, objet_science, objet_puce, objet_bloc, objet_conteneur, objet_verre,
-    objet_caisse)}
+    objet_caisse, objet_carapace, objet_tissu_vivant)}
 
 
 def construire(noms=None):

@@ -5,18 +5,23 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 /** Longueur de l'outil en jeu (m). */
 export const TOOL_LENGTH_M = 0.75;
 
-let loading: Promise<THREE.Group | null> | null = null;
+const loading = new Map<string, Promise<THREE.Group | null>>();
 
 /**
- * Charge le piolet (une seule fois) et le met à l'échelle du jeu : manche vers -z, pointe vers +z, centré sur l'origine
- * comme les anciennes formes simples. Un échec donne null : l'outil garde ses formes simples.
+ * Charge une pioche (une seule fois par fichier) et la met à l'échelle du jeu : manche vers -z, tête vers +z, pointe
+ * vers -y, centrée sur l'origine comme les anciennes formes simples. Le fichier est debout (axe y), pointe vers +z :
+ * pioches maison (`blender/scripts/outils.py` : `pioche_pierre`, `pioche_fer`) ou l'ancien piolet (`tool/icepick`).
+ * Un échec donne null : l'outil garde ses formes simples.
  */
 export function loadPickModel(
+  file = 'tool/icepick',
   baseUrl = import.meta.env.BASE_URL ?? './',
 ): Promise<THREE.Group | null> {
-  loading ??= new Promise((resolve) => {
+  const known = loading.get(file);
+  if (known) return known;
+  const promise = new Promise<THREE.Group | null>((resolve) => {
     new GLTFLoader().load(
-      `${baseUrl}models/tool/icepick.glb`,
+      `${baseUrl}models/${file}.glb`,
       (gltf) => {
         const raw = gltf.scene;
         const box = new THREE.Box3().setFromObject(raw);
@@ -44,5 +49,35 @@ export function loadPickModel(
       () => resolve(null),
     );
   });
-  return loading;
+  loading.set(file, promise);
+  return promise;
+}
+
+const weapons = new Map<string, Promise<THREE.Group | null>>();
+
+/**
+ * Charge une arme tenue en main (`blender/scripts/outils.py` : `pistolet`, `fusil`), en mètres, le canon vers +z et
+ * la poignée vers -y, l'origine à la poignée. Null si le fichier manque (formes simples).
+ */
+export function loadWeaponModel(
+  name: string,
+  baseUrl = import.meta.env.BASE_URL ?? './',
+): Promise<THREE.Group | null> {
+  const known = weapons.get(name);
+  if (known) return known;
+  const promise = new Promise<THREE.Group | null>((resolve) => {
+    new GLTFLoader().load(
+      `${baseUrl}models/terra/${name}.glb`,
+      (gltf) => {
+        gltf.scene.traverse((o) => {
+          if ((o as THREE.Mesh).isMesh) o.castShadow = true;
+        });
+        resolve(gltf.scene);
+      },
+      undefined,
+      () => resolve(null),
+    );
+  });
+  weapons.set(name, promise);
+  return promise;
 }
