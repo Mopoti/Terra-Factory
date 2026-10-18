@@ -7,6 +7,7 @@ import { CARS, RAIL_ITEM, carKindOfItem, type CarKind } from '../core/data/train
 import type { GameState } from '../core/game/state';
 import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from '../core/rail/plan';
 import {
+  RAIL_SCALE,
   RAIL_TOP_M,
   centerOf,
   cellsOf,
@@ -45,9 +46,9 @@ const STEP = 1 / 60;
 /** Portée (m) pour monter dans une locomotive ou reprendre un véhicule (en plus de sa demi-longueur). */
 const REACH_M = 4;
 /** Distance (m) à laquelle un bout de voie libre attire la pièce qu'on pose. */
-const SNAP_M = 4;
+const SNAP_M = 7;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
-const CAR_AIM_M = 1.4;
+const CAR_AIM_M = 2.2;
 /** Longueur maximale d'un tracé (tuiles). */
 const MAX_PATH = 150;
 
@@ -163,7 +164,7 @@ export class TrainView {
     let best: { piece: RailPiece; t: number } | null = null;
     for (const piece of this.host.state.changes.rails) {
       const len = lengthOf(piece.kind);
-      for (let u = 0; u <= len + 1e-6; u += 0.4) {
+      for (let u = 0; u <= len + 1e-6; u += 0.8) {
         const p = poseOn(piece, Math.min(u, len));
         const wx = p.x - o.x;
         const wy = p.y + RAIL_TOP_M - o.y;
@@ -173,7 +174,7 @@ export class TrainView {
         const rx = wx - t0 * d.x;
         const ry = wy - t0 * d.y;
         const rz = wz - t0 * d.z;
-        if (rx * rx + ry * ry + rz * rz > 0.45 * 0.45) continue;
+        if (rx * rx + ry * ry + rz * rz > 1.1 * 1.1) continue;
         if (!best || t0 < best.t) best = { piece, t: t0 };
       }
     }
@@ -191,7 +192,7 @@ export class TrainView {
   } {
     const { w, d } = footprintOf(piece.kind, piece.turns);
     const c = centerOf(piece);
-    const sy = piece.kind === 'ramp' ? 1.3 : 0.3;
+    const sy = piece.kind === 'ramp' ? 1.3 * RAIL_SCALE : 0.3 * RAIL_SCALE;
     return { x: c.x, y: piece.level + sy / 2, z: c.z, sx: w * 0.5, sy, sz: d * 0.5 };
   }
 
@@ -208,14 +209,13 @@ export class TrainView {
     const model = this.railModel(p.kind);
     const c = centerOf(p);
     if (model) {
-      mb.model(model, c.x, p.level, c.z, p.turns, 1, tint, tint ? 0.55 : 0);
+      mb.model(model, c.x, p.level, c.z, p.turns, RAIL_SCALE, tint, tint ? 0.55 : 0);
       return;
     }
     // Forme de secours tant que le modèle n'est pas chargé : une dalle à la taille de la voie.
     const color = tint ?? hexToRgb('#7d776e');
-    const len = p.kind === 'curve' ? 3 : p.kind === 'ramp' ? 4 : 1;
-    const alongX = p.turns % 2 === 1;
-    mb.box(c.x, p.level, c.z, alongX ? len : 1, 0.12, alongX ? 1 : len, color, true);
+    const { w, d } = footprintOf(p.kind, p.turns);
+    mb.box(c.x, p.level, c.z, w * 0.5, RAIL_TOP_M, d * 0.5, color, true);
   }
 
   private geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
@@ -339,9 +339,9 @@ export class TrainView {
     let best: { piece: RailPiece; u: number; dist: number } | null = null;
     for (const piece of graph.byId.values()) {
       const c = centerOf(piece);
-      if (Math.hypot(c.x - x, c.z - z) > 4.5) continue;
+      if (Math.hypot(c.x - x, c.z - z) > 13) continue;
       const len = lengthOf(piece.kind);
-      for (let u = 0; u <= len + 1e-6; u += 0.25) {
+      for (let u = 0; u <= len + 1e-6; u += 0.5) {
         const p = poseOn(piece, Math.min(u, len));
         const d = Math.hypot(p.x - x, p.z - z);
         if (!best || d < best.dist) best = { piece, u: Math.min(u, len), dist: d };

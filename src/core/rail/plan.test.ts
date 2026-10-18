@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from './plan';
-import { TrackGraph, portsOf, type RailPiece } from './track';
+import { RAMP_RISE_M, TrackGraph, portsOf, type RailPiece } from './track';
 
 const tilesOf = (...pts: [number, number][]): Tile[] => pts.map(([tx, tz]) => ({ tx, tz }));
 /** Tuiles en ligne droite de (x, z) par pas (dx, dz). */
@@ -95,12 +95,12 @@ describe('tracé de la voie', () => {
     const plan = planRails(line(5, 5, 0, -1, 9), { level: 0, tilt: 1, lead: 0 });
     expect(plan[0].kind).toBe('ramp');
     expect(plan[0].level).toBe(0);
-    expect(plan.slice(1).every((p) => p.kind === 'straight' && p.level === 1)).toBe(true);
+    expect(plan.slice(1).every((p) => p.kind === 'straight' && p.level === RAMP_RISE_M)).toBe(true);
     expect(plan).toHaveLength(1 + 5);
     const pieces = asPieces(plan);
     expect(links(pieces)).toBe(pieces.length - 1);
     // Dans la descente c'est l'inverse : la rampe est plus bas que le départ.
-    const down = planRails(line(5, 5, 1, 0, 9), { level: 1, tilt: -1, lead: 0 });
+    const down = planRails(line(5, 5, 1, 0, 9), { level: RAMP_RISE_M, tilt: -1, lead: 0 });
     expect(down[0].level).toBe(0);
     expect(down[1].level).toBe(0);
     expect(links(asPieces(down))).toBe(down.length - 1);
@@ -174,6 +174,6 @@ describe('tracé de la voie', () => {
   });
 
   it('tileOf : la tuile qui contient un point', () => {
-    expect(tileOf(3.4, -0.2)).toEqual({ tx: 3, tz: -1 });
+    expect(tileOf(8.4, -0.2)).toEqual({ tx: 3, tz: -1 });
   });
 });

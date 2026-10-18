@@ -102,9 +102,9 @@
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at 15% 25%, #ffd9a8 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 20%, #b8e6ff 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 90%, #c9f0d8 0%, transparent 55%), #f9efe0;
+    radial-gradient(ellipse at 15% 25%, #f2b982 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, #8fc3e4 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 90%, #9fd4b4 0%, transparent 55%), #d9c3a0;
 }
 #menu-bg .bg-slide {
   position: absolute;
@@ -347,7 +347,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(244, 241, 236, 0.7);
+  background: rgba(58, 42, 26, 0.5);
   padding: 16px;
 }
 .modal {
@@ -464,7 +464,7 @@
 .pause-dim {
   position: fixed;
   inset: 0;
-  background: rgba(242, 238, 233, 0.55);
+  background: rgba(58, 42, 26, 0.45);
 }
 #pause .panel {
   position: relative;
@@ -1760,7 +1760,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f2eddd;
+  background: rgba(236, 222, 196, 0.92);
 }
 .finale-box {
   width: min(640px, calc(100vw - 32px));
@@ -2690,11 +2690,11 @@ body.touch-mode .menu-corner {
   --accent: #ff8a5b;
   --ink: #3b2f22;
   --ink-soft: #6f5f4a;
-  --paper: rgba(255, 248, 234, 0.9);
-  --tile: rgba(255, 255, 255, 0.72);
-  --tile-edge: rgba(255, 255, 255, 0.95);
-  --sky: #cfeaff;
-  --sky-edge: #9fd0f4;
+  --paper: rgba(238, 224, 198, 0.94);
+  --tile: rgba(250, 242, 226, 0.7);
+  --tile-edge: rgba(190, 160, 118, 0.7);
+  --sky: #b4d6ee;
+  --sky-edge: #82b4d6;
   --mint: #6fd3b0;
   --coral: #ff8a5b;
   --sun: #ffc857;
@@ -2750,7 +2750,7 @@ body.touch-mode .menu-corner {
 .menu-btn {
   color: #25465f;
   font-weight: 700;
-  background: linear-gradient(180deg, #e7f4ff, var(--sky));
+  background: linear-gradient(180deg, #cfe6f6, #b4d6ee);
   border: 2px solid var(--sky-edge);
   border-radius: 16px;
   box-shadow: 0 3px 0 var(--sky-edge);
@@ -2765,7 +2765,7 @@ body.touch-mode .menu-corner {
 }
 .menu-btn:hover,
 .menu-btn:focus-visible {
-  background: linear-gradient(180deg, #f3faff, #bfe3ff);
+  background: linear-gradient(180deg, #dcedf8, #a9cfe9);
   border-color: var(--coral);
   transform: translateY(-1px);
 }
@@ -2801,8 +2801,8 @@ body.touch-mode .menu-corner {
 .panel select,
 .mach-search {
   color: var(--ink);
-  background: #fffdf8;
-  border: 2px solid #e6d6b8;
+  background: #f7efdc;
+  border: 2px solid #d3bd96;
   border-radius: 12px;
 }
 /* Tuiles d'objets : sac, fabrication, machines, barre d'objets. */
@@ -2820,7 +2820,7 @@ body.touch-mode .menu-corner {
 .slot.empty,
 .hot-slot.empty,
 .mach-slot.empty {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(150, 118, 70, 0.14);
   box-shadow: inset 0 2px 5px rgba(120, 90, 40, 0.12);
 }
 .slot:hover:not(:disabled),
@@ -2889,8 +2889,8 @@ body.touch-mode .menu-corner {
 .tabs button {
   color: var(--ink-soft);
   font-weight: 700;
-  background: #f6ead2;
-  border: 2px solid #ecdcbc;
+  background: #e6d3ac;
+  border: 2px solid #cdb68c;
   border-radius: 999px;
 }
 .ng-tab[aria-selected='true'],
@@ -2917,7 +2917,7 @@ body.touch-mode .menu-corner {
   box-shadow: var(--shadow);
 }
 .hotbar {
-  background: rgba(255, 248, 234, 0.82);
+  background: rgba(236, 220, 192, 0.86);
   border: 3px solid var(--tile-edge);
   border-radius: 22px;
   box-shadow: var(--shadow);
@@ -2925,10 +2925,10 @@ body.touch-mode .menu-corner {
 }
 .icon-btn {
   color: #25465f;
-  background: linear-gradient(180deg, #ffffff, #f1e7d4);
-  border: 2px solid #e6d6b8;
+  background: linear-gradient(180deg, #f6ecd6, #e4d3b0);
+  border: 2px solid #cdb68c;
   border-radius: 14px;
-  box-shadow: 0 3px 0 #e6d6b8;
+  box-shadow: 0 3px 0 #cdb68c;
 }
 .icon-btn:hover,
 .icon-btn:focus-visible {
@@ -2978,8 +2978,8 @@ input[type='range'] {
 }
 .mach-row button {
   color: #25465f;
-  background: linear-gradient(180deg, #ffffff, #f1e7d4);
-  border: 2px solid #e6d6b8;
+  background: linear-gradient(180deg, #f6ecd6, #e4d3b0);
+  border: 2px solid #cdb68c;
   border-radius: 12px;
   font-weight: 700;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
+import { TILE_CELLS } from './track';
 
 const free = (): boolean => false;
 
@@ -17,7 +18,8 @@ describe('voies et trains dans la partie', () => {
     return s;
   };
   const laidLine = (s: GameState, n: number): void => {
-    for (let k = 0; k < n; k++) expect(s.placeRail('straight', 0, -2 * k, 0, 0, free)).toBe('ok');
+    for (let k = 0; k < n; k++)
+      expect(s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free)).toBe('ok');
   };
 
   it('poser une voie consomme l’objet et refuse de recouvrir une autre pièce', () => {
@@ -25,9 +27,9 @@ describe('voies et trains dans la partie', () => {
     expect(s.placeRail('straight', 0, 0, 0, 0, free)).toBe('ok');
     expect(s.inventory.rail).toBe(199);
     expect(s.placeRail('straight', 1, 1, 0, 0, free)).toBe('blocked'); // recouvre une case
-    expect(s.placeRail('straight', 10, 0, 0, 0, () => true)).toBe('blocked'); // terrain bloqué
+    expect(s.placeRail('straight', 40, 0, 0, 0, () => true)).toBe('blocked'); // terrain bloqué
     s.inventory.rail = 2;
-    expect(s.placeRail('ramp', 20, 0, 0, 0, free)).toBe('missing'); // une rampe coûte 4 rails
+    expect(s.placeRail('ramp', 80, 0, 0, 0, free)).toBe('missing'); // une rampe coûte 4 rails
     expect(s.removeRail(s.changes.rails[0].id, { x: 0, z: 0 })).toBe(true);
     expect(s.inventory.rail).toBe(3); // 2 en stock + 1 rendu
   });

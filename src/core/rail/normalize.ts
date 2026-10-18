@@ -7,6 +7,8 @@ const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFin
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
 
 /** Limites de ce qui est enregistré (une sauvegarde abîmée ne doit pas faire exploser le jeu). */
+/** 2 : voie agrandie à l'échelle des trains (écartement de 1,5 m). */
+export const RAIL_VERSION = 2;
 export const MAX_RAILS = 4000;
 export const MAX_CONSISTS = 200;
 export const SOUTE_MAX = 50;
@@ -26,7 +28,7 @@ export function normalizeRails(raw: unknown): RailPiece[] {
       gx: Math.floor(r.gx),
       gz: Math.floor(r.gz),
       turns: isNum(r.turns) ? ((Math.floor(r.turns) % 4) + 4) % 4 : 0,
-      level: isNum(r.level) ? Math.max(-8, Math.min(8, Math.round(r.level * 100) / 100)) : 0,
+      level: isNum(r.level) ? Math.max(-40, Math.min(40, Math.round(r.level * 100) / 100)) : 0,
     });
   }
   return out;

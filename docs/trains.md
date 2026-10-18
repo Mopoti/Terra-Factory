@@ -3,7 +3,7 @@
 Première version (octobre 2026) : le joueur pose des rails, des véhicules, conduit la locomotive, attelle et dételle. Pas encore de signalisation ni d'aiguillages ; plus tard les trains seront automatisés par des signaux.
 
 ## Matériel
-- **Rail** (onglet « Rail ») : un seul objet, `rail` = 1 m de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce : tuile droite de 2 × 2 cases (1 rail), virage de 6 × 6 cases à chaque coin, quart de cercle de 1,5 m de rayon (3 rails), rampe de 2 × 8 cases qui monte d'un mètre (4 rails).
+- **Rail** (onglet « Rail ») : un seul objet, `rail` = une tuile de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce. **Échelle réelle** : les modèles de voie (faits pour 60 cm) sont agrandis ×2,5 (`RAIL_SCALE`), écartement de 1,5 m comme les trains. Tuile droite de 2,5 m (5 × 5 cases, 1 rail) ; virage de 3 × 3 tuiles à chaque coin, quart de cercle de 3,75 m de rayon (3 rails) ; rampe de 1 × 4 tuiles (10 m) qui monte de 2,5 m (4 rails). Une voie posée avant l'agrandissement (version 1) est abandonnée au chargement.
 - **Véhicules** : locomotive à vapeur (`train_locomotive`, 6,45 m), wagon de fret, wagon-citerne (5,4 m). La locomotive électrique (modèle prêt) viendra avec les caténaires.
 
 ## Pose (comme les convoyeurs et les tuyaux)

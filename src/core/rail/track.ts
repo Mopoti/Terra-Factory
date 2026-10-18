@@ -1,8 +1,9 @@
 /**
- * Voies ferrées (voir `docs/trains.md`) : trois pièces sans sens, comme les modèles de `blender/scripts/ferroviaire.py`.
- *  - `straight` : tuile de 2 × 2 cases (1 m) ;
- *  - `curve` : tuile de 6 × 6 cases (3 m), quart de cercle de 1,5 m de rayon reliant le milieu de deux bords voisins ;
- *  - `ramp` : 2 × 8 cases (4 m), monte de 1 m ; la descente est la même pièce tournée d'un demi-tour.
+ * Voies ferrées (voir `docs/trains.md`) : trois pièces sans sens, comme les modèles de `blender/scripts/ferroviaire.py`,
+ * agrandis de `RAIL_SCALE` pour aller avec des trains à l'échelle du personnage (écartement d'environ 1,5 m) :
+ *  - `straight` : une tuile de 2,5 m (5 × 5 cases) ;
+ *  - `curve` : 3 × 3 tuiles (7,5 m), quart de cercle de 3,75 m de rayon reliant le milieu de deux bords voisins ;
+ *  - `ramp` : 1 × 4 tuiles (10 m), monte de 2,5 m ; la descente est la même pièce tournée d'un demi-tour.
  * Une pièce est posée sur la grille de cases ; ses deux extrémités (« ports ») se raccordent à celles d'une pièce voisine.
  * Un train est repéré sur la voie par une pièce, une abscisse `u` (m le long de la voie, depuis le port 0) et un sens.
  */
@@ -23,18 +24,25 @@ export interface RailPiece {
   level: number;
 }
 
+/** Agrandissement des modèles de voie (créés pour une voie étroite de 60 cm) : écartement de 1,5 m. */
+export const RAIL_SCALE = 2.5;
+/** Côté d'une tuile de voie (m, et en cases). */
+export const TILE_M = RAIL_SCALE;
+export const TILE_CELLS = TILE_M / CELL_SIZE_M;
 /** Hauteur du dessus des rails au-dessus du bas d'une pièce (m) : les roues des trains y reposent. */
-export const RAIL_TOP_M = 0.12;
+export const RAIL_TOP_M = 0.12 * RAIL_SCALE;
 /** Rayon d'un virage (m) et élévation d'une rampe (m). */
-export const CURVE_RADIUS_M = 1.5;
-export const RAMP_RISE_M = 1;
-const RAMP_RUN_M = 4;
+export const CURVE_RADIUS_M = 1.5 * RAIL_SCALE;
+export const RAMP_RISE_M = 1 * RAIL_SCALE;
+const RAMP_RUN_M = 4 * RAIL_SCALE;
 
 /** Dimensions de l'emprise en cases (largeur selon x, profondeur selon z) pour ce quart de tour. */
 export function footprintOf(kind: RailKind, turns: number): { w: number; d: number } {
-  if (kind === 'straight') return { w: 2, d: 2 };
-  if (kind === 'curve') return { w: 6, d: 6 };
-  return turns % 2 === 0 ? { w: 2, d: 8 } : { w: 8, d: 2 };
+  if (kind === 'straight') return { w: TILE_CELLS, d: TILE_CELLS };
+  if (kind === 'curve') return { w: 3 * TILE_CELLS, d: 3 * TILE_CELLS };
+  return turns % 2 === 0
+    ? { w: TILE_CELLS, d: 4 * TILE_CELLS }
+    : { w: 4 * TILE_CELLS, d: TILE_CELLS };
 }
 
 /** Centre de la pièce (m). */
@@ -70,7 +78,7 @@ function turn(x: number, z: number, turns: number): [number, number] {
 
 /** Longueur de la voie d'une pièce (m), de son port 0 à son port 1. */
 export function lengthOf(kind: RailKind): number {
-  if (kind === 'straight') return 1;
+  if (kind === 'straight') return TILE_M;
   if (kind === 'curve') return (CURVE_RADIUS_M * Math.PI) / 2;
   return Math.hypot(RAMP_RUN_M, RAMP_RISE_M);
 }
@@ -90,7 +98,7 @@ function local(
   kind: RailKind,
   u: number,
 ): { x: number; y: number; z: number; tx: number; tz: number; dy: number } {
-  if (kind === 'straight') return { x: 0, y: 0, z: 0.5 - u, tx: 0, tz: -1, dy: 0 };
+  if (kind === 'straight') return { x: 0, y: 0, z: TILE_M / 2 - u, tx: 0, tz: -1, dy: 0 };
   if (kind === 'curve') {
     const th = Math.PI + u / CURVE_RADIUS_M;
     return {
@@ -153,7 +161,7 @@ export interface PortLink {
   port: 0 | 1;
 }
 
-const SAME_M = 0.08;
+const SAME_M = 0.2;
 const portsMeet = (a: Port, b: Port): boolean =>
   Math.hypot(a.x - b.x, a.z - b.z) <= SAME_M &&
   Math.abs(a.y - b.y) <= SAME_M &&
@@ -178,7 +186,7 @@ export class TrackGraph {
     for (const p of pieces) this.byId.set(p.id, p);
     const ports = new Map<number, [Port, Port]>();
     // Grille de 25 cm : on ne compare un port qu'à ceux des cases voisines (la voie peut compter des milliers de pièces).
-    const BUCKET = 0.25;
+    const BUCKET = 0.6;
     const bucket = new Map<string, { piece: number; port: 0 | 1 }[]>();
     const keyOf = (x: number, z: number): string =>
       `${Math.round(x / BUCKET)},${Math.round(z / BUCKET)}`;

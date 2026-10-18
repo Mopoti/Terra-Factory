@@ -8,6 +8,9 @@ import {
   cornerFor,
   freePorts,
   lengthOf,
+  RAMP_RISE_M,
+  TILE_CELLS,
+  TILE_M,
   matesFor,
   portsOf,
   poseOn,
@@ -26,13 +29,13 @@ import {
   type Consist,
 } from './train';
 
-/** Une voie droite de `n` tuiles de 1 m le long de z (tuile k à gz = −2k : on avance vers −z, le port 1). */
+/** Une voie droite de `n` tuiles de 1 m le long de z (tuile k à gz = −TILE_CELLS·k : on avance vers −z, le port 1). */
 const line = (n: number, gx = 0): RailPiece[] =>
   Array.from({ length: n }, (_, k) => ({
     id: k + 1,
     kind: 'straight',
     gx,
-    gz: -2 * k,
+    gz: -TILE_CELLS * k,
     turns: 0,
     level: 0,
   }));
@@ -59,23 +62,23 @@ describe('voies : géométrie et raccords', () => {
     expect(g.neighbour(1, 1)).toEqual({ piece: 2, port: 0 });
     expect(g.neighbour(2, 0)).toEqual({ piece: 1, port: 1 });
     expect(g.neighbour(1, 0)).toBeNull();
-    const r = g.advance({ piece: 1, u: 0.5, dir: 1 }, 2.2);
+    const r = g.advance({ piece: 1, u: 0.5, dir: 1 }, TILE_M * 2.2);
     expect(r.blocked).toBe(false);
     expect(r.pos.piece).toBe(3);
-    expect(r.pos.u).toBeCloseTo(0.7, 5);
+    expect(r.pos.u).toBeCloseTo(0.5 + TILE_M * 0.2, 5);
     // En sens inverse, retour à la tuile de départ.
-    const back = g.advance({ ...r.pos, dir: -1 }, 2.2);
+    const back = g.advance({ ...r.pos, dir: -1 }, TILE_M * 2.2);
     expect(back.pos.piece).toBe(1);
     expect(back.pos.u).toBeCloseTo(0.5, 5);
   });
 
   it('au bout de la voie on s’arrête et on dit ce qui reste', () => {
     const g = new TrackGraph(line(2));
-    const r = g.advance({ piece: 1, u: 0, dir: 1 }, 5);
+    const r = g.advance({ piece: 1, u: 0, dir: 1 }, 2 * TILE_M + 2);
     expect(r.blocked).toBe(true);
     expect(r.pos.piece).toBe(2);
-    expect(r.pos.u).toBeCloseTo(1);
-    expect(r.left).toBeCloseTo(3);
+    expect(r.pos.u).toBeCloseTo(TILE_M);
+    expect(r.left).toBeCloseTo(2 + 0, 5);
   });
 
   it('un virage se raccorde au bout d’une voie droite, quel que soit le côté, et on le parcourt', () => {
@@ -91,7 +94,7 @@ describe('voies : géométrie et raccords', () => {
     }
     // Longueur d'un quart de cercle de 1,5 m, cap qui tourne de 90°.
     const curve: RailPiece = { id: 1, kind: 'curve', gx: 0, gz: 0, turns: 0, level: 0 };
-    expect(lengthOf('curve')).toBeCloseTo(2.356, 3);
+    expect(lengthOf('curve')).toBeCloseTo((Math.PI / 2) * 3.75, 3);
     const a = poseOn(curve, 0);
     const b = poseOn(curve, lengthOf('curve'));
     let dyaw = b.yaw - a.yaw;
@@ -102,17 +105,17 @@ describe('voies : géométrie et raccords', () => {
   it('une rampe monte d’un mètre et la pièce suivante se pose à la bonne hauteur', () => {
     const ramp: RailPiece = { id: 1, kind: 'ramp', gx: 0, gz: 0, turns: 0, level: 0 };
     const [low, high] = portsOf(ramp);
-    expect(high.y - low.y).toBeCloseTo(1);
+    expect(high.y - low.y).toBeCloseTo(RAMP_RISE_M);
     const next = matesFor('straight', high)[0];
-    expect(next.level).toBeCloseTo(1);
+    expect(next.level).toBeCloseTo(RAMP_RISE_M);
     expect(poseOn(ramp, lengthOf('ramp')).slope).toBeGreaterThan(0.2);
   });
 
-  it('emprise : tuile de 2 × 2, virage de 6 × 6, rampe de 2 × 8', () => {
+  it('emprise : une tuile, un virage de 3 × 3 tuiles, une rampe de 1 × 4 tuiles', () => {
     const s: RailPiece = { id: 1, kind: 'straight', gx: 4, gz: 6, turns: 0, level: 0 };
-    expect(cellsOf(s)).toHaveLength(4);
-    expect(cellsOf({ ...s, kind: 'curve' })).toHaveLength(36);
-    expect(cellsOf({ ...s, kind: 'ramp' })).toHaveLength(16);
+    expect(cellsOf(s)).toHaveLength(TILE_CELLS ** 2);
+    expect(cellsOf({ ...s, kind: 'curve' })).toHaveLength(9 * TILE_CELLS ** 2);
+    expect(cellsOf({ ...s, kind: 'ramp' })).toHaveLength(4 * TILE_CELLS ** 2);
     const c = centerOf({ ...s, kind: 'ramp', turns: 1 });
     expect(cornerFor('ramp', 1, c.x, c.z)).toEqual({ gx: 4, gz: 6 });
   });

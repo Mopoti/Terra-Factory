@@ -1,4 +1,4 @@
-import { normalizeRails, normalizeTrains } from '../rail/normalize';
+import { RAIL_VERSION, normalizeRails, normalizeTrains } from '../rail/normalize';
 import type { RailPiece } from '../rail/track';
 import type { Consist } from '../rail/train';
 import { isVehicleKind, type VehicleKind } from '../data/vehicles';
@@ -167,6 +167,8 @@ export interface WorldChanges {
   rails: RailPiece[];
   /** Convois posés sur la voie : locomotive et wagons attelés. */
   trains: Consist[];
+  /** Version de l'échelle de la voie : une voie d'avant l'agrandissement (version 1) est abandonnée au chargement. */
+  railVersion: number;
   /** Nids nés de l'expansion des colonies (les nids d'origine viennent du monde généré). */
   nests: ExtraNest[];
   /** Balles dans le pistolet. */
@@ -233,6 +235,7 @@ export function emptyChanges(): WorldChanges {
     vehicles: [],
     rails: [],
     trains: [],
+    railVersion: RAIL_VERSION,
     nests: [],
     ammo: 0,
     rifleAmmo: 0,
@@ -553,8 +556,10 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       });
     }
   }
-  result.rails = normalizeRails(r.rails);
-  result.trains = normalizeTrains(r.trains, result.rails);
+  if (r.railVersion === RAIL_VERSION) {
+    result.rails = normalizeRails(r.rails);
+    result.trains = normalizeTrains(r.trains, result.rails);
+  }
   if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));
   if (isNum(r.rifleAmmo))
     result.rifleAmmo = Math.max(0, Math.min(WEAPONS.rifle.rounds, Math.floor(r.rifleAmmo)));

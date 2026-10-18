@@ -1,10 +1,10 @@
 /**
- * Tracé de la voie, comme pour les convoyeurs : le joueur glisse d'une tuile (1 m) à l'autre et le jeu choisit seul
+ * Tracé de la voie, comme pour les convoyeurs : le joueur glisse d'une tuile (2,5 m) à l'autre et le jeu choisit seul
  * la forme de chaque pièce : tuiles droites en ligne, virage de 3 × 3 tuiles à chaque coin, rampe de 4 tuiles quand
  * on a choisi de monter ou de descendre (PageUp / PageDown).
  */
 import { RAIL_COST } from '../data/trains';
-import { cornerFor, type Port, type RailKind } from './track';
+import { RAMP_RISE_M, TILE_M, cornerFor, type Port, type RailKind } from './track';
 
 export interface Tile {
   tx: number;
@@ -22,10 +22,13 @@ export interface PlannedPiece {
 }
 
 /** Tuile (1 m) qui contient ce point. */
-export const tileOf = (x: number, z: number): Tile => ({ tx: Math.floor(x), tz: Math.floor(z) });
+export const tileOf = (x: number, z: number): Tile => ({
+  tx: Math.floor(x / TILE_M),
+  tz: Math.floor(z / TILE_M),
+});
 
-const centreX = (t: Tile): number => t.tx + 0.5;
-const centreZ = (t: Tile): number => t.tz + 0.5;
+const centreX = (t: Tile): number => (t.tx + 0.5) * TILE_M;
+const centreZ = (t: Tile): number => (t.tz + 0.5) * TILE_M;
 
 type Dir = { dx: number; dz: number };
 const sameDir = (a: Dir, b: Dir): boolean => a.dx === b.dx && a.dz === b.dz;
@@ -128,10 +131,10 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
         kind: 'ramp',
         ...cornerFor('ramp', turns, cx, cz),
         turns,
-        level: climbs ? level : level - 1,
+        level: climbs ? level : level - RAMP_RISE_M,
         cost: RAIL_COST.ramp,
       });
-      level += climbs ? 1 : -1;
+      level += climbs ? RAMP_RISE_M : -RAMP_RISE_M;
       continue;
     }
     if (covered.has(i)) {
@@ -164,4 +167,5 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
 export const portDir = (p: Port): Dir => ({ dx: Math.round(p.dx), dz: Math.round(p.dz) });
 
 /** Tuile qui contient l'extrémité de la voie existante (là où se raccorde le tracé). */
-export const leadTile = (p: Port): Tile => tileOf(p.x - p.dx * 0.5, p.z - p.dz * 0.5);
+export const leadTile = (p: Port): Tile =>
+  tileOf(p.x - p.dx * (TILE_M / 2), p.z - p.dz * (TILE_M / 2));
