@@ -1,6 +1,6 @@
 import { itemById } from '../data/items';
 import { CARS, isCarKind } from '../data/trains';
-import { RAIL_KINDS, lengthOf, type RailKind, type RailPiece } from './track';
+import { RAIL_KINDS, baseId, isSwitch, lengthOf, type RailKind, type RailPiece } from './track';
 import type { Car, Consist } from './train';
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -21,15 +21,18 @@ export function normalizeRails(raw: unknown): RailPiece[] {
   for (const r of raw.slice(0, MAX_RAILS)) {
     if (!isRec(r) || !isNum(r.id) || ids.has(r.id)) continue;
     if (!isNum(r.gx) || !isNum(r.gz) || !RAIL_KINDS.includes(r.kind as RailKind)) continue;
+    if (r.id < 1) continue; // les identifiants négatifs désignent les voies déviées des aiguillages
     ids.add(r.id);
-    out.push({
+    const piece: RailPiece = {
       id: Math.floor(r.id),
       kind: r.kind as RailKind,
       gx: Math.floor(r.gx),
       gz: Math.floor(r.gz),
       turns: isNum(r.turns) ? ((Math.floor(r.turns) % 4) + 4) % 4 : 0,
       level: isNum(r.level) ? Math.max(-40, Math.min(40, Math.round(r.level * 100) / 100)) : 0,
-    });
+    };
+    if (isSwitch(piece.kind)) piece.branch = r.branch === 1 ? 1 : 0;
+    out.push(piece);
   }
   return out;
 }
@@ -66,8 +69,12 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     if (!isRec(r) || !isNum(r.id) || ids.has(r.id) || !isRec(r.head) || !Array.isArray(r.cars))
       continue;
     const head = r.head as Record<string, unknown>;
-    const piece = rails.find((p) => p.id === head.piece);
+    // La tête peut être sur la voie déviée d'un aiguillage (identifiant négatif).
+    const piece = isNum(head.piece)
+      ? rails.find((p) => p.id === baseId(head.piece as number))
+      : undefined;
     if (!piece || !isNum(head.u)) continue;
+    const onBranch = (head.piece as number) < 0 && isSwitch(piece.kind);
     const cars = r.cars
       .slice(0, 40)
       .map((c) => normalizeCar(c, carIds))
@@ -77,8 +84,8 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     out.push({
       id: Math.floor(r.id),
       head: {
-        piece: piece.id,
-        u: Math.max(0, Math.min(lengthOf(piece.kind), head.u)),
+        piece: onBranch ? -piece.id : piece.id,
+        u: Math.max(0, Math.min(lengthOf(piece.kind, onBranch ? 1 : 0), head.u)),
         dir: head.dir === -1 ? -1 : 1,
       },
       v: isNum(r.v) ? Math.max(-30, Math.min(30, r.v)) : 0,

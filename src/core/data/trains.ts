@@ -2,6 +2,8 @@
  * Matériel roulant : locomotive à vapeur et wagons (modèles de `blender/scripts/ferroviaire.py`). Les nombres sont ceux
  * de petites machines de voie normale (écartement 1,5 m, comme la voie posée) : masses en kg, efforts en N, puissances en kW.
  */
+import type { RailKind } from '../rail/track';
+
 export const CAR_KINDS = ['locomotive_steam', 'wagon_freight', 'wagon_tanker'] as const;
 export type CarKind = (typeof CAR_KINDS)[number];
 
@@ -85,8 +87,19 @@ export const carKindOfItem = (item: string): CarKind | null =>
 
 /** Objet du sac qui pose la voie : 1 rail = 1 m de voie (une tuile droite). */
 export const RAIL_ITEM = 'rail';
-/** Rails consommés par chaque forme de pièce : le virage (2,4 m) en vaut 3, la rampe (4 m) en vaut 4. */
-export const RAIL_COST = { straight: 1, curve: 3, ramp: 4 } as const;
+/**
+ * Rails consommés par chaque forme de pièce (un rail ≈ 2,5 m de voie) : virage serré (5,9 m) 3, large (9,8 m) 4, très
+ * large (13,7 m) 6, rampe (10 m) 4, aiguillage (ses deux voies et ses lames) 6.
+ */
+export const RAIL_COST: Record<RailKind, number> = {
+  straight: 1,
+  curve: 3,
+  curve_wide: 4,
+  curve_large: 6,
+  ramp: 4,
+  switch_r: 6,
+  switch_l: 6,
+};
 
 /** Identifiants (négatifs) de la fenêtre d'une locomotive : −(base + identifiant du véhicule), hors de ceux des buggys. */
 export const LOCO_WINDOW_BASE = 1_000_000;

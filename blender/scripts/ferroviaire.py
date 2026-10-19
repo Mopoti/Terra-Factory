@@ -7,8 +7,13 @@ Voies — une tuile de 2 x 2 cases (1 m), comme les convoyeurs mais sans sens (u
 - `rail_virage` : 6 x 6 cases (3 m, pour que les wagons de 3 m passent) ; quart de cercle qui relie le milieu du
   bord -Y au milieu du bord +X (centre du cercle au coin (+3, -3), rayon 3 unités = 1,5 m au milieu de la voie). Sans
   sens, le virage à gauche et le virage à droite sont la même pièce tournée ;
+- `rail_virage_large` (10 x 10 cases, rayon 5 unités) et `rail_virage_tres_large` (14 x 14 cases, rayon 7 unités) :
+  mêmes virages, plus larges (rayons de 6,25 m et 8,75 m dans le jeu) ;
 - `rail_rampe` : 2 x 8 cases (4 m), monte de 2 unités (1 m, un niveau) de -Y vers +Y. Sans sens aussi : la descente
   est la même pièce tournée d'un demi-tour. Piliers dessous ;
+- `rail_aiguillage_<d|g>_<droit|devie>` : aiguillage de 6 x 6 cases : pointe au milieu du bord -Y, voie directe vers
+  le bord +Y, voie déviée en virage serré vers le bord +X (`d`, à droite) ou -X (`g`) ; un modèle par position des
+  lames (`droit` : voie directe donnée, `devie` : voie déviée), levier et cible (verte / jaune) près de la pointe ;
 - pas de tunnel.
 Écartement : 1,2 unité (60 cm) entre les rails, dessus des rails à `Z_RAIL` (0,24 unité = 12 cm).
 
@@ -108,41 +113,163 @@ def rail_droit(coll, leger=True):
     T.poser_au_sol(coll, 1.0)
 
 
-def rail_virage(coll, leger=True):
-    """Tuile 6 x 6 : quart de cercle du milieu du bord -Y (0, -3) au milieu du bord +X (3, 0), centre (3, -3)."""
-    lot = T.Lot(coll, 'rail')
-    c = Vector((3.0, -3.0, 0))
-    n = 12 if leger else 20
-    r0 = 3.0
+def _rail_segment(lot, a, b, mat='rail'):
+    """Un bout de rail (champignon et patin) de `a` à `b` (points (x, y))."""
+    a, b = Vector((a[0], a[1], 0)), Vector((b[0], b[1], 0))
+    d = b - a
+    rr = Matrix.Rotation(math.atan2(d.y, d.x) - math.pi / 2, 3, 'Z')
+    m = (a + b) / 2
+    lot.cube(mat, (0.07, d.length + 0.02, Z_RAIL - Z_TRAVERSE), tuple(m + Vector((0, 0, (Z_RAIL + Z_TRAVERSE) / 2))), 0,
+             rr)
+    lot.cube(mat, (0.13, d.length + 0.02, 0.025), tuple(m + Vector((0, 0, Z_TRAVERSE + 0.0125))), 0, rr)
+
+
+def _arc(N, m=1):
+    """Point de l'arc de rayon `r` (unités) à l'angle `t` (0 à pi/2), du milieu du bord -Y (0, -N) d'un bloc de
+    2N x 2N unités au milieu du bord +X (N, 0) ; centre (N, -N). `m` = -1 : symétrique vers le bord -X."""
+    c = Vector((m * N, -N, 0))
 
     def p(r, t):
-        return c + Vector((-r * math.cos(t), r * math.sin(t), 0))
+        return c + Vector((-m * r * math.cos(t), r * math.sin(t), 0))
+    return p
 
-    # Ballast en secteurs, traverses rayonnantes, rails en segments.
+
+def _virage(lot, N, leger, m=1, ballast=True, traverses=True, rails=(-1, 1), t_min=0.0, dz_ballast=0.0):
+    """Quart de cercle de rayon N unités (bloc de 2N x 2N) : ballast en secteurs, traverses rayonnantes, rails en
+    segments. `rails` : côtés posés (-1 : rail intérieur, rayon N - écart ; 1 : extérieur). Traverses à partir de
+    l'angle `t_min` (aiguillage : là où la voie déviée s'est écartée de la voie directe)."""
+    p = _arc(N, m)
+    n = max(8, round((12 if leger else 20) * N / 3))
     for k in range(n):
         t0, t1 = (math.pi / 2) * k / n, (math.pi / 2) * (k + 1) / n
         tm = (t0 + t1) / 2
-        # Secteur de ballast : sa longueur est celle de l'arc extérieur (pas de trou entre deux secteurs).
-        lg = (r0 + 0.95) * (t1 - t0) + 0.02
-        lot.cube('ballast', (1.9, lg, Z_BALLAST), tuple(p(r0, tm) + Vector((0, 0, Z_BALLAST / 2))), 0,
-                 Matrix.Rotation(-tm, 3, 'Z'))
-        for s in (-1, 1):
-            r = r0 + s * ECART
-            a, b = p(r, t0), p(r, t1)
-            d = b - a
-            rr = Matrix.Rotation(math.atan2(d.y, d.x) - math.pi / 2, 3, 'Z')
-            m = (a + b) / 2
-            lot.cube('rail', (0.07, d.length + 0.02, Z_RAIL - Z_TRAVERSE),
-                     tuple(m + Vector((0, 0, (Z_RAIL + Z_TRAVERSE) / 2))), 0, rr)
-            lot.cube('rail', (0.13, d.length + 0.02, 0.025), tuple(m + Vector((0, 0, Z_TRAVERSE + 0.0125))), 0, rr)
-    nt = 9  # traverses tous les ~50 cm sur l'arc
-    for k in range(nt):
-        t = (math.pi / 2) * (k + 0.5) / nt
-        lot.cube('traverse', (1.7, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
-                 tuple(p(r0, t) + Vector((0, 0, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01))), 0.01,
-                 Matrix.Rotation(-t, 3, 'Z'))
+        if ballast:
+            # Secteur de ballast : sa longueur est celle de l'arc extérieur (pas de trou entre deux secteurs).
+            lg = (N + 0.95) * (t1 - t0) + 0.02
+            lot.cube('ballast', (1.9, lg, Z_BALLAST), tuple(p(N, tm) + Vector((0, 0, Z_BALLAST / 2 + dz_ballast))), 0,
+                     Matrix.Rotation(-m * tm, 3, 'Z'))
+        for s in rails:
+            r = N + s * ECART
+            _rail_segment(lot, p(r, t0), p(r, t1))
+    if traverses:
+        nt = round(N * math.pi / 2 / 0.52)  # traverses tous les ~50 cm sur l'arc
+        for k in range(nt):
+            t = (math.pi / 2) * (k + 0.5) / nt
+            if t < t_min:
+                continue
+            lot.cube('traverse', (1.7, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
+                     tuple(p(N, t) + Vector((0, 0, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01))), 0.01,
+                     Matrix.Rotation(-m * t, 3, 'Z'))
+
+
+def rail_virage(coll, leger=True):
+    """Bloc de 6 x 6 (3 x 3 tuiles) : quart de cercle du milieu du bord -Y (0, -3) au milieu du bord +X (3, 0), centre
+    (3, -3), rayon 3 unités (3,75 m dans le jeu)."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 3, leger)
     lot.finir()
     T.poser_au_sol(coll, 3.0)
+
+
+def rail_virage_large(coll, leger=True):
+    """Virage large : bloc de 10 x 10 (5 x 5 tuiles), rayon 5 unités (6,25 m dans le jeu)."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 5, leger)
+    lot.finir()
+    T.poser_au_sol(coll, 5.0)
+
+
+def rail_virage_tres_large(coll, leger=True):
+    """Virage très large : bloc de 14 x 14 (7 x 7 tuiles), rayon 7 unités (8,75 m dans le jeu)."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 7, leger)
+    lot.finir()
+    T.poser_au_sol(coll, 7.0)
+
+
+def _aiguillage(coll, leger, m, devie):
+    """Aiguillage dans un bloc de 6 x 6 (3 x 3 tuiles) : pointe au milieu du bord -Y (0, -3) ; voie directe jusqu'au
+    bord +Y (0, 3) ; voie déviée en virage serré vers le bord +X (m = 1, à droite) ou -X (m = -1, à gauche).
+
+    Rails : contre-aiguille droite (côté opposé à la branche) et contre-aiguille courbe (côté de la branche), continues ;
+    aiguilles (les lames mobiles, 1,6 unité) puis rails intérieurs des deux voies, qui se croisent au cœur. `devie` :
+    position des lames (voie déviée donnée) ; levier et cible (verte : voie directe, jaune : déviée) sur le côté
+    opposé à la branche, près de la pointe."""
+    N = 3.0
+    lot = T.Lot(coll, 'rail')
+    p = _arc(N, m)
+    # Voie directe : ballast et traverses ; les traverses de la zone des lames sont longues (elles portent les deux voies).
+    lot.cube('ballast', (1.9, 2 * N, Z_BALLAST), (0, 0, Z_BALLAST / 2), 0.02)
+    lot.cube('ballast_sombre', (2.0, 2 * N, Z_BALLAST * 0.5), (0, 0, Z_BALLAST * 0.25), 0)
+    t_ecart = 0.0
+    n = 12
+    for k in range(n):
+        y = -N + 2 * N * (k + 0.5) / n
+        # Écart de la voie déviée à cette hauteur (tant qu'elle est sur les traverses de la voie directe).
+        s_ = max(-1.0, min(1.0, (y + N) / N))
+        t = math.asin(s_)
+        ecart = N - N * math.cos(t)
+        if ecart < 1.75:
+            t_ecart = t
+            lg = 1.7 + ecart
+            lot.cube('traverse', (lg, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
+                     (m * ecart / 2, y, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01), 0.01)
+        else:
+            lot.cube('traverse', (1.7, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
+                     (0, y, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01), 0.01)
+    # Voie déviée : ballast un peu plus bas (pas de scintillement là où il recouvre celui de la voie directe), traverses
+    # au-delà des traverses longues, rail extérieur (contre-aiguille courbe) continu.
+    _virage(lot, N, leger, m, rails=(-1,), t_min=t_ecart + 0.05, dz_ballast=-0.004)
+    # Contre-aiguille droite (côté opposé à la branche), continue.
+    _rail_segment(lot, (-m * ECART, -N), (-m * ECART, N))
+    # Lames : de la pointe sur 1,6 unité ; l'une appliquée contre sa contre-aiguille, l'autre écartée de 0,12.
+    Lb = 1.6
+    tb = Lb / (N + ECART)
+    ouv = 0.12
+    # Lame de la voie directe (le long de la contre-aiguille courbe, côté branche), fermée quand la voie est directe.
+    dx = 0.0 if not devie else -m * ouv
+    _rail_segment(lot, (m * ECART + dx, -N), (m * ECART + dx * 0.3, -N + Lb), 'acier')
+    # Lame de la voie déviée (le long de la contre-aiguille droite), fermée quand la voie est déviée.
+    q0, q1 = p(N + ECART, 0), p(N + ECART, tb)
+    dxa = 0.0 if devie else m * ouv
+    _rail_segment(lot, (q0.x + dxa, q0.y), (q1.x + dxa * 0.3, q1.y), 'acier')
+    # Rails intérieurs, après les lames : voie directe (droit) et voie déviée (courbe), qui se croisent au cœur.
+    _rail_segment(lot, (m * ECART, -N + Lb), (m * ECART, N))
+    k0 = 6
+    for k in range(k0 * 3):
+        t0 = tb + (math.pi / 2 - tb) * k / (k0 * 3)
+        t1 = tb + (math.pi / 2 - tb) * (k + 1) / (k0 * 3)
+        _rail_segment(lot, p(N + ECART, t0), p(N + ECART, t1))
+    # Tringle de manœuvre entre les lames, levier et cible.
+    lot.cube('acier_sombre', (2.2, 0.08, 0.05), (m * 0.0 - m * 0.5, -N + 0.25, Z_TRAVERSE + 0.04))
+    xl, yl = -m * 1.5, -N + 0.75
+    lot.cube('fonte', (0.3, 0.45, 0.2), (xl, yl, Z_BALLAST + 0.1), 0.02)  # socle
+    a = 0.5 if devie else -0.5
+    lot.barre('rouge', (xl, yl, Z_BALLAST + 0.2), (xl + m * 0.0, yl + a * 0.6, Z_BALLAST + 0.75), 0.05)  # levier
+    lot.tube('blanc', (xl, yl + a * 0.6, Z_BALLAST + 0.75), (xl, yl + a * 0.6, Z_BALLAST + 0.8), 0.06, 8)
+    lot.barre('acier_sombre', (xl - m * 0.25, yl, Z_BALLAST), (xl - m * 0.25, yl, 1.3), 0.06)  # mât de la cible
+    # Cible : disque face aux trains qui arrivent par la pointe (vert : voie directe, jaune : voie déviée).
+    lot.tube('vert' if not devie else 'jaune', (xl - m * 0.25, yl - 0.03, 1.3),
+             (xl - m * 0.25, yl + 0.03, 1.3), 0.25, 12)
+    lot.tube('blanc', (xl - m * 0.25, yl - 0.035, 1.3), (xl - m * 0.25, yl + 0.035, 1.3), 0.08, 8)
+    lot.finir()
+    T.poser_au_sol(coll, N)
+
+
+def rail_aiguillage_d_droit(coll, leger=True):
+    _aiguillage(coll, leger, 1, False)
+
+
+def rail_aiguillage_d_devie(coll, leger=True):
+    _aiguillage(coll, leger, 1, True)
+
+
+def rail_aiguillage_g_droit(coll, leger=True):
+    _aiguillage(coll, leger, -1, False)
+
+
+def rail_aiguillage_g_devie(coll, leger=True):
+    _aiguillage(coll, leger, -1, True)
 
 
 def rail_rampe(coll, leger=True):
@@ -613,7 +740,13 @@ def wagon_citerne(coll, leger=True):
 MODELES = {
     'rail_droit': rail_droit,
     'rail_virage': rail_virage,
+    'rail_virage_large': rail_virage_large,
+    'rail_virage_tres_large': rail_virage_tres_large,
     'rail_rampe': rail_rampe,
+    'rail_aiguillage_d_droit': rail_aiguillage_d_droit,
+    'rail_aiguillage_d_devie': rail_aiguillage_d_devie,
+    'rail_aiguillage_g_droit': rail_aiguillage_g_droit,
+    'rail_aiguillage_g_devie': rail_aiguillage_g_devie,
     'locomotive_vapeur': locomotive_vapeur,
     'locomotive_electrique': locomotive_electrique,
     'wagon_fret': wagon_fret,

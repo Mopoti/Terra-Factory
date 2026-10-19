@@ -1,15 +1,17 @@
 # Voies ferrées et trains
 
-Première version (octobre 2026) : le joueur pose des rails, des véhicules, conduit la locomotive, attelle et dételle. Pas encore de signalisation ni d'aiguillages ; plus tard les trains seront automatisés par des signaux.
+Première version (octobre 2026) : le joueur pose des rails, des véhicules, conduit la locomotive, attelle et dételle. Aiguillages manœuvrés à la main (levier, ou depuis la locomotive) ; pas encore de signalisation : plus tard les trains seront automatisés par des signaux.
 
 ## Matériel
-- **Rail** (onglet « Rail ») : un seul objet, `rail` = une tuile de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce. **Échelle réelle** : les modèles de voie (faits pour 60 cm) sont agrandis ×2,5 (`RAIL_SCALE`), écartement de 1,5 m comme les trains. Tuile droite de 2,5 m (5 × 5 cases, 1 rail) ; virage de 3 × 3 tuiles à chaque coin, quart de cercle de 3,75 m de rayon (3 rails) ; rampe de 1 × 4 tuiles (10 m) qui monte de 2,5 m (4 rails). Une voie posée avant l'agrandissement (version 1) est abandonnée au chargement.
+- **Rail** (onglet « Rail ») : un seul objet, `rail` = une tuile de voie. La voie se pose comme un convoyeur (voir ci-dessous) et le jeu choisit la forme de chaque pièce. **Échelle réelle** : les modèles de voie (faits pour 60 cm) sont agrandis ×2,5 (`RAIL_SCALE`), écartement de 1,5 m comme les trains. Tuile droite de 2,5 m (5 × 5 cases, 1 rail) ; virage à chaque coin, quart de cercle : serré (3 × 3 tuiles, rayon 3,75 m, 3 rails), large (5 × 5 tuiles, 6,25 m, 4 rails) ou très large (7 × 7 tuiles, 8,75 m, 6 rails) ; aiguillage de 3 × 3 tuiles (6 rails) ; rampe de 1 × 4 tuiles (10 m) qui monte de 2,5 m (4 rails). Une voie posée avant l'agrandissement (version 1) est abandonnée au chargement.
 - **Véhicules** (à l'échelle de la voie : roues sur les rails à ±0,75 m, tampons à 1,05 m, caisses de 2,6 m de large) : locomotive à vapeur (`train_locomotive`, type 030T, essieux extrêmes à ±1,5 m, tampons à l'avant, attelage automatique à l'arrière : 7,5 m d'attelage à attelage), wagon de fret couvert et wagon-citerne (caisse de 5 m, deux essieux à ±1,7 m, attelage automatique à chaque bout : 6,6 m). La locomotive électrique (modèle prêt) viendra avec les caténaires.
 
 ## Pose (comme les convoyeurs et les tuyaux)
-- Rail en main : **maintenir le clic et glisser** de tuile en tuile ; un aperçu vert / rouge montre ce qui sera posé ; on relâche pour poser. Un coin dans le tracé devient un virage (il faut au moins 3 tuiles entre deux coins). Revenir en arrière dans le glissé raccourcit le tracé.
+- Rail en main : **maintenir le clic et glisser** de tuile en tuile ; un aperçu vert / rouge montre ce qui sera posé ; on relâche pour poser. Un coin dans le tracé devient un virage de la taille choisie (il faut au moins 3, 5 ou 7 tuiles entre deux coins, et 1, 2 ou 3 tuiles entre le départ et le premier coin). Revenir en arrière dans le glissé raccourcit le tracé.
 - La voie se **raccorde toute seule** au bout de voie libre le plus proche (à moins de 4 m) et suit sa hauteur.
 - **PageUp / PageDown** : la voie commence par une rampe qui monte / descend (4 tuiles droites, puis la voie continue au niveau atteint) ; une autre pression revient à plat.
+- **B** : forme de la voie, en boucle : virages serrés → larges → très larges → aiguillage (`RAIL_SHAPES`, action `railShape`).
+- **Aiguillage** (forme « aiguillage ») : viser une ligne droite et cliquer ; l'aiguillage remplace ses trois tuiles (rendues dans son prix) et une branche en part en virage serré. On peut aussi le poser au bout d'une voie ou seul. **R** fait défiler les poses : branche à droite ou à gauche, pointe d'un côté ou de l'autre.
 - **Clic droit maintenu** sur la voie : la démolit (les rails reviennent dans le sac), comme les autres constructions.
 - Véhicule en main : viser la voie, clic ; il regarde du côté où regarde le joueur. **Maj + F** reprend un véhicule (seul, pas attelé).
 
@@ -17,6 +19,8 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - **Vitres** : la façade de l'abri a deux vraies fenêtres, de part et d'autre de la chaudière (modèle `locomotive_vapeur`) ; le jeu les ferme par une vitre translucide (`CAB_GLASS` dans `src/render/trainView.ts`). Assis à gauche, le mécanicien voit la voie par la fenêtre gauche, au-dessus de la caisse à eau et à côté de la chaudière.
 - **F** près de la locomotive : monter ; F de nouveau : descendre. Le joueur est assis dans la cabine.
 - **Z / S** (avancer / reculer), le levier est dans le sens où regarde la locomotive ; **Espace** : frein ; la locomotive prend le charbon ou le bois du sac quand sa soute est vide.
+- **R** dans la locomotive : manœuvre le premier aiguillage devant elle (pris par la pointe, à moins de 60 m). À pied, **F** près du levier (à moins de 2,5 m). On ne manœuvre pas un aiguillage sous un train.
+- **Descendre** : le joueur est posé du côté du siège (la porte de l'abri), hors de la boîte de collision et du marchepied ; un joueur déjà un peu dans une boîte peut toujours en sortir (`trainBlocked` compare chaque point de son corps à sa position actuelle).
 - **C** : attelle au véhicule dont l'attelage est à moins de 1,6 m (on recule vers un wagon, on s'arrête, on appuie) ; sinon, dételle derrière la locomotive (devant elle si elle est en queue). Un convoi dételé est garé (frein à main).
 
 ## Simulation (`src/core/rail/`)
@@ -27,6 +31,7 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - Les convois sont enregistrés avec la partie (`changes.rails`, `changes.trains`).
 
 - Une pièce de voie ne se démonte pas tant qu'un convoi roule ou stationne dessus.
+- **Aiguillages** (`switch_r`, `switch_l`, `src/core/rail/track.ts`) : trois ports (pointe 0, voie directe 1, voie déviée 2) ; `branch` dit la voie donnée. Dans le graphe, l'aiguillage compte pour deux pièces qui partagent la pointe : la voie directe (identifiant de la pièce) et la voie déviée (l'opposé, `branchId`). Devant la pointe, `TrackGraph.neighbour` choisit la voie donnée ; en venant du talon, on passe toujours (pas de déraillement). `switchAhead` trouve l'aiguillage pris par la pointe devant un train. Un train peut être sur la voie déviée (identifiant négatif) : c'est enregistré tel quel.
 
 - Clic droit maintenu sur un véhicule : il est démonté (même attelé, le reste du convoi se scinde) et revient dans le sac avec sa soute.
 

@@ -80,6 +80,7 @@ export const ACTIONS = [
   // Échap, et P pour les cas où Échap est pris par le navigateur ou l'application qui affiche le jeu.
   { id: 'pause', category: 'ui', defaults: ['Escape', 'KeyP'], fixed: true },
   { id: 'rotate', category: 'build', defaults: ['L:R', null] },
+  { id: 'railShape', category: 'build', defaults: ['L:B', null] },
   { id: 'levelUp', category: 'build', defaults: ['PageUp', null] },
   { id: 'levelDown', category: 'build', defaults: ['PageDown', null] },
   { id: 'layerUp', category: 'build', defaults: ['Home', null] },

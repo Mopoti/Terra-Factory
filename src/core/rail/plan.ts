@@ -1,10 +1,18 @@
 /**
  * Tracé de la voie, comme pour les convoyeurs : le joueur glisse d'une tuile (2,5 m) à l'autre et le jeu choisit seul
- * la forme de chaque pièce : tuiles droites en ligne, virage de 3 × 3 tuiles à chaque coin, rampe de 4 tuiles quand
- * on a choisi de monter ou de descendre (PageUp / PageDown).
+ * la forme de chaque pièce : tuiles droites en ligne, virage à chaque coin (serré 3 × 3 tuiles, large 5 × 5 ou très
+ * large 7 × 7, au choix du joueur), rampe de 4 tuiles quand on a choisi de monter ou de descendre (PageUp / PageDown).
  */
 import { RAIL_COST } from '../data/trains';
-import { RAMP_RISE_M, TILE_M, cornerFor, type Port, type RailKind } from './track';
+import {
+  RAMP_RISE_M,
+  TILE_M,
+  blockTiles,
+  cornerFor,
+  type CurveKind,
+  type Port,
+  type RailKind,
+} from './track';
 
 export interface Tile {
   tx: number;
@@ -62,6 +70,8 @@ export interface PlanOptions {
   tilt: -1 | 0 | 1;
   /** Nombre de tuiles du début qui existent déjà (la voie qu'on prolonge) : rien n'y est posé. */
   lead: number;
+  /** Virage posé aux coins (serré par défaut). */
+  curve?: CurveKind;
 }
 
 /**
@@ -71,15 +81,15 @@ export interface PlanOptions {
 export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedPiece[] {
   const tiles = [...tilesIn];
   // Tuiles voisines seulement, sans demi-tour.
-  let n = 1;
+  let len = 1;
   let prev: Dir | null = null;
-  for (; n < tiles.length; n++) {
-    const d = { dx: tiles[n].tx - tiles[n - 1].tx, dz: tiles[n].tz - tiles[n - 1].tz };
+  for (; len < tiles.length; len++) {
+    const d = { dx: tiles[len].tx - tiles[len - 1].tx, dz: tiles[len].tz - tiles[len - 1].tz };
     if (Math.abs(d.dx) + Math.abs(d.dz) !== 1) break;
     if (prev && d.dx === -prev.dx && d.dz === -prev.dz) break;
     prev = d;
   }
-  const path = tiles.slice(0, n);
+  const path = tiles.slice(0, len);
   const dirs: Dir[] = [];
   for (let i = 0; i + 1 < path.length; i++)
     dirs.push({ dx: path[i + 1].tx - path[i].tx, dz: path[i + 1].tz - path[i].tz });
@@ -95,13 +105,18 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
     for (let i = lead; i < rampEnd - 1; i++)
       if (!dirs[i] || !sameDir(dirs[i], dirs[lead])) return [];
   }
-  // Coins : un virage occupe 3 × 3 tuiles autour du coin, donc ni sur la tuile existante, ni trop près d'un autre coin.
+  // Coins : un virage occupe un bloc de n × n tuiles centré sur le coin (h tuiles de chaque côté), donc ni sur la
+  // voie existante, ni sur la rampe, ni trop près d'un autre coin. Après le dernier coin, le virage peut dépasser la
+  // fin du tracé (on voit tout de suite où il mène).
+  const curve: CurveKind = opts.curve ?? 'curve';
+  const n = blockTiles(curve);
+  const h = (n - 1) / 2;
   const corners: number[] = [];
   for (let i = lead; i < dirs.length; i++) {
     if (!corner(i)) continue;
-    const tooEarly = i - 1 < lead || (ramp && i - 1 < rampEnd);
+    const tooEarly = i - h < lead || (ramp && i - h < rampEnd);
     const last = corners[corners.length - 1];
-    if (tooEarly || (last !== undefined && i - last < 3)) {
+    if (tooEarly || (last !== undefined && i - last < n)) {
       limit = i;
       break;
     }
@@ -112,7 +127,7 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
   if (ramp) for (let i = lead; i < rampEnd; i++) covered.add(i);
   for (const i of corners) {
     if (i >= limit) continue;
-    for (const k of [i - 1, i, i + 1]) covered.add(k);
+    for (let k = i - h; k <= i + h; k++) covered.add(k);
   }
 
   const out: PlannedPiece[] = [];
@@ -142,11 +157,11 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
         const k = used[i];
         const turns = curveTurns({ dx: -dirs[i - 1].dx, dz: -dirs[i - 1].dz }, dirs[i]);
         out.push({
-          kind: 'curve',
-          ...cornerFor('curve', turns, centreX(k), centreZ(k)),
+          kind: curve,
+          ...cornerFor(curve, turns, centreX(k), centreZ(k)),
           turns,
           level,
-          cost: RAIL_COST.curve,
+          cost: RAIL_COST[curve],
         });
       }
       continue;

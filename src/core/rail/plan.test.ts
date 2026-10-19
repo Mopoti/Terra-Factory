@@ -177,3 +177,33 @@ describe('tracé de la voie', () => {
     expect(tileOf(8.4, -0.2)).toEqual({ tx: 3, tz: -1 });
   });
 });
+
+describe('virages larges', () => {
+  for (const curve of ['curve_wide', 'curve_large'] as const) {
+    it(`un coin donne un ${curve} raccordé aux tuiles droites, dans les quatre sens`, () => {
+      const h = curve === 'curve_wide' ? 2 : 3;
+      for (const [ax, az, bx, bz] of [
+        [0, -1, 1, 0],
+        [1, 0, 0, 1],
+        [0, 1, -1, 0],
+        [-1, 0, 0, -1],
+      ]) {
+        // h + 2 tuiles avant le coin, h + 2 après.
+        const a = line(0, 0, ax, az, h + 3);
+        const corner = a[a.length - 1];
+        const b = line(corner.tx + bx, corner.tz + bz, bx, bz, h + 2);
+        const plan = planRails([...a, ...b], { level: 0, tilt: 0, lead: 0, curve });
+        expect(plan.filter((p) => p.kind === curve)).toHaveLength(1);
+        const pieces = asPieces(plan);
+        expect(links(pieces)).toBe(pieces.length - 1);
+      }
+    });
+  }
+
+  it('trop près du départ pour un grand virage : le tracé est coupé avant le coin', () => {
+    const a = line(0, 0, 0, -1, 2);
+    const b = line(1, -1, 1, 0, 5);
+    const plan = planRails([...a, ...b], { level: 0, tilt: 0, lead: 0, curve: 'curve_large' });
+    expect(plan.some((p) => p.kind === 'curve_large')).toBe(false);
+  });
+});

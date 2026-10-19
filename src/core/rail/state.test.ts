@@ -3,7 +3,7 @@ import { CARS, carIdOfWindow, locoWindowId } from '../data/trains';
 import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
 import { planRails } from './plan';
-import { TILE_CELLS } from './track';
+import { TILE_CELLS, centerOf, cornerFor } from './track';
 
 const free = (): boolean => false;
 
@@ -180,5 +180,44 @@ describe('voies et trains dans la partie', () => {
     });
     expect(broken.changes.rails).toEqual([]);
     expect(broken.changes.trains).toEqual([]);
+  });
+});
+
+describe('aiguillages dans la partie', () => {
+  const start = (): GameState => {
+    const s = new GameState({ inventory: { rail: 40, train_wagon_freight: 1 } });
+    s.creative = true;
+    for (let k = 0; k < 10; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
+    return s;
+  };
+  /** Aiguillage centré sur la tuile `k` de la ligne, voie directe dans l'axe. */
+  const onLine = (s: GameState, k: number, turns = 0) => {
+    const c = centerOf(s.changes.rails[k]);
+    return { ...cornerFor('switch_r', turns, c.x, c.z), turns };
+  };
+
+  it('posé sur une ligne, il remplace ses trois tuiles droites (rendues dans le prix)', () => {
+    const s = start();
+    const before = s.inventory.rail ?? 0;
+    const at = onLine(s, 5);
+    expect(s.placeRail('switch_r', at.gx, at.gz, at.turns, 0, free)).toBe('ok');
+    expect(s.changes.rails.filter((p) => p.kind === 'straight')).toHaveLength(7);
+    expect(s.inventory.rail).toBe(before - 6 + 3);
+    // La ligne reste continue au travers de la voie directe.
+    const g = s.railGraph();
+    const run = g.advance({ piece: s.changes.rails[0].id, u: 0, dir: 1 }, 24);
+    expect(run.blocked).toBe(false);
+  });
+
+  it('on change de voie, sauf quand un convoi est sur l’aiguillage', () => {
+    const s = start();
+    const at = onLine(s, 5);
+    s.placeRail('switch_r', at.gx, at.gz, at.turns, 0, free);
+    const sw = s.changes.rails.find((p) => p.kind === 'switch_r')!;
+    expect(s.toggleSwitch(sw.id)).toBe(1);
+    expect(s.toggleSwitch(sw.id)).toBe(0);
+    expect(s.placeCar('wagon_freight', { piece: sw.id, u: 3.75, dir: 1 })).not.toBeNull();
+    expect(s.toggleSwitch(sw.id)).toBeNull();
+    expect(s.removeRail(sw.id, { x: 0, z: 0 })).toBe(false);
   });
 });

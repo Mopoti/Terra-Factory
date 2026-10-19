@@ -295,7 +295,13 @@ const EXTRA_GROUPS: Record<string, string[]> = {
   // automatique pivotent à leur traverse de tête pour rejoindre ceux du véhicule voisin (`trainView.ts`).
   rail_droit: [],
   rail_virage: [],
+  rail_virage_large: [],
+  rail_virage_tres_large: [],
   rail_rampe: [],
+  rail_aiguillage_d_droit: [],
+  rail_aiguillage_d_devie: [],
+  rail_aiguillage_g_droit: [],
+  rail_aiguillage_g_devie: [],
   locomotive_vapeur: ['roues_av', 'roues_ar', 'roues_motrices', 'attelage_ar'],
   wagon_fret: ['roues_av', 'roues_ar', 'attelage_av', 'attelage_ar'],
   wagon_citerne: ['roues_av', 'roues_ar', 'attelage_av', 'attelage_ar'],

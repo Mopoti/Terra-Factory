@@ -3,6 +3,10 @@ import { CARS, RAIL_COST, RAIL_ITEM, isLocoWindow, type CarKind } from '../data/
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
+  branchId,
+  centerOf,
+  isSwitch,
+  portsOf,
   trackCellsOf,
   type RailKind,
   type RailPiece,
@@ -1297,17 +1301,50 @@ export class GameState {
     this.emit({ type: 'inventory' });
   }
 
-  /** La pièce tient-elle là : aucune de ses cases n'est prise par la voie ni bloquée par le terrain ? */
-  railFits(piece: RailPiece, blocked: (c: Cell) => boolean): boolean {
+  /**
+   * La pièce tient-elle là : aucune de ses cases n'est prise par la voie (sauf par les pièces `ignore`, qu'elle
+   * remplace) ni bloquée par le terrain ?
+   */
+  railFits(
+    piece: RailPiece,
+    blocked: (c: Cell) => boolean,
+    ignore: ReadonlySet<number> = new Set(),
+  ): boolean {
     const taken = new Set<string>();
-    for (const p of this.changes.rails)
+    for (const p of this.changes.rails) {
+      if (ignore.has(p.id)) continue;
       for (const [x, z] of trackCellsOf(p)) taken.add(`${x},${z}`);
+    }
     return trackCellsOf(piece).every(
       ([x, z]) => !taken.has(`${x},${z}`) && !blocked({ gx: x, gz: z }),
     );
   }
 
-  /** Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la voie. */
+  /**
+   * Tuiles droites qu'un aiguillage remplace : celles posées sur sa voie directe (même hauteur, même axe). On pose
+   * ainsi un aiguillage sur une ligne existante pour en faire partir une branche.
+   */
+  railsUnderSwitch(piece: RailPiece): RailPiece[] {
+    if (!isSwitch(piece.kind)) return [];
+    const [a, b] = portsOf(piece);
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const ux = (b.x - a.x) / len;
+    const uz = (b.z - a.z) / len;
+    return this.changes.rails.filter((p) => {
+      if (p.kind !== 'straight' || Math.abs(p.level - piece.level) > 0.05) return false;
+      const [pa, pb] = portsOf(p);
+      if (Math.abs((pb.x - pa.x) * uz - (pb.z - pa.z) * ux) > 0.05) return false; // pas parallèle
+      const c = centerOf(p);
+      const along = (c.x - a.x) * ux + (c.z - a.z) * uz;
+      const side = (c.x - a.x) * uz - (c.z - a.z) * ux;
+      return Math.abs(side) < 0.05 && along > 0 && along < len;
+    });
+  }
+
+  /**
+   * Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la
+   * voie. Un aiguillage remplace les tuiles droites de sa voie directe (rendues au sac), sauf si un convoi y est.
+   */
   placeRail(
     kind: RailKind,
     gx: number,
@@ -1316,21 +1353,31 @@ export class GameState {
     level: number,
     blocked: (c: Cell) => boolean,
   ): 'ok' | 'missing' | 'blocked' {
-    const cost = RAIL_COST[kind];
-    if ((this.inventory[RAIL_ITEM] ?? 0) < cost) return 'missing';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
     const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
-    if (!this.railFits(piece, blocked)) return 'blocked';
-    this.inventory = remove(this.inventory, RAIL_ITEM, cost).inventory;
+    if (isSwitch(kind)) piece.branch = 0;
+    const replaced = this.railsUnderSwitch(piece);
+    if (replaced.some((p) => this.railOccupied(p.id))) return 'blocked';
+    const refund = replaced.reduce((n, p) => n + RAIL_COST[p.kind], 0);
+    const cost = RAIL_COST[kind];
+    if ((this.inventory[RAIL_ITEM] ?? 0) + refund < cost) return 'missing';
+    if (!this.railFits(piece, blocked, new Set(replaced.map((p) => p.id)))) return 'blocked';
+    for (const p of replaced) this.changes.rails.splice(this.changes.rails.indexOf(p), 1);
+    if (refund > cost) this.inventory = add(this.inventory, RAIL_ITEM, refund - cost);
+    else if (cost > refund)
+      this.inventory = remove(this.inventory, RAIL_ITEM, cost - refund).inventory;
     this.changes.rails.push(piece);
     this.railsChanged();
     return 'ok';
   }
 
-  /** Un convoi roule ou stationne-t-il sur cette pièce ? */
+  /** Un convoi roule ou stationne-t-il sur cette pièce (sur l'une ou l'autre voie d'un aiguillage) ? */
   railOccupied(id: number): boolean {
     const graph = this.railGraph();
-    return this.changes.trains.some((c) => piecesUnder(graph, c).has(id));
+    return this.changes.trains.some((c) => {
+      const under = piecesUnder(graph, c);
+      return under.has(id) || under.has(branchId(id));
+    });
   }
 
   /** Reprend une pièce de voie (l'objet revient dans le sac) ; refusé tant qu'un convoi est dessus. */
@@ -1341,6 +1388,18 @@ export class GameState {
     this.giveBack(RAIL_ITEM, RAIL_COST[piece.kind], at);
     this.railsChanged();
     return true;
+  }
+
+  /**
+   * Change la voie donnée par un aiguillage (directe ↔ déviée). Refusé si un convoi est sur l'aiguillage : on ne
+   * bouge pas les lames sous un train. Renvoie la nouvelle voie, ou null.
+   */
+  toggleSwitch(id: number): 0 | 1 | null {
+    const piece = this.changes.rails.find((p) => p.id === id);
+    if (!piece || !isSwitch(piece.kind) || this.railOccupied(id)) return null;
+    piece.branch = piece.branch === 1 ? 0 : 1;
+    this.railsChanged();
+    return piece.branch;
   }
 
   private newConsistId(): number {

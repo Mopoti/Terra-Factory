@@ -1988,11 +1988,16 @@ export function startGameView(
    * (un train lui est arrivé dessus), il peut en sortir : on ne le bloque pas.
    */
   let trainSolid: ((x: number, z: number, y0: number, y1: number) => boolean) | null = null;
-  const trainBlocked = (x: number, z: number): boolean => {
+  /**
+   * Le point (x, z) du corps du joueur (décalé de dx, dz de son centre) entrerait-il dans un train ? Un point déjà
+   * dedans (le joueur est descendu trop près, un train est arrivé sur lui) ne bloque pas : on peut toujours en sortir.
+   */
+  const trainBlocked = (x: number, z: number, dx = 0, dz = 0): boolean => {
     if (!trainSolid) return false;
     const top = playerY + PLAYER_HEIGHT_M;
     return (
-      trainSolid(x, z, playerY + 0.05, top) && !trainSolid(playerX, playerZ, playerY + 0.05, top)
+      trainSolid(x, z, playerY + 0.05, top) &&
+      !trainSolid(playerX + dx, playerZ + dz, playerY + 0.05, top)
     );
   };
   const canStand = (x: number, z: number): boolean => {
@@ -2002,7 +2007,7 @@ export function startGameView(
         if (isBlockedAt(x + dx, z + dz)) return false;
         if (bodyBlocked(pieces, x + dx, z + dz, playerY, PLAYER_HEIGHT_M, stepSlack)) return false;
         if (beltBlocked(x + dx, z + dz)) return false;
-        if (trainBlocked(x + dx, z + dz)) return false;
+        if (trainBlocked(x + dx, z + dz, dx, dz)) return false;
       }
     }
     return true;
@@ -2283,6 +2288,7 @@ export function startGameView(
   let trainRotate = false;
   let trainLevelUp = false;
   let trainLevelDown = false;
+  let trainShape = false;
   let placeWasDown = false;
   /** Mode Créatif : dernière case où l'on a posé une ressource pendant ce clic (on peint case après case). */
   let lastCreativeCell: string | null = null;
@@ -3536,6 +3542,7 @@ export function startGameView(
       if (options.state.selectedItem() === 'rail') {
         trainLevelUp = pressed('levelUp');
         trainLevelDown = pressed('levelDown');
+        trainShape = pressed('railShape');
       }
       vehicleTick(dt, useKey);
       bodyTick(useKey);
@@ -3555,6 +3562,7 @@ export function startGameView(
         rotate: trainRotate,
         levelUp: trainLevelUp,
         levelDown: trainLevelDown,
+        shape: trainShape,
         aimed: interaction.aimed,
         facing,
       },
@@ -3565,6 +3573,7 @@ export function startGameView(
     trainRotate = false;
     trainLevelUp = false;
     trainLevelDown = false;
+    trainShape = false;
     const trainSeat = trains.mounted();
     if (trainSeat) {
       playerX = trainSeat.x;

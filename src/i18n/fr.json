@@ -89,7 +89,7 @@
   "train.pickedUp": "Véhicule repris.",
   "train.pickCoupled": "Dételle d'abord ce véhicule.",
   "train.carHint": "Vise la voie et clique pour poser le véhicule.",
-  "train.railHint": "Rail : maintiens le clic et glisse pour tracer (la voie se raccorde au bout de la voie existante, les virages se font seuls), PageUp / PageDown : rampe, clic droit maintenu : reprendre.",
+  "train.railHint": "Rail : maintiens le clic et glisse pour tracer (la voie se raccorde au bout de la voie existante, les virages se font seuls), B : taille des virages ou aiguillage, PageUp / PageDown : rampe, clic droit maintenu : reprendre.",
   "train.tiltUp": "Voie : la rampe monte.",
   "train.tiltDown": "Voie : la rampe descend.",
   "train.tiltFlat": "Voie : à plat.",
@@ -1248,5 +1248,15 @@
   "char.custom": "couleur libre",
   "char.random": "Aléatoire",
   "char.reset": "Réinitialiser",
-  "char.validate": "Valider"
+  "char.validate": "Valider",
+  "train.shape.curve": "Voie : virages serrés (rayon 3,75 m).",
+  "train.shape.curve_wide": "Voie : virages larges (rayon 6,25 m).",
+  "train.shape.curve_large": "Voie : virages très larges (rayon 8,75 m).",
+  "train.shape.switch": "Voie : aiguillage. Vise une ligne droite (ou un bout de voie) et clique ; R : changer le côté et le sens.",
+  "train.switchPlaced": "Aiguillage posé : F près du levier (ou R dans la locomotive) pour changer de voie.",
+  "train.switchStraight": "Aiguillage : voie directe.",
+  "train.switchDiverge": "Aiguillage : voie déviée.",
+  "train.switchBusy": "Un convoi est sur l'aiguillage : attends qu'il soit passé.",
+  "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
+  "action.railShape": "Forme de la voie (virages, aiguillage)"
 }
