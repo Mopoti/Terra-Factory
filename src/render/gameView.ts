@@ -2288,7 +2288,6 @@ export function startGameView(
   let trainRotate = false;
   let trainLevelUp = false;
   let trainLevelDown = false;
-  let trainShape = false;
   let placeWasDown = false;
   /** Mode Créatif : dernière case où l'on a posé une ressource pendant ce clic (on peint case après case). */
   let lastCreativeCell: string | null = null;
@@ -3542,7 +3541,6 @@ export function startGameView(
       if (options.state.selectedItem() === 'rail') {
         trainLevelUp = pressed('levelUp');
         trainLevelDown = pressed('levelDown');
-        trainShape = pressed('railShape');
       }
       vehicleTick(dt, useKey);
       bodyTick(useKey);
@@ -3562,7 +3560,6 @@ export function startGameView(
         rotate: trainRotate,
         levelUp: trainLevelUp,
         levelDown: trainLevelDown,
-        shape: trainShape,
         aimed: interaction.aimed,
         facing,
       },
@@ -3573,7 +3570,6 @@ export function startGameView(
     trainRotate = false;
     trainLevelUp = false;
     trainLevelDown = false;
-    trainShape = false;
     const trainSeat = trains.mounted();
     if (trainSeat) {
       playerX = trainSeat.x;

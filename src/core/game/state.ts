@@ -1419,6 +1419,17 @@ export class GameState {
    * Change la voie donnée par un aiguillage (directe ↔ déviée). Refusé si un convoi est sur l'aiguillage : on ne
    * bouge pas les lames sous un train. Renvoie la nouvelle voie, ou null.
    */
+  setSwitch(id: number, branch: 0 | 1): 0 | 1 | null {
+    const piece = this.changes.rails.find((p) => p.id === id);
+    if (!piece || !isSwitch(piece.kind) || this.railOccupied(id)) return null;
+    if (piece.branch !== branch) {
+      piece.branch = branch;
+      this.railsChanged();
+    }
+    return branch;
+  }
+
+  /** Inverse la voie donnée par un aiguillage. */
   toggleSwitch(id: number): 0 | 1 | null {
     const piece = this.changes.rails.find((p) => p.id === id);
     if (!piece || !isSwitch(piece.kind) || this.railOccupied(id)) return null;

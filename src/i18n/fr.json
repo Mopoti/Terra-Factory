@@ -71,7 +71,7 @@
   "action.viewTop": "Vue du dessus",
   "action.interact": "Interagir / récolter",
   "action.secondary": "Action secondaire",
-  "train.mount": "Locomotive : Z / S pour avancer / reculer, Espace pour freiner, C pour atteler ou dételer, F pour descendre",
+  "train.mount": "Locomotive : Z / S pour avancer / reculer, Q / D pour choisir la voie au prochain aiguillage (sinon tout droit), Espace pour freiner, C pour atteler ou dételer, F pour descendre",
   "train.hud": "{speed} km/h · {dir} · soute : {fuel} · chaudière {heat} %",
   "train.hud.fwd": "avant",
   "train.hud.rev": "arrière",
@@ -1249,12 +1249,11 @@
   "char.random": "Aléatoire",
   "char.reset": "Réinitialiser",
   "char.validate": "Valider",
-  "train.shape.auto": "Voie : tracé automatique.",
-  "train.shape.switch": "Voie : aiguillage seul. Vise une ligne droite (ou un bout de voie) et clique ; R : changer le côté et le sens ; B : revenir au tracé.",
   "train.switchPlaced": "Aiguillage posé : F près du levier (ou R dans la locomotive) pour changer de voie.",
   "train.switchStraight": "Aiguillage : voie directe.",
   "train.switchDiverge": "Aiguillage : voie déviée.",
   "train.switchBusy": "Un convoi est sur l'aiguillage : attends qu'il soit passé.",
-  "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
-  "action.railShape": "Aiguillage seul (au lieu du tracé)"
+  "train.steerRight": "Aiguillage : tu tournes à droite.",
+  "train.steerLeft": "Aiguillage : tu tournes à gauche.",
+  "train.noSwitch": "Pas d'aiguillage devant la locomotive."
 }

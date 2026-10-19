@@ -28,7 +28,6 @@ import {
   portsOf,
   leverOf,
   lengthOfPiece,
-  matesFor,
   poseOn,
   routesOf,
   type Port,
@@ -66,7 +65,6 @@ export function railModelName(p: RailPiece): string {
   return `rail_aiguillage_${p.kind === 'switch_r' ? 'd' : 'g'}_${p.branch === 1 ? 'devie' : 'droit'}`;
 }
 /** Formes de voie qu'on choisit avec B : la taille des virages du tracé, ou l'aiguillage. */
-type RailShape = 'auto' | 'switch';
 /** Distance (m) au levier d'un aiguillage pour le manœuvrer à pied (touche F). */
 const LEVER_REACH_M = 2.5;
 /** Distance (m) jusqu'à laquelle on cherche, depuis la locomotive, l'aiguillage à manœuvrer (touche R). */
@@ -119,7 +117,7 @@ export interface TrainHost {
   aim(): { x: number; z: number } | null;
   /** Case (gx, gz) bloquée par le terrain, une machine ou une construction ? */
   blocked(gx: number, gz: number): boolean;
-  held(action: 'forward' | 'backward' | 'jump' | 'interact' | 'sprint'): boolean;
+  held(action: 'forward' | 'backward' | 'jump' | 'interact' | 'sprint' | 'left' | 'right'): boolean;
   message(text: string): void;
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
 }
@@ -136,8 +134,6 @@ export interface TrainFrame {
   /** PageUp / PageDown : monter / descendre (rampe en tête de tracé). */
   levelUp: boolean;
   levelDown: boolean;
-  /** B : forme de la voie (taille des virages, aiguillage). */
-  shape?: boolean;
   /** Le joueur vise déjà autre chose (ressource, machine…). */
   aimed: boolean;
   /** Cap du joueur (rad) : sert à choisir le sens d'un véhicule qu'on pose. */
@@ -681,6 +677,15 @@ export class TrainView {
   ): void {
     const { state } = this.host;
     if (frame.rotate && this.mountedCar !== null) this.switchAheadOfLoco(graph);
+    // Aux commandes : D / Q (droite / gauche) mettent l'aiguillage devant la locomotive sur la voie qui part de ce côté.
+    const right = this.host.held('right');
+    const left = this.host.held('left');
+    if (this.mountedCar !== null) {
+      if (right && !this.wasRight) this.steerAhead(graph, 'right');
+      if (left && !this.wasLeft) this.steerAhead(graph, 'left');
+    }
+    this.wasRight = right;
+    this.wasLeft = left;
     if (frame.use) {
       if (this.mountedCar !== null) this.dismount(true);
       else {
@@ -764,6 +769,30 @@ export class TrainView {
     } else this.toggleSwitch(id);
   }
 
+  private wasRight = false;
+  private wasLeft = false;
+
+  /** Met l'aiguillage devant la locomotive sur la voie qui tourne du côté demandé (l'autre : tout droit). */
+  private steerAhead(graph: TrackGraph, side: 'left' | 'right'): void {
+    const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
+    const loco = c?.cars.find((k) => k.id === this.mountedCar);
+    if (!c || !loco) return;
+    const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
+    const id = graph.switchAhead(from, SWITCH_AHEAD_M);
+    const piece = id === null ? null : this.host.state.changes.rails.find((p) => p.id === id);
+    if (!piece) return;
+    // La voie déviée d'un aiguillage « droit » part à droite ; celle d'un aiguillage « gauche », à gauche.
+    const diverges = (piece.kind === 'switch_r') === (side === 'right');
+    const r = this.host.state.setSwitch(piece.id, diverges ? 1 : 0);
+    if (r === null) {
+      this.host.sfx('deny');
+      this.host.message(t('train.switchBusy'));
+      return;
+    }
+    this.host.sfx('select');
+    this.host.message(t(side === 'right' ? 'train.steerRight' : 'train.steerLeft'));
+  }
+
   private dismount(announce: boolean): void {
     this.exit = this.sideSpot();
     this.mountedCar = null;
@@ -816,7 +845,6 @@ export class TrainView {
   private pathLead = 0;
   private pathLevel = 0;
   private railTurn = 0;
-  private railShape: RailShape = 'auto';
   /** Ligne droite d'où part le tracé en cours : s'il la quitte de côté, un aiguillage est posé. */
   private branch: RailPiece | null = null;
 
@@ -846,13 +874,7 @@ export class TrainView {
       if (frame.levelUp) this.setTilt(Math.min(1, this.tilt + 1) as -1 | 0 | 1);
       if (frame.levelDown) this.setTilt(Math.max(-1, this.tilt - 1) as -1 | 0 | 1);
       if (frame.rotate) this.railTurn++;
-      if (frame.shape) {
-        this.railShape = this.railShape === 'auto' ? 'switch' : 'auto';
-        this.path = [];
-        this.host.message(t(`train.shape.${this.railShape}`));
-      }
-      if (this.railShape === 'switch') this.placeSwitch(aim, edge, frame);
-      else this.trace(graph, aim, edge, release, down, frame, player);
+      this.trace(graph, aim, edge, release, down, frame, player);
       this.showHint('train.railHint');
     } else if (carKind && !aim) this.setCarGhost(null, false);
     else if (carKind && aim) {
@@ -1061,22 +1083,31 @@ export class TrainView {
       } else single = true;
     }
     let planned: PlannedPiece[];
-    const side =
-      this.branch && tiles.length >= 2
-        ? { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz }
-        : null;
-    const alongZ = this.branch ? this.branch.turns % 2 === 0 : false;
-    const sw =
-      this.branch && side && (alongZ ? side.tx !== 0 : side.tz !== 0)
-        ? this.branchSwitch(this.branch, side)
-        : null;
+    // Une ligne droite est quittée de côté (départ) ou jointe de côté (arrivée) : un aiguillage s'y pose.
+    const perpendicular = (line: RailPiece, d: Tile): boolean =>
+      line.turns % 2 === 0 ? d.tx !== 0 : d.tz !== 0;
+    let sw: PlannedPiece | null = null;
+    let rest: Tile[] = [];
+    let restTilt: -1 | 0 | 1 = this.tilt;
+    if (this.branch && tiles.length >= 2) {
+      const side = { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz };
+      if (perpendicular(this.branch, side)) sw = this.branchSwitch(this.branch, side);
+      rest = tiles.slice(1);
+    } else if (!this.branch && this.pathLead === 0 && this.path.length >= 3) {
+      const end = this.path[this.path.length - 1];
+      const prev = this.path[this.path.length - 2];
+      const line = this.straightAt(end);
+      const side = { tx: prev.tx - end.tx, tz: prev.tz - end.tz };
+      if (line && perpendicular(line, side)) {
+        sw = this.branchSwitch(line, side);
+        // Le tracé est lu de la ligne vers son départ : la branche du côté de l'aiguillage, le reste la prolonge.
+        rest = this.path.slice(0, -1).reverse();
+        restTilt = 0;
+      }
+    }
     if (sw) {
-      // La branche part de la tuile voisine : le reste du tracé la prolonge comme un bout de voie.
       const exit = portsOf({ id: -1, ...sw, branch: 0 })[2];
-      planned = [
-        sw,
-        ...planRails(tiles.slice(1), { level: exit.y, tilt: this.tilt, lead: 1, curve: 'auto' }),
-      ];
+      planned = [sw, ...planRails(rest, { level: exit.y, tilt: restTilt, lead: 1, curve: 'auto' })];
     } else {
       planned = planRails(tiles, { level, tilt: this.tilt, lead, curve: 'auto' });
       if (single) planned = planned.slice(0, 1);
@@ -1116,89 +1147,6 @@ export class TrainView {
       }
     }
     void player;
-  }
-
-  /**
-   * Pose d'un aiguillage : sur une ligne droite visée (il remplace ses tuiles et en fait partir une branche), au bout
-   * d'une voie, ou seul sur le terrain. R fait défiler les poses possibles (côté de la branche, sens).
-   */
-  private placeSwitch(
-    aim: { x: number; z: number } | null,
-    edge: boolean,
-    frame: TrainFrame,
-  ): void {
-    const { state } = this.host;
-    if (!aim) {
-      this.setGhost([]);
-      return;
-    }
-    const kinds = ['switch_r', 'switch_l'] as const;
-    const options: RailPiece[] = [];
-    const piece = (
-      kind: RailKind,
-      at: { gx: number; gz: number; turns: number; level: number },
-    ): RailPiece => ({ id: -1, kind, ...at, branch: 0 });
-    // Sur une ligne droite : le bloc est centré sur la tuile visée, la voie directe dans l'axe de la ligne.
-    let line: RailPiece | null = null;
-    let lineD = TILE_M * 0.75;
-    for (const p of state.changes.rails) {
-      if (p.kind !== 'straight') continue;
-      const c = centerOf(p);
-      const d = Math.hypot(c.x - aim.x, c.z - aim.z);
-      if (d < lineD) {
-        line = p;
-        lineD = d;
-      }
-    }
-    const port = line ? null : this.nearestFreePort(aim);
-    if (line) {
-      const c = centerOf(line);
-      for (const turns of [line.turns % 2, (line.turns % 2) + 2])
-        for (const kind of kinds)
-          options.push(
-            piece(kind, { ...cornerFor(kind, turns, c.x, c.z), turns, level: line.level }),
-          );
-    } else if (port) {
-      for (const kind of kinds) for (const m of matesFor(kind, port)) options.push(piece(kind, m));
-    } else {
-      const base = Math.round((((-frame.facing / (Math.PI / 2)) % 4) + 4) % 4);
-      const cx = (Math.floor(aim.x / TILE_M) + 0.5) * TILE_M;
-      const cz = (Math.floor(aim.z / TILE_M) + 0.5) * TILE_M;
-      for (let k = 0; k < 4; k++)
-        for (const kind of kinds) {
-          const turns = (base + k) % 4;
-          options.push(piece(kind, { ...cornerFor(kind, turns, cx, cz), turns, level: 0 }));
-        }
-    }
-    if (options.length === 0) {
-      this.setGhost([]);
-      return;
-    }
-    const chosen = options[this.railTurn % options.length];
-    const blocked = (c: { gx: number; gz: number }): boolean => this.host.blocked(c.gx, c.gz);
-    const replaced = state.railsUnderSwitch(chosen);
-    const refund = replaced.length * RAIL_COST.straight;
-    const ok =
-      state.railFits(chosen, blocked, new Set(replaced.map((p) => p.id))) &&
-      (state.inventory[RAIL_ITEM] ?? 0) + refund >= RAIL_COST[chosen.kind];
-    this.setGhost([{ piece: chosen, ok }]);
-    if (!edge) return;
-    const r = state.placeRail(
-      chosen.kind,
-      chosen.gx,
-      chosen.gz,
-      chosen.turns,
-      chosen.level,
-      blocked,
-    );
-    this.ghostKey = '';
-    if (r === 'ok') {
-      this.host.sfx('placeStone');
-      this.host.message(t('train.switchPlaced'));
-    } else {
-      this.host.sfx('deny');
-      this.host.message(t('train.railBlocked'));
-    }
   }
 
   private placeCar(

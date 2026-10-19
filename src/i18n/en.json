@@ -71,7 +71,7 @@
   "action.viewTop": "Top view",
   "action.interact": "Interact / harvest",
   "action.secondary": "Secondary action",
-  "train.mount": "Locomotive: W / S to go forward / back, Space to brake, C to couple or uncouple, F to get off",
+  "train.mount": "Locomotive: W / S to go forward / back, A / D to pick the route at the next switch (else straight), Space to brake, C to couple or uncouple, F to get off",
   "train.hud": "{speed} km/h · {dir} · tender: {fuel} · boiler {heat} %",
   "train.hud.fwd": "forward",
   "train.hud.rev": "reverse",
@@ -1249,12 +1249,11 @@
   "char.random": "Random",
   "char.reset": "Reset",
   "char.validate": "Done",
-  "train.shape.auto": "Track: automatic tracing.",
-  "train.shape.switch": "Track: lone switch. Aim at a straight line (or a track end) and click; R: change side and direction; B: back to tracing.",
   "train.switchPlaced": "Switch placed: F near the lever (or R in the locomotive) to change route.",
   "train.switchStraight": "Switch: straight route.",
   "train.switchDiverge": "Switch: diverging route.",
   "train.switchBusy": "A train is on the switch: wait until it has passed.",
-  "train.noSwitch": "No switch ahead of the locomotive.",
-  "action.railShape": "Lone switch (instead of tracing)"
+  "train.steerRight": "Switch: you will turn right.",
+  "train.steerLeft": "Switch: you will turn left.",
+  "train.noSwitch": "No switch ahead of the locomotive."
 }
