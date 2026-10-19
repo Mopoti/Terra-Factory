@@ -1341,6 +1341,28 @@ export class GameState {
     });
   }
 
+  /** Pièces de voie qu'une nouvelle pièce remplacerait : celles dont une case est prise, et les tuiles sous un aiguillage. */
+  railsOverlapping(piece: RailPiece): RailPiece[] {
+    const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
+    const out = new Set(this.railsUnderSwitch(piece));
+    for (const p of this.changes.rails)
+      if (trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`))) out.add(p);
+    return [...out];
+  }
+
+  /** La même pièce est-elle déjà posée exactement là ? */
+  railAlready(kind: RailKind, gx: number, gz: number, turns: number, level: number): boolean {
+    const tu = ((turns % 4) + 4) % 4;
+    return this.changes.rails.some(
+      (p) =>
+        p.kind === kind &&
+        p.gx === gx &&
+        p.gz === gz &&
+        p.turns === tu &&
+        Math.abs(p.level - level) < 0.05,
+    );
+  }
+
   /**
    * Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la
    * voie. Un aiguillage remplace les tuiles droites de sa voie directe (rendues au sac), sauf si un convoi y est.
@@ -1352,11 +1374,14 @@ export class GameState {
     turns: number,
     level: number,
     blocked: (c: Cell) => boolean,
+    replace = false,
   ): 'ok' | 'missing' | 'blocked' {
+    if (replace && this.railAlready(kind, gx, gz, turns, level)) return 'ok';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
     const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
     if (isSwitch(kind)) piece.branch = 0;
-    const replaced = this.railsUnderSwitch(piece);
+    // `replace` : on pose par-dessus la voie existante (changer de forme) ; sinon seul l'aiguillage remplace des tuiles.
+    const replaced = replace ? this.railsOverlapping(piece) : this.railsUnderSwitch(piece);
     if (replaced.some((p) => this.railOccupied(p.id))) return 'blocked';
     const refund = replaced.reduce((n, p) => n + RAIL_COST[p.kind], 0);
     const cost = RAIL_COST[kind];

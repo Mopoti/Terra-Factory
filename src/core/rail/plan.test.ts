@@ -206,4 +206,24 @@ describe('virages larges', () => {
     const plan = planRails([...a, ...b], { level: 0, tilt: 0, lead: 0, curve: 'curve_large' });
     expect(plan.some((p) => p.kind === 'curve_large')).toBe(false);
   });
+
+  it('en automatique, le virage prend la plus grande taille que les deux branches permettent', () => {
+    const L = (a: number, b: number): Tile[] => [
+      ...line(0, 0, 1, 0, a + 1),
+      ...line(a, 1, 0, 1, b),
+    ];
+    const kindFor = (a: number, b: number): string[] =>
+      planRails(L(a, b), { level: 0, tilt: 0, lead: 0, curve: 'auto' })
+        .filter((p) => p.kind !== 'straight')
+        .map((p) => p.kind);
+    expect(kindFor(1, 1)).toEqual(['curve']);
+    expect(kindFor(2, 2)).toEqual(['curve_wide']);
+    expect(kindFor(3, 3)).toEqual(['curve_large']);
+    expect(kindFor(8, 8)).toEqual(['curve_large']);
+    // La branche la plus courte décide.
+    expect(kindFor(8, 1)).toEqual(['curve']);
+    // Le tracé reste continu.
+    const plan = planRails(L(6, 6), { level: 0, tilt: 0, lead: 0, curve: 'auto' });
+    expect(links(asPieces(plan))).toBe(plan.length - 1);
+  });
 });

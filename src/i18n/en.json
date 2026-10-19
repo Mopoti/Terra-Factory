@@ -89,7 +89,7 @@
   "train.pickedUp": "Vehicle picked up.",
   "train.pickCoupled": "Uncouple this vehicle first.",
   "train.carHint": "Aim at the track and click to place the vehicle.",
-  "train.railHint": "Rail: hold click and drag to trace (the track joins the end of existing track, curves are automatic), B: curve size or switch, PageUp / PageDown: ramp, hold right click: pick up.",
+  "train.railHint": "Rail: hold click and drag to trace (curves of the right size and joining the track end are automatic). Start from an existing line and drag sideways to place a switch (R: which end the points face). Tracing over a track replaces it. PageUp / PageDown: ramp, hold right click: pick up.",
   "train.tiltUp": "Track: ramp goes up.",
   "train.tiltDown": "Track: ramp goes down.",
   "train.tiltFlat": "Track: flat.",
@@ -1249,14 +1249,12 @@
   "char.random": "Random",
   "char.reset": "Reset",
   "char.validate": "Done",
-  "train.shape.curve": "Track: tight curves (3.75 m radius).",
-  "train.shape.curve_wide": "Track: wide curves (6.25 m radius).",
-  "train.shape.curve_large": "Track: very wide curves (8.75 m radius).",
-  "train.shape.switch": "Track: switch. Aim at a straight line (or a track end) and click; R: change side and direction.",
+  "train.shape.auto": "Track: automatic tracing.",
+  "train.shape.switch": "Track: lone switch. Aim at a straight line (or a track end) and click; R: change side and direction; B: back to tracing.",
   "train.switchPlaced": "Switch placed: F near the lever (or R in the locomotive) to change route.",
   "train.switchStraight": "Switch: straight route.",
   "train.switchDiverge": "Switch: diverging route.",
   "train.switchBusy": "A train is on the switch: wait until it has passed.",
   "train.noSwitch": "No switch ahead of the locomotive.",
-  "action.railShape": "Track shape (curves, switch)"
+  "action.railShape": "Lone switch (instead of tracing)"
 }

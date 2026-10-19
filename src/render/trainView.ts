@@ -16,7 +16,6 @@ import { emptyMachine, type Machine } from '../core/factory/factory';
 import type { GameState } from '../core/game/state';
 import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from '../core/rail/plan';
 import {
-  CURVE_KINDS,
   RAIL_SCALE,
   RAIL_TOP_M,
   TILE_M,
@@ -26,12 +25,12 @@ import {
   freePorts,
   footprintOf,
   isSwitch,
+  portsOf,
   leverOf,
   lengthOfPiece,
   matesFor,
   poseOn,
   routesOf,
-  type CurveKind,
   type Port,
   type RailKind,
   type RailPiece,
@@ -67,8 +66,7 @@ export function railModelName(p: RailPiece): string {
   return `rail_aiguillage_${p.kind === 'switch_r' ? 'd' : 'g'}_${p.branch === 1 ? 'devie' : 'droit'}`;
 }
 /** Formes de voie qu'on choisit avec B : la taille des virages du tracé, ou l'aiguillage. */
-type RailShape = CurveKind | 'switch';
-const RAIL_SHAPES: readonly RailShape[] = [...CURVE_KINDS, 'switch'];
+type RailShape = 'auto' | 'switch';
 /** Distance (m) au levier d'un aiguillage pour le manœuvrer à pied (touche F). */
 const LEVER_REACH_M = 2.5;
 /** Distance (m) jusqu'à laquelle on cherche, depuis la locomotive, l'aiguillage à manœuvrer (touche R). */
@@ -818,7 +816,9 @@ export class TrainView {
   private pathLead = 0;
   private pathLevel = 0;
   private railTurn = 0;
-  private railShape: RailShape = 'curve';
+  private railShape: RailShape = 'auto';
+  /** Ligne droite d'où part le tracé en cours : s'il la quitte de côté, un aiguillage est posé. */
+  private branch: RailPiece | null = null;
 
   private handlePlacing(
     graph: TrackGraph,
@@ -847,8 +847,7 @@ export class TrainView {
       if (frame.levelDown) this.setTilt(Math.max(-1, this.tilt - 1) as -1 | 0 | 1);
       if (frame.rotate) this.railTurn++;
       if (frame.shape) {
-        this.railShape =
-          RAIL_SHAPES[(RAIL_SHAPES.indexOf(this.railShape) + 1) % RAIL_SHAPES.length];
+        this.railShape = this.railShape === 'auto' ? 'switch' : 'auto';
         this.path = [];
         this.host.message(t(`train.shape.${this.railShape}`));
       }
@@ -887,14 +886,13 @@ export class TrainView {
     return best?.port ?? null;
   }
 
-  /** Les pièces du tracé avec ce qu'on peut vraiment poser (terrain libre, rails en stock). */
+  /** Les pièces du tracé avec ce qu'on peut vraiment poser : par-dessus la voie existante, on la remplace (rails rendus). */
   private evaluate(
     planned: PlannedPiece[],
   ): { piece: RailPiece; ok: boolean; plan: PlannedPiece }[] {
     const { state } = this.host;
-    const taken = new Set<string>();
-    for (const p of state.changes.rails)
-      for (const [x, z] of trackCellsOf(p)) taken.add(`${x},${z}`);
+    const gone = new Set<number>();
+    const added = new Set<string>();
     let stock = state.inventory[RAIL_ITEM] ?? 0;
     return planned.map((plan) => {
       const piece: RailPiece = {
@@ -904,16 +902,51 @@ export class TrainView {
         gz: plan.gz,
         turns: plan.turns,
         level: plan.level,
+        ...(isSwitch(plan.kind) ? { branch: 0 as const } : {}),
       };
+      if (state.railAlready(plan.kind, plan.gx, plan.gz, plan.turns, plan.level))
+        return { piece, ok: true, plan };
+      const over = state.railsOverlapping(piece).filter((p) => !gone.has(p.id));
+      const refund = over.reduce((n, p) => n + RAIL_COST[p.kind], 0);
       const cells = trackCellsOf(piece);
-      const free = cells.every(([x, z]) => !taken.has(`${x},${z}`) && !this.host.blocked(x, z));
-      const ok = free && stock >= plan.cost;
+      const free = cells.every(([x, z]) => !added.has(`${x},${z}`) && !this.host.blocked(x, z));
+      const ok = free && !over.some((p) => state.railOccupied(p.id)) && stock + refund >= plan.cost;
       if (ok) {
-        stock -= plan.cost;
-        for (const [x, z] of cells) taken.add(`${x},${z}`);
+        stock += refund - plan.cost;
+        for (const p of over) gone.add(p.id);
+        for (const [x, z] of cells) added.add(`${x},${z}`);
       }
       return { piece, ok, plan };
     });
+  }
+
+  /** Tuile droite posée sur cette tuile de tracé, s'il y en a une. */
+  private straightAt(tile: Tile): RailPiece | null {
+    for (const p of this.host.state.changes.rails) {
+      if (p.kind !== 'straight') continue;
+      const c = centerOf(p);
+      const t = tileOf(c.x, c.z);
+      if (t.tx === tile.tx && t.tz === tile.tz) return p;
+    }
+    return null;
+  }
+
+  /**
+   * Aiguillage d'un tracé qui quitte une ligne de côté : le bloc est centré sur la tuile de départ, sa branche sort
+   * du côté où l'on glisse. R choisit de quel bout de la ligne part la pointe.
+   */
+  private branchSwitch(line: RailPiece, side: Tile): PlannedPiece | null {
+    const c = centerOf(line);
+    const want = { x: c.x + side.tx * 1.5 * TILE_M, z: c.z + side.tz * 1.5 * TILE_M };
+    const found: PlannedPiece[] = [];
+    for (const turns of [line.turns % 2, (line.turns % 2) + 2])
+      for (const kind of ['switch_r', 'switch_l'] as const) {
+        const at = { ...cornerFor(kind, turns, c.x, c.z), turns, level: line.level };
+        const exit = portsOf({ id: -1, kind, ...at, branch: 0 })[2];
+        if (exit && Math.hypot(exit.x - want.x, exit.z - want.z) < 0.3)
+          found.push({ kind, ...at, cost: RAIL_COST[kind] });
+      }
+    return found.length > 0 ? found[this.railTurn % found.length] : null;
   }
 
   private trace(
@@ -950,6 +983,15 @@ export class TrainView {
       this.path = s.tiles;
       this.pathLead = s.lead;
       this.pathLevel = s.level;
+      // Départ sur une ligne droite (et pas à son bout) : si le tracé la quitte de côté, ce sera un aiguillage.
+      const onLine = this.straightAt(here);
+      this.branch =
+        onLine && !(port && Math.hypot(port.x - aim.x, port.z - aim.z) < 1.4) ? onLine : null;
+      if (this.branch) {
+        this.path = [here];
+        this.pathLead = 0;
+        this.pathLevel = this.branch.level;
+      }
     }
     if (this.path.length > 0 && down) {
       const back = this.path.findIndex(
@@ -1018,12 +1060,34 @@ export class TrainView {
         ];
       } else single = true;
     }
-    const curve = this.railShape === 'switch' ? 'curve' : this.railShape;
-    let planned = planRails(tiles, { level, tilt: this.tilt, lead, curve });
-    if (single) planned = planned.slice(0, 1);
+    let planned: PlannedPiece[];
+    const side =
+      this.branch && tiles.length >= 2
+        ? { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz }
+        : null;
+    const alongZ = this.branch ? this.branch.turns % 2 === 0 : false;
+    const sw =
+      this.branch && side && (alongZ ? side.tx !== 0 : side.tz !== 0)
+        ? this.branchSwitch(this.branch, side)
+        : null;
+    if (sw) {
+      // La branche part de la tuile voisine : le reste du tracé la prolonge comme un bout de voie.
+      const exit = portsOf({ id: -1, ...sw, branch: 0 })[2];
+      planned = [
+        sw,
+        ...planRails(tiles.slice(1), { level: exit.y, tilt: this.tilt, lead: 1, curve: 'auto' }),
+      ];
+    } else {
+      planned = planRails(tiles, { level, tilt: this.tilt, lead, curve: 'auto' });
+      if (single) planned = planned.slice(0, 1);
+      if (this.branch && tiles.length < 2) planned = [];
+    }
     const checked = this.evaluate(planned);
     this.setGhost(checked.map(({ piece, ok }) => ({ piece, ok })));
-    if (release && this.path.length > 0) {
+    if (release && this.path.length > 0 && planned.length === 0) {
+      this.path = [];
+      this.branch = null;
+    } else if (release && this.path.length > 0) {
       let placed = 0;
       for (const c of checked) {
         if (!c.ok) continue;
@@ -1035,11 +1099,13 @@ export class TrainView {
             c.plan.turns,
             c.plan.level,
             blocked,
+            true,
           ) === 'ok'
         )
           placed++;
       }
       this.path = [];
+      this.branch = null;
       this.ghostKey = '';
       if (placed > 0) {
         this.host.sfx('placeStone');

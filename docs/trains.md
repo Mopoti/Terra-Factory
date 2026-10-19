@@ -10,8 +10,9 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - Rail en main : **maintenir le clic et glisser** de tuile en tuile ; un aperçu vert / rouge montre ce qui sera posé ; on relâche pour poser. Un coin dans le tracé devient un virage de la taille choisie (il faut au moins 3, 5 ou 7 tuiles entre deux coins, et 1, 2 ou 3 tuiles entre le départ et le premier coin). Revenir en arrière dans le glissé raccourcit le tracé.
 - La voie se **raccorde toute seule** au bout de voie libre le plus proche (à moins de 4 m) et suit sa hauteur.
 - **PageUp / PageDown** : la voie commence par une rampe qui monte / descend (4 tuiles droites, puis la voie continue au niveau atteint) ; une autre pression revient à plat.
-- **B** : forme de la voie, en boucle : virages serrés → larges → très larges → aiguillage (`RAIL_SHAPES`, action `railShape`).
-- **Aiguillage** (forme « aiguillage ») : viser une ligne droite et cliquer ; l'aiguillage remplace ses trois tuiles (rendues dans son prix) et une branche en part en virage serré. On peut aussi le poser au bout d'une voie ou seul. **R** fait défiler les poses : branche à droite ou à gauche, pointe d'un côté ou de l'autre.
+- **Virages automatiques** : au coin du tracé, le jeu prend le plus grand virage (serré, large, très large) que les deux branches permettent (1, 2 ou 3 tuiles de chaque côté du coin), comme pour les convoyeurs. Pendant qu'on allonge la branche, l'aperçu s'élargit.
+- **Aiguillage automatique** : on commence à glisser sur une ligne droite déjà posée (pas à son bout) et on part **de côté** : un aiguillage remplace les trois tuiles et la branche suit le tracé, comme une bifurcation de Factorio. **R** choisit de quel bout de la ligne part la pointe. **B** bascule en pose d'un aiguillage seul (visée d'une ligne ou d'un bout de voie, R : côté et sens), re-**B** revient au tracé.
+- **Retracer par-dessus** : poser une voie sur une voie existante la remplace (les rails remplacés reviennent dans le sac, une pièce identique ne coûte rien) : on change ainsi une droite en virage, en rampe, etc. Refusé sous un convoi.
 - **Clic droit maintenu** sur la voie : la démolit (les rails reviennent dans le sac), comme les autres constructions.
 - Véhicule en main : viser la voie, clic ; il regarde du côté où regarde le joueur. **Maj + F** reprend un véhicule (seul, pas attelé).
 

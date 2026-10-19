@@ -70,8 +70,11 @@ export interface PlanOptions {
   tilt: -1 | 0 | 1;
   /** Nombre de tuiles du début qui existent déjà (la voie qu'on prolonge) : rien n'y est posé. */
   lead: number;
-  /** Virage posé aux coins (serré par défaut). */
-  curve?: CurveKind;
+  /**
+   * Virage posé aux coins : une taille fixe, ou `auto` (le jeu prend le plus grand qui tient entre les coins voisins,
+   * jusqu'au très large). Serré par défaut.
+   */
+  curve?: CurveKind | 'auto';
 }
 
 /**
@@ -108,25 +111,41 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
   // Coins : un virage occupe un bloc de n × n tuiles centré sur le coin (h tuiles de chaque côté), donc ni sur la
   // voie existante, ni sur la rampe, ni trop près d'un autre coin. Après le dernier coin, le virage peut dépasser la
   // fin du tracé (on voit tout de suite où il mène).
-  const curve: CurveKind = opts.curve ?? 'curve';
-  const n = blockTiles(curve);
-  const h = (n - 1) / 2;
+  const choice = opts.curve ?? 'curve';
+  const BY_HALF: CurveKind[] = ['curve', 'curve_wide', 'curve_large']; // demi-bloc de 1, 2, 3 tuiles
+  const cornerAt: number[] = [];
+  for (let i = lead; i < dirs.length; i++) if (corner(i)) cornerAt.push(i);
   const corners: number[] = [];
-  for (let i = lead; i < dirs.length; i++) {
-    if (!corner(i)) continue;
-    const tooEarly = i - h < lead || (ramp && i - h < rampEnd);
-    const last = corners[corners.length - 1];
-    if (tooEarly || (last !== undefined && i - last < n)) {
+  const kindAt = new Map<number, CurveKind>();
+  const halfAt = new Map<number, number>();
+  for (let c = 0; c < cornerAt.length; c++) {
+    const i = cornerAt[c];
+    const prevI = corners[corners.length - 1];
+    // Première tuile libre à gauche : après la voie existante, la rampe ou le bloc du coin précédent.
+    const leftEdge =
+      prevI !== undefined ? prevI + (halfAt.get(prevI) ?? 0) + 1 : ramp ? rampEnd : lead;
+    const leftRoom = i - leftEdge;
+    let half: number;
+    if (choice === 'auto') {
+      // À droite : jusqu'au coin suivant (qui garde au moins un virage serré) ou jusqu'au bout du tracé.
+      const next = cornerAt[c + 1];
+      const rightRoom = next !== undefined ? next - 1 - i : dirs.length - i;
+      half = Math.min(3, leftRoom, rightRoom);
+    } else half = (blockTiles(choice) - 1) / 2;
+    if (half < 1 || half > leftRoom) {
       limit = i;
       break;
     }
     corners.push(i);
+    halfAt.set(i, half);
+    kindAt.set(i, choice === 'auto' ? BY_HALF[half - 1] : choice);
   }
   const used = path.slice(0, limit);
   const covered = new Set<number>();
   if (ramp) for (let i = lead; i < rampEnd; i++) covered.add(i);
   for (const i of corners) {
     if (i >= limit) continue;
+    const h = halfAt.get(i) ?? 1;
     for (let k = i - h; k <= i + h; k++) covered.add(k);
   }
 
@@ -155,6 +174,7 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
     if (covered.has(i)) {
       if (corners.includes(i) && i < limit) {
         const k = used[i];
+        const curve = kindAt.get(i) ?? 'curve';
         const turns = curveTurns({ dx: -dirs[i - 1].dx, dz: -dirs[i - 1].dz }, dirs[i]);
         out.push({
           kind: curve,

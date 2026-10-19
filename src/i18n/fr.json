@@ -89,7 +89,7 @@
   "train.pickedUp": "Véhicule repris.",
   "train.pickCoupled": "Dételle d'abord ce véhicule.",
   "train.carHint": "Vise la voie et clique pour poser le véhicule.",
-  "train.railHint": "Rail : maintiens le clic et glisse pour tracer (la voie se raccorde au bout de la voie existante, les virages se font seuls), B : taille des virages ou aiguillage, PageUp / PageDown : rampe, clic droit maintenu : reprendre.",
+  "train.railHint": "Rail : maintiens le clic et glisse pour tracer (virages de la bonne taille et raccord au bout de la voie, tout seuls). Pars d'une ligne existante en glissant de côté : un aiguillage se pose (R : sens de la pointe). Retracer par-dessus une voie la remplace. PageUp / PageDown : rampe, clic droit maintenu : reprendre.",
   "train.tiltUp": "Voie : la rampe monte.",
   "train.tiltDown": "Voie : la rampe descend.",
   "train.tiltFlat": "Voie : à plat.",
@@ -1249,14 +1249,12 @@
   "char.random": "Aléatoire",
   "char.reset": "Réinitialiser",
   "char.validate": "Valider",
-  "train.shape.curve": "Voie : virages serrés (rayon 3,75 m).",
-  "train.shape.curve_wide": "Voie : virages larges (rayon 6,25 m).",
-  "train.shape.curve_large": "Voie : virages très larges (rayon 8,75 m).",
-  "train.shape.switch": "Voie : aiguillage. Vise une ligne droite (ou un bout de voie) et clique ; R : changer le côté et le sens.",
+  "train.shape.auto": "Voie : tracé automatique.",
+  "train.shape.switch": "Voie : aiguillage seul. Vise une ligne droite (ou un bout de voie) et clique ; R : changer le côté et le sens ; B : revenir au tracé.",
   "train.switchPlaced": "Aiguillage posé : F près du levier (ou R dans la locomotive) pour changer de voie.",
   "train.switchStraight": "Aiguillage : voie directe.",
   "train.switchDiverge": "Aiguillage : voie déviée.",
   "train.switchBusy": "Un convoi est sur l'aiguillage : attends qu'il soit passé.",
   "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
-  "action.railShape": "Forme de la voie (virages, aiguillage)"
+  "action.railShape": "Aiguillage seul (au lieu du tracé)"
 }

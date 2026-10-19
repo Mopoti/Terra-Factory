@@ -3,7 +3,7 @@ import { CARS, carIdOfWindow, locoWindowId } from '../data/trains';
 import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
 import { planRails } from './plan';
-import { TILE_CELLS, centerOf, cornerFor } from './track';
+import { TILE_CELLS, TILE_M, centerOf, cornerFor, portsOf } from './track';
 
 const free = (): boolean => false;
 
@@ -219,5 +219,43 @@ describe('aiguillages dans la partie', () => {
     expect(s.placeCar('wagon_freight', { piece: sw.id, u: 3.75, dir: 1 })).not.toBeNull();
     expect(s.toggleSwitch(sw.id)).toBeNull();
     expect(s.removeRail(sw.id, { x: 0, z: 0 })).toBe(false);
+  });
+
+  it('une voie reposée par-dessus la voie existante la remplace', () => {
+    const s = start();
+    const before = s.changes.rails.length;
+    const mid = s.changes.rails[3];
+    // Même pièce : rien ne change, rien n'est dépensé.
+    const stock = s.inventory.rail ?? 0;
+    expect(s.placeRail(mid.kind, mid.gx, mid.gz, mid.turns, mid.level, () => false, true)).toBe(
+      'ok',
+    );
+    expect(s.changes.rails).toHaveLength(before);
+    expect(s.inventory.rail ?? 0).toBe(stock);
+    // Sans `replace`, la pièce est refusée ; avec, elle prend la place d'une autre.
+    expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false)).toBe('blocked');
+    expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false, true)).toBe('ok');
+    expect(s.changes.rails).not.toContain(mid);
+  });
+
+  it('une branche part de la tuile voisine : sa sortie touche la tuile du tracé, des deux côtés', () => {
+    const s = start();
+    for (const k of [0, 1]) {
+      const line = s.changes.rails[4];
+      const c = centerOf(line);
+      for (const side of [-1, 1]) {
+        const hits = [];
+        for (const turns of [line.turns % 2, (line.turns % 2) + 2])
+          for (const kind of ['switch_r', 'switch_l'] as const) {
+            const at = { ...cornerFor(kind, turns, c.x, c.z), turns, level: 0 };
+            const exit = portsOf({ id: -1, kind, ...at, branch: 0 })[2];
+            // Ligne le long de z : la branche sort de côté, à 1,5 tuile du centre.
+            if (Math.hypot(exit.x - (c.x + side * 1.5 * TILE_M), exit.z - c.z) < 0.3)
+              hits.push(kind);
+          }
+        expect(hits.length).toBeGreaterThanOrEqual(2);
+      }
+      void k;
+    }
   });
 });
