@@ -21,7 +21,7 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - **Vitres** : la façade de l'abri a deux vraies fenêtres, de part et d'autre de la chaudière (modèle `locomotive_vapeur`) ; le jeu les ferme par une vitre translucide (`CAB_GLASS` dans `src/render/trainView.ts`). Assis à gauche, le mécanicien voit la voie par la fenêtre gauche, au-dessus de la caisse à eau et à côté de la chaudière.
 - **F** près de la locomotive : monter ; F de nouveau : descendre. Le joueur est assis dans la cabine.
 - **Z / S** (avancer / reculer), le levier est dans le sens où regarde la locomotive ; **Espace** : frein ; la locomotive prend le charbon ou le bois du sac quand sa soute est vide.
-- **R** dans la locomotive : manœuvre le premier aiguillage devant elle (pris par la pointe, à moins de 60 m). À pied, **F** près du levier (à moins de 2,5 m). On ne manœuvre pas un aiguillage sous un train.
+- **Tableau de bord** : il montre où mène le prochain aiguillage devant la locomotive (« aiguillage ← gauche (Q / D) »). On ne manœuvre pas un aiguillage sous un train (sauf s'il est déjà dans la bonne position).
 - **Descendre** : le joueur est posé du côté du siège (la porte de l'abri), hors de la boîte de collision et du marchepied ; un joueur déjà un peu dans une boîte peut toujours en sortir (`trainBlocked` compare chaque point de son corps à sa position actuelle).
 - **C** : attelle au véhicule dont l'attelage est à moins de 1,6 m (on recule vers un wagon, on s'arrête, on appuie) ; sinon, dételle derrière la locomotive (devant elle si elle est en queue). Un convoi dételé est garé (frein à main).
 

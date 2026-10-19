@@ -1183,6 +1183,21 @@ export class TrainView {
 
   // --- Affichage ------------------------------------------------------------------------------------
 
+  /** Prochain aiguillage devant la locomotive, pour le tableau de bord : « aiguillage ← gauche (Q / D) ». */
+  private switchHud(): string {
+    const graph = this.lastGraph;
+    const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
+    const loco = c?.cars.find((k) => k.id === this.mountedCar);
+    if (!graph || !c || !loco) return '';
+    const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
+    const id = graph.switchAhead(from, SWITCH_AHEAD_M);
+    const p = id === null ? null : this.host.state.changes.rails.find((q) => q.id === id);
+    if (!p) return '';
+    // Aiguillage à droite : la voie déviée part à droite, la directe à gauche ; l'inverse pour un aiguillage à gauche.
+    const right = (p.kind === 'switch_r') === (p.branch === 1);
+    return ` · ${t(right ? 'train.hud.switchRight' : 'train.hud.switchLeft')}`;
+  }
+
   private updateHud(): void {
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     if (!c || this.mountedCar === null) {
@@ -1208,6 +1223,7 @@ export class TrainView {
         heat: String(heat),
       }) +
       brake +
+      this.switchHud() +
       (c.cars.length > 1 ? ` · ${t('train.uncoupleHint')}` : ` · ${t('train.coupleHint')}`);
   }
 }

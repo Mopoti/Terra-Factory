@@ -221,6 +221,8 @@ describe('aiguillages dans la partie', () => {
     expect(s.setSwitch(sw.id, 0)).toBe(0);
     expect(s.placeCar('wagon_freight', { piece: sw.id, u: 3.75, dir: 1 })).not.toBeNull();
     expect(s.toggleSwitch(sw.id)).toBeNull();
+    // Déjà dans la position demandée : rien à bouger, accepté même sous un train.
+    expect(s.setSwitch(sw.id, 0)).toBe(0);
     expect(s.removeRail(sw.id, { x: 0, z: 0 })).toBe(false);
   });
 

@@ -13,7 +13,7 @@ Voies — une tuile de 2 x 2 cases (1 m), comme les convoyeurs mais sans sens (u
   est la même pièce tournée d'un demi-tour. Piliers dessous ;
 - `rail_aiguillage_<d|g>_<droit|devie>` : aiguillage de 6 x 6 cases : pointe au milieu du bord -Y, voie directe vers
   le bord +Y, voie déviée en virage serré vers le bord +X (`d`, à droite) ou -X (`g`) ; un modèle par position des
-  lames (`droit` : voie directe donnée, `devie` : voie déviée), levier et cible (verte / jaune) près de la pointe ;
+  lames (`droit` : voie directe donnée, `devie` : voie déviée), levier près de la pointe ;
 - pas de tunnel.
 Écartement : 1,2 unité (60 cm) entre les rails, dessus des rails à `Z_RAIL` (0,24 unité = 12 cm).
 
@@ -193,8 +193,7 @@ def _aiguillage(coll, leger, m, devie):
 
     Rails : contre-aiguille droite (côté opposé à la branche) et contre-aiguille courbe (côté de la branche), continues ;
     aiguilles (les lames mobiles, 1,6 unité) puis rails intérieurs des deux voies, qui se croisent au cœur. `devie` :
-    position des lames (voie déviée donnée) ; levier et cible (verte : voie directe, jaune : déviée) sur le côté
-    opposé à la branche, près de la pointe."""
+    position des lames (voie déviée donnée) et du levier, sur le côté opposé à la branche, près de la pointe."""
     N = 3.0
     lot = T.Lot(coll, 'rail')
     p = _arc(N, m)
@@ -240,18 +239,13 @@ def _aiguillage(coll, leger, m, devie):
         t0 = tb + (math.pi / 2 - tb) * k / (k0 * 3)
         t1 = tb + (math.pi / 2 - tb) * (k + 1) / (k0 * 3)
         _rail_segment(lot, p(N + ECART, t0), p(N + ECART, t1))
-    # Tringle de manœuvre entre les lames, levier et cible.
+    # Tringle de manœuvre entre les lames, levier.
     lot.cube('acier_sombre', (2.2, 0.08, 0.05), (m * 0.0 - m * 0.5, -N + 0.25, Z_TRAVERSE + 0.04))
     xl, yl = -m * 1.5, -N + 0.75
     lot.cube('fonte', (0.3, 0.45, 0.2), (xl, yl, Z_BALLAST + 0.1), 0.02)  # socle
     a = 0.5 if devie else -0.5
     lot.barre('rouge', (xl, yl, Z_BALLAST + 0.2), (xl + m * 0.0, yl + a * 0.6, Z_BALLAST + 0.75), 0.05)  # levier
     lot.tube('blanc', (xl, yl + a * 0.6, Z_BALLAST + 0.75), (xl, yl + a * 0.6, Z_BALLAST + 0.8), 0.06, 8)
-    lot.barre('acier_sombre', (xl - m * 0.25, yl, Z_BALLAST), (xl - m * 0.25, yl, 1.3), 0.06)  # mât de la cible
-    # Cible : disque face aux trains qui arrivent par la pointe (vert : voie directe, jaune : voie déviée).
-    lot.tube('vert' if not devie else 'jaune', (xl - m * 0.25, yl - 0.03, 1.3),
-             (xl - m * 0.25, yl + 0.03, 1.3), 0.25, 12)
-    lot.tube('blanc', (xl - m * 0.25, yl - 0.035, 1.3), (xl - m * 0.25, yl + 0.035, 1.3), 0.08, 8)
     lot.finir()
     T.poser_au_sol(coll, N)
 
@@ -431,9 +425,9 @@ def locomotive_electrique(coll, leger=True):
         lot.cube('acier', (1.5, 0.1, 0.05), (0, y + sens * 0.1, zt + 1.32))
     lot.cube('moderne_sombre', (1.6, 3.0, 0.3), (0, 0, zt + 0.1), 0.03)
     yc = -lc / 2
-    lot.cube('noir', (0.7, 0.6, 0.12), (-0.8, yc + 0.9, 2.54), 0.03)
+    lot.cube('noir', (0.7, 0.6, 0.12), (0.8, yc + 0.9, 2.54), 0.03)
     lot.cube('panneau', (LARGE - 0.4, 0.5, 0.45), (0, yc + 0.2, 2.8), 0.02, Matrix.Rotation(-0.4, 3, 'X'))
-    T.reperer(coll, 'siege', (-0.8, yc + 0.9, 2.6))
+    T.reperer(coll, 'siege', (0.8, yc + 0.9, 2.6))  # à gauche (+X : la gauche du conducteur qui regarde vers -Y)
     lot.finir()
     _fini(coll)
 
@@ -541,7 +535,7 @@ def locomotive_vapeur(coll, leger=True):
     rouges, tablier noir ; chaudière noire à cerclages laiton, boîte à fumée et porte, cheminée, dôme, soupapes, sifflet,
     caisses à eau latérales, sablières ; abri du mécanicien avec deux vitres frontales (ouvertures réelles, de chaque
     côté de la chaudière : le jeu y pose une vitre translucide, `CAB_GLASS` de `trainView.ts`), portes latérales
-    ouvertes, toit bombé, siège `siege` à gauche (coussin à 2,25 m : les yeux passent au-dessus des caisses à eau,
+    ouvertes, toit bombé, siège `siege` à gauche (+X, la gauche du mécanicien ; coussin à 2,25 m : les yeux passent au-dessus des caisses à eau,
     à côté de la chaudière) ; façade arrière à deux fenêtres, soute à charbon au fond de l'abri, lanternes."""
     _couleurs()
     sg = 10 if leger else 16
@@ -645,11 +639,12 @@ def locomotive_vapeur(coll, leger=True):
     lot.cube('braise', (0.6, 0.02, 0.4), (0, y0 + 0.91, zp + 0.8))
     for x in (-0.5, 0.5):
         lot.tube('blanc', (x, y0 + 0.14, 6.4), (x, y0 + 0.2, 6.4), 0.16, 10)  # manomètres (sous l'encadrement)
-    lot.barre('laiton', (-0.7, y0 + 0.5, 6.0), (-1.2, y0 + 0.9, 5.6), 0.06)  # régulateur
-    T.reperer(coll, 'siege', (-1.7, 3.2, 4.5))  # coussin du mécanicien (lu par le jeu)
-    lot.cube('noir', (0.8, 0.7, 0.14), (-1.7, 3.2, 4.43), 0.03)
-    lot.cube('noir', (0.8, 0.14, 0.9), (-1.7, 3.6, 4.95), 0.03)
-    lot.tube('acier_sombre', (-1.7, 3.2, zp + 0.1), (-1.7, 3.2, 4.36), 0.08, sg)
+    lot.barre('laiton', (0.7, y0 + 0.5, 6.0), (1.2, y0 + 0.9, 5.6), 0.06)  # régulateur
+    # Siège du mécanicien à gauche (+X : la gauche de qui regarde vers l'avant, -Y), coussin lu par le jeu.
+    T.reperer(coll, 'siege', (1.7, 3.2, 4.5))
+    lot.cube('noir', (0.8, 0.7, 0.14), (1.7, 3.2, 4.43), 0.03)
+    lot.cube('noir', (0.8, 0.14, 0.9), (1.7, 3.6, 4.95), 0.03)
+    lot.tube('acier_sombre', (1.7, 3.2, zp + 0.1), (1.7, 3.2, 4.36), 0.08, sg)
     # Soute à charbon au fond de l'abri, sous les fenêtres arrière.
     ys0 = 4.3
     lot.cube('loco_noir', (2 * W - 0.3, y1 - ys0 - 0.06, 1.3), (0, (ys0 + y1) / 2 - 0.03, zp + 0.65), 0.04)

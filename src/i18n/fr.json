@@ -1249,11 +1249,13 @@
   "char.random": "Aléatoire",
   "char.reset": "Réinitialiser",
   "char.validate": "Valider",
-  "train.switchPlaced": "Aiguillage posé : F près du levier (ou R dans la locomotive) pour changer de voie.",
+  "train.switchPlaced": "Aiguillage posé : en conduisant, Q / D choisissent la voie (à pied : F près du levier).",
   "train.switchStraight": "Aiguillage : voie directe.",
   "train.switchDiverge": "Aiguillage : voie déviée.",
   "train.switchBusy": "Un convoi est sur l'aiguillage : attends qu'il soit passé.",
   "train.steerRight": "Aiguillage : tu tournes à droite.",
   "train.steerLeft": "Aiguillage : tu tournes à gauche.",
-  "train.noSwitch": "Pas d'aiguillage devant la locomotive."
+  "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
+  "train.hud.switchLeft": "aiguillage ← gauche (Q / D)",
+  "train.hud.switchRight": "aiguillage → droite (Q / D)"
 }

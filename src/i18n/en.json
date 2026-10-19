@@ -1249,11 +1249,13 @@
   "char.random": "Random",
   "char.reset": "Reset",
   "char.validate": "Done",
-  "train.switchPlaced": "Switch placed: F near the lever (or R in the locomotive) to change route.",
+  "train.switchPlaced": "Switch placed: while driving, A / D choose the route (on foot: F near the lever).",
   "train.switchStraight": "Switch: straight route.",
   "train.switchDiverge": "Switch: diverging route.",
   "train.switchBusy": "A train is on the switch: wait until it has passed.",
   "train.steerRight": "Switch: you will turn right.",
   "train.steerLeft": "Switch: you will turn left.",
-  "train.noSwitch": "No switch ahead of the locomotive."
+  "train.noSwitch": "No switch ahead of the locomotive.",
+  "train.hud.switchLeft": "switch ← left (A / D)",
+  "train.hud.switchRight": "switch → right (A / D)"
 }

@@ -290,7 +290,11 @@ export const pipeModel = (form: PipeForm, tier: number): BakedModel | null =>
 const EXTRA_GROUPS: Record<string, string[]> = {
   buggy: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   quad: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
-  tank: ['chenille_g', 'chenille_d', 'tourelle'],
+  // Char : cinq galets par côté, chacun sur son axe (ils roulent), et la tourelle.
+  tank: [
+    ...[1, 2, 3, 4, 5].flatMap((k) => [`roue_g${k}`, `roue_d${k}`]),
+    'tourelle',
+  ],
   // Voies et trains (voir `docs/trains.md`) : les roues des trains tournent par groupes ; les bras d'attelage
   // automatique pivotent à leur traverse de tête pour rejoindre ceux du véhicule voisin (`trainView.ts`).
   rail_droit: [],
