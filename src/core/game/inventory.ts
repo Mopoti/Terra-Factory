@@ -96,3 +96,21 @@ export function normalizeInventory(raw: unknown): Inventory {
   }
   return result;
 }
+
+/**
+ * Nombre de cases du sac à dessiner : toutes en survie, mais en mode Créatif (sac énorme) seulement de quoi contenir
+ * les piles (dernière case utilisée comprise) plus une dizaine de cases libres, par rangées de 5, 30 au moins. Le
+ * nombre dépend du nombre de piles et non de leur position : descendre une pile dans la grille ne l'agrandit pas.
+ */
+export function cellsToShow(slots: readonly (unknown | null)[], max: number): number {
+  if (max <= 40) return max;
+  let last = -1;
+  let used = 0;
+  slots.forEach((s, i) => {
+    if (!s) return;
+    last = i;
+    used++;
+  });
+  const rows = (n: number): number => Math.ceil(n / 5) * 5;
+  return Math.min(max, Math.max(30, rows(used + 10), rows(last + 1)));
+}
