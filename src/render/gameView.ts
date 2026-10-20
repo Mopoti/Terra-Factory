@@ -204,6 +204,10 @@ export interface GameViewOptions {
   onMessage?: (text: string) => void;
   /** Le joueur veut ouvrir l'interface de la machine visée (touche « Utiliser »). */
   onOpenMachine?: (id: number) => void;
+  /** Le joueur veut renommer une station (fenêtre de saisie). */
+  onRenameStation?: (id: number) => void;
+  /** Choisir une station de la liste (destination du pilote automatique) ; null si le joueur annule. */
+  onChooseStation?: (stations: { id: number; name: string }[]) => Promise<number | null>;
   /** Partie rejointe chez un autre joueur : le monde vient de l'hôte (pas de simulation locale). */
   guest?: GuestSync;
 }
@@ -925,6 +929,22 @@ export function startGameView(
     const piece = pickPiece(options.state.changes.pieces, o, d, 80);
     const hitM = pickMachine(factory, o, d, 80);
     const hitRail = trains.pickRail(o, d, 30);
+    const hitStation = trains.pickStation(o, d, 30);
+    if (
+      hitStation &&
+      (!hitM || hitStation.t < hitM.t) &&
+      (!piece || hitStation.t < piece.t) &&
+      (!hitRail || hitStation.t <= hitRail.t + 0.5)
+    ) {
+      return {
+        id: `station:${hitStation.id}`,
+        name: t('item.train_station'),
+        seconds: 0.8,
+        usable: false,
+        distance: hitStation.t,
+        box: { x: hitStation.x, y: 0.8, z: hitStation.z, sx: 4, sy: 1.6, sz: 4 },
+      };
+    }
     const hitCar = trains.pickCar(o, d, 30);
     if (
       hitCar &&
@@ -981,6 +1001,8 @@ export function startGameView(
     const at = { x: playerX, z: playerZ };
     if (id.startsWith('piece:')) {
       options.state.removeKeys([id.slice(6)], at);
+    } else if (id.startsWith('station:')) {
+      options.state.removeStation(Number(id.slice(8)));
     } else if (id.startsWith('car:')) {
       options.state.removeCar(Number(id.slice(4)));
     } else if (id.startsWith('rail:')) {
@@ -2280,11 +2302,14 @@ export function startGameView(
     held: (action) => input.isActionActive(action),
     message: (text) => options.onMessage?.(text),
     sfx: (name) => playSfx(name),
+    renameStation: (id) => options.onRenameStation?.(id),
+    chooseStation: (stations) => options.onChooseStation?.(stations) ?? Promise.resolve(null),
   });
   // Boîtes de collision des trains (voir `trainBlocked`) ; pas quand on conduit (on est dans la cabine).
   trainSolid = (x, z, y0, y1) => !trains.isMounted() && trains.solidAt(x, z, y0, y1);
   let trainUse = false;
   let trainCouple = false;
+  let trainRoute = false;
   let trainRotate = false;
   let trainLevelUp = false;
   let trainLevelDown = false;
@@ -3537,6 +3562,7 @@ export function startGameView(
       const useKey = pressed('use');
       trainUse = useKey;
       trainCouple = pressed('couple');
+      trainRoute = pressed('route');
       trainRotate = !building && pressed('rotate');
       if (options.state.selectedItem() === 'rail') {
         trainLevelUp = pressed('levelUp');
@@ -3557,6 +3583,7 @@ export function startGameView(
         guest: !!guest,
         use: trainUse,
         couple: trainCouple,
+        route: trainRoute,
         rotate: trainRotate,
         levelUp: trainLevelUp,
         levelDown: trainLevelDown,
@@ -3567,6 +3594,7 @@ export function startGameView(
     );
     trainUse = false;
     trainCouple = false;
+    trainRoute = false;
     trainRotate = false;
     trainLevelUp = false;
     trainLevelDown = false;

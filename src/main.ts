@@ -32,6 +32,8 @@ import type { JoinInfo } from './ui/menu';
 import { GuestSync } from './core/net/worldSync';
 import { mergeChanges } from './core/game/playerData';
 import type { WorldChanges } from './core/game/worldChanges';
+import { choiceModal, promptModal } from './ui/modal';
+import { STATION_NAME_MAX } from './core/rail/station';
 
 initLocale();
 installKeyHints();
@@ -260,6 +262,19 @@ function startGame(
     onMessage: (text) => showToast(text),
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
+    onRenameStation: (id) => {
+      void renameStation(id);
+    },
+    onChooseStation: async (stations) => {
+      view.setUiOpen(true);
+      const id = await choiceModal({
+        title: t('station.route.title'),
+        choices: stations.map((st) => ({ value: st.id, label: st.name })),
+        cancelLabel: t('station.cancel'),
+      });
+      syncPaused();
+      return id;
+    },
     onOpenMachine: (id) => {
       if (!session?.pause.isOpen() && !session?.inventory.isOpen()) session?.machine.open(id);
     },
@@ -282,6 +297,24 @@ function startGame(
     toastTimer: 0,
   };
   session = s;
+
+  /** Renomme une station : fenêtre de saisie, le jeu continue derrière. */
+  const renameStation = async (id: number): Promise<void> => {
+    const st = state.changes.stations.find((x) => x.id === id);
+    if (!st) return;
+    view.setUiOpen(true);
+    const name = await promptModal({
+      title: t('station.rename.title'),
+      label: t('station.rename.label'),
+      value: st.name,
+      confirmLabel: t('station.confirm'),
+      cancelLabel: t('station.cancel'),
+      maxLength: STATION_NAME_MAX,
+      validate: (v) => (v === '' ? t('manage.nameEmpty') : null),
+    });
+    syncPaused();
+    if (name !== null) state.renameStation(id, name);
+  };
 
   /** Le jeu n'est figé que par le menu pause. */
   const syncPaused = (): void => {

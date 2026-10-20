@@ -3,6 +3,7 @@
  * conduite de la locomotive, attelage et dételage, simulation du convoi (voir `docs/trains.md`).
  */
 import * as THREE from 'three';
+import { STATION_ITEM } from '../core/data/trains';
 import {
   CARS,
   RAIL_COST,
@@ -52,6 +53,8 @@ import {
 } from '../core/rail/train';
 import { t } from '../i18n';
 import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
+import { StationView } from './stationView';
+import { AUTO_SPEED, autoControl as autoThrottle, findRoute, type Route } from '../core/rail/route';
 import { bakedModel } from './models';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 
@@ -128,6 +131,10 @@ export interface TrainHost {
   held(action: 'forward' | 'backward' | 'jump' | 'interact' | 'sprint' | 'left' | 'right'): boolean;
   message(text: string): void;
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
+  /** Le joueur veut renommer cette station (fenêtre de saisie). */
+  renameStation(id: number): void;
+  /** Fenêtre de choix d'une station ; renvoie son identifiant, ou null si le joueur annule. */
+  chooseStation(stations: { id: number; name: string }[]): Promise<number | null>;
 }
 
 export interface TrainFrame {
@@ -142,6 +149,8 @@ export interface TrainFrame {
   /** PageUp / PageDown : monter / descendre (rampe en tête de tracé). */
   levelUp: boolean;
   levelDown: boolean;
+  /** H : choisir la destination du train (pilote automatique). */
+  route: boolean;
   /** Le joueur vise déjà autre chose (ressource, machine…). */
   aimed: boolean;
   /** Cap du joueur (rad) : sert à choisir le sens d'un véhicule qu'on pose. */
@@ -185,7 +194,16 @@ export class TrainView {
   private hintShown = '';
   private warnedFuel = false;
 
+  private readonly stations: StationView;
+  /** Pilote automatique : itinéraire en cours de chaque convoi (distance restante, graphe d'origine, âge). */
+  private readonly autos = new Map<
+    number,
+    { route: Route; remaining: number; graph: TrackGraph; age: number; total: number }
+  >();
+  private choosing = false;
+
   constructor(private readonly host: TrainHost) {
+    this.stations = new StationView(host.scene);
     this.rails.frustumCulled = false;
     this.rails.receiveShadow = true;
     this.ghost.frustumCulled = false;
@@ -278,6 +296,7 @@ export class TrainView {
     this.rails.geometry.dispose();
     this.ghost.geometry.dispose();
     this.hud.remove();
+    this.stations.dispose();
   }
 
   /** Pièce de voie que le rayon touche (à moins de 50 cm de la voie), avec la distance. */
@@ -305,6 +324,18 @@ export class TrainView {
         }
       }
     return best;
+  }
+
+  /** Station que le rayon touche (quai ou panneau), avec la distance. */
+  pickStation(
+    o: THREE.Vector3,
+    d: THREE.Vector3,
+    maxDist: number,
+  ): { id: number; t: number; x: number; z: number } | null {
+    const hit = this.stations.pick(o, d, maxDist);
+    if (!hit) return null;
+    const at = this.stations.platformAt(hit.id);
+    return { id: hit.id, t: hit.t, x: at?.x ?? hit.x, z: at?.z ?? hit.z };
   }
 
   /** Véhicule que le rayon touche (sphère de 1,4 m autour de son milieu et de ses extrémités), avec la distance. */
@@ -728,6 +759,7 @@ export class TrainView {
 
     if (this.mountedCar !== null && !this.consistOf(this.mountedCar)) this.dismount(false);
 
+    this.stations.sync(this.host.state.changes.stations, graph);
     this.traceInfo = '';
     if (active && !frame.uiOpen) {
       this.handleMounted(graph, frame, player);
@@ -744,6 +776,12 @@ export class TrainView {
     let left = Math.min(dt, 0.1);
     const driven = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     const input = (this.host.held('forward') ? 1 : 0) - (this.host.held('backward') ? 1 : 0);
+    // Toucher aux commandes (avancer, reculer, frein) reprend la conduite à la main.
+    if (driven && driven.goTo !== undefined && (input !== 0 || this.host.held('jump'))) {
+      this.host.state.sendTrain(driven.id, null);
+      this.autos.delete(driven.id);
+      this.host.message(t('train.autoOff'));
+    }
     let ctrlDriven = IDLE;
     if (driven && this.mountedCar !== null) {
       const loco = driven.cars.find((k) => k.id === this.mountedCar);
@@ -764,7 +802,12 @@ export class TrainView {
     while (left > 1e-6) {
       const h = Math.min(STEP, left);
       left -= h;
-      for (const c of trains) stepConsist(graph, c, h, c === driven ? ctrlDriven : IDLE);
+      for (const c of trains) {
+        const auto = c.goTo !== undefined ? this.autoControl(graph, c, h) : null;
+        stepConsist(graph, c, h, auto ?? (c === driven ? ctrlDriven : IDLE));
+        const e = auto ? this.autos.get(c.id) : undefined;
+        if (e) e.remaining -= Math.max(0, c.v) * h;
+      }
       collide(graph, trains);
     }
   }
@@ -778,6 +821,7 @@ export class TrainView {
   ): void {
     const { state } = this.host;
     if (frame.rotate && this.mountedCar !== null) this.switchAheadOfLoco(graph);
+    if (frame.route && this.mountedCar !== null) this.chooseDestination();
     // Aux commandes : D / Q (droite / gauche) mettent l'aiguillage devant la locomotive sur la voie qui part de ce côté.
     const right = this.host.held('right');
     const left = this.host.held('left');
@@ -792,7 +836,9 @@ export class TrainView {
       else {
         const near = this.carNear(player.x, player.z);
         const lever = this.leverNear(player.x, player.z);
-        if (lever !== null) this.toggleSwitch(lever);
+        const station = this.stationAimed(player);
+        if (station !== null) this.host.renameStation(station);
+        else if (lever !== null) this.toggleSwitch(lever);
         else if (near && this.host.held('sprint')) {
           const r = state.pickUpCar(near.consist.id);
           if (r === 'ok') {
@@ -879,6 +925,110 @@ export class TrainView {
       const next = ahead.options[(at + 1) % ahead.options.length];
       this.selectRoute(ahead, next.piece);
     }
+  }
+
+  /** Station dont le quai est sous le curseur, et assez près du joueur pour la renommer. */
+  private stationAimed(player: { x: number; z: number }): number | null {
+    const aim = this.host.aim();
+    if (!aim) return null;
+    let best: { id: number; d: number } | null = null;
+    for (const st of this.host.state.changes.stations) {
+      const at = this.stations.platformAt(st.id);
+      if (!at) continue;
+      const d = Math.hypot(at.x - aim.x, at.z - aim.z);
+      if (d <= 3 && Math.hypot(at.x - player.x, at.z - player.z) <= 12 && (!best || d < best.d))
+        best = { id: st.id, d };
+    }
+    return best?.id ?? null;
+  }
+
+  /** H : choisir la station où envoyer le train qu'on conduit (pilote automatique). */
+  private chooseDestination(): void {
+    const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
+    if (!c || this.choosing) return;
+    const stations = this.host.state.changes.stations;
+    if (stations.length === 0) {
+      this.host.sfx('deny');
+      this.host.message(t('train.noStation'));
+      return;
+    }
+    this.choosing = true;
+    void this.host.chooseStation(stations.map((s) => ({ id: s.id, name: s.name }))).then((id) => {
+      this.choosing = false;
+      const station = id === null ? null : stations.find((s) => s.id === id);
+      if (!station) return;
+      if (this.host.state.sendTrain(c.id, station.id)) {
+        this.autos.delete(c.id);
+        this.host.sfx('select');
+        this.host.message(t('train.goTo', { name: station.name }));
+      }
+    });
+  }
+
+  /** Règle les aiguillages de l'itinéraire qui sont à moins de 60 m devant le convoi. */
+  private setRouteSwitches(
+    graph: TrackGraph,
+    e: { route: Route; remaining: number; total: number },
+  ): void {
+    const travelled = e.total - e.remaining;
+    for (const d of e.route.decisions) {
+      if (d.at - travelled > 60 || d.at < travelled - 2) continue;
+      if (graph.neighbour(d.piece, d.port)?.piece === d.chosen) continue;
+      const chosen = graph.byId.get(d.chosen);
+      if (!chosen) continue;
+      if (chosen.route !== undefined)
+        this.host.state.setSwitch(Math.abs(d.chosen), d.chosen < 0 ? 1 : 0);
+      else
+        this.host.state.selectRoute(
+          d.chosen,
+          graph.linksAt(d.piece, d.port).map((l) => Math.abs(l.piece)),
+        );
+    }
+  }
+
+  /** Commande du pilote automatique pour ce convoi ; null si l'ordre est annulé (pas de chemin, plus de combustible). */
+  private autoControl(
+    graph: TrackGraph,
+    c: Consist,
+    dt: number,
+  ): import('../core/rail/train').Control | null {
+    const { state } = this.host;
+    const station = state.changes.stations.find((x) => x.id === c.goTo);
+    if (!station) {
+      state.sendTrain(c.id, null);
+      this.autos.delete(c.id);
+      return null;
+    }
+    let e = this.autos.get(c.id);
+    if (e) e.age += dt;
+    if (!e || e.graph !== graph || e.age > 3) {
+      const route = findRoute(graph, c.head, { piece: station.piece, u: station.u });
+      if (!route) {
+        state.sendTrain(c.id, null);
+        this.autos.delete(c.id);
+        this.host.sfx('deny');
+        this.host.message(t('train.noRoute', { name: station.name }));
+        return null;
+      }
+      e = { route, remaining: route.distance, graph, age: 0, total: route.distance };
+      this.autos.set(c.id, e);
+    }
+    const loco = c.cars.find((k) => CARS[k.kind].loco);
+    if (loco && loco.heatKJ <= 0 && !loco.fuel && Math.abs(c.v) < 0.1) {
+      state.sendTrain(c.id, null);
+      this.autos.delete(c.id);
+      this.host.message(t('train.noFuelAuto'));
+      return null;
+    }
+    this.setRouteSwitches(graph, e);
+    const ctrl = autoThrottle(c, e.remaining, AUTO_SPEED);
+    if (ctrl.parked) {
+      state.sendTrain(c.id, null);
+      this.autos.delete(c.id);
+      this.host.sfx('select');
+      this.host.message(t('train.arrived', { name: station.name }));
+    }
+    return ctrl;
   }
 
   private wasRight = false;
@@ -991,12 +1141,14 @@ export class TrainView {
     const item = state.selectedItem();
     const rail = item === RAIL_ITEM;
     const carKind = item ? carKindOfItem(item) : null;
+    const station = item === STATION_ITEM;
     const down = this.host.held('interact');
     const edge = down && !this.wasDown;
     const release = !down && this.wasDown;
     this.wasDown = down;
     if (!carKind) this.setCarGhost(null, false);
-    if (this.mountedCar !== null || (!rail && !carKind)) {
+    if (!station) this.stations.showGhost(graph, null, false);
+    if (this.mountedCar !== null || (!rail && !carKind && !station)) {
       this.setGhost([]);
       this.hintShown = '';
       this.path = [];
@@ -1010,6 +1162,11 @@ export class TrainView {
       if (frame.rotate) this.railTurn++;
       this.trace(graph, aim, edge, release, down, frame, player);
       this.showHint('train.railHint');
+    } else if (station) {
+      this.setGhost([]);
+      if (aim) this.placeStationAt(graph, aim, edge);
+      else this.stations.showGhost(graph, null, false);
+      this.showHint('train.stationHint');
     } else if (carKind && !aim) this.setCarGhost(null, false);
     else if (carKind && aim) {
       this.setGhost([]);
@@ -1026,7 +1183,7 @@ export class TrainView {
     );
   }
 
-  private showHint(key: 'train.railHint' | 'train.carHint'): void {
+  private showHint(key: 'train.railHint' | 'train.carHint' | 'train.stationHint'): void {
     if (this.hintShown === key) return;
     this.hintShown = key;
     this.host.message(t(key));
@@ -1352,6 +1509,34 @@ export class TrainView {
     void player;
   }
 
+  /** Pose d'une station sur la voie la plus proche du curseur (fantôme vert : on peut ; rouge : non). */
+  private placeStationAt(graph: TrackGraph, aim: { x: number; z: number }, edge: boolean): void {
+    const near = this.nearestTrack(graph, aim.x, aim.z);
+    if (!near || near.dist > CAR_AIM_M * 2) {
+      this.stations.showGhost(graph, null, false);
+      if (edge) {
+        this.host.sfx('deny');
+        this.host.message(t('train.cannotStation'));
+      }
+      return;
+    }
+    const at = { piece: near.piece.id, u: near.u };
+    const { state } = this.host;
+    const ok = !state.changes.stations.some(
+      (s) => s.piece === at.piece && Math.abs(s.u - at.u) < 3,
+    );
+    this.stations.showGhost(graph, at, ok);
+    if (!edge) return;
+    const placed = ok ? state.placeStation(at) : null;
+    if (placed) {
+      this.host.sfx('placeStone');
+      this.host.message(t('train.stationPlaced', { name: placed.name }));
+    } else {
+      this.host.sfx('deny');
+      this.host.message(t('train.cannotStation'));
+    }
+  }
+
   private placeCar(
     graph: TrackGraph,
     kind: CarKind,
@@ -1385,6 +1570,15 @@ export class TrainView {
   }
 
   // --- Affichage ------------------------------------------------------------------------------------
+
+  /** Ligne du pilote automatique : destination et distance restante, ou le rappel de la touche H. */
+  private autoHud(c: Consist): string {
+    const st = this.host.state.changes.stations.find((x) => x.id === c.goTo);
+    const e = this.autos.get(c.id);
+    if (st)
+      return ` · ${t('train.hud.auto', { name: st.name, dist: String(Math.max(0, Math.round(e?.remaining ?? 0))) })}`;
+    return this.host.state.changes.stations.length > 0 ? ` · ${t('train.routeHint')}` : '';
+  }
 
   /** Prochain aiguillage devant la locomotive, pour le tableau de bord : « aiguillage ← gauche (Q / D) ». */
   private switchHud(): string {
@@ -1439,6 +1633,7 @@ export class TrainView {
       }) +
       brake +
       this.switchHud() +
+      this.autoHud(c) +
       (c.cars.length > 1 ? ` · ${t('train.uncoupleHint')}` : ` · ${t('train.coupleHint')}`);
   }
 }

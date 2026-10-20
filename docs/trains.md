@@ -44,6 +44,12 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - **Sécurité anti « effet portefeuille »** : seul cas sans long attelage, l'avant de la locomotive (tampons) contre un wagon, quand elle est retournée. `carPoses` vérifie alors que les caisses (rectangles vus du dessus, `overlapBetween` : axes séparateurs) ne se chevauchent pas et recule le véhicule suivant juste assez si besoin. Seul l'affichage (et la collision) est concerné : la simulation garde les longueurs nominales.
 - Limite connue : dans le virage de 3,75 m de rayon, l'essieu du milieu de la locomotive (empattement rigide de 3 m) sort d'environ 30 cm du rail.
 
+## Stations et pilote automatique (première étape)
+- **Station** (`train_station`, onglet « Rail », 20 lingots de fer + 12 bois) : on la tient en main, on vise la voie (fantôme vert / rouge) et on clique. Un quai bas et un panneau avec le nom (dessinés par le code) sont posés le long de la voie. Au moins 3 m entre deux stations d'une même pièce. **F** près du panneau : renommer (nom de 24 caractères au plus) ; **clic droit maintenu** : la reprendre. Démonter la voie qui la porte la rend dans le sac.
+- **H** en conduisant (bouton « Destination » au tactile) : liste des stations ; le convoi part en pilote automatique (`Consist.goTo`). Le chemin est le plus court en mètres de voie (`findRoute`, `src/core/rail/route.ts`) ; le convoi ne fait pas demi-tour (il roule vers sa tête). Le pilote règle les aiguillages et embranchements de l'itinéraire dans les 60 m devant lui, accélère jusqu'à 9 m/s puis freine pour s'arrêter pile sur le repère (tête du convoi sur la station, à 25 cm), puis rend la main (« Arrivé à… »). Avancer, reculer ou le frein reprennent la conduite à la main. Sans combustible, ou sans chemin, l'ordre est annulé avec un message.
+- L'itinéraire est recalculé toutes les 3 s et dès que la voie change.
+- Programme en boucle, conditions et choix plus court / plus rapide : voir `docs/trains-programmation.md` (à venir).
+
 ## Soute et attelage
 - Tab en conduisant ouvre la fenêtre de la locomotive : on y glisse du charbon ou du bois depuis le sac (soute de 50 pièces). La chaudière brûle la soute selon la puissance demandée ; la jauge montre la chaleur.
 - C attèle (wagon à moins de 1,6 m derrière) ou dételle ; la ligne de HUD et un bouton tactile le rappellent.

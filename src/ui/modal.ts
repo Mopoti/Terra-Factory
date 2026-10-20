@@ -212,3 +212,67 @@ export function infoModal(options: {
     ok.focus();
   });
 }
+
+export interface ChoiceOptions {
+  title: string;
+  choices: { value: number; label: string }[];
+  cancelLabel: string;
+}
+
+/** Fenêtre de choix dans une liste (un bouton par choix). Renvoie la valeur choisie, ou null si le joueur annule. */
+export function choiceModal(options: ChoiceOptions): Promise<number | null> {
+  return new Promise((resolve) => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const dialog = document.createElement('div');
+    dialog.className = 'modal';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    const title = document.createElement('h2');
+    title.textContent = options.title;
+    const list = document.createElement('div');
+    list.className = 'modal-choices';
+    list.style.display = 'grid';
+    list.style.gap = '6px';
+    list.style.maxHeight = '50vh';
+    list.style.overflowY = 'auto';
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'menu-btn';
+    cancel.textContent = options.cancelLabel;
+    actions.append(cancel);
+    function close(result: number | null): void {
+      window.removeEventListener('keydown', onKey, true);
+      overlay.remove();
+      previous?.focus({ preventScroll: true });
+      resolve(result);
+    }
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        close(null);
+      }
+    }
+    for (const c of options.choices) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'menu-btn';
+      b.textContent = c.label;
+      b.addEventListener('click', () => close(c.value));
+      list.append(b);
+    }
+    cancel.addEventListener('click', () => close(null));
+    overlay.addEventListener('mousedown', (e) => {
+      if (e.target === overlay) close(null);
+    });
+    dialog.append(title, list, actions);
+    overlay.append(dialog);
+    window.addEventListener('keydown', onKey, true);
+    document.body.append(overlay);
+    (list.firstElementChild as HTMLElement | null)?.focus();
+  });
+}

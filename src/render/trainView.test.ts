@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GameState } from '../core/game/state';
-import { TILE_M, portsOf } from '../core/rail/track';
+import { TILE_M, matesFor, portsOf } from '../core/rail/track';
 import { TrainView } from './trainView';
 
 /** Rejoue de vrais glissés de la souris dans `TrainView` (sans écran) : le tracé se pose comme en jeu. */
@@ -12,6 +12,7 @@ function bench() {
     textContent: '',
     appendChild() {},
     remove() {},
+    getContext: () => null,
   });
   vi.stubGlobal('document', { createElement: fake });
   const state = new GameState({ inventory: { rail: 999 } });
@@ -29,6 +30,8 @@ function bench() {
     held: (a: string) => down.has(a),
     message: () => {},
     sfx: () => {},
+    renameStation: () => {},
+    chooseStation: () => Promise.resolve(null),
   } as never);
   const frame = {
     dt: 0.016,
@@ -40,6 +43,7 @@ function bench() {
     rotate: false,
     levelUp: false,
     levelDown: false,
+    route: false,
     aimed: false,
     facing: 0,
   };
@@ -63,7 +67,10 @@ function bench() {
       }
     step(tx, tz, false);
   };
-  return { state, drag };
+  const tick = (n: number, dt = 0.05): void => {
+    for (let i = 0; i < n; i++) view.update({ ...frame, dt }, { x: 0, z: 0 });
+  };
+  return { state, drag, tick };
 }
 
 describe('tracé à la souris depuis une voie existante', () => {
@@ -137,5 +144,33 @@ describe('tracé à la souris depuis une voie existante', () => {
     const added = state.changes.rails.slice(before);
     expect(added.length).toBeGreaterThan(3);
     expect(added.every((p) => p.kind === 'straight')).toBe(true);
+  });
+
+  it('un convoi envoyé à une station y va tout seul, tourne par les aiguillages et s’y arrête', () => {
+    const { state, drag, tick } = bench();
+    drag([20, 20], [[0, -1, 13]]); // ligne de 14 tuiles vers −z
+    // Un virage tangent au joint des tuiles 4 et 5 ; la station est au bout du virage.
+    const rails = state.changes.rails;
+    const joint = portsOf(rails[4]).find((p) => p.dz === -1)!;
+    for (const m of matesFor('curve_large', joint))
+      if (state.placeRail('curve_large', m.gx, m.gz, m.turns, m.level, () => false, true) === 'ok')
+        break;
+    const curve = state.changes.rails[state.changes.rails.length - 1];
+    expect(curve.kind).toBe('curve_large');
+    state.inventory.train_station = 2;
+    state.inventory.train_locomotive = 1;
+    const station = state.placeStation({ piece: curve.id, u: 9 }, 'Gare du virage')!;
+    const loco = state.placeCar('locomotive_steam', { piece: rails[0].id, u: 1, dir: 1 })!;
+    loco.cars[0].fuel = { item: 'coal', count: 30 };
+    expect(state.sendTrain(loco.id, station.id)).toBe(true);
+    tick(20 * 90); // 90 s
+    expect(loco.goTo).toBeUndefined();
+    expect(Math.abs(loco.v)).toBeLessThan(0.3);
+    // Il est arrivé sur la voie du virage, à moins de 1 m du repère.
+    const g = state.railGraph();
+    const head = g.pose(loco.head)!;
+    const stop = g.pose({ piece: station.piece, u: station.u, dir: 1 })!;
+    expect(loco.head.piece).toBe(curve.id);
+    expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
   });
 });

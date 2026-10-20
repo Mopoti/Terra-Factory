@@ -1,6 +1,6 @@
 # Stations, programmation des trains et signalisation (conception)
 
-État : **conception, rien n'est codé** (octobre 2026). Demande du PO : un système simple mais très modulable, « quand… alors… », réutilisable plus tard pour les signaux et l'automatisation des lignes de production. À valider avant de coder.
+État : **étape 1 codée** (stations + « va à la station » avec pilote automatique, voir `docs/trains.md`) ; le reste est de la conception (octobre 2026). Demande du PO : un système simple mais très modulable, « quand… alors… », réutilisable plus tard pour les signaux et l'automatisation des lignes de production. À valider avant de coder.
 
 ## 1. Idée générale : des règles « sujet – verbe – valeur → action »
 Un même moteur de règles sert aux trains (maintenant) et plus tard aux signaux, portes, machines, lignes de production.
@@ -38,8 +38,8 @@ Aujourd'hui les wagons n'ont pas de contenu. À prévoir : coffre du wagon de fr
 - Pendant le tracé, une ligne d'infos donne le nombre de rails, la longueur et les virages (angle, rayon).
 - À décider : ajouter des virages de **45°** (et 22,5°) de mêmes rayons pour pouvoir faire des ronds-points à 8 pans, des changements de direction doux et des raccordements en diagonale (nouveaux modèles et nouvelle grille d'angles).
 
-## 7. Ordre de travail proposé
-1. Stations (pose, nom, repère d'arrêt) + pilotage automatique « va à la station X » (plus court) avec réglage des aiguillages et arrêt précis.
+## 7. Ordre de travail proposé (le PO a choisi de commencer par l'étape 1 ; virages de 45° à part, voir §6)
+1. (fait) Stations (pose, nom, repère d'arrêt) + pilotage automatique « va à la station X » (plus court) avec réglage des aiguillages et arrêt précis.
 2. Programme en boucle (liste d'étapes) avec la condition de temps (« attendre N s ») + fenêtre de programmation.
 3. Contenu des wagons (coffre) + conditions « vide / plein / contient ».
 4. Moteur de règles complet (sujets, verbes, et / ou) + choix « plus court / plus rapide ».

@@ -29,6 +29,7 @@ const BUTTONS: { action: ActionId; key: string; hold?: boolean; toggle?: boolean
   { action: 'interact', key: 'touch.interact', hold: true },
   { action: 'use', key: 'touch.use', hold: true },
   { action: 'couple', key: 'touch.couple', hold: true },
+  { action: 'route', key: 'touch.route', hold: true },
   { action: 'crouch', key: 'touch.crouch', toggle: true },
   { action: 'sprint', key: 'touch.sprint', toggle: true },
   { action: 'cycleView', key: 'touch.view', hold: true },
