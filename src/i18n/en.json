@@ -1255,6 +1255,8 @@
   "train.switchBusy": "A train is on the switch: wait until it has passed.",
   "train.steerRight": "Switch: you will turn right.",
   "train.steerLeft": "Switch: you will turn left.",
+  "train.trace": "Track: {rails} rails · {length} m",
+  "train.traceCurve": "90° curve ({r} m radius)",
   "train.noSwitch": "No switch ahead of the locomotive.",
   "train.hud.switchLeft": "switch ← left (A / D)",
   "train.hud.switchStraight": "junction ↑ straight (A / D)",

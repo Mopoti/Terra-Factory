@@ -1255,6 +1255,8 @@
   "train.switchBusy": "Un convoi est sur l'aiguillage : attends qu'il soit passé.",
   "train.steerRight": "Aiguillage : tu tournes à droite.",
   "train.steerLeft": "Aiguillage : tu tournes à gauche.",
+  "train.trace": "Tracé : {rails} rails · {length} m",
+  "train.traceCurve": "virage de 90° (rayon {r} m)",
   "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
   "train.hud.switchLeft": "aiguillage ← gauche (Q / D)",
   "train.hud.switchStraight": "embranchement ↑ tout droit (Q / D)",

@@ -31,6 +31,7 @@ import {
   isCurve,
   lengthOf,
   poseOn,
+  radiusOf,
   routesOf,
   type Port,
   type RailKind,
@@ -371,16 +372,99 @@ export class TrainView {
     // Forme de secours tant que le modèle n'est pas chargé : une dalle à la taille de la voie.
     const color = tint ?? hexToRgb('#7d776e');
     if (isCurve(p.kind)) {
-      // Un grand virage sans modèle : un ruban de dalles le long de la voie.
-      const len = lengthOf(p.kind);
-      for (let u = 0; u <= len + 1e-6; u += 0.7) {
-        const q = poseOn(p, Math.min(u, len));
-        mb.box(q.x, q.y, q.z, 1.8, RAIL_TOP_M, 1.8, color, true);
-      }
+      this.addProceduralCurve(mb, p, tint);
       return;
     }
     const { w, d } = footprintOf(p.kind, p.turns);
     mb.box(c.x, p.level, c.z, w * 0.5, RAIL_TOP_M, d * 0.5, color, true);
+  }
+
+  /**
+   * Un virage sans modèle 3D : ballast, traverses et rails dessinés le long de l'arc (propre pour n'importe quel
+   * rayon). Boîtes orientées le long de la voie, assez courtes pour suivre la courbe sans escalier.
+   */
+  private addProceduralCurve(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
+    const pick = (hex: string): Rgb => tint ?? hexToRgb(hex);
+    const ballast = pick('#7a7167');
+    const sleeper = pick('#4a3325');
+    const steel = pick('#8d939c');
+    const len = lengthOf(p.kind);
+    const STEP = 0.5;
+    // Une boîte orientée : centre (x, z), cap (fx, fz), demi-longueur, demi-largeur, de y0 à y0 + h.
+    const obox = (
+      x: number,
+      z: number,
+      fx: number,
+      fz: number,
+      hl: number,
+      hw: number,
+      y0: number,
+      h: number,
+      color: Rgb,
+    ): void => {
+      const rx = fz;
+      const rz = -fx;
+      const corner = (sl: number, sw: number, y: number): [number, number, number] => [
+        x + fx * hl * sl + rx * hw * sw,
+        y,
+        z + fz * hl * sl + rz * hw * sw,
+      ];
+      const lo = [corner(-1, -1, y0), corner(1, -1, y0), corner(1, 1, y0), corner(-1, 1, y0)];
+      const hi = [
+        corner(-1, -1, y0 + h),
+        corner(1, -1, y0 + h),
+        corner(1, 1, y0 + h),
+        corner(-1, 1, y0 + h),
+      ];
+      const mid: [number, number, number] = [x, y0 + h / 2, z];
+      const face = (
+        a: [number, number, number],
+        b: [number, number, number],
+        c: [number, number, number],
+        d: [number, number, number],
+        shade: number,
+      ): void => {
+        // Le sommet qui regarde vers l'extérieur : on inverse l'ordre si la normale pointe vers le centre.
+        const nx = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]);
+        const ny = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+        const nz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        const out = nx * (a[0] - mid[0]) + ny * (a[1] - mid[1]) + nz * (a[2] - mid[2]);
+        const col = { r: color.r * shade, g: color.g * shade, b: color.b * shade };
+        if (out >= 0) mb.quad(a, b, c, d, col);
+        else mb.quad(d, c, b, a, col);
+      };
+      face(hi[0], hi[1], hi[2], hi[3], 1);
+      face(lo[3], lo[2], lo[1], lo[0], 0.6);
+      face(lo[0], lo[1], hi[1], hi[0], 0.85);
+      face(lo[1], lo[2], hi[2], hi[1], 0.75);
+      face(lo[2], lo[3], hi[3], hi[2], 0.85);
+      face(lo[3], lo[0], hi[0], hi[3], 0.75);
+    };
+    const GAUGE = 0.75; // demi-écartement (m)
+    for (let u = 0; u < len - 1e-6; u += STEP) {
+      const mid = Math.min(u + STEP / 2, len);
+      const q = poseOn(p, mid);
+      const fx = Math.sin(q.yaw);
+      const fz = Math.cos(q.yaw);
+      const rx = fz;
+      const rz = -fx;
+      const base = q.y;
+      obox(q.x, q.z, fx, fz, STEP * 0.56, 1.35, base, 0.1, ballast);
+      if (Math.round(u / STEP) % 2 === 0)
+        obox(q.x, q.z, fx, fz, 0.13, 1.15, base + 0.1, 0.1, sleeper);
+      for (const side of [-1, 1])
+        obox(
+          q.x + rx * GAUGE * side,
+          q.z + rz * GAUGE * side,
+          fx,
+          fz,
+          STEP * 0.56,
+          0.06,
+          base + 0.2,
+          RAIL_TOP_M - 0.2,
+          steel,
+        );
+    }
   }
 
   private geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
@@ -644,6 +728,7 @@ export class TrainView {
 
     if (this.mountedCar !== null && !this.consistOf(this.mountedCar)) this.dismount(false);
 
+    this.traceInfo = '';
     if (active && !frame.uiOpen) {
       this.handleMounted(graph, frame, player);
       this.handlePlacing(graph, frame, player);
@@ -892,6 +977,8 @@ export class TrainView {
   private railTurn = 0;
   /** Ligne droite d'où part le tracé en cours : s'il la quitte de côté, un aiguillage est posé. */
   private branch: RailPiece | null = null;
+  /** Ligne d'infos du tracé en cours (rails, longueur, virages) ; vide si rien n'est tracé. */
+  private traceInfo = '';
   /** Le tracé en cours part d'un bout de voie : sa route est recalculée vers le curseur à chaque image. */
   private fromPort = false;
 
@@ -1211,6 +1298,24 @@ export class TrainView {
       if (single) planned = planned.slice(0, 1);
       if (this.branch && tiles.length < 2) planned = [];
     }
+    // Repères pour reproduire une forme : longueur, rails et virages (angle et rayon) du tracé en cours.
+    if (planned.length > 0) {
+      const radii = new Map<string, number>();
+      for (const q of planned) if (isCurve(q.kind)) radii.set(q.kind, (radii.get(q.kind) ?? 0) + 1);
+      const curves = [...radii].map(
+        ([kind, n]) =>
+          ` · ${n} × ${t('train.traceCurve', {
+            r: radiusOf(kind as RailKind)
+              .toFixed(1)
+              .replace('.', ','),
+          })}`,
+      );
+      this.traceInfo =
+        t('train.trace', {
+          rails: String(planned.reduce((n, q) => n + q.cost, 0)),
+          length: String(Math.round(planned.reduce((n, q) => n + lengthOf(q.kind), 0))),
+        }) + curves.join('');
+    }
     const checked = this.evaluate(planned);
     this.setGhost(checked.map(({ piece, ok }) => ({ piece, ok })));
     if (release && this.path.length > 0 && planned.length === 0) {
@@ -1310,7 +1415,8 @@ export class TrainView {
   private updateHud(): void {
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     if (!c || this.mountedCar === null) {
-      this.hud.hidden = true;
+      this.hud.hidden = this.traceInfo === '';
+      this.hud.textContent = this.traceInfo;
       return;
     }
     const loco = c.cars.find((k) => k.id === this.mountedCar);
