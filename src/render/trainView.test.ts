@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GameState } from '../core/game/state';
-import { TILE_M } from '../core/rail/track';
+import { TILE_M, portsOf } from '../core/rail/track';
 import { TrainView } from './trainView';
 
 /** Rejoue de vrais glissés de la souris dans `TrainView` (sans écran) : le tracé se pose comme en jeu. */
@@ -104,5 +104,38 @@ describe('tracé à la souris depuis une voie existante', () => {
     const g = state.railGraph();
     const run = g.advance({ piece: state.changes.rails[0].id, u: 0, dir: 1 }, 25);
     expect(run.blocked).toBe(false);
+  });
+
+  it.each([
+    ['devant à gauche', 17, 12, 3.5],
+    ['de côté à gauche', 17, 16, 3.5],
+    ['en dessous à gauche', 17, 18, 5.5],
+    ['devant à droite, loin', 26, 8, 3.5],
+  ])('le curseur %s du bout de voie : un virage mène au plus près', (_nom, tx, tz, tol) => {
+    const { state, drag } = bench();
+    drag([20, 20], [[0, -1, 4]]); // 5 tuiles, bout à tz = 16, qui regarde vers −z
+    const before = state.changes.rails.length;
+    drag([tx, tz], []);
+    const added = state.changes.rails.slice(before);
+    expect(added.some((p) => p.kind.startsWith('curve'))).toBe(true);
+    // Voie continue du premier rail à la fin.
+    const g = state.railGraph();
+    expect(g.advance({ piece: state.changes.rails[0].id, u: 0, dir: 1 }, 12.5).blocked).toBe(false);
+    // La voie finit près du curseur (quelques tuiles de l'un de ses bouts).
+    const last = added[added.length - 1];
+    const gap = Math.min(
+      ...portsOf(last).map((q) => Math.hypot(q.x - (tx + 0.5) * TILE_M, q.z - (tz + 0.5) * TILE_M)),
+    );
+    expect(gap).toBeLessThan(tol * TILE_M);
+  });
+
+  it('un décalage de moins de 2 tuiles est ignoré : la voie reste droite', () => {
+    const { state, drag } = bench();
+    drag([20, 20], [[0, -1, 4]]);
+    const before = state.changes.rails.length;
+    drag([19, 10], []);
+    const added = state.changes.rails.slice(before);
+    expect(added.length).toBeGreaterThan(3);
+    expect(added.every((p) => p.kind === 'straight')).toBe(true);
   });
 });

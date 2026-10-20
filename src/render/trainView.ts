@@ -892,6 +892,8 @@ export class TrainView {
   private railTurn = 0;
   /** Ligne droite d'où part le tracé en cours : s'il la quitte de côté, un aiguillage est posé. */
   private branch: RailPiece | null = null;
+  /** Le tracé en cours part d'un bout de voie : sa route est recalculée vers le curseur à chaque image. */
+  private fromPort = false;
 
   private handlePlacing(
     graph: TrackGraph,
@@ -950,7 +952,7 @@ export class TrainView {
       const d = Math.hypot(p.at.x - aim.x, p.at.z - aim.z);
       // Devant le bout de voie (pas derrière lui) : le plus proche du curseur, même loin.
       const along = (aim.x - p.at.x) * p.at.dx + (aim.z - p.at.z) * p.at.dz;
-      const near = d <= SNAP_M || (along > -TILE_M && d <= PORT_REACH_M);
+      const near = d <= SNAP_M || (along > -3 * TILE_M && d <= PORT_REACH_M);
       if (near && (!best || d < best.d)) best = { port: p.at, d };
     }
     return best?.port ?? null;
@@ -1039,6 +1041,41 @@ export class TrainView {
     }
   }
 
+  /**
+   * Route d'un bout de voie jusqu'au curseur, au mieux : tout droit devant soi, puis un seul virage vers le côté du
+   * curseur. Le virage ne peut pas partir trop près (il lui faut 2 tuiles de voie droite avant et 2 après) : si le
+   * curseur est de côté ou derrière, la voie va plus loin tout droit avant de tourner ; un décalage de moins de 2
+   * tuiles est ignoré. `path` commence par la dernière tuile de la voie existante, puis la première tuile à poser.
+   */
+  private routeTo(path: Tile[], here: Tile): void {
+    const MIN = 2;
+    const lead = 1;
+    let turned = false;
+    for (let guard = 0; guard < MAX_PATH; guard++) {
+      const cur = path[path.length - 1];
+      const prev = path[path.length - 2];
+      const dx = here.tx - cur.tx;
+      const dz = here.tz - cur.tz;
+      if (dx === 0 && dz === 0) break;
+      const hd = { tx: cur.tx - prev.tx, tz: cur.tz - prev.tz };
+      const ahead = dx * hd.tx + dz * hd.tz; // reste devant (< 0 : le curseur est derrière)
+      const sideX = dx - ahead * hd.tx;
+      const sideZ = dz - ahead * hd.tz;
+      const side = Math.abs(sideX) + Math.abs(sideZ);
+      const index = path.length - 1; // la tuile courante serait le coin
+      if (!turned && side >= MIN && ahead <= 0 && index >= lead + MIN) {
+        path.push({ tx: cur.tx + Math.sign(sideX), tz: cur.tz + Math.sign(sideZ) });
+        turned = true;
+        continue;
+      }
+      if (ahead > 0 || (!turned && side >= MIN)) {
+        path.push({ tx: cur.tx + hd.tx, tz: cur.tz + hd.tz });
+        continue;
+      }
+      break;
+    }
+  }
+
   private trace(
     graph: TrackGraph,
     aim: { x: number; z: number } | null,
@@ -1077,13 +1114,20 @@ export class TrainView {
       const onLine = this.straightAt(here);
       this.branch =
         onLine && !(port && Math.hypot(port.x - aim.x, port.z - aim.z) < 1.4) ? onLine : null;
+      this.fromPort = !!port;
       if (this.branch) {
+        this.fromPort = false;
         this.path = [here];
         this.pathLead = 0;
         this.pathLevel = this.branch.level;
       }
     }
-    if (this.path.length > 0 && down) {
+    if (this.path.length > 0 && down && this.fromPort) {
+      // Depuis un bout de voie : la route est recalculée à chaque image jusqu'au curseur (pas de mémoire du chemin).
+      const route = this.path.slice(0, 2);
+      this.routeTo(route, here);
+      this.path = route;
+    } else if (this.path.length > 0 && down) {
       const back = this.path.findIndex(
         (p, i) => i >= this.pathLead && p.tx === here.tx && p.tz === here.tz,
       );
@@ -1131,7 +1175,7 @@ export class TrainView {
       } else {
         // Le tracé que ferait un glissé du bout de voie jusqu'au curseur : un clic le pose en entier.
         tiles = [...tiles];
-        this.growPath(tiles, here);
+        this.routeTo(tiles, here);
         if (tiles.length > MAX_PATH) tiles.length = MAX_PATH;
         single = tiles.length <= 2;
       }
