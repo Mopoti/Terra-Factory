@@ -1031,6 +1031,7 @@
   "factory.status.noAmmo": "Out of ammo",
   "factory.turret.ammo": "Ammo: {v}",
   "machine.magazines": "Magazines",
+  "item.train_station": "Station",
   "item.rail": "Rail (2.5 m tile)",
   "item.train_locomotive": "Steam locomotive",
   "item.train_wagon_freight": "Freight wagon",

@@ -403,6 +403,11 @@ export class TrackGraph {
     return null;
   }
 
+  /** Toutes les pièces raccordées à ce port (plusieurs devant la pointe d'un aiguillage ou d'un embranchement). */
+  linksAt(piece: number, port: 0 | 1): readonly PortLink[] {
+    return this.links.get(piece)?.[port] ?? [];
+  }
+
   has(piece: number): boolean {
     return this.byId.has(piece);
   }

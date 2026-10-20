@@ -28,6 +28,8 @@ export interface Consist {
   v: number;
   /** Du premier au dernier véhicule. */
   cars: Car[];
+  /** Pilote automatique : station où le convoi se rend (rien : conduite à la main). */
+  goTo?: number;
 }
 
 export const G = 9.81;

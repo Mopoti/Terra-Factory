@@ -1383,6 +1383,18 @@
       }
     },
     {
+      "id": "train_station",
+      "stack": 10,
+      "category": "rail",
+      "weightKg": 20,
+      "volumeL": 60,
+      "color": "#c9a66b",
+      "recipe": {
+        "iron_ingot": 20,
+        "wood": 12
+      }
+    },
+    {
       "id": "carapace",
       "stack": 50,
       "weightKg": 0.3,

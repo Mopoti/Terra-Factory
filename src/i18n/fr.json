@@ -1031,6 +1031,7 @@
   "factory.status.noAmmo": "Plus de munitions",
   "factory.turret.ammo": "Munitions : {v}",
   "machine.magazines": "Chargeurs",
+  "item.train_station": "Station",
   "item.rail": "Rail (tuile de 2,5 m)",
   "item.train_locomotive": "Locomotive à vapeur",
   "item.train_wagon_freight": "Wagon de fret",

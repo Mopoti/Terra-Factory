@@ -72,6 +72,7 @@ export function iconModelName(item: string): string | null {
 
 /** Objets sans modèle 3D pour l'instant (vêtements, munitions, outils de couchage…) : ils gardent la caisse. */
 export const NO_MODEL_ITEMS: readonly string[] = [
+  'train_station',
   'compass',
   'backpack',
   'hood',

@@ -1,8 +1,17 @@
 import { VEHICLES, type VehicleKind } from '../data/vehicles';
-import { CARS, RAIL_COST, RAIL_ITEM, isLocoWindow, type CarKind } from '../data/trains';
+import {
+  CARS,
+  RAIL_COST,
+  RAIL_ITEM,
+  STATION_ITEM,
+  isLocoWindow,
+  type CarKind,
+} from '../data/trains';
+import { MAX_STATIONS, cleanStationName, type Station } from '../rail/station';
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
+  baseId,
   blockTiles,
   tangentOverlap,
   branchId,
@@ -1444,6 +1453,12 @@ export class GameState {
     if (i < 0 || this.railOccupied(id)) return false;
     const [piece] = this.changes.rails.splice(i, 1);
     this.giveBack(RAIL_ITEM, RAIL_COST[piece.kind], at);
+    // Une station posée sur cette pièce n'a plus de voie : elle revient dans le sac.
+    for (const st of this.changes.stations.filter((x) => baseId(x.piece) === id)) {
+      this.changes.stations.splice(this.changes.stations.indexOf(st), 1);
+      this.giveBack(STATION_ITEM, 1, at);
+      this.dropOrders(st.id);
+    }
     this.railsChanged();
     return true;
   }
@@ -1560,6 +1575,64 @@ export class GameState {
     return true;
   }
 
+  /** Les convois qui allaient à cette station reprennent la conduite à la main. */
+  private dropOrders(stationId: number): void {
+    for (const c of this.changes.trains) if (c.goTo === stationId) delete c.goTo;
+  }
+
+  /** Pose une station sur la voie (consomme l'objet) : refusé hors voie, trop près d'une autre station, ou sans objet. */
+  placeStation(pos: { piece: number; u: number }, name = ''): Station | null {
+    if ((this.inventory[STATION_ITEM] ?? 0) < 1) return null;
+    const graph = this.railGraph();
+    if (!graph.has(pos.piece)) return null;
+    if (this.changes.stations.some((s) => s.piece === pos.piece && Math.abs(s.u - pos.u) < 3))
+      return null;
+    if (this.changes.stations.length >= MAX_STATIONS) return null;
+    const id = this.changes.stations.reduce((m, s) => Math.max(m, s.id), 0) + 1;
+    const station: Station = {
+      id,
+      name: cleanStationName(name) || `Station ${id}`,
+      piece: pos.piece,
+      u: pos.u,
+    };
+    this.inventory = remove(this.inventory, STATION_ITEM, 1).inventory;
+    this.changes.stations.push(station);
+    this.railsChanged();
+    return station;
+  }
+
+  renameStation(id: number, name: string): boolean {
+    const st = this.changes.stations.find((s) => s.id === id);
+    const clean = cleanStationName(name);
+    if (!st || !clean) return false;
+    st.name = clean;
+    this.emit({ type: 'rails' });
+    return true;
+  }
+
+  /** Reprend une station (l'objet revient dans le sac). */
+  removeStation(id: number): boolean {
+    const i = this.changes.stations.findIndex((s) => s.id === id);
+    if (i < 0) return false;
+    const [st] = this.changes.stations.splice(i, 1);
+    const p = this.railGraph().pose({ piece: st.piece, u: st.u, dir: 1 });
+    this.giveBack(STATION_ITEM, 1, { x: p?.x ?? 0, z: p?.z ?? 0 });
+    this.dropOrders(id);
+    this.railsChanged();
+    return true;
+  }
+
+  /** Envoie un convoi à une station (pilote automatique), ou lui rend la conduite à la main (`null`). */
+  sendTrain(consistId: number, stationId: number | null): boolean {
+    const c = this.changes.trains.find((x) => x.id === consistId);
+    if (!c) return false;
+    if (stationId === null) delete c.goTo;
+    else if (this.changes.stations.some((s) => s.id === stationId)) c.goTo = stationId;
+    else return false;
+    this.emit({ type: 'rails' });
+    return true;
+  }
+
   /** Remplit la soute d'une locomotive avec du charbon ou du bois du sac (renvoie le nombre de pièces chargées). */
   refuelLocomotive(car: Car): number {
     if (!CARS[car.kind].loco) return 0;
@@ -1585,6 +1658,8 @@ export class GameState {
     const found = findCoupling(graph, this.changes.trains, c);
     if (!found) return null;
     const merged = coupleConsists(graph, c, found.mine, found.other, found.theirs);
+    delete merged.goTo; // un nouveau convoi : le pilote reprend à zéro
+    delete found.other.goTo;
     this.changes.trains.splice(this.changes.trains.indexOf(found.other), 1);
     this.railsChanged();
     return merged;
@@ -1596,6 +1671,7 @@ export class GameState {
     if (!c) return null;
     const rear = splitConsist(this.railGraph(), c, index, this.newConsistId());
     if (!rear) return null;
+    delete c.goTo;
     this.changes.trains.push(rear);
     this.railsChanged();
     return rear;

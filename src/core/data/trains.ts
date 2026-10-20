@@ -86,6 +86,8 @@ export const carKindOfItem = (item: string): CarKind | null =>
   CAR_KINDS.find((k) => CARS[k].item === item) ?? null;
 
 /** Objet du sac qui pose la voie : 1 rail = 1 m de voie (une tuile droite). */
+/** Objet qui pose une station sur la voie. */
+export const STATION_ITEM = 'train_station';
 export const RAIL_ITEM = 'rail';
 /**
  * Rails consommés par chaque forme de pièce (un rail ≈ 2,5 m de voie) : virage serré (5,9 m) 3, large (9,8 m) 4, très

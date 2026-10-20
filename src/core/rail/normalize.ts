@@ -83,6 +83,7 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     if (cars.length === 0) continue;
     ids.add(r.id);
     out.push({
+      ...(isNum(r.goTo) && r.goTo >= 1 ? { goTo: Math.floor(r.goTo) } : {}),
       id: Math.floor(r.id),
       head: {
         piece: onBranch ? -piece.id : piece.id,
