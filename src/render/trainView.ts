@@ -778,7 +778,16 @@ export class TrainView {
     }
 
     const active = !frame.paused && !frame.guest;
-    if (active) this.simulate(graph, frame.dt);
+    if (active) {
+      // Les programmes avancent ; on n'annonce que ceux du train qu'on conduit.
+      for (const { consist, event } of this.host.state.tickPrograms(frame.dt)) {
+        if (event.goTo !== undefined) this.autos.delete(consist);
+        if (this.mountedCar === null || this.consistOf(this.mountedCar)?.id !== consist) continue;
+        if (event.paused === 'noStation') this.host.message(t('train.programNoStation'));
+        else if (event.paused === 'cancelled') this.host.message(t('train.programCancelled'));
+      }
+      this.simulate(graph, frame.dt);
+    }
     this.syncCars(graph, frame.dt);
 
     if (this.mountedCar !== null && !this.consistOf(this.mountedCar)) this.dismount(false);
@@ -801,8 +810,13 @@ export class TrainView {
     const driven = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     const input = (this.host.held('forward') ? 1 : 0) - (this.host.held('backward') ? 1 : 0);
     // Toucher aux commandes (avancer, reculer, frein) reprend la conduite à la main.
-    if (driven && driven.goTo !== undefined && (input !== 0 || this.host.held('jump'))) {
+    if (
+      driven &&
+      (driven.goTo !== undefined || driven.program?.running) &&
+      (input !== 0 || this.host.held('jump'))
+    ) {
       this.host.state.sendTrain(driven.id, null);
+      this.host.state.setProgramRunning(driven.id, false);
       this.autos.delete(driven.id);
       this.host.message(t('train.autoOff'));
     }
@@ -1599,11 +1613,16 @@ export class TrainView {
 
   /** Ligne du pilote automatique : destination et distance restante, ou le rappel de la touche H. */
   private autoHud(c: Consist): string {
+    const prog = c.program;
+    const progText =
+      prog && prog.steps.length > 0
+        ? ` · ${t(prog.running ? 'train.hud.program' : 'train.hud.programPaused', { n: String((prog.index % prog.steps.length) + 1), of: String(prog.steps.length) })}`
+        : '';
     const st = this.host.state.changes.stations.find((x) => x.id === c.goTo);
     const e = this.autos.get(c.id);
     if (st)
-      return ` · ${t('train.hud.auto', { name: st.name, dist: String(Math.max(0, Math.round(e?.remaining ?? 0))) })}`;
-    return this.host.state.changes.stations.length > 0 ? ` · ${t('train.routeHint')}` : '';
+      return `${progText} · ${t('train.hud.auto', { name: st.name, dist: String(Math.max(0, Math.round(e?.remaining ?? 0))) })}`;
+    return `${progText}${this.host.state.changes.stations.length > 0 ? ` · ${t('train.routeHint')}` : ''}`;
   }
 
   /** Prochain aiguillage devant la locomotive, pour le tableau de bord : « aiguillage ← gauche (Q / D) ». */

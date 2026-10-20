@@ -1,6 +1,7 @@
 import { itemById } from '../data/items';
 import { CARS, isCarKind, isLiquid } from '../data/trains';
 import { RAIL_KINDS, baseId, isSwitch, lengthOf, type RailKind, type RailPiece } from './track';
+import { normalizeProgram, type Program } from './program';
 import type { Car, Consist } from './train';
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -115,6 +116,7 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     ids.add(r.id);
     out.push({
       ...(isNum(r.goTo) && r.goTo >= 1 ? { goTo: Math.floor(r.goTo) } : {}),
+      ...(normalizeProgram(r.program) ? { program: normalizeProgram(r.program) as Program } : {}),
       id: Math.floor(r.id),
       head: {
         piece: onBranch ? -piece.id : piece.id,

@@ -13,6 +13,7 @@ import {
   type CarKind,
 } from '../data/trains';
 import { MAX_STATIONS, cleanStationName, type Station } from '../rail/station';
+import { normalizeProgram, stepProgram, type ProgramEnv, type ProgramEvent } from '../rail/program';
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
@@ -1582,6 +1583,57 @@ export class GameState {
     return true;
   }
 
+  /** Enregistre le programme d'un convoi (rien : on l'efface) ; il est en pause tant qu'on ne le lance pas. */
+  setProgram(consistId: number, raw: unknown): boolean {
+    const c = this.changes.trains.find((x) => x.id === consistId);
+    if (!c) return false;
+    const program = raw === null ? null : normalizeProgram(raw);
+    if (raw !== null && !program) return false;
+    delete c.goTo;
+    if (program) c.program = { ...program, index: 0, phase: 'waiting', timer: 0, running: false };
+    else delete c.program;
+    this.emit({ type: 'rails' });
+    return true;
+  }
+
+  /** Lance ou arrête le programme d'un convoi (arrêter lui rend la conduite à la main). */
+  setProgramRunning(consistId: number, running: boolean): boolean {
+    const c = this.changes.trains.find((x) => x.id === consistId);
+    if (!c?.program) return false;
+    c.program.running = running;
+    c.program.phase = 'waiting';
+    c.program.timer = 0;
+    if (!running) delete c.goTo;
+    this.emit({ type: 'rails' });
+    return true;
+  }
+
+  /** Fait avancer les programmes de `dt` secondes ; renvoie les événements à annoncer (pause, ordre donné). */
+  tickPrograms(dt: number): { consist: number; event: ProgramEvent }[] {
+    const out: { consist: number; event: ProgramEvent }[] = [];
+    if (!this.changes.trains.some((c) => c.program?.running)) return out;
+    const graph = this.railGraph();
+    const stations = new Set(this.changes.stations.map((s) => s.id));
+    const env: ProgramEnv = {
+      stations,
+      atStation: (c, id) => {
+        const st = this.changes.stations.find((s) => s.id === id);
+        const a = st ? graph.pose({ piece: st.piece, u: st.u, dir: 1 }) : null;
+        const b = graph.pose(c.head);
+        return !!a && !!b && Math.hypot(a.x - b.x, a.z - b.z) < 1.5;
+      },
+    };
+    for (const c of this.changes.trains) {
+      const event = stepProgram(c, dt, env);
+      if (event.goTo !== undefined) c.goTo = event.goTo;
+      if (event.goTo !== undefined || event.paused) {
+        this.emit({ type: 'rails' });
+        out.push({ consist: c.id, event });
+      }
+    }
+    return out;
+  }
+
   /** Les convois qui allaient à cette station reprennent la conduite à la main. */
   private dropOrders(stationId: number): void {
     for (const c of this.changes.trains) if (c.goTo === stationId) delete c.goTo;
@@ -1728,6 +1780,7 @@ export class GameState {
     if (!found) return null;
     const merged = coupleConsists(graph, c, found.mine, found.other, found.theirs);
     delete merged.goTo; // un nouveau convoi : le pilote reprend à zéro
+    delete merged.program;
     delete found.other.goTo;
     this.changes.trains.splice(this.changes.trains.indexOf(found.other), 1);
     this.railsChanged();
@@ -1741,6 +1794,7 @@ export class GameState {
     const rear = splitConsist(this.railGraph(), c, index, this.newConsistId());
     if (!rear) return null;
     delete c.goTo;
+    delete c.program;
     this.changes.trains.push(rear);
     this.railsChanged();
     return rear;

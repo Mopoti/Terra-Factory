@@ -174,4 +174,43 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(loco.head.piece).toBe(curve.id);
     expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
   });
+
+  it('un programme enchaîne les étapes : aller à B, attendre, aller à C, puis se met en pause faute de chemin', () => {
+    const { state, drag, tick } = bench();
+    drag([20, 20], [[0, -1, 19]]); // ligne de 20 tuiles vers −z
+    const rails = state.changes.rails;
+    state.inventory.train_station = 2;
+    state.inventory.train_locomotive = 1;
+    const b = state.placeStation({ piece: rails[6].id, u: 1.25 }, 'B')!;
+    const c = state.placeStation({ piece: rails[15].id, u: 1.25 }, 'C')!;
+    const loco = state.placeCar('locomotive_steam', { piece: rails[0].id, u: 1, dir: 1 })!;
+    loco.cars[0].fuel = { item: 'coal', count: 40 };
+    expect(
+      state.setProgram(loco.id, {
+        steps: [
+          { mode: 'all', when: [], then: { type: 'goTo', station: b.id } },
+          {
+            mode: 'all',
+            when: [{ subject: 'time', verb: 'elapsed', value: 2 }],
+            then: { type: 'wait', seconds: 1 },
+          },
+          { mode: 'all', when: [], then: { type: 'goTo', station: c.id } },
+        ],
+      }),
+    ).toBe(true);
+    expect(loco.program?.running).toBe(false);
+    tick(20 * 3);
+    expect(loco.goTo).toBeUndefined(); // en pause : rien ne bouge
+    state.setProgramRunning(loco.id, true);
+    tick(20 * 12);
+    expect(loco.program?.index).toBeGreaterThanOrEqual(0);
+    tick(20 * 150);
+    // Arrivé à C ; revenir à B est impossible (il est derrière) : le programme se met en pause.
+    const g = state.railGraph();
+    const head = g.pose(loco.head)!;
+    const stop = g.pose({ piece: c.piece, u: c.u, dir: 1 })!;
+    expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
+    expect(loco.program?.running).toBe(false);
+    expect(Math.abs(loco.v)).toBeLessThan(0.3);
+  });
 });

@@ -7,6 +7,7 @@
  */
 import { energyKJ, itemById } from '../data/items';
 import { CARS, LIQUID_KG_PER_L, type CarKind, type LiquidKind } from '../data/trains';
+import type { Program } from './program';
 import { flip, type TrackGraph, type TrackPos } from './track';
 
 export interface Car {
@@ -34,6 +35,8 @@ export interface Consist {
   cars: Car[];
   /** Pilote automatique : station où le convoi se rend (rien : conduite à la main). */
   goTo?: number;
+  /** Programme en boucle (étapes « quand… alors… »), voir `program.ts`. */
+  program?: Program;
 }
 
 export const G = 9.81;
