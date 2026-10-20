@@ -136,6 +136,8 @@ export interface TrainHost {
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
   /** Le joueur veut renommer cette station (fenêtre de saisie). */
   renameStation(id: number): void;
+  /** Ouvre l'éditeur du programme du convoi. */
+  editProgram(consistId: number): void;
   /** Ouvre la fenêtre du contenu d'un wagon (identifiant de fenêtre négatif). */
   openWindow(id: number): void;
   /** Fenêtre de choix d'une station ; renvoie son identifiant, ou null si le joueur annule. */
@@ -156,6 +158,8 @@ export interface TrainFrame {
   levelDown: boolean;
   /** H : choisir la destination du train (pilote automatique). */
   route: boolean;
+  /** N : programme du train. */
+  program: boolean;
   /** Le joueur vise déjà autre chose (ressource, machine…). */
   aimed: boolean;
   /** Cap du joueur (rad) : sert à choisir le sens d'un véhicule qu'on pose. */
@@ -860,6 +864,10 @@ export class TrainView {
     const { state } = this.host;
     if (frame.rotate && this.mountedCar !== null) this.switchAheadOfLoco(graph);
     if (frame.route && this.mountedCar !== null) this.chooseDestination();
+    if (frame.program && this.mountedCar !== null) {
+      const c = this.consistOf(this.mountedCar);
+      if (c) this.host.editProgram(c.id);
+    }
     // Aux commandes : D / Q (droite / gauche) mettent l'aiguillage devant la locomotive sur la voie qui part de ce côté.
     const right = this.host.held('right');
     const left = this.host.held('left');
@@ -1622,7 +1630,7 @@ export class TrainView {
     const e = this.autos.get(c.id);
     if (st)
       return `${progText} · ${t('train.hud.auto', { name: st.name, dist: String(Math.max(0, Math.round(e?.remaining ?? 0))) })}`;
-    return `${progText}${this.host.state.changes.stations.length > 0 ? ` · ${t('train.routeHint')}` : ''}`;
+    return `${progText} · ${t('train.routeHint')}`;
   }
 
   /** Prochain aiguillage devant la locomotive, pour le tableau de bord : « aiguillage ← gauche (Q / D) ». */

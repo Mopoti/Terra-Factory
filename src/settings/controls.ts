@@ -73,6 +73,7 @@ export const ACTIONS = [
   { id: 'drop', category: 'interaction', defaults: ['L:G', null] },
   { id: 'couple', category: 'interaction', defaults: ['L:C', null] },
   { id: 'route', category: 'interaction', defaults: ['L:H', null] },
+  { id: 'program', category: 'interaction', defaults: ['L:N', null] },
   { id: 'inventory', category: 'ui', defaults: ['Tab', 'L:I'] },
   { id: 'map', category: 'ui', defaults: ['L:M', null] },
   { id: 'techTree', category: 'ui', defaults: ['L:T', null] },

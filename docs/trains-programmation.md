@@ -40,7 +40,7 @@ Aujourd'hui les wagons n'ont pas de contenu. À prévoir : coffre du wagon de fr
 
 ## 7. Ordre de travail proposé (le PO a choisi de commencer par l'étape 1 ; virages de 45° à part, voir §6)
 1. (fait) Stations (pose, nom, repère d'arrêt) + pilotage automatique « va à la station X » (plus court) avec réglage des aiguillages et arrêt précis.
-2. Programme en boucle (liste d'étapes) avec la condition de temps (« attendre N s ») + fenêtre de programmation.
-3. Contenu des wagons (coffre) + conditions « vide / plein / contient ».
-4. Moteur de règles complet (sujets, verbes, et / ou) + choix « plus court / plus rapide ».
+2. (fait) Programme en boucle (liste d'étapes) avec la condition de temps (« attendre N s ») + fenêtre de programmation.
+3. (fait) Contenu des wagons (coffre, citerne) + conditions « vide / plein / contient ».
+4. (en grande partie fait : sujets wagons / locomotive / temps, et / ou) Reste : choix « plus court / plus rapide », autres sujets (station, coffre, machine, tronçon de voie).
 5. Signaux et détecteurs, puis réutilisation du moteur pour les lignes de production.
