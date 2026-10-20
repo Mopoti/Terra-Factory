@@ -85,6 +85,8 @@ const CAR_HEIGHT_M = 3.8;
 const CAR_COUPLER_Y_M = 1.05;
 /** Distance (m) à laquelle un bout de voie libre attire la pièce qu'on pose. */
 const SNAP_M = 7;
+/** Portée d'un bout de voie : le curseur peut être bien plus loin s'il est devant lui (le tracé le rejoint). */
+const PORT_REACH_M = 30;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
 const CAR_AIM_M = 2.2;
 /** Longueur maximale d'un tracé (tuiles). */
@@ -946,7 +948,10 @@ export class TrainView {
     let best: { port: Port; d: number } | null = null;
     for (const p of freePorts(this.host.state.changes.rails)) {
       const d = Math.hypot(p.at.x - aim.x, p.at.z - aim.z);
-      if (d <= SNAP_M && (!best || d < best.d)) best = { port: p.at, d };
+      // Devant le bout de voie (pas derrière lui) : le plus proche du curseur, même loin.
+      const along = (aim.x - p.at.x) * p.at.dx + (aim.z - p.at.z) * p.at.dz;
+      const near = d <= SNAP_M || (along > -TILE_M && d <= PORT_REACH_M);
+      if (near && (!best || d < best.d)) best = { port: p.at, d };
     }
     return best?.port ?? null;
   }
@@ -1014,6 +1019,26 @@ export class TrainView {
     return found.length > 0 ? found[this.railTurn % found.length] : null;
   }
 
+  /** Prolonge le tracé tuile à tuile vers la tuile visée (jamais de demi-tour sur soi-même). */
+  private growPath(path: Tile[], here: Tile): void {
+    const cur = { ...path[path.length - 1] };
+    for (let guard = 0; guard < MAX_PATH && (cur.tx !== here.tx || cur.tz !== here.tz); guard++) {
+      const dx = here.tx - cur.tx;
+      const dz = here.tz - cur.tz;
+      const prev = path[path.length - 2];
+      const horizontal = Math.abs(dx) >= Math.abs(dz);
+      let step = horizontal ? { tx: Math.sign(dx), tz: 0 } : { tx: 0, tz: Math.sign(dz) };
+      if (prev && cur.tx + step.tx === prev.tx && cur.tz + step.tz === prev.tz) {
+        const other = horizontal ? { tx: 0, tz: Math.sign(dz) } : { tx: Math.sign(dx), tz: 0 };
+        if (other.tx === 0 && other.tz === 0) break;
+        step = other;
+      }
+      cur.tx += step.tx;
+      cur.tz += step.tz;
+      path.push({ ...cur });
+    }
+  }
+
   private trace(
     graph: TrackGraph,
     aim: { x: number; z: number } | null,
@@ -1065,27 +1090,7 @@ export class TrainView {
       if (back >= 0 && back >= this.pathLead)
         this.path.length = Math.max(back + 1, this.pathLead + 1);
       else {
-        const cur = { ...this.path[this.path.length - 1] };
-        for (
-          let guard = 0;
-          guard < MAX_PATH && (cur.tx !== here.tx || cur.tz !== here.tz);
-          guard++
-        ) {
-          const dx = here.tx - cur.tx;
-          const dz = here.tz - cur.tz;
-          const prev = this.path[this.path.length - 2];
-          const horizontal = Math.abs(dx) >= Math.abs(dz);
-          let step = horizontal ? { tx: Math.sign(dx), tz: 0 } : { tx: 0, tz: Math.sign(dz) };
-          // Jamais de demi-tour sur soi-même : on prend l'autre axe, ou on s'arrête.
-          if (prev && cur.tx + step.tx === prev.tx && cur.tz + step.tz === prev.tz) {
-            const other = horizontal ? { tx: 0, tz: Math.sign(dz) } : { tx: Math.sign(dx), tz: 0 };
-            if (other.tx === 0 && other.tz === 0) break;
-            step = other;
-          }
-          cur.tx += step.tx;
-          cur.tz += step.tz;
-          this.path.push({ ...cur });
-        }
+        this.growPath(this.path, here);
         if (this.path.length > MAX_PATH) this.path.length = MAX_PATH;
       }
     }
@@ -1123,7 +1128,13 @@ export class TrainView {
             tz: tiles[0].tz + lastDir.tz * (i + 1),
           })),
         ];
-      } else single = true;
+      } else {
+        // Le tracé que ferait un glissé du bout de voie jusqu'au curseur : un clic le pose en entier.
+        tiles = [...tiles];
+        this.growPath(tiles, here);
+        if (tiles.length > MAX_PATH) tiles.length = MAX_PATH;
+        single = tiles.length <= 2;
+      }
     }
     let planned: PlannedPiece[];
     // Une ligne droite est quittée de côté (départ) ou jointe de côté (arrivée) : un aiguillage s'y pose.

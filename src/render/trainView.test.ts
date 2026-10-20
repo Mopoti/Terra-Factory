@@ -93,4 +93,16 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(line.filter((id) => !kept.has(id))).toHaveLength(3);
     expect(state.changes.rails.some((p) => p.kind.startsWith('switch'))).toBe(true);
   });
+
+  it("un clic loin devant le bout de la voie la prolonge jusqu'au curseur", () => {
+    const { state, drag } = bench();
+    drag([20, 20], [[0, -1, 4]]); // 5 tuiles, bout à tz = 16
+    const before = state.changes.rails.length;
+    // Clic simple, sans glisser, 8 tuiles plus loin sur la même ligne.
+    drag([20, 8], []);
+    expect(state.changes.rails.length).toBeGreaterThanOrEqual(before + 7);
+    const g = state.railGraph();
+    const run = g.advance({ piece: state.changes.rails[0].id, u: 0, dir: 1 }, 25);
+    expect(run.blocked).toBe(false);
+  });
 });
