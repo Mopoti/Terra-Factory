@@ -61,8 +61,8 @@ describe('onglets de fabrication', () => {
     }
     for (const c of ITEM_CATEGORIES) {
       expect(counts.get(c) ?? 0, c).toBeGreaterThan(0);
-      // L'onglet « Ressources » du mode Créatif tient toutes les ressources du monde (13).
-      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(c === 'resources' ? 14 : 12);
+      // L'onglet « Ressources » du mode Créatif tient les cases de ressources du monde (13) et les objets bruts (11).
+      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(c === 'resources' ? 26 : 12);
     }
   });
 });

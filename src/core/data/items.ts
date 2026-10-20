@@ -124,6 +124,43 @@ export function categoryOf(item: ItemDef): ItemCategory | null {
 export const creativeResourceOf = (item: string | null): string | null =>
   item && item.startsWith('res_') ? item.slice(4) : null;
 
+/**
+ * Mode Créatif, onglet « Ressources » : l'objet brut qui va avec chaque case de ressource (`res_<ressource>`), pour
+ * les montrer côte à côte (le charbon à côté de la case de charbon).
+ */
+export const RESOURCE_PARTNER: Record<string, string> = {
+  res_iron_ore: 'iron_ore',
+  res_copper_ore: 'copper_ore',
+  res_zinc_ore: 'zinc_ore',
+  res_coal: 'coal',
+  res_bauxite: 'bauxite',
+  res_stone_ore: 'stone',
+  res_uraninite: 'uraninite',
+  res_sand: 'silica_sand',
+  res_oil: 'crude_oil',
+  res_tree: 'wood',
+  res_fiber_bush: 'fiber',
+};
+
+/** Les objets d'un onglet, avec chaque objet brut juste après sa case de ressource (voir `RESOURCE_PARTNER`). */
+export function withPartnersBeside<T extends { id: string }>(list: readonly T[]): T[] {
+  const partners = new Set(Object.values(RESOURCE_PARTNER));
+  const byId = new Map(list.map((i) => [i.id, i]));
+  const out: T[] = [];
+  for (const i of list) {
+    const partner = RESOURCE_PARTNER[i.id];
+    if (
+      partners.has(i.id) &&
+      [...Object.entries(RESOURCE_PARTNER)].some(([k, v]) => v === i.id && byId.has(k))
+    )
+      continue; // il sera placé après sa case
+    out.push(i);
+    const mate = partner ? byId.get(partner) : undefined;
+    if (mate) out.push(mate);
+  }
+  return out;
+}
+
 /** Portée de la récolte à la main, en mètres. */
 export const REACH_M: number = raw.reachM;
 

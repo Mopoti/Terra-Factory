@@ -4,6 +4,7 @@ import {
   ITEM_CATEGORIES,
   ITEMS,
   categoryOf,
+  withPartnersBeside,
   type ItemCategory,
   itemById,
   type EquipSlot,
@@ -496,7 +497,7 @@ export function mountInventory(
     }
     craftBox.append(tabs);
     const catalog = el('div', 'slot-grid craft-grid');
-    for (const def of visible.filter((i) => categoryOf(i) === craftTab)) {
+    for (const def of withPartnersBeside(visible.filter((i) => categoryOf(i) === craftTab))) {
       const cell = el('button', 'slot craft');
       cell.type = 'button';
       cell.style.setProperty('--item', def.color);
