@@ -32,6 +32,7 @@ export function normalizeRails(raw: unknown): RailPiece[] {
       level: isNum(r.level) ? Math.max(-40, Math.min(40, Math.round(r.level * 100) / 100)) : 0,
     };
     if (isSwitch(piece.kind)) piece.branch = r.branch === 1 ? 1 : 0;
+    if (r.closed === true && !isSwitch(piece.kind)) piece.closed = true;
     out.push(piece);
   }
   return out;

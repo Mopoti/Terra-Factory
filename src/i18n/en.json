@@ -1257,5 +1257,7 @@
   "train.steerLeft": "Switch: you will turn left.",
   "train.noSwitch": "No switch ahead of the locomotive.",
   "train.hud.switchLeft": "switch ← left (A / D)",
-  "train.hud.switchRight": "switch → right (A / D)"
+  "train.hud.switchStraight": "junction ↑ straight (A / D)",
+  "train.hud.switchRight": "switch → right (A / D)",
+  "train.switchChosen": "Switch: route changed."
 }

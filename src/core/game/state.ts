@@ -3,6 +3,7 @@ import { CARS, RAIL_COST, RAIL_ITEM, isLocoWindow, type CarKind } from '../data/
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
+  tangentOverlap,
   branchId,
   centerOf,
   isSwitch,
@@ -1297,6 +1298,7 @@ export class GameState {
   private railRevision = 0;
   private railsChanged(): void {
     this.railRevision++;
+    this.settleJunctions();
     this.emit({ type: 'rails' });
     this.emit({ type: 'inventory' });
   }
@@ -1310,13 +1312,9 @@ export class GameState {
     blocked: (c: Cell) => boolean,
     ignore: ReadonlySet<number> = new Set(),
   ): boolean {
-    const taken = new Set<string>();
-    for (const p of this.changes.rails) {
-      if (ignore.has(p.id)) continue;
-      for (const [x, z] of trackCellsOf(p)) taken.add(`${x},${z}`);
-    }
-    return trackCellsOf(piece).every(
-      ([x, z]) => !taken.has(`${x},${z}`) && !blocked({ gx: x, gz: z }),
+    return (
+      trackCellsOf(piece).every(([x, z]) => !blocked({ gx: x, gz: z })) &&
+      this.railsOverlapping(piece).every((p) => ignore.has(p.id))
     );
   }
 
@@ -1346,8 +1344,43 @@ export class GameState {
     const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
     const out = new Set(this.railsUnderSwitch(piece));
     for (const p of this.changes.rails)
-      if (trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`))) out.add(p);
+      if (
+        trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
+        !tangentOverlap(piece, p, this.changes.rails)
+      )
+        out.add(p);
     return [...out];
+  }
+
+  /** À chaque embranchement tangent, une seule voie est donnée : la plus droite, si le joueur n'a rien choisi. */
+  private settleJunctions(): void {
+    const byId = new Map(this.changes.rails.map((p) => [p.id, p]));
+    const straightness = (k: RailKind): number =>
+      k === 'straight' ? 0 : k === 'curve_large' ? 1 : k === 'curve_wide' ? 2 : 3;
+    for (const ids of new TrackGraph(this.changes.rails).junctions()) {
+      const group = ids
+        .map((id) => byId.get(id))
+        .filter((p): p is RailPiece => !!p && !isSwitch(p.kind));
+      if (group.length < 2 || group.filter((p) => !p.closed).length === 1) continue;
+      const keep = [...group].sort((a, b) => straightness(a.kind) - straightness(b.kind))[0];
+      for (const p of group) {
+        if (p === keep) delete p.closed;
+        else p.closed = true;
+      }
+    }
+  }
+
+  /** Donne la voie `chosen` d'un embranchement tangent (les autres sont fermées) ; refusé si un convoi y est. */
+  selectRoute(chosen: number, group: readonly number[]): boolean {
+    const pieces = group.map((id) => this.changes.rails.find((p) => p.id === id));
+    if (pieces.some((p) => !p) || !group.includes(chosen)) return false;
+    if (group.some((id) => this.railOccupied(id))) return false;
+    for (const p of pieces as RailPiece[]) {
+      if (p.id === chosen) delete p.closed;
+      else p.closed = true;
+    }
+    this.railsChanged();
+    return true;
   }
 
   /** La même pièce est-elle déjà posée exactement là ? */

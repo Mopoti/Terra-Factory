@@ -1257,5 +1257,7 @@
   "train.steerLeft": "Aiguillage : tu tournes à gauche.",
   "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
   "train.hud.switchLeft": "aiguillage ← gauche (Q / D)",
-  "train.hud.switchRight": "aiguillage → droite (Q / D)"
+  "train.hud.switchStraight": "embranchement ↑ tout droit (Q / D)",
+  "train.hud.switchRight": "aiguillage → droite (Q / D)",
+  "train.switchChosen": "Aiguillage : voie changée."
 }

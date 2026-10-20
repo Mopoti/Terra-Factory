@@ -755,31 +755,60 @@ export class TrainView {
     this.host.message(t(r === 1 ? 'train.switchDiverge' : 'train.switchStraight'));
   }
 
-  /** Depuis la locomotive : manœuvre le premier aiguillage devant elle (dans le sens où elle regarde). */
-  private switchAheadOfLoco(graph: TrackGraph): void {
+  /** Premier choix de voie devant la locomotive (dans le sens où elle regarde). */
+  private choiceAheadOfLoco(graph: TrackGraph): ReturnType<TrackGraph['choiceAhead']> {
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     const loco = c?.cars.find((k) => k.id === this.mountedCar);
-    if (!c || !loco) return;
+    if (!c || !loco) return null;
     // La locomotive regarde vers la tête du convoi, sauf si elle est retournée.
     const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
-    const id = graph.switchAhead(from, SWITCH_AHEAD_M);
-    if (id === null) {
+    return graph.choiceAhead(from, SWITCH_AHEAD_M);
+  }
+
+  /** Depuis la locomotive : manœuvre le premier aiguillage (ou embranchement) devant elle. */
+  private switchAheadOfLoco(graph: TrackGraph): void {
+    const ahead = this.choiceAheadOfLoco(graph);
+    if (!ahead) {
       this.host.sfx('deny');
       this.host.message(t('train.noSwitch'));
-    } else this.toggleSwitch(id);
+    } else if (ahead.kind === 'switch') this.toggleSwitch(ahead.id);
+    else {
+      // Embranchement tangent : on passe à la voie suivante.
+      const at = ahead.options.findIndex((o) => o.open);
+      const next = ahead.options[(at + 1) % ahead.options.length];
+      this.selectRoute(ahead, next.piece);
+    }
   }
 
   private wasRight = false;
   private wasLeft = false;
 
-  /** Met l'aiguillage devant la locomotive sur la voie qui tourne du côté demandé (l'autre : tout droit). */
+  private selectRoute(ahead: { options: { piece: number }[] }, chosen: number): void {
+    const ok = this.host.state.selectRoute(
+      chosen,
+      ahead.options.map((o) => o.piece),
+    );
+    this.host.sfx(ok ? 'select' : 'deny');
+    this.host.message(t(ok ? 'train.switchChosen' : 'train.switchBusy'));
+  }
+
+  /** Met la voie devant la locomotive du côté demandé (l'autre : tout droit). */
   private steerAhead(graph: TrackGraph, side: 'left' | 'right'): void {
-    const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
-    const loco = c?.cars.find((k) => k.id === this.mountedCar);
-    if (!c || !loco) return;
-    const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
-    const id = graph.switchAhead(from, SWITCH_AHEAD_M);
-    const piece = id === null ? null : this.host.state.changes.rails.find((p) => p.id === id);
+    const ahead = this.choiceAheadOfLoco(graph);
+    if (!ahead) return;
+    if (ahead.kind === 'junction') {
+      // Voie qui tourne le plus de ce côté ; à défaut de voie qui tourne, la plus droite.
+      const sign = side === 'right' ? 1 : -1;
+      const turning = ahead.options.filter((o) => o.lateral * sign > 0.3);
+      const pool = turning.length > 0 ? turning : ahead.options;
+      const best =
+        turning.length > 0
+          ? pool.reduce((a, b) => (b.lateral * sign > a.lateral * sign ? b : a))
+          : pool.reduce((a, b) => (Math.abs(b.lateral) < Math.abs(a.lateral) ? b : a));
+      this.selectRoute(ahead, best.piece);
+      return;
+    }
+    const piece = this.host.state.changes.rails.find((p) => p.id === ahead.id);
     if (!piece) return;
     // La voie déviée d'un aiguillage « droit » part à droite ; celle d'un aiguillage « gauche », à gauche.
     const diverges = (piece.kind === 'switch_r') === (side === 'right');
@@ -1190,8 +1219,19 @@ export class TrainView {
     const loco = c?.cars.find((k) => k.id === this.mountedCar);
     if (!graph || !c || !loco) return '';
     const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
-    const id = graph.switchAhead(from, SWITCH_AHEAD_M);
-    const p = id === null ? null : this.host.state.changes.rails.find((q) => q.id === id);
+    const ahead = graph.choiceAhead(from, SWITCH_AHEAD_M);
+    if (!ahead) return '';
+    if (ahead.kind === 'junction') {
+      const open = ahead.options.find((o) => o.open) ?? ahead.options[0];
+      const key =
+        open.lateral > 0.3
+          ? 'train.hud.switchRight'
+          : open.lateral < -0.3
+            ? 'train.hud.switchLeft'
+            : 'train.hud.switchStraight';
+      return ` · ${t(key)}`;
+    }
+    const p = this.host.state.changes.rails.find((q) => q.id === ahead.id);
     if (!p) return '';
     // Aiguillage à droite : la voie déviée part à droite, la directe à gauche ; l'inverse pour un aiguillage à gauche.
     const right = (p.kind === 'switch_r') === (p.branch === 1);

@@ -47,6 +47,8 @@ export interface RailPiece {
   branch?: 0 | 1;
   /** Dans le graphe seulement : voie d'un aiguillage que représente cette pièce (0 : directe, 1 : déviée). */
   route?: 0 | 1;
+  /** Embranchement tangent : cette voie n'est pas celle donnée aux trains qui arrivent par la pointe. */
+  closed?: boolean;
 }
 
 /** Identifiant de la voie déviée d'un aiguillage dans le graphe (et inversement). */
@@ -300,6 +302,7 @@ export class TrackGraph {
   /** La voie d'un aiguillage est-elle celle qu'il donne (toujours vrai pour une autre pièce) ? */
   private active(id: number): boolean {
     const p = this.byId.get(id);
+    if (p?.closed) return false;
     if (!p || p.route === undefined) return true;
     return (p.branch ?? 0) === p.route;
   }
@@ -312,6 +315,74 @@ export class TrackGraph {
     const list = this.links.get(piece)?.[port] ?? [];
     if (list.length <= 1) return list[0] ?? null;
     return list.find((l) => this.active(l.piece)) ?? list[0];
+  }
+
+  /** Voies qui partent d'un même point dans le même sens (embranchements tangents), groupées par pointe. */
+  junctions(): number[][] {
+    const seen = new Set<string>();
+    const out: number[][] = [];
+    for (const lists of this.links.values())
+      for (const list of lists) {
+        const ids = [...new Set(list.map((l) => baseId(l.piece)))].sort((a, b) => a - b);
+        if (ids.length < 2) continue;
+        const key = ids.join(',');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(ids);
+      }
+    return out;
+  }
+
+  /**
+   * Premier choix de voie devant `pos`, à moins de `maxDist` mètres : un aiguillage pris par la pointe, ou un
+   * embranchement tangent (plusieurs voies qui partent du même point). `lateral` : écart à 5 m (> 0 : à droite).
+   */
+  choiceAhead(
+    pos: TrackPos,
+    maxDist: number,
+  ):
+    | { kind: 'switch'; id: number }
+    | { kind: 'junction'; options: { piece: number; lateral: number; open: boolean }[] }
+    | null {
+    let cur = { ...pos };
+    let dist = 0;
+    for (let guard = 0; guard < 400; guard++) {
+      const p = this.byId.get(cur.piece);
+      if (!p) return null;
+      const len = lengthOfPiece(p);
+      dist += cur.dir === 1 ? len - cur.u : cur.u;
+      if (dist > maxDist) return null;
+      const port = cur.dir === 1 ? 1 : 0;
+      const list = this.links.get(cur.piece)?.[port] ?? [];
+      if (new Set(list.map((l) => baseId(l.piece))).size > 1) {
+        return {
+          kind: 'junction',
+          options: list.map((l) => {
+            const s = this.byId.get(l.piece) as RailPiece;
+            const sl = lengthOfPiece(s);
+            const at = portsOf(s)[l.port];
+            const d = Math.min(5, sl);
+            const q = poseOn(s, l.port === 0 ? d : sl - d);
+            return {
+              piece: l.piece,
+              lateral: (q.x - at.x) * -at.dz + (q.z - at.z) * at.dx,
+              open: this.active(l.piece),
+            };
+          }),
+        };
+      }
+      const link = this.neighbour(cur.piece, port);
+      if (!link) return null;
+      const next = this.byId.get(link.piece);
+      if (!next) return null;
+      if (next.route !== undefined && link.port === 0)
+        return { kind: 'switch', id: baseId(next.id) };
+      cur =
+        link.port === 0
+          ? { piece: next.id, u: 0, dir: 1 }
+          : { piece: next.id, u: lengthOfPiece(next), dir: -1 };
+    }
+    return null;
   }
 
   has(piece: number): boolean {
@@ -381,6 +452,43 @@ export class TrackGraph {
     }
     return null;
   }
+}
+
+const SHARE_M = 11.5;
+/**
+ * Deux pièces dont les cases se chevauchent forment-elles un embranchement tangent ? Un virage part d'un point de la
+ * voie (où une pièce attend déjà de l'autre côté) dans le sens même d'une voie droite : les deux restent tangents sur
+ * quelques mètres, leurs cases se recouvrent donc sans que ce soit une erreur.
+ */
+export function tangentOverlap(a: RailPiece, b: RailPiece, rails: readonly RailPiece[]): boolean {
+  if (a.kind === 'straight' && b.kind === 'straight') return false;
+  if (Math.abs(a.level - b.level) > 0.3) return false;
+  for (const [c, o] of [
+    [a, b],
+    [b, a],
+  ] as const) {
+    if (c.kind !== 'curve' && c.kind !== 'curve_wide' && c.kind !== 'curve_large') continue;
+    for (const q of portsOf(c)) {
+      const mated = rails.some(
+        (z) => z.id !== c.id && z.id !== o.id && portsOf(z).some((zp) => portsMeet(q, zp)),
+      );
+      if (!mated) continue;
+      const sameStart = portsOf(o).some(
+        (op) =>
+          Math.hypot(op.x - q.x, op.z - q.z) <= SAME_M &&
+          Math.abs(op.y - q.y) <= SAME_M &&
+          op.dx * q.dx + op.dz * q.dz > 0.9,
+      );
+      if (sameStart) return true;
+      if (o.kind !== 'straight' || o.turns % 2 !== (Math.abs(q.dx) > 0.5 ? 1 : 0)) continue;
+      const oc = centerOf(o);
+      // Le port regarde vers la pointe : la voie part dans le sens opposé.
+      const along = -((oc.x - q.x) * q.dx + (oc.z - q.z) * q.dz);
+      const lateral = (oc.x - q.x) * -q.dz + (oc.z - q.z) * q.dx;
+      if (along > 0 && along <= SHARE_M && Math.abs(lateral) < 0.3) return true;
+    }
+  }
+  return false;
 }
 
 /** Les ports de la voie où l'on peut raccorder une nouvelle pièce (aucune pièce de l'autre côté). */
