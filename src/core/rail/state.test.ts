@@ -264,34 +264,37 @@ describe('aiguillages dans la partie', () => {
     }
   });
 
-  it('un virage posé dans le prolongement d’une ligne en fait un embranchement tangent', () => {
-    const s = start();
-    const line = s.changes.rails.slice(0, 10);
-    // Joint entre la tuile 2 et la tuile 3 : la ligne va vers −z, le port avant de la tuile 2 y est.
-    const joint = portsOf(line[2]).find((p) => p.dz === -1)!;
-    const mates = matesFor('curve_wide', joint);
-    expect(mates.length).toBeGreaterThan(0);
-    const before = s.changes.rails.length;
-    let curve = null as null | (typeof s.changes.rails)[number];
-    for (const m of mates) {
-      const r = s.placeRail('curve_wide', m.gx, m.gz, m.turns, m.level, free, true);
-      if (r === 'ok') {
-        curve = s.changes.rails[s.changes.rails.length - 1];
-        break;
+  it.each(['curve_wide', 'curve_large', 'curve_big', 'curve_huge'] as const)(
+    'un virage %s posé dans le prolongement d’une ligne en fait un embranchement tangent',
+    (kind) => {
+      const s = start();
+      const line = s.changes.rails.slice(0, 10);
+      // Joint entre la tuile 2 et la tuile 3 : la ligne va vers −z, le port avant de la tuile 2 y est.
+      const joint = portsOf(line[2]).find((p) => p.dz === -1)!;
+      const mates = matesFor(kind, joint);
+      expect(mates.length).toBeGreaterThan(0);
+      const before = s.changes.rails.length;
+      let curve = null as null | (typeof s.changes.rails)[number];
+      for (const m of mates) {
+        const r = s.placeRail(kind, m.gx, m.gz, m.turns, m.level, free, true);
+        if (r === 'ok') {
+          curve = s.changes.rails[s.changes.rails.length - 1];
+          break;
+        }
       }
-    }
-    expect(curve).not.toBeNull();
-    // Rien n'a été remplacé : la ligne reste, le virage s'y ajoute.
-    expect(s.changes.rails).toHaveLength(before + 1);
-    // Par défaut, tout droit ; le virage est fermé.
-    const g = s.railGraph();
-    expect(g.neighbour(line[2].id, 1)?.piece).toBe(line[3].id);
-    expect(curve!.closed).toBe(true);
-    // On choisit la voie qui tourne : un train qui arrive par la pointe la prend.
-    const group = g.junctions().find((j) => j.includes(curve!.id))!;
-    expect(s.selectRoute(curve!.id, group)).toBe(true);
-    expect(s.railGraph().neighbour(line[2].id, 1)?.piece).toBe(curve!.id);
-    // La pointe est un choix de voie pour le train qui arrive.
-    expect(s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60)).not.toBeNull();
-  });
+      expect(curve).not.toBeNull();
+      // Rien n'a été remplacé : la ligne reste, le virage s'y ajoute.
+      expect(s.changes.rails).toHaveLength(before + 1);
+      // Par défaut, tout droit ; le virage est fermé.
+      const g = s.railGraph();
+      expect(g.neighbour(line[2].id, 1)?.piece).toBe(line[3].id);
+      expect(curve!.closed).toBe(true);
+      // On choisit la voie qui tourne : un train qui arrive par la pointe la prend.
+      const group = g.junctions().find((j) => j.includes(curve!.id))!;
+      expect(s.selectRoute(curve!.id, group)).toBe(true);
+      expect(s.railGraph().neighbour(line[2].id, 1)?.piece).toBe(curve!.id);
+      // La pointe est un choix de voie pour le train qui arrive.
+      expect(s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60)).not.toBeNull();
+    },
+  );
 });

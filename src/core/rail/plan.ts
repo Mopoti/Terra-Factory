@@ -112,7 +112,13 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
   // voie existante, ni sur la rampe, ni trop près d'un autre coin. Après le dernier coin, le virage peut dépasser la
   // fin du tracé (on voit tout de suite où il mène).
   const choice = opts.curve ?? 'curve';
-  const BY_HALF: CurveKind[] = ['curve', 'curve_wide', 'curve_large']; // demi-bloc de 1, 2, 3 tuiles
+  // Virages que le tracé automatique peut poser (les serrés sont retirés pour l'instant) : demi-bloc en tuiles.
+  const AUTO: { kind: CurveKind; half: number }[] = [
+    { kind: 'curve_wide', half: 2 },
+    { kind: 'curve_large', half: 3 },
+    { kind: 'curve_big', half: 5 },
+    { kind: 'curve_huge', half: 7 },
+  ];
   const cornerAt: number[] = [];
   for (let i = lead; i < dirs.length; i++) if (corner(i)) cornerAt.push(i);
   const corners: number[] = [];
@@ -130,15 +136,18 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
       // À droite : jusqu'au coin suivant (qui garde au moins un virage serré) ou jusqu'au bout du tracé.
       const next = cornerAt[c + 1];
       const rightRoom = next !== undefined ? next - 1 - i : dirs.length - i;
-      half = Math.min(3, leftRoom, rightRoom);
+      half = Math.min(AUTO[AUTO.length - 1].half, leftRoom, rightRoom);
     } else half = (blockTiles(choice) - 1) / 2;
-    if (half < 1 || half > leftRoom) {
+    // En automatique : le plus grand virage qui tient ; trop serré pour le plus petit, le tracé s'arrête là.
+    const picked = choice === 'auto' ? AUTO.filter((a) => a.half <= half).pop() : undefined;
+    if (choice === 'auto' ? !picked : half < 1 || half > leftRoom) {
       limit = i;
       break;
     }
+    if (picked) half = picked.half;
     corners.push(i);
     halfAt.set(i, half);
-    kindAt.set(i, choice === 'auto' ? BY_HALF[half - 1] : choice);
+    kindAt.set(i, picked ? picked.kind : (choice as CurveKind));
   }
   const used = path.slice(0, limit);
   const covered = new Set<number>();

@@ -3,6 +3,7 @@ import { CARS, RAIL_COST, RAIL_ITEM, isLocoWindow, type CarKind } from '../data/
 import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
+  blockTiles,
   tangentOverlap,
   branchId,
   centerOf,
@@ -1355,8 +1356,7 @@ export class GameState {
   /** À chaque embranchement tangent, une seule voie est donnée : la plus droite, si le joueur n'a rien choisi. */
   private settleJunctions(): void {
     const byId = new Map(this.changes.rails.map((p) => [p.id, p]));
-    const straightness = (k: RailKind): number =>
-      k === 'straight' ? 0 : k === 'curve_large' ? 1 : k === 'curve_wide' ? 2 : 3;
+    const straightness = (k: RailKind): number => (k === 'straight' ? -100 : -blockTiles(k));
     for (const ids of new TrackGraph(this.changes.rails).junctions()) {
       const group = ids
         .map((id) => byId.get(id))

@@ -28,6 +28,8 @@ import {
   portsOf,
   leverOf,
   lengthOfPiece,
+  isCurve,
+  lengthOf,
   poseOn,
   routesOf,
   type Port,
@@ -57,6 +59,9 @@ const RAIL_MODEL: Record<Exclude<RailKind, 'switch_r' | 'switch_l'>, string> = {
   curve: 'rail_virage',
   curve_wide: 'rail_virage_large',
   curve_large: 'rail_virage_tres_large',
+  // Pas encore de modèle (à faire dans Blender) : un ruban provisoire est dessiné à la place.
+  curve_big: 'rail_virage_grand',
+  curve_huge: 'rail_virage_geant',
   ramp: 'rail_rampe',
 };
 /** Modèle d'une pièce de voie : un aiguillage a un modèle par côté et par position des lames. */
@@ -363,6 +368,15 @@ export class TrainView {
     }
     // Forme de secours tant que le modèle n'est pas chargé : une dalle à la taille de la voie.
     const color = tint ?? hexToRgb('#7d776e');
+    if (isCurve(p.kind)) {
+      // Un grand virage sans modèle : un ruban de dalles le long de la voie.
+      const len = lengthOf(p.kind);
+      for (let u = 0; u <= len + 1e-6; u += 0.7) {
+        const q = poseOn(p, Math.min(u, len));
+        mb.box(q.x, q.y, q.z, 1.8, RAIL_TOP_M, 1.8, color, true);
+      }
+      return;
+    }
     const { w, d } = footprintOf(p.kind, p.turns);
     mb.box(c.x, p.level, c.z, w * 0.5, RAIL_TOP_M, d * 0.5, color, true);
   }

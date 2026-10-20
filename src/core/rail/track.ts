@@ -16,18 +16,34 @@
 import { CELL_SIZE_M } from '../constants';
 
 export type RailKind =
-  'straight' | 'curve' | 'curve_wide' | 'curve_large' | 'ramp' | 'switch_r' | 'switch_l';
+  | 'straight'
+  | 'curve'
+  | 'curve_wide'
+  | 'curve_large'
+  | 'curve_big'
+  | 'curve_huge'
+  | 'ramp'
+  | 'switch_r'
+  | 'switch_l';
 export const RAIL_KINDS: readonly RailKind[] = [
   'straight',
   'curve',
   'curve_wide',
   'curve_large',
+  'curve_big',
+  'curve_huge',
   'ramp',
   'switch_r',
   'switch_l',
 ];
-export type CurveKind = 'curve' | 'curve_wide' | 'curve_large';
-export const CURVE_KINDS: readonly CurveKind[] = ['curve', 'curve_wide', 'curve_large'];
+export type CurveKind = 'curve' | 'curve_wide' | 'curve_large' | 'curve_big' | 'curve_huge';
+export const CURVE_KINDS: readonly CurveKind[] = [
+  'curve',
+  'curve_wide',
+  'curve_large',
+  'curve_big',
+  'curve_huge',
+];
 export const isCurve = (k: RailKind): k is CurveKind =>
   (CURVE_KINDS as readonly string[]).includes(k);
 export const isSwitch = (k: RailKind): k is 'switch_r' | 'switch_l' =>
@@ -72,6 +88,8 @@ const RAMP_RUN_M = 4 * RAIL_SCALE;
 export function blockTiles(kind: RailKind): number {
   if (kind === 'curve_wide') return 5;
   if (kind === 'curve_large') return 7;
+  if (kind === 'curve_big') return 11;
+  if (kind === 'curve_huge') return 15;
   return 3;
 }
 /** Rayon (m) d'un virage, ou de la voie déviée d'un aiguillage : la moitié du côté du bloc. */
@@ -467,7 +485,7 @@ export function tangentOverlap(a: RailPiece, b: RailPiece, rails: readonly RailP
     [a, b],
     [b, a],
   ] as const) {
-    if (c.kind !== 'curve' && c.kind !== 'curve_wide' && c.kind !== 'curve_large') continue;
+    if (!isCurve(c.kind)) continue;
     for (const q of portsOf(c)) {
       const mated = rails.some(
         (z) => z.id !== c.id && z.id !== o.id && portsOf(z).some((zp) => portsMeet(q, zp)),

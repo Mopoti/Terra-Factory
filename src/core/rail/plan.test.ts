@@ -216,14 +216,18 @@ describe('virages larges', () => {
       planRails(L(a, b), { level: 0, tilt: 0, lead: 0, curve: 'auto' })
         .filter((p) => p.kind !== 'straight')
         .map((p) => p.kind);
-    expect(kindFor(1, 1)).toEqual(['curve']);
+    // Les virages serrés sont retirés : un coin trop court n'est pas posé.
+    expect(kindFor(1, 1)).toEqual([]);
     expect(kindFor(2, 2)).toEqual(['curve_wide']);
     expect(kindFor(3, 3)).toEqual(['curve_large']);
-    expect(kindFor(8, 8)).toEqual(['curve_large']);
+    expect(kindFor(4, 4)).toEqual(['curve_large']);
+    expect(kindFor(5, 5)).toEqual(['curve_big']);
+    expect(kindFor(7, 7)).toEqual(['curve_huge']);
+    expect(kindFor(12, 12)).toEqual(['curve_huge']);
     // La branche la plus courte décide.
-    expect(kindFor(8, 1)).toEqual(['curve']);
+    expect(kindFor(12, 2)).toEqual(['curve_wide']);
     // Le tracé reste continu.
-    const plan = planRails(L(6, 6), { level: 0, tilt: 0, lead: 0, curve: 'auto' });
+    const plan = planRails(L(9, 9), { level: 0, tilt: 0, lead: 0, curve: 'auto' });
     expect(links(asPieces(plan))).toBe(plan.length - 1);
   });
 });
