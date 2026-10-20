@@ -4,7 +4,12 @@ import {
   RAIL_COST,
   RAIL_ITEM,
   STATION_ITEM,
+  BARREL_L,
+  BARREL_OF,
+  carIdOfCargo,
+  isCargoWindow,
   isLocoWindow,
+  type LiquidKind,
   type CarKind,
 } from '../data/trains';
 import { MAX_STATIONS, cleanStationName, type Station } from '../rail/station';
@@ -25,6 +30,8 @@ import {
 } from '../rail/track';
 import {
   carPoses,
+  cargoMassKg,
+  cargoVolumeL,
   coupleConsists,
   piecesUnder,
   findCoupling,
@@ -1633,6 +1640,68 @@ export class GameState {
     return true;
   }
 
+  /** Le véhicule de cet identifiant (dans l'un des convois), ou null. */
+  carById(id: number): Car | null {
+    for (const c of this.changes.trains) {
+      const k = c.cars.find((x) => x.id === id);
+      if (k) return k;
+    }
+    return null;
+  }
+
+  /** Combien d'unités de cet objet un wagon de fret peut encore recevoir, selon sa charge utile et son volume. */
+  cargoRoom(car: Car, item: string): number {
+    const spec = CARS[car.kind].cargo;
+    if (!spec) return 0;
+    const def = itemById(item);
+    const byKg = Math.floor((spec.maxKg - cargoMassKg(car)) / (def.weightG / 1000));
+    const byL = Math.floor((spec.maxL - cargoVolumeL(car)) / (def.volumeMl / 1000));
+    return Math.max(0, Math.min(byKg, byL));
+  }
+
+  /** Verse un baril plein du sac dans une citerne (100 L) : le baril vide revient dans le sac. */
+  pourBarrel(carId: number): 'ok' | 'noBarrel' | 'full' | 'mismatch' | 'none' {
+    const car = this.carById(carId);
+    const cap = car ? CARS[car.kind].tankL : undefined;
+    if (!car || !cap) return 'none';
+    const kinds = car.liquid
+      ? [car.liquid.kind]
+      : (Object.keys(BARREL_OF) as LiquidKind[]).filter(
+          (k) => (this.inventory[BARREL_OF[k] ?? ''] ?? 0) > 0,
+        );
+    const kind = kinds.find((k) => (this.inventory[BARREL_OF[k] ?? ''] ?? 0) > 0);
+    if (!kind) {
+      const other = (Object.keys(BARREL_OF) as LiquidKind[]).some(
+        (k) => (this.inventory[BARREL_OF[k] ?? ''] ?? 0) > 0,
+      );
+      return other && car.liquid ? 'mismatch' : 'noBarrel';
+    }
+    if ((car.liquid?.liters ?? 0) + BARREL_L > cap) return 'full';
+    this.inventory = remove(this.inventory, BARREL_OF[kind] as string, 1).inventory;
+    this.inventory = add(this.inventory, 'barrel_empty', 1);
+    car.liquid = { kind, liters: (car.liquid?.liters ?? 0) + BARREL_L };
+    this.emit({ type: 'rails' });
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Remplit un baril vide du sac avec 100 L de la citerne (eau ou pétrole). */
+  drawBarrel(carId: number): 'ok' | 'noBarrel' | 'empty' | 'unsupported' | 'none' {
+    const car = this.carById(carId);
+    if (!car || !CARS[car.kind].tankL) return 'none';
+    if (!car.liquid || car.liquid.liters < BARREL_L) return 'empty';
+    const full = BARREL_OF[car.liquid.kind];
+    if (!full) return 'unsupported';
+    if ((this.inventory.barrel_empty ?? 0) < 1) return 'noBarrel';
+    this.inventory = remove(this.inventory, 'barrel_empty', 1).inventory;
+    this.inventory = add(this.inventory, full, 1);
+    car.liquid.liters -= BARREL_L;
+    if (car.liquid.liters <= 0) car.liquid = null;
+    this.emit({ type: 'rails' });
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
   /** Remplit la soute d'une locomotive avec du charbon ou du bois du sac (renvoie le nombre de pièces chargées). */
   refuelLocomotive(car: Car): number {
     if (!CARS[car.kind].loco) return 0;
@@ -2132,7 +2201,14 @@ export class GameState {
 
   /** Range des objets du sac dans un coffre (jusqu'à `count`). Renvoie la quantité rangée. */
   putInChest(m: Machine, item: string, count: number, bagIndex?: number): number {
-    const n = Math.min(count, this.availableIn(item, bagIndex), chestRoom(m, item));
+    // Un wagon de fret : la charge utile et le volume limitent, en plus des cases.
+    const car = isCargoWindow(m.id) ? this.carById(carIdOfCargo(m.id)) : null;
+    const n = Math.min(
+      count,
+      this.availableIn(item, bagIndex),
+      chestRoom(m, item),
+      car ? this.cargoRoom(car, item) : Infinity,
+    );
     if (n <= 0) return 0;
     const stored = chestPut(m, item, n);
     this.takeUnits(item, stored, bagIndex);

@@ -8,7 +8,9 @@ import {
   CARS,
   RAIL_COST,
   RAIL_ITEM,
+  carIdOfCargo,
   carIdOfWindow,
+  cargoWindowId,
   carKindOfItem,
   locoWindowId,
   type CarKind,
@@ -42,6 +44,7 @@ import {
 } from '../core/rail/track';
 import {
   IDLE,
+  consistMass,
   CAR_HALF_WIDTH_M,
   carPoses,
   endPos,
@@ -133,6 +136,8 @@ export interface TrainHost {
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
   /** Le joueur veut renommer cette station (fenêtre de saisie). */
   renameStation(id: number): void;
+  /** Ouvre la fenêtre du contenu d'un wagon (identifiant de fenêtre négatif). */
+  openWindow(id: number): void;
   /** Fenêtre de choix d'une station ; renvoie son identifiant, ou null si le joueur annule. */
   chooseStation(stations: { id: number; name: string }[]): Promise<number | null>;
 }
@@ -226,6 +231,25 @@ export class TrainView {
   }
 
   /** La locomotive vue comme une machine : sa soute est la case de combustible, la chaudière sa chaleur. */
+  /** Le contenu d'un wagon vu comme un coffre (fret) ou comme une machine sans cases (citerne). */
+  cargoMachine(windowId: number): Machine | null {
+    const car = this.host.state.carById(carIdOfCargo(windowId));
+    if (!car) return null;
+    const spec = CARS[car.kind];
+    if (!spec.cargo && !spec.tankL) return null;
+    let m = this.locoProxies.get(car.id);
+    if (!m) {
+      m = emptyMachine(windowId, spec.cargo ? 'chest_iron' : 'chest_wood', 0, 0, 0);
+      this.locoProxies.set(car.id, m);
+    }
+    // Le coffre du wagon est directement sa liste de piles : ranger ou reprendre la modifie.
+    if (spec.cargo) {
+      car.cargo ??= [];
+      m.slots = car.cargo;
+    } else m.slots = [];
+    return m;
+  }
+
   locoMachine(windowId: number): Machine | null {
     const carId = carIdOfWindow(windowId);
     const car = this.host.state.changes.trains
@@ -845,6 +869,8 @@ export class TrainView {
             this.host.sfx('pickup');
             this.host.message(t('train.pickedUp'));
           } else if (r === 'coupled') this.host.message(t('train.pickCoupled'));
+        } else if (near && !CARS[near.car.kind].loco) {
+          this.host.openWindow(cargoWindowId(near.car.id));
         } else if (near && CARS[near.car.kind].loco) {
           this.mountedCar = near.car.id;
           this.warnedFuel = false;
@@ -1632,6 +1658,7 @@ export class TrainView {
         heat: String(heat),
       }) +
       brake +
+      ` · ${t('train.hud.mass', { t: (consistMass(c) / 1000).toFixed(0) })}` +
       this.switchHud() +
       this.autoHud(c) +
       (c.cars.length > 1 ? ` · ${t('train.uncoupleHint')}` : ` · ${t('train.coupleHint')}`);

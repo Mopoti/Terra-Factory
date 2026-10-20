@@ -1,6 +1,6 @@
 import { TrainView } from './trainView';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
-import { CARS, isLocoWindow } from '../core/data/trains';
+import { CARS, isCargoWindow, isLocoWindow } from '../core/data/trains';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
@@ -2303,6 +2303,7 @@ export function startGameView(
     message: (text) => options.onMessage?.(text),
     sfx: (name) => playSfx(name),
     renameStation: (id) => options.onRenameStation?.(id),
+    openWindow: (id) => options.onOpenMachine?.(id),
     chooseStation: (stations) => options.onChooseStation?.(stations) ?? Promise.resolve(null),
   });
   // Boîtes de collision des trains (voir `trainBlocked`) ; pas quand on conduit (on est dans la cabine).
@@ -2436,6 +2437,7 @@ export function startGameView(
   /** Le coffre d'un buggy, vu comme un coffre en bois qui partage le contenu du buggy. */
   function vehicleMachine(id: number): Machine | null {
     if (isLocoWindow(id)) return trains.locoMachine(id);
+    if (isCargoWindow(id)) return trains.cargoMachine(id);
     const v = options.state.changes.vehicles.find((x) => x.id === -id);
     if (!v) return null;
     let m = vehicleChests.get(v.id);

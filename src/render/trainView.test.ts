@@ -31,6 +31,7 @@ function bench() {
     message: () => {},
     sfx: () => {},
     renameStation: () => {},
+    openWindow: () => {},
     chooseStation: () => Promise.resolve(null),
   } as never);
   const frame = {

@@ -35,9 +35,33 @@ export interface CarSpec {
   bodyM: { front: number; rear: number };
   /** Demi-empattement (m) : distance du centre à chaque essieu / bogie, pour suivre les courbes. */
   halfBaseM: number;
+  /** Masse à vide (kg) ; le contenu s'y ajoute (`massOfCar`). */
   massKg: number;
   loco?: LocoSpec;
+  /** Wagon de fret : coffre de 32 cases, charge utile (kg) et volume (L) maximaux. */
+  cargo?: { maxKg: number; maxL: number };
+  /** Citerne : contenance (L). */
+  tankL?: number;
 }
+
+/** Liquides qu'une citerne transporte, et leur masse volumique (kg par litre). */
+export const LIQUIDS = ['water', 'oil', 'polymer', 'dirty'] as const;
+export type LiquidKind = (typeof LIQUIDS)[number];
+export const LIQUID_KG_PER_L: Record<LiquidKind, number> = {
+  water: 1,
+  oil: 0.9,
+  polymer: 0.95,
+  dirty: 1.1,
+};
+export const isLiquid = (x: unknown): x is LiquidKind =>
+  typeof x === 'string' && (LIQUIDS as readonly string[]).includes(x);
+/** Contenu d'un baril (L) : un baril plein verse ou reprend 100 L. */
+export const BARREL_L = 100;
+/** Baril plein pour chaque liquide qu'il peut contenir. */
+export const BARREL_OF: Partial<Record<LiquidKind, string>> = {
+  water: 'barrel_water',
+  oil: 'barrel_oil',
+};
 
 export const CARS: Record<CarKind, CarSpec> = {
   locomotive_steam: {
@@ -66,6 +90,7 @@ export const CARS: Record<CarKind, CarSpec> = {
     bodyM: { front: 2.55, rear: 2.55 },
     halfBaseM: 1.7,
     massKg: 9000,
+    cargo: { maxKg: 20000, maxL: 30000 },
   },
   wagon_tanker: {
     item: 'train_wagon_tanker',
@@ -76,6 +101,7 @@ export const CARS: Record<CarKind, CarSpec> = {
     bodyM: { front: 2.55, rear: 2.55 },
     halfBaseM: 1.7,
     massKg: 9500,
+    tankL: 10000,
   },
 };
 
@@ -107,6 +133,12 @@ export const RAIL_COST: Record<RailKind, number> = {
 
 /** Identifiants (négatifs) de la fenêtre d'une locomotive : −(base + identifiant du véhicule), hors de ceux des buggys. */
 export const LOCO_WINDOW_BASE = 1_000_000;
+/** Identifiants (négatifs) de la fenêtre du contenu d'un wagon : −(base + identifiant du véhicule). */
+export const CARGO_WINDOW_BASE = 2_000_000;
 export const locoWindowId = (carId: number): number => -(LOCO_WINDOW_BASE + carId);
-export const isLocoWindow = (id: number): boolean => id <= -LOCO_WINDOW_BASE;
+export const isLocoWindow = (id: number): boolean =>
+  id <= -LOCO_WINDOW_BASE && id > -CARGO_WINDOW_BASE;
+export const cargoWindowId = (carId: number): number => -(CARGO_WINDOW_BASE + carId);
+export const isCargoWindow = (id: number): boolean => id <= -CARGO_WINDOW_BASE;
+export const carIdOfCargo = (id: number): number => -id - CARGO_WINDOW_BASE;
 export const carIdOfWindow = (id: number): number => -id - LOCO_WINDOW_BASE;

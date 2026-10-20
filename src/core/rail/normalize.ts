@@ -1,5 +1,5 @@
 import { itemById } from '../data/items';
-import { CARS, isCarKind } from '../data/trains';
+import { CARS, isCarKind, isLiquid } from '../data/trains';
 import { RAIL_KINDS, baseId, isSwitch, lengthOf, type RailKind, type RailPiece } from './track';
 import type { Car, Consist } from './train';
 
@@ -51,13 +51,44 @@ function normalizeCar(raw: unknown, used: Set<number>): Car | null {
     }
   }
   used.add(raw.id);
-  return {
+  const spec = CARS[raw.kind];
+  const car: Car = {
     id: Math.floor(raw.id),
     kind: raw.kind,
     rev: raw.rev === true,
     heatKJ: isNum(raw.heatKJ) ? Math.max(0, raw.heatKJ) : 0,
-    fuel: CARS[raw.kind].loco ? stack : null,
+    fuel: spec.loco ? stack : null,
   };
+  if (spec.cargo && Array.isArray(raw.cargo)) {
+    // Les piles valides, tant que la charge utile et le volume du wagon le permettent.
+    const cargo: NonNullable<Car['cargo']> = [];
+    let kg = 0;
+    let litres = 0;
+    for (const s of raw.cargo.slice(0, 32)) {
+      if (!isRec(s) || typeof s.item !== 'string' || !isNum(s.count) || s.count < 1) continue;
+      let def;
+      try {
+        def = itemById(s.item);
+      } catch {
+        continue;
+      }
+      const n = Math.min(
+        Math.floor(s.count),
+        Math.floor((spec.cargo.maxKg - kg) / (def.weightG / 1000)),
+        Math.floor((spec.cargo.maxL - litres) / (def.volumeMl / 1000)),
+      );
+      if (n < 1) continue;
+      cargo.push({ item: s.item, count: n });
+      kg += (def.weightG / 1000) * n;
+      litres += (def.volumeMl / 1000) * n;
+    }
+    if (cargo.length > 0) car.cargo = cargo;
+  }
+  if (spec.tankL && isRec(raw.liquid) && isLiquid(raw.liquid.kind) && isNum(raw.liquid.liters)) {
+    const liters = Math.max(0, Math.min(spec.tankL, raw.liquid.liters));
+    if (liters > 0) car.liquid = { kind: raw.liquid.kind, liters };
+  }
+  return car;
 }
 
 /** Relit les convois enregistrés ; un convoi sans véhicule valide disparaît. */

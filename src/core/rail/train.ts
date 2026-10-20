@@ -5,8 +5,8 @@
  * traction limité par la puissance et l'adhérence, résistance au roulement et à l'air, pente, freins, inertie de toute
  * la rame, chocs et attelage.
  */
-import { energyKJ } from '../data/items';
-import { CARS, type CarKind } from '../data/trains';
+import { energyKJ, itemById } from '../data/items';
+import { CARS, LIQUID_KG_PER_L, type CarKind, type LiquidKind } from '../data/trains';
 import { flip, type TrackGraph, type TrackPos } from './track';
 
 export interface Car {
@@ -18,6 +18,10 @@ export interface Car {
   heatKJ: number;
   /** Combustible dans la soute d'une locomotive. */
   fuel: { item: string; count: number } | null;
+  /** Wagon de fret : les piles chargées (liste sans trous, comme un coffre). */
+  cargo?: { item: string; count: number }[];
+  /** Citerne : le liquide transporté et sa quantité (L). */
+  liquid?: { kind: LiquidKind; liters: number } | null;
 }
 
 export interface Consist {
@@ -53,7 +57,21 @@ export interface Control {
 export const IDLE: Control = { throttle: 0, brake: 1, parked: true };
 
 export const lengthOfCar = (c: Car): number => CARS[c.kind].lengthM;
-export const massOfCar = (c: Car): number => CARS[c.kind].massKg;
+/** Masse du contenu d'un wagon (kg) : objets chargés ou liquide. */
+export function cargoMassKg(c: Car): number {
+  let kg = 0;
+  for (const s of c.cargo ?? []) kg += (itemById(s.item).weightG / 1000) * s.count;
+  if (c.liquid) kg += LIQUID_KG_PER_L[c.liquid.kind] * c.liquid.liters;
+  return kg;
+}
+/** Volume (L) des objets chargés dans un wagon de fret. */
+export function cargoVolumeL(c: Car): number {
+  let l = 0;
+  for (const s of c.cargo ?? []) l += (itemById(s.item).volumeMl / 1000) * s.count;
+  return l;
+}
+/** Masse totale du véhicule : à vide plus son contenu. Plus la rame est lourde, plus elle est lente à lancer et à arrêter. */
+export const massOfCar = (c: Car): number => CARS[c.kind].massKg + cargoMassKg(c);
 export const consistLength = (c: Consist): number => c.cars.reduce((a, k) => a + lengthOfCar(k), 0);
 export const consistMass = (c: Consist): number => c.cars.reduce((a, k) => a + massOfCar(k), 0);
 

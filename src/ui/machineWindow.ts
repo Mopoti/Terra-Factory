@@ -1,6 +1,13 @@
 import { VEHICLES } from '../core/data/vehicles';
 import { SOUTE_MAX } from '../core/rail/normalize';
-import { isLocoWindow } from '../core/data/trains';
+import {
+  CARS,
+  carIdOfCargo,
+  isCargoWindow,
+  isLocoWindow,
+  LIQUID_KG_PER_L,
+} from '../core/data/trains';
+import { cargoMassKg, cargoVolumeL } from '../core/rail/train';
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import {
@@ -38,7 +45,7 @@ import { totals } from '../core/game/inventory';
 import { buyPrice, sellPrice } from '../core/game/trade';
 import type { CommandBus } from '../core/game/commands';
 import type { GameState } from '../core/game/state';
-import { onLocaleChange, t, type TranslationKey } from '../i18n';
+import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
 import { itemIcon } from './itemIcon';
 import {
@@ -103,7 +110,11 @@ export function mountMachineWindow(
   const vehicleName = (id: number): string =>
     isLocoWindow(id)
       ? itemName('train_locomotive')
-      : itemName(VEHICLES[state.changes.vehicles.find((v) => v.id === -id)?.kind ?? 'buggy'].item);
+      : isCargoWindow(id)
+        ? itemName(CARS[state.carById(carIdOfCargo(id))?.kind ?? 'wagon_freight'].item)
+        : itemName(
+            VEHICLES[state.changes.vehicles.find((v) => v.id === -id)?.kind ?? 'buggy'].item,
+          );
   /** Capacité d'une case : la soute d'une locomotive en a une à elle. */
   const capOf = (m: Machine, slot: SlotName): number =>
     isLocoWindow(m.id) ? SOUTE_MAX : slotCap(machineDef(m.type), slot);
@@ -152,7 +163,9 @@ export function mountMachineWindow(
 
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>
-    (slot === 'fuel' && (machineDef(m.type).fuel || m.id < 0) && !!itemById(item).energyMJ) ||
+    (slot === 'fuel' &&
+      (machineDef(m.type).fuel || (m.id < 0 && !isCargoWindow(m.id))) &&
+      !!itemById(item).energyMJ) ||
     (slot === 'input' && isSmith(m.type) && recipeById(m.recipe)?.mould === item) ||
     (slot === 'input' && isTurret(m.type) && item === turretSpec(m.type).ammo) ||
     (slot === 'input' && m.type === 'fission_reactor' && item === 'uranium_rod');
@@ -344,6 +357,74 @@ export function mountMachineWindow(
     }
     out.push(buyBox);
     return out;
+  }
+
+  /** Jauges et boutons d'un wagon : charge d'un wagon de fret, niveau et barils d'une citerne. */
+  function cargoRows(m: Machine): HTMLElement[] {
+    const car = state.carById(carIdOfCargo(m.id));
+    if (!car) return [];
+    const spec = CARS[car.kind];
+    const gauge = (fraction: number): HTMLElement => {
+      const bar = el('div', 'cycle-bar fuel-bar');
+      bar.setAttribute('role', 'progressbar');
+      const fill = el('div');
+      bar.append(fill);
+      setCycleBar(fill, fraction > 0 ? Math.min(1, fraction) : null);
+      return bar;
+    };
+    const fmt = (n: number): string => Math.round(n).toLocaleString(getLocale());
+    if (spec.cargo) {
+      const kg = cargoMassKg(car);
+      const litres = cargoVolumeL(car);
+      return [
+        el(
+          'div',
+          'mach-info',
+          t('cargo.load', {
+            kg: fmt(kg),
+            max: fmt(spec.cargo.maxKg),
+            l: fmt(litres),
+            maxl: fmt(spec.cargo.maxL),
+          }),
+        ),
+        gauge(Math.max(kg / spec.cargo.maxKg, litres / spec.cargo.maxL)),
+        el('small', 'help', t('cargo.hint')),
+      ];
+    }
+    const cap = spec.tankL ?? 0;
+    const liquid = car.liquid;
+    const info = el(
+      'div',
+      'mach-info',
+      liquid
+        ? t('tank.level', {
+            kind: t(`liquid.${liquid.kind}` as TranslationKey),
+            l: fmt(liquid.liters),
+            cap: fmt(cap),
+            kg: fmt(liquid.liters * LIQUID_KG_PER_L[liquid.kind]),
+          })
+        : t('tank.empty', { cap: fmt(cap) }),
+    );
+    const message = el('div', 'mach-info');
+    const button = (label: string, run: () => string): HTMLButtonElement => {
+      const b = el('button', undefined, label);
+      b.type = 'button';
+      b.addEventListener('click', () => {
+        const r = run();
+        playSfx(r === 'ok' ? 'pickup' : 'deny');
+        if (r === 'ok') render();
+        else message.textContent = t(`tank.err.${r}` as TranslationKey);
+      });
+      return b;
+    };
+    return [
+      info,
+      gauge((liquid?.liters ?? 0) / cap),
+      button(t('tank.pour'), () => state.pourBarrel(car.id)),
+      button(t('tank.draw'), () => state.drawBarrel(car.id)),
+      message,
+      el('small', 'help', t('tank.hint')),
+    ];
   }
 
   /** Maj + clic sur une pile du sac : l'envoie dans la case de la machine qui l'accepte. Sans effet sinon. */
@@ -846,7 +927,7 @@ export function mountMachineWindow(
     const status = factory.status(m);
     const statusEl = el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey));
     live.status = statusEl;
-    panel.append(statusEl);
+    if (!isCargoWindow(m.id)) panel.append(statusEl);
     // Barre du cycle en cours (temps qui s'écoule dans la machine).
     const cycleBar = el('div', 'cycle-bar');
     cycleBar.setAttribute('role', 'progressbar');
@@ -889,7 +970,15 @@ export function mountMachineWindow(
       rows.append(note, button, out);
     }
     if (m.type === 'waypoint') rows.append(...waypointRows(m));
-    if ((isChest(m.type) || hasSlotStore(m.type)) && !isLocoWindow(m.id))
+    if (isCargoWindow(m.id)) rows.append(...cargoRows(m));
+    if (
+      (isChest(m.type) || hasSlotStore(m.type)) &&
+      !isLocoWindow(m.id) &&
+      !(
+        isCargoWindow(m.id) &&
+        !CARS[state.carById(carIdOfCargo(m.id))?.kind ?? 'wagon_freight'].cargo
+      )
+    )
       rows.append(
         chestGrid(m),
         el(
@@ -927,7 +1016,7 @@ export function mountMachineWindow(
       });
       rows.append(note, go, out);
     }
-    if (def.fuel || m.id < 0) {
+    if (def.fuel || (m.id < 0 && !isCargoWindow(m.id))) {
       rows.append(machineSlot(m, 'fuel', t('machine.fuel'), m.fuel));
       const fuelInfo = el('div', 'mach-info', fuelText(m));
       live.fuel = fuelInfo;
