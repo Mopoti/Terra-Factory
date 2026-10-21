@@ -477,6 +477,21 @@ export class TrackGraph {
   }
 }
 
+/**
+ * Deux tuiles droites qui se croisent : même tuile, même hauteur, axes perpendiculaires. Elles se superposent sans
+ * se raccorder (chaque voie traverse l'autre) : un croisement à niveau.
+ */
+export function crossesStraight(a: RailPiece, b: RailPiece): boolean {
+  return (
+    a.kind === 'straight' &&
+    b.kind === 'straight' &&
+    a.gx === b.gx &&
+    a.gz === b.gz &&
+    a.turns % 2 !== b.turns % 2 &&
+    Math.abs(a.level - b.level) <= 0.05
+  );
+}
+
 const SHARE_M = 11.5;
 /**
  * Deux pièces dont les cases se chevauchent forment-elles un embranchement tangent ? Un virage part d'un point de la

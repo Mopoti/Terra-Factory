@@ -297,4 +297,34 @@ describe('aiguillages dans la partie', () => {
       expect(s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60)).not.toBeNull();
     },
   );
+
+  it('deux voies droites se croisent à niveau : chacune traverse l’autre, dans les deux sens', () => {
+    const s = start();
+    // La ligne verticale (10 tuiles) est posée ; on pose une ligne horizontale qui la coupe à la tuile 5.
+    const mid = s.changes.rails[5];
+    const before = s.changes.rails.length;
+    for (let k = -3; k <= 3; k++)
+      expect(s.placeRail('straight', mid.gx + TILE_CELLS * k, mid.gz, 1, 0, free, true)).toBe('ok');
+    // Rien n'a été remplacé : 7 tuiles de plus, la ligne verticale est entière.
+    expect(s.changes.rails).toHaveLength(before + 7);
+    expect(s.changes.rails.filter((p) => p.gx === mid.gx && p.gz === mid.gz)).toHaveLength(2);
+    const g = s.railGraph();
+    const vertical = s.changes.rails.slice(0, 10).map((p) => p.id);
+    const horizontal = s.changes.rails.slice(before).map((p) => p.id);
+    for (const [line, len] of [
+      [vertical, 24],
+      [horizontal, 16],
+    ] as const) {
+      // Depuis chacun des deux bouts, vers l'intérieur : on traverse le croisement sans être arrêté.
+      for (const end of [line[0], line[line.length - 1]]) {
+        const ok = ([1, -1] as const).some((dir) =>
+          [0.2, TILE_M - 0.2].some((u) => !g.advance({ piece: end, u, dir }, len).blocked),
+        );
+        expect(ok).toBe(true);
+      }
+    }
+    // Une droite de même axe sur la même tuile reste un remplacement (pas un croisement).
+    expect(s.placeRail('straight', mid.gx, mid.gz, 0, 0, free, true)).toBe('ok');
+    expect(s.changes.rails.filter((p) => p.gx === mid.gx && p.gz === mid.gz)).toHaveLength(2);
+  });
 });

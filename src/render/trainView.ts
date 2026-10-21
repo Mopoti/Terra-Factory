@@ -31,6 +31,7 @@ import {
   portsOf,
   leverOf,
   lengthOfPiece,
+  crossesStraight,
   isCurve,
   lengthOf,
   poseOn,
@@ -526,6 +527,26 @@ export class TrainView {
     }
   }
 
+  /** Les deux rails d'une voie qui en croise une autre : posés sur le lit de la première, sans traverses ni ballast. */
+  private addCrossingRails(mb: MeshBuilder, p: RailPiece): void {
+    const c = centerOf(p);
+    const alongX = p.turns % 2 === 1;
+    const steel = hexToRgb('#8d939c');
+    for (const side of [-1, 1]) {
+      const x = c.x + (alongX ? 0 : 0.75 * side);
+      const z = c.z + (alongX ? 0.75 * side : 0);
+      mb.box(
+        x,
+        p.level + 0.2,
+        z,
+        alongX ? TILE_M : 0.12,
+        RAIL_TOP_M - 0.2,
+        alongX ? 0.12 : TILE_M,
+        steel,
+      );
+    }
+  }
+
   private geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(mb.positions, 3));
@@ -537,7 +558,20 @@ export class TrainView {
 
   private rebuildRails(): void {
     const mb = new MeshBuilder();
-    for (const p of this.host.state.changes.rails) this.addPiece(mb, p);
+    const rails = this.host.state.changes.rails;
+    // Croisement à niveau : la voie la plus ancienne de la tuile garde son lit complet, l'autre n'y ajoute que ses rails.
+    const first = new Map<string, RailPiece>();
+    for (const p of rails)
+      if (p.kind === 'straight') {
+        const key = `${p.gx},${p.gz},${p.level}`;
+        const have = first.get(key);
+        if (!have || p.id < have.id) first.set(key, p);
+      }
+    for (const p of rails) {
+      const base = p.kind === 'straight' ? first.get(`${p.gx},${p.gz},${p.level}`) : undefined;
+      if (base && base !== p && crossesStraight(base, p)) this.addCrossingRails(mb, p);
+      else this.addPiece(mb, p);
+    }
     this.rails.geometry.dispose();
     this.rails.geometry = this.geometryOf(mb);
     this.rails.material = this.host.material;

@@ -20,6 +20,7 @@ import {
   baseId,
   blockTiles,
   tangentOverlap,
+  crossesStraight,
   branchId,
   centerOf,
   isSwitch,
@@ -1364,7 +1365,8 @@ export class GameState {
     for (const p of this.changes.rails)
       if (
         trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
-        !tangentOverlap(piece, p, this.changes.rails)
+        !tangentOverlap(piece, p, this.changes.rails) &&
+        !crossesStraight(piece, p)
       )
         out.add(p);
     return [...out];
