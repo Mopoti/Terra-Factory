@@ -168,6 +168,9 @@ const SKY = 0x8fb8d8;
 // Déplacement provisoire (le vrai personnage arrive plus tard).
 const WALK_SPEED_M_S = 4.5;
 const SPRINT_FACTOR = 1.7;
+/** Accroupi : vitesse (en part de la marche) et hauteur dont descend la vue (m). */
+const CROUCH_FACTOR = 0.45;
+const CROUCH_EYE_DROP_M = 0.45;
 /** Mode Créatif, vol libre : vitesse horizontale (× la marche), vitesse de montée/descente (m/s), plafond (m). */
 const FLY_SPEED_FACTOR = 3;
 const FLY_VERTICAL_M_S = 8;
@@ -309,7 +312,7 @@ export function startGameView(
     player.add(miner.root);
     (player.material as THREE.Material).visible = false;
     player.castShadow = false;
-    miner.attachHandTool(bodyTool);
+    miner.attachHandTool(bodyTool, 1.0);
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
@@ -321,7 +324,7 @@ export function startGameView(
     camera.add(firstArm.root);
     // Vue subjective : outil un peu plus court (il ne masque pas la vue), tourné sur son manche pour que la tête
     // pointe vers l'avant.
-    firstArm.attachHandTool(hand, 0.85, -0.55);
+    firstArm.attachHandTool(hand, 0.75, -0.55);
     bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
@@ -338,6 +341,10 @@ export function startGameView(
   let playerY = state.y;
   let velY = 0;
   let onGround = playerY === 0;
+  /** Accroupi : touche Accroupi tenue au sol, à pied (en vol libre elle fait descendre). */
+  let crouching = false;
+  /** Descente de la vue quand on s'accroupit (m), qui suit en douceur. */
+  let crouchEye = 0;
   /** Mode Créatif : vol libre (double appui sur Saut). */
   let flying = false;
   let jumpWasDown = false;
@@ -2185,7 +2192,12 @@ export function startGameView(
       WALK_SPEED_M_S *
       base *
       (flying ? FLY_SPEED_FACTOR : 1) *
-      (!mounted && input.isActionActive('sprint') ? (flying ? 2 : SPRINT_FACTOR) : 1);
+      (!mounted && input.isActionActive('sprint') && !crouching
+        ? flying
+          ? 2
+          : SPRINT_FACTOR
+        : 1) *
+      (crouching ? CROUCH_FACTOR : 1);
     const yaw = rig.yaw;
     // « Avant » = la direction vers laquelle regarde la caméra.
     const dirX = (-Math.sin(yaw) * forward + Math.cos(yaw) * right) / len;
@@ -3743,9 +3755,17 @@ export function startGameView(
       if (seat) miner.root.position.set(seat.x, seatDrop, seat.z);
       else miner.root.position.set(0, 0, 0);
     }
+    crouching =
+      input.isActionActive('crouch') && onGround && !flying && !mounted && !trains.isMounted();
+    crouchEye += ((crouching ? CROUCH_EYE_DROP_M : 0) - crouchEye) * Math.min(1, dt * 10);
+    if (miner instanceof Avatar) {
+      miner.crouching = crouching;
+      miner.airborne = !onGround && !flying && !seat;
+      miner.verticalSpeed = velY;
+    }
     rig.update(
       dt,
-      { x: playerX, y: playerY + seatDrop, z: playerZ },
+      { x: playerX, y: playerY + seatDrop - crouchEye, z: playerZ },
       motion,
       views,
       edge,

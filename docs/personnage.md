@@ -64,6 +64,11 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    mains en poses clés lissées (`STRIKE_KEYS` : préparation, élan au-dessus de la tête, frappe vers l'avant et le bas
    en se penchant, genoux pliés, retour) ; vue subjective : placement du bras inchangé (même point de vue qu'avant), outil plus
    court (×0,85) tourné sur son manche, dressé à droite, tête vers l'avant, qui s'abat au centre de l'écran (`FP_ROWS`). Le geste en cours se termine en douceur quand on arrête de frapper.
+   Saut et accroupi (21 octobre) : en l'air, jambes repliées à la montée et tendues vers le sol à la descente, bras
+   écartés, réception genoux fléchis selon la vitesse de chute ; accroupi (touche Accroupi, Ctrl gauche, au sol et à
+   pied) : genoux pliés, pieds à plat, buste penché, corps abaissé de 42 cm, on avance à 45 % de la marche (pas de
+   course) et la vue descend de 45 cm (`CROUCH_FACTOR`, `CROUCH_EYE_DROP_M` dans `gameView.ts`). Outil raccourci : ×1
+   en vue extérieure, ×0,75 en vue subjective.
    Retouches du 17 octobre (retours du PO) : **tête et cheveux agrandis** (×1,18 autour du menton, menton plus bas :
    le cou est plus court) ; **10 coupes de cheveux** pour les deux silhouettes, pièces séparées dans le même fichier
    (`<modèle>_coupe_<nom>`) : courte, rasée, en brosse, iroquoise, mi-longue, longue, carré, queue de cheval, chignon,

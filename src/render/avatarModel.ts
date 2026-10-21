@@ -7,6 +7,9 @@
  *  - marche et course : jambes qui balancent avec le genou qui plie quand le pied passe devant, bassin qui tourne et
  *    descend à chaque pas, buste qui compense et se penche en courant, bras opposés aux jambes, coudes souples ;
  *  - repos : respiration légère du buste, bras détendus ;
+ *  - saut : jambes repliées à la montée, tendues vers le sol à la descente, bras écartés pour l'équilibre, puis
+ *    réception genoux fléchis (amortie selon la vitesse de chute) ;
+ *  - accroupi : genoux pliés, pieds à plat, buste penché, corps abaissé ; on avance à petits pas ;
  *  - outil en main : tenu par le bas du manche dans la main droite, manche relevé devant soi, tête en haut ;
  *  - coup de pioche : à deux mains, en quatre temps (préparation, élan au-dessus de la tête, frappe rapide vers
  *    l'avant et le bas en se penchant, retour), courbes lissées entre les poses clés.
@@ -250,10 +253,24 @@ export class Avatar {
   seated = false;
   /** Façon de s'asseoir : en voiture (volant), à moto / quad (jambes écartées vers les repose-pieds, penché sur le guidon). */
   seatStyle: 'car' | 'bike' = 'car';
+  /** En l'air (saut, chute) et vitesse verticale (m/s, positive en montant). */
+  airborne = false;
+  verticalSpeed = 0;
+  /** Accroupi (touche Accroupi au sol). */
+  crouching = false;
+  /** Hauteur dont le corps descend quand on est accroupi, pour un personnage de 1,70 m (m). */
+  static readonly CROUCH_DROP_M = 0.42;
   /** Hauteur des hanches par rapport au centre de `root` (m), selon la taille et la longueur des jambes. */
   hipOffset = 0;
   private phase = 0;
   private amount = 0;
+  /** Part de chaque posture dans la pose (0 à 1), qui suit l'état en douceur. */
+  private airMix = 0;
+  private crouchMix = 0;
+  /** Réception d'un saut : flexion des genoux qui s'efface (0 à 1). */
+  private landing = 0;
+  private wasAirborne = false;
+  private lastVy = 0;
 
   /**
    * `height` : taille (m) ; `color` : couleur de la combinaison ; `silhouette` : homme ou femme ; `appearance` : le
@@ -433,12 +450,13 @@ export class Avatar {
   }
 
   /** Vise la pose d'une jambe : cuisse (balancement, écart), genou, cheville (le pied reste à peu près à plat). */
-  private legTo(side: 'g' | 'd', swing: number, knee: number, spread = 0): void {
+  private legTo(side: 'g' | 'd', swing: number, knee: number, spread = 0, flat = 0.55): void {
     const [thigh, shin, foot] = LEG[side];
     const m = side === 'g' ? 1 : -1;
     this.aim(thigh, this.euler(swing, 0, m * spread));
     this.aim(shin, this.axis(X, knee));
-    this.aim(foot, this.axis(X, -(swing + knee) * 0.55));
+    // `flat` : part de la flexion compensée par la cheville (1 : pied à plat, accroupi).
+    this.aim(foot, this.axis(X, -(swing + knee) * flat));
   }
 
   /** Fait glisser chaque articulation vers sa pose visée (`rate` : vivacité, par seconde) et l'applique. */
@@ -518,6 +536,16 @@ export class Avatar {
     this.strikeMix += ((striking ? 1 : 0) - this.strikeMix) * Math.min(1, dt * (striking ? 12 : 5));
     if (!striking && this.strikeMix < 0.02) this.strikeT = 0;
 
+    // Saut et accroupi : chaque posture entre et sort en douceur ; la réception dépend de la vitesse de chute.
+    if (this.wasAirborne && !this.airborne)
+      this.landing = Math.min(1, Math.max(0.25, -this.lastVy / 7));
+    this.wasAirborne = this.airborne;
+    this.lastVy = this.verticalSpeed;
+    this.landing = Math.max(0, this.landing - dt * 3.5);
+    this.airMix += ((this.airborne ? 1 : 0) - this.airMix) * Math.min(1, dt * 12);
+    const crouchNow = this.crouching && !this.airborne && !this.seated;
+    this.crouchMix += ((crouchNow ? 1 : 0) - this.crouchMix) * Math.min(1, dt * 10);
+
     if (this.firstPerson) {
       this.updateFirstPerson(dt);
       return;
@@ -539,12 +567,39 @@ export class Avatar {
     const breathe = Math.sin(this.clock * 1.7);
     const strike = this.strikeMix > 0.01 ? strikePose(this.strikeT) : null;
     const k = this.strikeMix;
-    const lean = (0.04 + 0.08 * a + 0.12 * run) * (1 - k) + (strike ? strike.lean * k : 0);
-    const knees = strike ? strike.knees * k : 0;
-    this.legTo('g', -s * stride - knees * 0.5, kneeG + knees);
-    this.legTo('d', s * stride - knees * 0.5, kneeD + knees);
+    const cm = this.crouchMix;
+    const am = this.airMix;
+    const lean =
+      (0.04 + 0.08 * a + 0.12 * run) * (1 - k) +
+      (strike ? strike.lean * k : 0) +
+      0.6 * cm +
+      0.12 * am +
+      0.15 * this.landing;
+    const knees = (strike ? strike.knees * k : 0) + this.landing * 0.7;
+    // Accroupi : cuisses vers l'avant, genoux très pliés, pieds à plat ; on avance à petits pas.
+    const cStride = stride * (1 - 0.55 * cm);
+    // En l'air : jambes repliées en montant, tendues vers le sol en descendant (vitesse verticale).
+    const up = Math.max(-1, Math.min(1, this.verticalSpeed / 4));
+    const rising = Math.max(0, up);
+    const legPose = (side: 'g' | 'd', walkSwing: number, walkKnee: number): void => {
+      let swing = walkSwing * (1 - cm) * (1 - am) - knees * 0.5;
+      let knee = walkKnee * (1 - am) + knees;
+      swing += cm * (-1.25 + walkSwing * 0.45);
+      knee += cm * (2.05 - walkKnee * 0.5 + Math.max(0, walkSwing) * 0.3);
+      // En l'air, une jambe un peu plus en avant que l'autre.
+      const lead = side === 'g' ? 0.25 : -0.15;
+      swing += am * (-0.55 - 0.35 * rising + lead * (1 - rising));
+      knee += am * (0.6 + 0.6 * rising + (side === 'g' ? 0.1 : 0.25));
+      this.legTo(side, swing, knee, 0.04 * cm, 0.55 + 0.45 * cm);
+    };
+    legPose('g', -s * cStride, kneeG);
+    legPose('d', s * cStride, kneeD);
     this.model.position.y =
-      this.modelY - (0.035 * a + 0.03 * run) * Math.abs(Math.sin(ph + Math.PI / 2)) - knees * 0.06;
+      this.modelY -
+      (0.035 * a + 0.03 * run) * Math.abs(Math.sin(ph + Math.PI / 2)) * (1 - am) -
+      knees * 0.06 -
+      cm * Avatar.CROUCH_DROP_M * (this.baseHeight / 1.7) +
+      am * 0.04;
     this.aim(
       'bassin',
       this.euler(0, s * 0.14 * a + (strike ? strike.turn * k * 0.4 : 0), c * 0.035 * a),
@@ -583,6 +638,15 @@ export class Avatar {
     const carry = arm(-0.35 + swingD * 0.15, 0.04, 0.85 + 0.06 * Math.sin(ph * 2) * a, 0.55, 0.18);
     let right = this.holding ? carry : rest(swingD);
     let left = rest(swingG);
+    // En l'air : bras écartés et levés pour l'équilibre ; accroupi : bras en avant, près des genoux.
+    const balance = (p: ArmPose): ArmPose =>
+      blend(
+        blend(p, arm(-0.5 - 0.3 * rising, 0.55, 0.45, 0.1, 0), am),
+        arm(-0.65, 0.18, 0.75, 0.15, 0.1),
+        cm * 0.8,
+      );
+    left = balance(left);
+    if (!this.holding) right = balance(right);
     if (strike) {
       right = blend(right, strike.right, k);
       left = blend(left, strike.left, k);
