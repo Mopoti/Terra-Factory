@@ -416,6 +416,15 @@ export class TrackGraph {
     return null;
   }
 
+  /**
+   * Devant un embranchement, la voie que le convoi a vraiment suivie (une pièce de `prefer`), sinon rien : un train
+   * qui a franchi un aiguillage garde sa queue sur la voie d'où il vient, quelle que soit la position des lames.
+   */
+  private followed(piece: number, port: 0 | 1, prefer: ReadonlySet<number>): PortLink | null {
+    const list = this.links.get(piece)?.[port] ?? [];
+    return list.length > 1 ? (list.find((l) => prefer.has(l.piece)) ?? null) : null;
+  }
+
   /** Toutes les pièces raccordées à ce port (plusieurs devant la pointe d'un aiguillage ou d'un embranchement). */
   linksAt(piece: number, port: 0 | 1): readonly PortLink[] {
     return this.links.get(piece)?.[port] ?? [];
@@ -435,7 +444,11 @@ export class TrackGraph {
    * Avance de `dist` mètres (≥ 0) dans le sens de marche. `blocked` : on a atteint un bout de voie (la position reste
    * au bout) ; `left` : la distance qui n'a pas pu être parcourue.
    */
-  advance(pos: TrackPos, dist: number): { pos: TrackPos; blocked: boolean; left: number } {
+  advance(
+    pos: TrackPos,
+    dist: number,
+    prefer?: ReadonlySet<number>,
+  ): { pos: TrackPos; blocked: boolean; left: number } {
     let cur = { ...pos };
     let left = dist;
     for (let guard = 0; guard < 400; guard++) {
@@ -448,7 +461,9 @@ export class TrackGraph {
         return { pos: cur, blocked: false, left: 0 };
       }
       left -= room;
-      const link = this.neighbour(cur.piece, cur.dir === 1 ? 1 : 0);
+      const port = cur.dir === 1 ? 1 : 0;
+      const link =
+        (prefer && this.followed(cur.piece, port, prefer)) || this.neighbour(cur.piece, port);
       if (!link) {
         cur.u = cur.dir === 1 ? len : 0;
         return { pos: cur, blocked: true, left };

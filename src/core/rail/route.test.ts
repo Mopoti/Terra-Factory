@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
 import { normalizeChanges } from '../game/worldChanges';
 import { AUTO_SPEED, autoControl, findRoute } from './route';
-import { TILE_CELLS, lengthOfPiece, matesFor, portsOf } from './track';
-import { stepConsist } from './train';
+import { TILE_CELLS, lengthOfPiece, matesFor, poseOn, portsOf } from './track';
+import { carPoses, stepConsist } from './train';
 
 const free = (): boolean => false;
 
@@ -128,5 +128,60 @@ describe('itinéraires', () => {
     const copy = normalizeChanges(JSON.parse(JSON.stringify(s.snapshot().changes)));
     expect(copy.stations).toEqual([st]);
     expect(copy.trains[0].goTo).toBe(st.id);
+  });
+
+  it('un train qui franchit un embranchement garde sa queue sur la voie d’où il vient', () => {
+    const s = new GameState({
+      inventory: { rail: 300, train_locomotive: 1, train_wagon_freight: 1, coal: 30 },
+    });
+    s.creative = true;
+    for (let k = 0; k < 14; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
+    const line = s.changes.rails.map((p) => p.id);
+    const joint = portsOf(s.changes.rails[2]).find((p) => p.dz === -1)!;
+    for (const m of matesFor('curve_huge', joint))
+      if (s.placeRail('curve_huge', m.gx, m.gz, m.turns, m.level, free, true) === 'ok') break;
+    const curve = s.changes.rails[s.changes.rails.length - 1];
+    expect(curve.kind).toBe('curve_huge');
+    // Par défaut le train va tout droit : le virage est fermé.
+    expect(curve.closed).toBe(true);
+    const g = s.railGraph();
+    const len = lengthOfPiece(g.byId.get(curve.id)!);
+    // Port du virage qui touche l'embranchement : l'autre bout du virage est loin.
+    const ports = portsOf(curve);
+    const near = ports.findIndex((p) => Math.hypot(p.x - joint.x, p.z - joint.z) < 0.3);
+    const dir = near === 1 ? 1 : -1;
+    const loco = s.placeCar('locomotive_steam', {
+      piece: curve.id,
+      u: near === 1 ? len - 4 : 4,
+      dir,
+    })!;
+    loco.cars[0].fuel = { item: 'coal', count: 30 };
+    // Un wagon attelé derrière la locomotive.
+    const wagon = { id: 99, kind: 'wagon_freight' as const, rev: false, heatKJ: 0, fuel: null };
+    loco.cars.push(wagon);
+    // Remonte la queue sur la voie parcourue : le train vient du virage.
+    loco.head = { piece: curve.id, u: near === 1 ? len - 13 : 13, dir };
+    for (let i = 0; i < 20 * 40; i++) {
+      stepConsist(g, loco, 0.05, { throttle: 1, brake: 0, parked: false });
+      if (loco.head.piece === line[2] && loco.head.u > 2.2) break;
+    }
+    expect(loco.head.piece === line[2] || loco.head.piece === line[1]).toBe(true);
+    // Le wagon est resté sur le virage (et non téléporté sur la voie droite).
+    const w = carPoses(g, loco)[1];
+    const onCurve = Math.min(
+      ...Array.from({ length: 60 }, (_, k) => {
+        const q = poseOn(g.byId.get(curve.id)!, (len * k) / 59);
+        return Math.hypot(q.x - w.x, q.z - w.z);
+      }),
+    );
+    const straight = g.byId.get(line[3])!;
+    const onStraight = Math.min(
+      ...Array.from({ length: 30 }, (_, k) => {
+        const q = poseOn(straight, (lengthOfPiece(straight) * k) / 29);
+        return Math.hypot(q.x - w.x, q.z - w.z);
+      }),
+    );
+    expect(onCurve).toBeLessThan(0.6);
+    expect(onStraight).toBeGreaterThan(1.5);
   });
 });

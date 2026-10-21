@@ -117,6 +117,14 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     out.push({
       ...(isNum(r.goTo) && r.goTo >= 1 ? { goTo: Math.floor(r.goTo) } : {}),
       ...(normalizeProgram(r.program) ? { program: normalizeProgram(r.program) as Program } : {}),
+      ...(Array.isArray(r.trail)
+        ? {
+            trail: r.trail
+              .filter(isNum)
+              .slice(-80)
+              .map((n) => Math.floor(n)),
+          }
+        : {}),
       id: Math.floor(r.id),
       head: {
         piece: onBranch ? -piece.id : piece.id,

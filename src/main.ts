@@ -262,13 +262,6 @@ function startGame(
     onMessage: (text) => showToast(text),
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
-    onEditProgram: () => {
-      // Le programme se règle dans la fenêtre de la locomotive (onglet « Programme »).
-      const id = view.mountedMachineId();
-      if (id === null || session?.pause.isOpen() || session?.inventory.isOpen()) return;
-      session?.machine.setLocoTab('program');
-      session?.machine.open(id);
-    },
     onRenameStation: (id) => {
       void renameStation(id);
     },

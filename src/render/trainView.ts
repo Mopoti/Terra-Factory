@@ -48,6 +48,7 @@ import {
 import {
   IDLE,
   anchorOffset,
+  preferOf,
   consistMass,
   CAR_HALF_WIDTH_M,
   carPoses,
@@ -143,8 +144,6 @@ export interface TrainHost {
   renameStation(id: number): void;
   /** Le joueur est percuté : dégâts avant armure. */
   hurtPlayer(amount: number): void;
-  /** Ouvre l'éditeur du programme du convoi. */
-  editProgram(consistId: number): void;
   /** Ouvre la fenêtre du contenu d'un wagon (identifiant de fenêtre négatif). */
   openWindow(id: number): void;
   /** Fenêtre de choix d'une station ; renvoie son identifiant, ou null si le joueur annule. */
@@ -165,8 +164,6 @@ export interface TrainFrame {
   levelDown: boolean;
   /** H : choisir la destination du train (pilote automatique). */
   route: boolean;
-  /** N : programme du train. */
-  program: boolean;
   /** Le joueur vise déjà autre chose (ressource, machine…). */
   aimed: boolean;
   /** Cap du joueur (rad) : sert à choisir le sens d'un véhicule qu'on pose. */
@@ -217,6 +214,8 @@ export class TrainView {
     { route: Route; remaining: number; graph: TrackGraph; age: number; total: number }
   >();
   private choosing = false;
+  /** Le prochain véhicule posé regarde à contresens de la voie (touche R). */
+  private carFlip = false;
   /** Effort demandé à la locomotive conduite (0 à 1), pour le bruit de moteur. */
   private engineEffort = 0;
 
@@ -973,10 +972,6 @@ export class TrainView {
     const { state } = this.host;
     if (frame.rotate && this.mountedCar !== null) this.switchAheadOfLoco(graph);
     if (frame.route && this.mountedCar !== null) this.chooseDestination();
-    if (frame.program && this.mountedCar !== null) {
-      const c = this.consistOf(this.mountedCar);
-      if (c) this.host.editProgram(c.id);
-    }
     // Aux commandes : D / Q (droite / gauche) mettent l'aiguillage devant la locomotive sur la voie qui part de ce côté.
     const right = this.host.held('right');
     const left = this.host.held('left');
@@ -1166,7 +1161,7 @@ export class TrainView {
       let total = route ? route.distance + offset : 0;
       if (!route) {
         // La tête a déjà dépassé le repère : on regarde où en est la locomotive.
-        const anchor = flip(graph.advance(flip(c.head), offset).pos);
+        const anchor = flip(graph.advance(flip(c.head), offset, preferOf(c)).pos);
         route = findRoute(graph, anchor, stop);
         total = route?.distance ?? 0;
         const a = graph.pose(anchor);
@@ -1354,7 +1349,11 @@ export class TrainView {
     } else if (carKind && !aim) this.setCarGhost(null, false);
     else if (carKind && aim) {
       this.setGhost([]);
-      this.placeCar(graph, carKind, aim, edge, frame.facing);
+      if (frame.rotate) {
+        this.carFlip = !this.carFlip;
+        this.host.message(t('train.carFlipped'));
+      }
+      this.placeCar(graph, carKind, aim, edge);
       this.showHint('train.carHint');
     }
   }
@@ -1777,7 +1776,6 @@ export class TrainView {
     kind: CarKind,
     aim: { x: number; z: number },
     edge: boolean,
-    facing: number,
   ): void {
     const near = this.nearestTrack(graph, aim.x, aim.z);
     if (!near || near.dist > CAR_AIM_M) {
@@ -1788,10 +1786,8 @@ export class TrainView {
       }
       return;
     }
-    // Le véhicule regarde du côté où regarde le joueur.
-    const fwd = poseOn(near.piece, near.u, 1);
-    const along = Math.sin(fwd.yaw) * Math.sin(facing) + Math.cos(fwd.yaw) * Math.cos(facing);
-    const pos: TrackPos = { piece: near.piece.id, u: near.u, dir: along >= 0 ? 1 : -1 };
+    // Le véhicule regarde le sens de la voie ; R l'inverse (il ne dépend plus du sens du joueur).
+    const pos: TrackPos = { piece: near.piece.id, u: near.u, dir: this.carFlip ? -1 : 1 };
     const free = this.host.state.canPlaceCar(kind, pos);
     this.setCarGhost({ kind, pos }, free);
     if (!edge) return;

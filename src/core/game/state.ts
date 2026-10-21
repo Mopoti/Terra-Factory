@@ -33,6 +33,7 @@ import {
 } from '../rail/track';
 import {
   anchorOffset,
+  preferOf,
   carPoses,
   cargoMassKg,
   cargoVolumeL,
@@ -1624,7 +1625,7 @@ export class GameState {
         const st = this.changes.stations.find((s) => s.id === id);
         const a = st ? graph.pose({ piece: st.piece, u: st.u, dir: 1 }) : null;
         // C'est la locomotive qui se tient au repère de la station.
-        const anchor = graph.advance(flip(c.head), anchorOffset(c)).pos;
+        const anchor = graph.advance(flip(c.head), anchorOffset(c), preferOf(c)).pos;
         const b = graph.pose(flip(anchor));
         return !!a && !!b && Math.hypot(a.x - b.x, a.z - b.z) < 1.5;
       },

@@ -35,6 +35,8 @@ export interface Consist {
   cars: Car[];
   /** Pilote automatique : station où le convoi se rend (rien : conduite à la main). */
   goTo?: number;
+  /** Pièces que la tête a parcourues dernièrement : la queue du convoi les suit aux embranchements. */
+  trail?: number[];
   /** Programme en boucle (étapes « quand… alors… »), voir `program.ts`. */
   program?: Program;
 }
@@ -112,10 +114,31 @@ export function anchorOffset(c: Consist): number {
   return offsets[i >= 0 ? i : 0] ?? 0;
 }
 
+const TRAIL_MAX = 80;
+const trailSets = new WeakMap<number[], Set<number>>();
+/** Les pièces que le convoi vient de parcourir (pour placer sa queue aux embranchements), ou rien. */
+export function preferOf(c: Consist): ReadonlySet<number> | undefined {
+  const trail = c.trail;
+  if (!trail || trail.length === 0) return undefined;
+  let set = trailSets.get(trail);
+  if (!set) {
+    set = new Set(trail);
+    trailSets.set(trail, set);
+  }
+  return set;
+}
+
+/** Note la pièce où est la tête (à chaque changement de pièce). */
+function noteTrail(c: Consist): void {
+  const last = c.trail?.[c.trail.length - 1];
+  if (last === c.head.piece) return;
+  c.trail = [...(c.trail ?? []).slice(-(TRAIL_MAX - 1)), c.head.piece];
+}
+
 /** Attelage avant ou arrière du convoi, orienté vers l'extérieur du convoi. */
 export function endPos(graph: TrackGraph, c: Consist, end: 'front' | 'rear'): TrackPos {
   if (end === 'front') return c.head;
-  return graph.advance(flip(c.head), consistLength(c)).pos;
+  return graph.advance(flip(c.head), consistLength(c), preferOf(c)).pos;
 }
 
 export interface CarPose {
@@ -141,9 +164,10 @@ function poseAt(
   offset: number,
 ): { x: number; y: number; z: number; yaw: number; pitch: number; ux: number; uz: number } | null {
   const hb = CARS[car.kind].halfBaseM;
-  const centre = graph.advance(flip(c.head), offset).pos; // regarde vers l'arrière du convoi
-  const rear = graph.advance(centre, hb).pos;
-  const front = graph.advance(flip(centre), hb).pos;
+  const prefer = preferOf(c);
+  const centre = graph.advance(flip(c.head), offset, prefer).pos; // regarde vers l'arrière du convoi
+  const rear = graph.advance(centre, hb, prefer).pos;
+  const front = graph.advance(flip(centre), hb, prefer).pos;
   const pf = graph.pose(front);
   const pr = graph.pose(rear);
   const pc = graph.pose(flip(centre));
@@ -277,7 +301,7 @@ function gradeOf(graph: TrackGraph, c: Consist): number {
   let mass = 0;
   const offsets = carOffsets(c);
   c.cars.forEach((car, i) => {
-    const p = graph.pose(flip(graph.advance(back, offsets[i]).pos));
+    const p = graph.pose(flip(graph.advance(back, offsets[i], preferOf(c)).pos));
     const m = massOfCar(car);
     sum += (p?.slope ?? 0) * m;
     mass += m;
@@ -338,6 +362,7 @@ export function stepConsist(graph: TrackGraph, c: Consist, dt: number, ctrl: Con
           return { ...r, pos: flip(r.pos) };
         })();
   c.head = moved.pos;
+  noteTrail(c);
   // Butoir : on rebondit à peine.
   if (moved.blocked) c.v = -c.v * RESTITUTION;
 }
@@ -347,7 +372,8 @@ export function piecesUnder(graph: TrackGraph, c: Consist): Set<number> {
   const out = new Set<number>([c.head.piece]);
   const back = flip(c.head);
   const len = consistLength(c) + 1;
-  for (let d = 0.5; d <= len; d += 0.5) out.add(graph.advance(back, d).pos.piece);
+  const prefer = preferOf(c);
+  for (let d = 0.5; d <= len; d += 0.5) out.add(graph.advance(back, d, prefer).pos.piece);
   return out;
 }
 
@@ -432,9 +458,15 @@ export function splitConsist(
   const front = c.cars.slice(0, index);
   const rear = c.cars.slice(index);
   const frontLen = front.reduce((a, k) => a + lengthOfCar(k), 0);
-  const rearHead = graph.advance(flip(c.head), frontLen).pos; // regarde vers l'arrière
+  const rearHead = graph.advance(flip(c.head), frontLen, preferOf(c)).pos; // regarde vers l'arrière
   c.cars = front;
-  return { id: newId, head: flip(rearHead), v: c.v, cars: rear };
+  return {
+    id: newId,
+    head: flip(rearHead),
+    v: c.v,
+    cars: rear,
+    ...(c.trail ? { trail: [...c.trail] } : {}),
+  };
 }
 
 /** Chocs entre convois qui se touchent sans être attelés : choc mou, ils repartent presque ensemble. */

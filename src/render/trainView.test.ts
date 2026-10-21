@@ -37,7 +37,6 @@ function bench() {
     renameStation: () => {},
     hurtPlayer: (a: number) => hurts.push(a),
     openWindow: () => {},
-    editProgram: () => {},
     chooseStation: () => Promise.resolve(null),
   } as never);
   const frame = {
@@ -51,7 +50,6 @@ function bench() {
     levelUp: false,
     levelDown: false,
     route: false,
-    program: false,
     aimed: false,
     facing: 0,
   };

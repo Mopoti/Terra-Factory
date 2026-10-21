@@ -207,8 +207,6 @@ export interface GameViewOptions {
   onOpenMachine?: (id: number) => void;
   /** Le joueur veut renommer une station (fenêtre de saisie). */
   onRenameStation?: (id: number) => void;
-  /** Le joueur veut éditer le programme d'un convoi. */
-  onEditProgram?: (consistId: number) => void;
   /** Choisir une station de la liste (destination du pilote automatique) ; null si le joueur annule. */
   onChooseStation?: (stations: { id: number; name: string }[]) => Promise<number | null>;
   /** Partie rejointe chez un autre joueur : le monde vient de l'hôte (pas de simulation locale). */
@@ -2311,7 +2309,6 @@ export function startGameView(
       playerHealth -= options.state.mitigate(amount);
       sinceHurt = 0;
     },
-    editProgram: (id) => options.onEditProgram?.(id),
     chooseStation: (stations) => options.onChooseStation?.(stations) ?? Promise.resolve(null),
   });
   // Boîtes de collision des trains (voir `trainBlocked`) ; pas quand on conduit (on est dans la cabine).
@@ -2319,7 +2316,6 @@ export function startGameView(
   let trainUse = false;
   let trainCouple = false;
   let trainRoute = false;
-  let trainProgram = false;
   let trainRotate = false;
   let trainLevelUp = false;
   let trainLevelDown = false;
@@ -3648,7 +3644,6 @@ export function startGameView(
       trainUse = useKey && !claim;
       trainCouple = pressed('couple');
       trainRoute = pressed('route');
-      trainProgram = pressed('program');
       trainRotate = !building && pressed('rotate');
       if (options.state.selectedItem() === 'rail') {
         trainLevelUp = pressed('levelUp');
@@ -3670,7 +3665,6 @@ export function startGameView(
         use: trainUse,
         couple: trainCouple,
         route: trainRoute,
-        program: trainProgram,
         rotate: trainRotate,
         levelUp: trainLevelUp,
         levelDown: trainLevelDown,
@@ -3682,7 +3676,6 @@ export function startGameView(
     trainUse = false;
     trainCouple = false;
     trainRoute = false;
-    trainProgram = false;
     trainRotate = false;
     trainLevelUp = false;
     trainLevelDown = false;

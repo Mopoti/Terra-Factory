@@ -14,6 +14,9 @@ import {
   type WorldParams,
 } from '../core/world/worldgen';
 import { POLLUTION_CELL_M, type Threat } from '../core/game/threat';
+import { CARS } from '../core/data/trains';
+import { carPoses } from '../core/rail/train';
+import { lengthOfPiece, poseOn, routesOf, type TrackGraph } from '../core/rail/track';
 import { getLocale, t, type TranslationKey } from '../i18n';
 import './menu.css';
 
@@ -190,6 +193,29 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     }
   }
 
+  /** Voie de la carte : lignes (en cases) de chaque pièce, recalculées quand la voie change. */
+  let railGraph: TrackGraph | null = null;
+  let railLines: { cx: number; cz: number; pts: [number, number][] }[] = [];
+  function railsOnMap(): { cx: number; cz: number; pts: [number, number][] }[] {
+    const graph = options.state.railGraph();
+    if (graph === railGraph) return railLines;
+    railGraph = graph;
+    railLines = [];
+    for (const piece of options.state.changes.rails)
+      for (const route of routesOf(piece)) {
+        const len = lengthOfPiece(route);
+        const steps = Math.max(2, Math.ceil(len / 1.2));
+        const pts: [number, number][] = [];
+        for (let k = 0; k <= steps; k++) {
+          const q = poseOn(route, (len * k) / steps);
+          pts.push([q.x / CELL_SIZE_M, q.z / CELL_SIZE_M]);
+        }
+        const mid = pts[Math.floor(pts.length / 2)];
+        railLines.push({ cx: mid[0], cz: mid[1], pts });
+      }
+    return railLines;
+  }
+
   function draw(): void {
     if (!isOpenNow || !canvas) return;
     const ctx = canvas.getContext('2d');
@@ -241,6 +267,84 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
         ctx.strokeStyle = '#ffd36b';
         ctx.lineWidth = 1;
         ctx.strokeRect(sx(mc.gx) + 0.5, sz(mc.gz) + 0.5, w2 * zoom - 1, d2 * zoom - 1);
+      }
+    }
+    // Voies ferrées : traits clairs et discrets ; stations : petits repères bleus.
+    {
+      ctx.strokeStyle = 'rgba(206, 211, 220, 0.6)';
+      ctx.lineWidth = Math.min(12, Math.max(1.5, zoom * 1.4));
+      ctx.lineCap = 'butt';
+      const margin = 40;
+      for (const line of railsOnMap()) {
+        if (
+          line.cx < gx0 - margin ||
+          line.cx > gx0 + halfX * 2 + margin ||
+          line.cz < gz0 - margin ||
+          line.cz > gz0 + halfZ * 2 + margin
+        )
+          continue;
+        ctx.beginPath();
+        line.pts.forEach(([x, z], k) => {
+          const px = (x - gx0) * zoom;
+          const pz = (z - gz0) * zoom;
+          if (k === 0) ctx.moveTo(px, pz);
+          else ctx.lineTo(px, pz);
+        });
+        ctx.stroke();
+      }
+      const graph = options.state.railGraph();
+      for (const st of options.state.changes.stations) {
+        const q = graph.pose({ piece: st.piece, u: st.u, dir: 1 });
+        if (!q) continue;
+        const sxp = (q.x / CELL_SIZE_M - gx0) * zoom;
+        const szp = (q.z / CELL_SIZE_M - gz0) * zoom;
+        ctx.fillStyle = '#2d86d6';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(sxp - 4, szp - 4, 8, 8);
+        ctx.strokeRect(sxp - 4, szp - 4, 8, 8);
+        if (zoom >= 4) {
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#000000';
+          ctx.strokeText(st.name, sxp, szp - 8);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(st.name, sxp, szp - 8);
+          ctx.textAlign = 'start';
+        }
+      }
+      // Convois : une flèche orange par locomotive dans le sens de la circulation, un point par wagon.
+      for (const c of options.state.changes.trains) {
+        const reversing = c.v < -0.1;
+        for (const pose of carPoses(graph, c)) {
+          const px = (pose.x / CELL_SIZE_M - gx0) * zoom;
+          const pz = (pose.z / CELL_SIZE_M - gz0) * zoom;
+          if (!CARS[pose.car.kind].loco) {
+            ctx.fillStyle = '#c9a36b';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.fillRect(px - 2.5, pz - 2.5, 5, 5);
+            ctx.strokeRect(px - 2.5, pz - 2.5, 5, 5);
+            continue;
+          }
+          // Cap du modèle (son avant) ; la flèche suit le sens de marche du convoi.
+          const toHead = pose.car.rev ? pose.yaw + Math.PI : pose.yaw;
+          const yaw = reversing ? toHead + Math.PI : toHead;
+          const fx = Math.sin(yaw);
+          const fz = Math.cos(yaw);
+          const r = 8;
+          ctx.fillStyle = '#ff9a2e';
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(px + fx * r * 1.5, pz + fz * r * 1.5);
+          ctx.lineTo(px - fx * r - fz * r * 0.85, pz - fz * r + fx * r * 0.85);
+          ctx.lineTo(px - fx * r + fz * r * 0.85, pz - fz * r - fx * r * 0.85);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fill();
+        }
       }
     }
     // Pollution : voile rouge par cellule de 32 m ; ennemis : points rouges.
