@@ -46,6 +46,12 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 - **Sécurité anti « effet portefeuille »** : seul cas sans long attelage, l'avant de la locomotive (tampons) contre un wagon, quand elle est retournée. `carPoses` vérifie alors que les caisses (rectangles vus du dessus, `overlapBetween` : axes séparateurs) ne se chevauchent pas et recule le véhicule suivant juste assez si besoin. Seul l'affichage (et la collision) est concerné : la simulation garde les longueurs nominales.
 - Limite connue : dans le virage de 3,75 m de rayon, l'essieu du milieu de la locomotive (empattement rigide de 3 m) sort d'environ 30 cm du rail.
 
+## Monter, descendre, bruits, collisions
+- **F** monte dans le véhicule le plus proche (quad, buggy, char ou locomotive), jamais dans deux à la fois : le plus près reçoit la touche (`vehicleClaimsUse`, `TrainView.useDistance`). Le véhicule **ne bouge pas** : le joueur marche jusqu'à lui (jusqu'à 6 m) et s'y assoit ; bouger ou ré-appuyer sur F annule. En descendant, le joueur est posé **à côté** (premier côté libre, puis derrière ou devant), jamais dedans.
+- **Bruit de moteur** (`src/audio/engine.ts`, volume « Machines ») : ronronnement continu dont la hauteur suit la vitesse (quad aigu, buggy rond, char grave), « chuffs » de vapeur au rythme des roues pour la locomotive. Plus de bruits de pas au volant.
+- **Collision** : un convoi qui roule à plus de 1,5 m/s et percute le joueur à pied lui fait des dégâts selon sa vitesse (5 points par m/s, jusqu'à 100, armure déduite ; un coup toutes les 0,7 s). Les véhicules conduits par un autre joueur ne blessent pas encore.
+- **Posture** : sur un quad, le pilote est penché en avant, cuisses un peu relevées, pieds vers les repose-pieds, bras tendus au guidon (`Avatar.seatStyle`).
+
 ## Contenu des wagons et poids
 - **Wagon de fret** : un coffre de 32 cases, limité par la **charge utile** (20 000 kg) et le **volume** (30 000 L). **F** près du wagon ouvre sa fenêtre (jauge de charge) ; on y glisse des objets du sac comme dans un coffre.
 - **Wagon-citerne** : 10 000 L d'un seul liquide (eau, pétrole, polymère, eau sale ; masse volumique 1 / 0,9 / 0,95 / 1,1 kg/L). **F** près de la citerne ouvre sa fenêtre : jauge de remplissage, « Verser un baril plein » (100 L, le baril vide revient dans le sac) et « Remplir un baril vide ». Les machines (stations de chargement) viendront plus tard.

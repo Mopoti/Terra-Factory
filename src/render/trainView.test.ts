@@ -5,6 +5,7 @@ import { TILE_M, matesFor, portsOf } from '../core/rail/track';
 import { TrainView } from './trainView';
 
 /** Rejoue de vrais glissés de la souris dans `TrainView` (sans écran) : le tracé se pose comme en jeu. */
+const hurts: number[] = [];
 function bench() {
   const fake = () => ({
     className: '',
@@ -31,6 +32,7 @@ function bench() {
     message: () => {},
     sfx: () => {},
     renameStation: () => {},
+    hurtPlayer: (a: number) => hurts.push(a),
     openWindow: () => {},
     editProgram: () => {},
     chooseStation: () => Promise.resolve(null),
@@ -70,8 +72,8 @@ function bench() {
       }
     step(tx, tz, false);
   };
-  const tick = (n: number, dt = 0.05): void => {
-    for (let i = 0; i < n; i++) view.update({ ...frame, dt }, { x: 0, z: 0 });
+  const tick = (n: number, dt = 0.05, at = { x: 0, z: 0 }): void => {
+    for (let i = 0; i < n; i++) view.update({ ...frame, dt }, at);
   };
   return { state, drag, tick };
 }
@@ -214,5 +216,28 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
     expect(loco.program?.running).toBe(false);
     expect(Math.abs(loco.v)).toBeLessThan(0.3);
+  });
+
+  it('un train en marche qui percute le joueur lui fait des dégâts selon sa vitesse', () => {
+    const { state, drag, tick } = bench();
+    hurts.length = 0;
+    drag([20, 20], [[0, -1, 9]]);
+    const rails = state.changes.rails;
+    state.inventory.train_locomotive = 1;
+    const loco = state.placeCar('locomotive_steam', { piece: rails[0].id, u: 1, dir: 1 })!;
+    loco.cars[0].fuel = { item: 'coal', count: 30 };
+    // Le joueur se tient sur la voie, devant la locomotive : elle roule vers lui.
+    const g = state.railGraph();
+    const ahead = g.advance(loco.head, 14).pos;
+    const at = g.pose(ahead)!;
+    loco.v = 8;
+    // Les frames du banc ne donnent pas la position du joueur : on appelle update avec la sienne.
+    for (let i = 0; i < 60 && hurts.length === 0; i++) {
+      loco.v = 8;
+      tick(1, 0.05, { x: at.x, z: at.z });
+    }
+    expect(hurts.length).toBeGreaterThan(0);
+    expect(hurts[0]).toBeGreaterThan(20);
+    expect(hurts[0]).toBeLessThanOrEqual(100);
   });
 });

@@ -69,6 +69,7 @@ import {
   stepVertical,
   surfaceMaterialAt,
 } from '../core/game/physics';
+import { setEngine, type EngineKind } from '../audio/engine';
 import { playSfx } from '../audio/sfx';
 import { pickPiece } from '../core/build/pick';
 import { riseFromDirection } from '../core/build/aim';
@@ -2203,7 +2204,7 @@ export function startGameView(
     } else if (canStand(nx, playerZ)) playerX = nx;
     else if (canStand(playerX, nz)) playerZ = nz;
     const moved = Math.hypot(playerX - ox, playerZ - oz);
-    if (onGround) {
+    if (onGround && !mounted) {
       strideDist += moved;
       if (strideDist >= STRIDE_M) {
         strideDist = 0;
@@ -2306,6 +2307,10 @@ export function startGameView(
     sfx: (name) => playSfx(name),
     renameStation: (id) => options.onRenameStation?.(id),
     openWindow: (id) => options.onOpenMachine?.(id),
+    hurtPlayer: (amount) => {
+      playerHealth -= options.state.mitigate(amount);
+      sinceHurt = 0;
+    },
     editProgram: (id) => options.onEditProgram?.(id),
     chooseStation: (stations) => options.onChooseStation?.(stations) ?? Promise.resolve(null),
   });
@@ -2536,7 +2541,83 @@ export function startGameView(
       options.onMessage?.(t('spawn.pickedUp'));
     }
   }
+  /** Distance (m) à laquelle F monte dans un véhicule ; le joueur y marche (le véhicule ne bouge pas). */
+  const MOUNT_REACH_M = 6;
+  const BOARD_SPEED = WALK_SPEED_M_S * 1.15;
+  const BOARD_ARRIVE_M = 0.9;
+  /** Véhicule vers lequel le joueur marche pour y monter. */
+  let boarding: Vehicle | null = null;
+  const vehicleReach = (v: Vehicle): number =>
+    Math.hypot(v.x - playerX, v.z - playerZ) - VEHICLES[v.kind].aimRadius;
+  function nearestVehicle(): Vehicle | null {
+    let best: Vehicle | null = null;
+    for (const v of options.state.changes.vehicles)
+      if (vehicleReach(v) <= MOUNT_REACH_M && (!best || vehicleReach(v) < vehicleReach(best)))
+        best = v;
+    return best;
+  }
+  /** Le véhicule reçoit-il la touche « utiliser » : on est dedans, ou il est plus près que tout train. */
+  function vehicleClaimsUse(): boolean {
+    if (mounted) return true;
+    if (trains.isMounted()) return false;
+    const v = nearestVehicle();
+    return v !== null && vehicleReach(v) <= trains.useDistance(playerX, playerZ);
+  }
+  /** Où poser le joueur qui descend : à côté du véhicule (jamais dedans), du premier côté libre. */
+  function exitSpot(v: Vehicle): { x: number; z: number } {
+    const out = VEHICLES[v.kind].aimRadius + 0.9;
+    const fx = Math.sin(v.yaw);
+    const fz = Math.cos(v.yaw);
+    const rx = fz;
+    const rz = -fx;
+    const tries: [number, number][] = [
+      [rx * out, rz * out],
+      [-rx * out, -rz * out],
+      [-fx * (out + 0.8), -fz * (out + 0.8)],
+      [fx * (out + 0.8), fz * (out + 0.8)],
+      [rx * out * 1.8, rz * out * 1.8],
+      [-rx * out * 1.8, -rz * out * 1.8],
+    ];
+    for (const [dx, dz] of tries)
+      if (canStand(v.x + dx, v.z + dz)) return { x: v.x + dx, z: v.z + dz };
+    return { x: v.x + rx * out, z: v.z + rz * out };
+  }
+  function boardTick(dt: number): void {
+    if (!boarding) return;
+    const v = boarding;
+    const moving = ['forward', 'backward', 'left', 'right'].some((a) =>
+      input.isActionActive(a as ActionId),
+    );
+    if (mounted || trains.isMounted() || moving || !options.state.changes.vehicles.includes(v)) {
+      boarding = null;
+      return;
+    }
+    const dx = v.x - playerX;
+    const dz = v.z - playerZ;
+    const dist = Math.hypot(dx, dz);
+    if (dist <= BOARD_ARRIVE_M) {
+      boarding = null;
+      mounted = v;
+      // Le joueur s'assoit sur le siège ; le véhicule ne bouge pas.
+      playerX = v.x;
+      playerZ = v.z;
+      facing = v.yaw;
+      if (v.fuel <= 0 && options.state.refuelVehicle(v) <= 0)
+        options.onMessage?.(t('vehicle.noFuel'));
+      return;
+    }
+    const step = Math.min(dist, BOARD_SPEED * dt);
+    const nx = playerX + (dx / dist) * step;
+    const nz = playerZ + (dz / dist) * step;
+    // Un obstacle sur le chemin : on abandonne (le véhicule est lui-même sans collision avec le joueur).
+    if (canStand(nx, nz) || dist < 2.2) {
+      playerX = nx;
+      playerZ = nz;
+    } else boarding = null;
+    facing = Math.atan2(dx, dz);
+  }
   function vehicleTick(dt: number, pressedUse: boolean): void {
+    boardTick(dt);
     const list = options.state.changes.vehicles;
     // Les modèles suivent la liste enregistrée.
     for (const v of list) {
@@ -2566,23 +2647,19 @@ export function startGameView(
       }
     }
     if (mounted && !list.includes(mounted)) mounted = null;
-    const near = list
-      .filter((v) => Math.hypot(v.x - playerX, v.z - playerZ) <= 3)
-      .sort(
-        (a, b) =>
-          Math.hypot(a.x - playerX, a.z - playerZ) - Math.hypot(b.x - playerX, b.z - playerZ),
-      )[0];
+    const near = nearestVehicle();
     if (pressedUse && !aimedMachine) {
       if (mounted) {
+        // On descend à côté du véhicule, qui reste où il est.
+        const spot = exitSpot(mounted);
         mounted = null;
+        playerX = spot.x;
+        playerZ = spot.z;
         options.onMessage?.(t('vehicle.mount'));
-      } else if (near) {
+      } else if (boarding) boarding = null;
+      else if (near) {
         if (input.isActionActive('sprint')) options.state.pickUpVehicle(near.id);
-        else {
-          mounted = near;
-          if (near.fuel <= 0 && options.state.refuelVehicle(near) <= 0)
-            options.onMessage?.(t('vehicle.noFuel'));
-        }
+        else boarding = near; // le joueur marche jusqu'au véhicule, puis s'y assoit
       }
     }
     // Clic gauche sur un buggy : on ouvre son coffre (carburant et objets).
@@ -3566,7 +3643,9 @@ export function startGameView(
       }
       updateSeason();
       const useKey = pressed('use');
-      trainUse = useKey;
+      // Une seule touche, un seul véhicule : le plus proche (quad, buggy ou locomotive) la reçoit, jamais deux à la fois.
+      const claim = vehicleClaimsUse();
+      trainUse = useKey && !claim;
       trainCouple = pressed('couple');
       trainRoute = pressed('route');
       trainProgram = pressed('program');
@@ -3575,7 +3654,7 @@ export function startGameView(
         trainLevelUp = pressed('levelUp');
         trainLevelDown = pressed('levelDown');
       }
-      vehicleTick(dt, useKey);
+      vehicleTick(dt, useKey && claim);
       bodyTick(useKey);
       motion = trains.isMounted() ? { speed: 0, strafe: 0 } : step(dt);
       stepBody(dt);
@@ -3598,7 +3677,7 @@ export function startGameView(
         aimed: interaction.aimed,
         facing,
       },
-      { x: playerX, z: playerZ },
+      { x: playerX, z: playerZ, y: playerY },
     );
     trainUse = false;
     trainCouple = false;
@@ -3615,6 +3694,25 @@ export function startGameView(
       velY = 0;
       onGround = true;
       facing = trainSeat.yaw;
+    }
+    // Bruit de moteur : celui du véhicule qu'on conduit (rien à pied).
+    {
+      let kind: EngineKind | null = null;
+      let speed = 0;
+      let effort = 0;
+      if (mounted && mounted.fuel > 0 && !paused) {
+        kind = mounted.kind;
+        speed = Math.min(1, motion.speed / (WALK_SPEED_M_S * VEHICLES[mounted.kind].speedFactor));
+        effort = input.isActionActive('forward') || input.isActionActive('backward') ? 1 : 0;
+      } else {
+        const e = trains.engineState();
+        if (e && !paused) {
+          kind = 'steam';
+          speed = e.speed;
+          effort = e.effort;
+        }
+      }
+      setEngine(kind, speed, effort);
     }
     const trainExit = trains.takeExit();
     if (trainExit) {
@@ -3645,6 +3743,7 @@ export function startGameView(
     let seatDrop = 0;
     if (miner instanceof Avatar) {
       miner.seated = seat !== null;
+      miner.seatStyle = mounted?.kind === 'quad' ? 'bike' : 'car';
       if (seat) seatDrop = seat.y + 0.08 - PLAYER_HEIGHT_M / 2 - miner.hipOffset;
       if (seat) miner.root.position.set(seat.x, seatDrop, seat.z);
       else miner.root.position.set(0, 0, 0);
@@ -3884,6 +3983,7 @@ export function startGameView(
       }
     },
     dispose: () => {
+      setEngine(null, 0, 0);
       enemyView.dispose();
       remotePlayers.dispose();
       healthBar.remove();

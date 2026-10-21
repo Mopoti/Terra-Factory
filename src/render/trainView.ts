@@ -139,6 +139,8 @@ export interface TrainHost {
   sfx(name: 'placeStone' | 'pickup' | 'deny' | 'select'): void;
   /** Le joueur veut renommer cette station (fenêtre de saisie). */
   renameStation(id: number): void;
+  /** Le joueur est percuté : dégâts avant armure. */
+  hurtPlayer(amount: number): void;
   /** Ouvre l'éditeur du programme du convoi. */
   editProgram(consistId: number): void;
   /** Ouvre la fenêtre du contenu d'un wagon (identifiant de fenêtre négatif). */
@@ -213,6 +215,8 @@ export class TrainView {
     { route: Route; remaining: number; graph: TrackGraph; age: number; total: number }
   >();
   private choosing = false;
+  /** Effort demandé à la locomotive conduite (0 à 1), pour le bruit de moteur. */
+  private engineEffort = 0;
 
   constructor(private readonly host: TrainHost) {
     this.stations = new StationView(host.scene);
@@ -291,7 +295,10 @@ export class TrainView {
     uz: number;
     hl: number;
     hw: number;
+    /** Vitesse (m/s) du convoi, pour les dégâts d'une collision. */
+    v: number;
   }[] = [];
+  private hitCooldown = 0;
 
   /**
    * Le point (x, z) est-il dans la caisse d'un véhicule, entre les hauteurs y0 et y1 (le joueur) ? Sert à empêcher de
@@ -678,6 +685,7 @@ export class TrainView {
           uz,
           hl: spec.lengthM / 2,
           hw: CAR_HALF_WIDTH_M,
+          v: Math.abs(consist.v),
         });
         let entry = this.meshes.get(pose.car.id);
         const model = bakedModel(spec.model);
@@ -805,6 +813,47 @@ export class TrainView {
     return best;
   }
 
+  /**
+   * Un train en marche qui percute le joueur lui fait des dégâts selon sa vitesse (à 12 m/s : 60 points). On est touché
+   * par l'avant ou le flanc d'un véhicule qui va assez vite ; un convoi qui rampe ne fait que pousser.
+   */
+  private collideWithPlayer(player: { x: number; z: number; y?: number }, dt: number): void {
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
+    if (this.hitCooldown > 0) return;
+    for (const b of this.solids) {
+      if (b.v < 1.5) continue;
+      if (player.y !== undefined && (player.y > b.y1 || player.y + 1.7 < b.y0)) continue;
+      const dx = player.x - b.x;
+      const dz = player.z - b.z;
+      if (Math.abs(dx * b.ux + dz * b.uz) > b.hl + 0.5) continue;
+      if (Math.abs(dx * b.uz - dz * b.ux) > b.hw + 0.25) continue;
+      this.hitCooldown = 0.7;
+      this.host.hurtPlayer(Math.min(100, b.v * 5));
+      this.host.sfx('deny');
+      return;
+    }
+  }
+
+  /** Vitesse (0 à 1) et effort (0 à 1) du train qu'on conduit, pour le bruit de moteur ; null à pied. */
+  engineState(): { speed: number; effort: number } | null {
+    const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
+    const loco = c?.cars.find((k) => k.id === this.mountedCar);
+    const spec = loco ? CARS[loco.kind].loco : undefined;
+    if (!c || !spec) return null;
+    return { speed: Math.min(1, Math.abs(c.v) / spec.vMax), effort: this.engineEffort };
+  }
+
+  /** Distance (m) du joueur au véhicule ferroviaire le plus proche à portée de F, sinon l'infini. */
+  useDistance(x: number, z: number): number {
+    const graph = this.lastGraph;
+    if (!graph) return Infinity;
+    let best = Infinity;
+    for (const consist of this.host.state.changes.trains)
+      for (const pose of carPoses(graph, consist))
+        best = Math.min(best, Math.hypot(pose.x - x, pose.z - z) - CARS[pose.car.kind].lengthM / 2);
+    return best <= REACH_M ? Math.max(0, best) : Infinity;
+  }
+
   private carNear(x: number, z: number): { consist: Consist; car: Car } | null {
     const graph = this.lastGraph;
     if (!graph) return null;
@@ -822,7 +871,7 @@ export class TrainView {
   // --- Boucle ------------------------------------------------------------------------------------
 
   /** À appeler à chaque image. `player` est la position du joueur à pied (m). */
-  update(frame: TrainFrame, player: { x: number; z: number }): void {
+  update(frame: TrainFrame, player: { x: number; z: number; y?: number }): void {
     const { state } = this.host;
     const graph = state.railGraph();
     this.lastGraph = graph;
@@ -859,6 +908,7 @@ export class TrainView {
       this.handlePlacing(graph, frame, player);
     } else this.setGhost([]);
 
+    if (active && this.mountedCar === null) this.collideWithPlayer(player, frame.dt);
     this.updateAttach();
     this.updateHud();
   }
@@ -902,6 +952,7 @@ export class TrainView {
       left -= h;
       for (const c of trains) {
         const auto = c.goTo !== undefined ? this.autoControl(graph, c, h) : null;
+        if (c === driven) this.engineEffort = Math.abs((auto ?? ctrlDriven).throttle);
         stepConsist(graph, c, h, auto ?? (c === driven ? ctrlDriven : IDLE));
         const e = auto ? this.autos.get(c.id) : undefined;
         if (e) e.remaining -= Math.max(0, c.v) * h;

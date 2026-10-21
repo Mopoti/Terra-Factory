@@ -111,6 +111,8 @@ export class Avatar {
   holding = false;
   /** Vrai quand le joueur conduit un véhicule : assis, cuisses vers l'avant, genoux pliés, mains sur le volant. */
   seated = false;
+  /** Façon de s'asseoir : en voiture (volant), à moto / quad (jambes écartées vers les repose-pieds, penché sur le guidon). */
+  seatStyle: 'car' | 'bike' = 'car';
   /** Hauteur des hanches par rapport au centre de `root` (m), selon la taille et la longueur des jambes. */
   hipOffset = 0;
   private phase = 0;
@@ -174,7 +176,7 @@ export class Avatar {
     if (stripe) stripe.color.setHex(color).offsetHSL(0.08, 0.1, 0.22);
 
     model.updateMatrixWorld(true);
-    for (const name of [...ARM.g, ...ARM.d, ...LEG.g, ...LEG.d]) {
+    for (const name of [...ARM.g, ...ARM.d, ...LEG.g, ...LEG.d, 'poitrine']) {
       const bone = bones.get(name);
       if (!bone) continue;
       const parentWorld = new THREE.Quaternion();
@@ -335,6 +337,9 @@ export class Avatar {
     this.amount += (Math.min(1, speed / 2.5) - this.amount) * Math.min(1, dt * 10);
     this.phase += dt * (3 + Math.min(speed, 6) * 1.6);
     this.strike += dt * 7.5;
+    // Le buste ne reste penché que sur un quad.
+    if (!(this.seated && this.seatStyle === 'bike'))
+      this.rotate('poitrine', new THREE.Quaternion());
     const s = Math.sin(this.phase) * 0.6 * this.amount;
     if (this.firstPerson) {
       const t = 0.5 + 0.5 * Math.sin(this.strike);
@@ -351,6 +356,18 @@ export class Avatar {
     }
     if (this.seated) {
       // Assis : cuisses à l'horizontale vers l'avant, tibias à la verticale, mains devant (volant, guidon).
+      if (this.seatStyle === 'bike') {
+        // Quad : cuisses un peu relevées, pieds sur les repose-pieds devant, buste penché, bras tendus au guidon.
+        for (const side of ['g', 'd'] as const) {
+          const [thigh, shin] = LEG[side];
+          this.rotate(thigh, this.axis(X, -0.95));
+          this.rotate(shin, this.axis(X, 0.7));
+        }
+        this.rotate('poitrine', this.axis(X, 0.35));
+        this.arm('g', -1.12, 0, 0.18);
+        this.arm('d', -1.12, 0, 0.18);
+        return;
+      }
       for (const side of ['g', 'd'] as const) {
         const [thigh, shin] = LEG[side];
         this.rotate(thigh, this.axis(X, -1.45));
