@@ -161,15 +161,15 @@ const STRIKE_KEYS: StrikeKey[] = ROWS.map(([t, r, l, lean, turn, knees]) => ({
  * Vue subjective (bras droit seul, vu de l'épaule) : outil tenu en bas à droite, manche dressé un peu penché vers
  * l'avant ; au coup, la main monte et l'outil part en arrière par-dessus l'épaule, puis s'abat au centre de l'écran.
  */
-const FP_HOLD: ArmPose = arm(-1.35, 0.0, 0.35, 1.0, 0.45);
+const FP_HOLD: ArmPose = arm(-1.55, 0.05, 0.3, 0.75, 0.6);
 // prettier-ignore
 const FP_ROWS: [number, number[]][] = [
-  [0,    [-1.35, 0.0,  0.35, 1.0,  0.45]],
-  [0.44, [-2.2, -0.1,  0.9, -0.5,  0.35]],
-  [0.56, [-1.9, -0.05, 0.6,  0.3,  0.4]],
-  [0.64, [-1.1,  0.0,  0.1,  1.7,  0.5]],
-  [0.74, [-1.05, 0.0,  0.15, 1.75, 0.5]],
-  [1,    [-1.35, 0.0,  0.35, 1.0,  0.45]],
+  [0,    [-1.55, 0.05, 0.3,  0.75, 0.6]],
+  [0.44, [-2.15, 0.05, 0.7, -0.3,  0.45]],
+  [0.56, [-1.85, 0.05, 0.45, 0.5,  0.6]],
+  [0.64, [-1.3,  0.0,  0.1,  1.3,  0.75]],
+  [0.74, [-1.25, 0.0,  0.12, 1.4,  0.75]],
+  [1,    [-1.55, 0.05, 0.3,  0.75, 0.6]],
 ];
 
 /** La pose du bras en vue subjective à l'instant t du coup (0 à 1), lissée entre les poses clés. */
@@ -494,7 +494,7 @@ export class Avatar {
   get windup(): number {
     if (this.strikeMix <= 0) return 0;
     const p = fpPose(this.strikeT);
-    return this.strikeMix * Math.max(0, Math.min(1, (-p.swing - 1.35) / 0.85));
+    return this.strikeMix * Math.max(0, Math.min(1, (-p.swing - 1.55) / 0.6));
   }
 
   private handBone(): THREE.Bone | null {

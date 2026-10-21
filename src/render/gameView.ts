@@ -313,13 +313,15 @@ export function startGameView(
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
-    firstArm.root.position.set(0.42, -0.6, -0.12);
+    firstArm.root.position.set(0.4, -0.7, 0.12);
     firstArm.root.scale.setScalar(0.8);
     firstArm.root.rotation.y = Math.PI;
     firstArm.clip([firstClip]);
     renderer.localClippingEnabled = true;
     camera.add(firstArm.root);
-    firstArm.attachHandTool(hand, 1.15);
+    // Vue subjective : outil un peu plus court (il ne masque pas la vue), tourné sur son manche pour que la tête
+    // pointe vers l'avant.
+    firstArm.attachHandTool(hand, 0.85, -0.55);
     bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
@@ -3781,7 +3783,7 @@ export function startGameView(
       firstArm.root.visible =
         rig.view === 'first' && views.first.showHands && holdsTool && !gun.visible;
       firstArm.update(dt, 0, interaction.working !== null);
-      if (firstArm instanceof Avatar) firstArm.root.position.x = 0.42 - 0.12 * firstArm.windup;
+      if (firstArm instanceof Avatar) firstArm.root.position.x = 0.4 - 0.16 * firstArm.windup;
     } else bareHand.visible = false; // pas de main nue en vue subjective
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();
