@@ -102,6 +102,16 @@ export function carOffsets(c: Consist): number[] {
   return out;
 }
 
+/**
+ * Distance (m) de la tête du convoi au centre de sa première locomotive (à défaut, du premier véhicule) : c'est elle
+ * qui doit se trouver au milieu du quai d'une station, la tête dépassant donc le repère de cette distance.
+ */
+export function anchorOffset(c: Consist): number {
+  const offsets = carOffsets(c);
+  const i = c.cars.findIndex((k) => CARS[k.kind].loco);
+  return offsets[i >= 0 ? i : 0] ?? 0;
+}
+
 /** Attelage avant ou arrière du convoi, orienté vers l'extérieur du convoi. */
 export function endPos(graph: TrackGraph, c: Consist, end: 'front' | 'rear'): TrackPos {
   if (end === 'front') return c.head;

@@ -33,6 +33,7 @@ import {
   leverOf,
   lengthOfPiece,
   crossesStraight,
+  flip,
   isCurve,
   lengthOf,
   poseOn,
@@ -46,6 +47,7 @@ import {
 } from '../core/rail/track';
 import {
   IDLE,
+  anchorOffset,
   consistMass,
   CAR_HALF_WIDTH_M,
   carPoses,
@@ -1157,7 +1159,21 @@ export class TrainView {
     let e = this.autos.get(c.id);
     if (e) e.age += dt;
     if (!e || e.graph !== graph || e.age > 3) {
-      const route = findRoute(graph, c.head, { piece: station.piece, u: station.u });
+      const stop = { piece: station.piece, u: station.u };
+      const offset = anchorOffset(c);
+      // La locomotive (et non la tête du convoi) s'arrête au milieu du quai : la tête dépasse le repère de `offset`.
+      let route = findRoute(graph, c.head, stop);
+      let total = route ? route.distance + offset : 0;
+      if (!route) {
+        // La tête a déjà dépassé le repère : on regarde où en est la locomotive.
+        const anchor = flip(graph.advance(flip(c.head), offset).pos);
+        route = findRoute(graph, anchor, stop);
+        total = route?.distance ?? 0;
+        const a = graph.pose(anchor);
+        const st = graph.pose({ piece: stop.piece, u: stop.u, dir: 1 });
+        if (!route && a && st && Math.hypot(a.x - st.x, a.z - st.z) < 2)
+          route = { distance: 0, steps: [], decisions: [] };
+      }
       if (!route) {
         state.sendTrain(c.id, null);
         this.autos.delete(c.id);
@@ -1165,7 +1181,7 @@ export class TrainView {
         this.host.message(t('train.noRoute', { name: station.name }));
         return null;
       }
-      e = { route, remaining: route.distance, graph, age: 0, total: route.distance };
+      e = { route, remaining: total, graph, age: 0, total };
       this.autos.set(c.id, e);
     }
     const loco = c.cars.find((k) => CARS[k.kind].loco);
@@ -1180,8 +1196,11 @@ export class TrainView {
     if (ctrl.parked) {
       state.sendTrain(c.id, null);
       this.autos.delete(c.id);
-      this.host.sfx('select');
-      this.host.message(t('train.arrived', { name: station.name }));
+      // Un train déjà à la station ne l'annonce pas (sinon un programme « va à X » sans condition claquerait sans fin).
+      if (e.total > 1.5) {
+        this.host.sfx('select');
+        this.host.message(t('train.arrived', { name: station.name }));
+      }
     }
     return ctrl;
   }
@@ -1244,7 +1263,17 @@ export class TrainView {
     if (!a) return null;
     const side = a.seatX < 0 ? -1 : 1;
     // Repère du véhicule : (cos cap, −sin cap) est son côté +x.
-    const out = side * (CAR_HALF_WIDTH_M + 0.9) - a.seatX;
+    let out = side * (CAR_HALF_WIDTH_M + 0.9) - a.seatX;
+    // À une station : on descend sur le quai, du côté où il se trouve (sinon, du côté du conducteur).
+    for (const st of this.host.state.changes.stations) {
+      const plat = this.stations.platformAt(st.id);
+      if (!plat || Math.hypot(plat.x - a.x, plat.z - a.z) > 7) continue;
+      const lateral = (plat.x - a.x) * Math.cos(a.yaw) - (plat.z - a.z) * Math.sin(a.yaw);
+      if (Math.abs(lateral) >= 1.5 && Math.abs(lateral) <= 4) {
+        out = lateral;
+        break;
+      }
+    }
     return {
       x: a.x + Math.cos(a.yaw) * out,
       z: a.z - Math.sin(a.yaw) * out,

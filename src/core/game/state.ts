@@ -19,6 +19,7 @@ import {
   TrackGraph,
   baseId,
   blockTiles,
+  flip,
   tangentOverlap,
   crossesStraight,
   branchId,
@@ -31,6 +32,7 @@ import {
   type TrackPos,
 } from '../rail/track';
 import {
+  anchorOffset,
   carPoses,
   cargoMassKg,
   cargoVolumeL,
@@ -1621,7 +1623,9 @@ export class GameState {
       atStation: (c, id) => {
         const st = this.changes.stations.find((s) => s.id === id);
         const a = st ? graph.pose({ piece: st.piece, u: st.u, dir: 1 }) : null;
-        const b = graph.pose(c.head);
+        // C'est la locomotive qui se tient au repère de la station.
+        const anchor = graph.advance(flip(c.head), anchorOffset(c)).pos;
+        const b = graph.pose(flip(anchor));
         return !!a && !!b && Math.hypot(a.x - b.x, a.z - b.z) < 1.5;
       },
     };

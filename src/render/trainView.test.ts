@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GameState } from '../core/game/state';
-import { TILE_M, matesFor, portsOf } from '../core/rail/track';
+import { TILE_M, flip, matesFor, portsOf } from '../core/rail/track';
+import { anchorOffset } from '../core/rail/train';
 import { TrainView } from './trainView';
 
 /** Rejoue de vrais glissés de la souris dans `TrainView` (sans écran) : le tracé se pose comme en jeu. */
 const hurts: number[] = [];
+const sfxs: string[] = [];
+const msgs: string[] = [];
 function bench() {
   const fake = () => ({
     className: '',
@@ -29,8 +32,8 @@ function bench() {
     aim: () => aim,
     blocked: () => false,
     held: (a: string) => down.has(a),
-    message: () => {},
-    sfx: () => {},
+    message: (m: string) => msgs.push(m),
+    sfx: (n: string) => sfxs.push(n),
     renameStation: () => {},
     hurtPlayer: (a: number) => hurts.push(a),
     openWindow: () => {},
@@ -173,7 +176,8 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(Math.abs(loco.v)).toBeLessThan(0.3);
     // Il est arrivé sur la voie du virage, à moins de 1 m du repère.
     const g = state.railGraph();
-    const head = g.pose(loco.head)!;
+    // C'est la locomotive (son centre) qui s'arrête au repère de la station.
+    const head = g.pose(flip(g.advance(flip(loco.head), anchorOffset(loco)).pos))!;
     const stop = g.pose({ piece: station.piece, u: station.u, dir: 1 })!;
     expect(loco.head.piece).toBe(curve.id);
     expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
@@ -211,7 +215,8 @@ describe('tracé à la souris depuis une voie existante', () => {
     tick(20 * 150);
     // Arrivé à C ; revenir à B est impossible (il est derrière) : le programme se met en pause.
     const g = state.railGraph();
-    const head = g.pose(loco.head)!;
+    // C'est la locomotive (son centre) qui s'arrête au repère de la station.
+    const head = g.pose(flip(g.advance(flip(loco.head), anchorOffset(loco)).pos))!;
     const stop = g.pose({ piece: c.piece, u: c.u, dir: 1 })!;
     expect(Math.hypot(head.x - stop.x, head.z - stop.z)).toBeLessThan(1);
     expect(loco.program?.running).toBe(false);
@@ -239,5 +244,28 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(hurts.length).toBeGreaterThan(0);
     expect(hurts[0]).toBeGreaterThan(20);
     expect(hurts[0]).toBeLessThanOrEqual(100);
+  });
+
+  it('un programme « va à X » sans condition, quand le train est déjà à X, ne claque pas sans fin', () => {
+    const { state, drag, tick } = bench();
+    drag([20, 20], [[0, -1, 9]]);
+    const rails = state.changes.rails;
+    state.inventory.train_station = 1;
+    state.inventory.train_locomotive = 1;
+    const loco = state.placeCar('locomotive_steam', { piece: rails[3].id, u: 1, dir: 1 })!;
+    loco.cars[0].fuel = { item: 'coal', count: 30 };
+    // La station est juste sous la locomotive.
+    const g = state.railGraph();
+    const at = g.advance(flip(loco.head), anchorOffset(loco)).pos;
+    const st = state.placeStation({ piece: at.piece, u: at.u }, 'Ici')!;
+    state.setProgram(loco.id, {
+      steps: [{ mode: 'all', when: [], then: { type: 'goTo', station: st.id } }],
+    });
+    state.setProgramRunning(loco.id, true);
+    sfxs.length = 0;
+    msgs.length = 0;
+    tick(20 * 20); // 20 s
+    expect(sfxs.filter((n) => n === 'select')).toHaveLength(0);
+    expect(msgs).toHaveLength(0);
   });
 });

@@ -54,6 +54,8 @@ export interface Program {
 export const MAX_STEPS = 24;
 export const MAX_CONDITIONS = 8;
 export const FULL_FRACTION = 0.98;
+/** Temps minimal (s) passé dans une étape avant d'agir : évite qu'un programme sans condition tourne à chaque image. */
+export const MIN_DWELL_S = 1;
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const isRec = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
@@ -167,7 +169,7 @@ export function stepProgram(c: Consist, dt: number, env: ProgramEnv): ProgramEve
     if (step.then.type === 'wait' && p.timer >= step.then.seconds) advance(p);
     return {};
   }
-  if (!conditionsMet(step, c, p.timer)) return {};
+  if (p.timer < MIN_DWELL_S || !conditionsMet(step, c, p.timer)) return {};
   if (step.then.type === 'wait') {
     p.phase = 'pausing';
     p.timer = 0;

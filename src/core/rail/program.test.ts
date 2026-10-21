@@ -143,10 +143,10 @@ describe('déroulement du programme', () => {
     delete c.goTo;
     expect(stepProgram(c, 1, env(2))).toEqual({});
     expect(c.program?.index).toBe(1);
-    // Étape 2 : attendre 3 s.
-    expect(stepProgram(c, 0.1, env(2))).toEqual({});
+    // Étape 2 : attendre 3 s (après le temps minimal d'une étape).
+    expect(stepProgram(c, 1.1, env(2))).toEqual({});
     expect(c.program?.phase).toBe('pausing');
-    stepProgram(c, 2, env(2));
+    stepProgram(c, 1.5, env(2));
     expect(c.program?.index).toBe(1);
     stepProgram(c, 1.5, env(2));
     expect(c.program?.index).toBe(2);
