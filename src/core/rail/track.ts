@@ -24,7 +24,9 @@ export type RailKind =
   | 'curve_huge'
   | 'ramp'
   | 'switch_r'
-  | 'switch_l';
+  | 'switch_l'
+  | 'curve45'
+  | 'curve45_b';
 export const RAIL_KINDS: readonly RailKind[] = [
   'straight',
   'curve',
@@ -35,6 +37,8 @@ export const RAIL_KINDS: readonly RailKind[] = [
   'ramp',
   'switch_r',
   'switch_l',
+  'curve45',
+  'curve45_b',
 ];
 export type CurveKind = 'curve' | 'curve_wide' | 'curve_large' | 'curve_big' | 'curve_huge';
 export const CURVE_KINDS: readonly CurveKind[] = [
@@ -46,6 +50,13 @@ export const CURVE_KINDS: readonly CurveKind[] = [
 ];
 export const isCurve = (k: RailKind): k is CurveKind =>
   (CURVE_KINDS as readonly string[]).includes(k);
+/**
+ * Demi-virages (45°) : les deux moitiés d'un virage très large, dans le même bloc de 7 × 7 tuiles. `curve45` va du
+ * milieu du bord +z jusqu'au milieu de l'arc (sur la diagonale du bloc), `curve45_b` de là au milieu du bord +x. Deux
+ * à la suite font un quart de tour ; un seul tourne de 45° (son bout est alors en diagonale).
+ */
+export const isHalfCurve = (k: RailKind): k is 'curve45' | 'curve45_b' =>
+  k === 'curve45' || k === 'curve45_b';
 export const isSwitch = (k: RailKind): k is 'switch_r' | 'switch_l' =>
   k === 'switch_r' || k === 'switch_l';
 
@@ -87,7 +98,7 @@ const RAMP_RUN_M = 4 * RAIL_SCALE;
 /** Côté du bloc d'un virage ou d'un aiguillage (en tuiles). */
 export function blockTiles(kind: RailKind): number {
   if (kind === 'curve_wide') return 5;
-  if (kind === 'curve_large') return 7;
+  if (kind === 'curve_large' || kind === 'curve45' || kind === 'curve45_b') return 7;
   if (kind === 'curve_big') return 11;
   if (kind === 'curve_huge') return 15;
   return 3;
@@ -141,6 +152,7 @@ export function lengthOf(kind: RailKind, route: 0 | 1 = 0): number {
   if (kind === 'straight') return TILE_M;
   if (kind === 'ramp') return Math.hypot(RAMP_RUN_M, RAMP_RISE_M);
   if (isSwitch(kind) && route === 0) return 2 * radiusOf(kind);
+  if (isHalfCurve(kind)) return (radiusOf(kind) * Math.PI) / 4;
   return (radiusOf(kind) * Math.PI) / 2;
 }
 
@@ -181,7 +193,8 @@ function local(
     // Quart de cercle du milieu du bord +z au milieu du bord +x (aiguillage à gauche : vers le bord −x).
     const r = radiusOf(kind);
     const m = kind === 'switch_l' ? -1 : 1;
-    const th = Math.PI + u / r;
+    // La seconde moitié d'un demi-virage commence au milieu de l'arc (45° plus loin).
+    const th = Math.PI + (kind === 'curve45_b' ? Math.PI / 4 : 0) + u / r;
     return {
       x: m * (r + r * Math.cos(th)),
       y: 0,
@@ -594,6 +607,20 @@ export function cellsOf(p: RailPiece): [number, number][] {
  * Cases réellement prises par la voie : toute l'emprise pour une tuile droite et une rampe, mais pour un virage ou un
  * aiguillage seulement les cases proches de la voie (le reste du bloc est libre : arbres, rochers, autre voie).
  */
+/**
+ * La case est-elle du côté du bloc qui revient à ce demi-virage ? Le bloc est coupé par sa diagonale (celle où se
+ * rejoignent les deux moitiés) : deux demi-virages qui se complètent n'ont aucune case en commun.
+ */
+function inHalf(p: RailPiece, gx: number, gz: number): boolean {
+  const c = centerOf(p);
+  const [lx, lz] = turn(
+    (gx + 0.5) * CELL_SIZE_M - c.x,
+    (gz + 0.5) * CELL_SIZE_M - c.z,
+    4 - (p.turns % 4),
+  );
+  return p.kind === 'curve45' ? lz >= lx : lz < lx;
+}
+
 export function trackCellsOf(p: RailPiece): [number, number][] {
   if (p.kind === 'straight' || p.kind === 'ramp') return cellsOf(p);
   const keep = new Set<string>();
@@ -612,6 +639,7 @@ export function trackCellsOf(p: RailPiece): [number, number][] {
           const gz = cz + dz;
           // Jamais hors du bloc : les cases au-delà des bords appartiennent à la pièce voisine.
           if (gx < p.gx || gx >= p.gx + w || gz < p.gz || gz >= p.gz + d) continue;
+          if (isHalfCurve(p.kind) && !inHalf(p, gx, gz)) continue;
           if (Math.hypot((gx + 0.5) * CELL_SIZE_M - q.x, (gz + 0.5) * CELL_SIZE_M - q.z) <= reach)
             keep.add(`${gx},${gz}`);
         }

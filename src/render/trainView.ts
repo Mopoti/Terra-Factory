@@ -28,6 +28,7 @@ import {
   freePorts,
   footprintOf,
   isSwitch,
+  matesFor,
   portsOf,
   leverOf,
   lengthOfPiece,
@@ -67,10 +68,11 @@ const RAIL_MODEL: Record<Exclude<RailKind, 'switch_r' | 'switch_l'>, string> = {
   curve: 'rail_virage',
   curve_wide: 'rail_virage_large',
   curve_large: 'rail_virage_tres_large',
-  // Pas encore de modèle (à faire dans Blender) : un ruban provisoire est dessiné à la place.
   curve_big: 'rail_virage_grand',
   curve_huge: 'rail_virage_geant',
   ramp: 'rail_rampe',
+  curve45: 'rail_virage_45',
+  curve45_b: 'rail_virage_45_b',
 };
 /** Modèle d'une pièce de voie : un aiguillage a un modèle par côté et par position des lames. */
 export function railModelName(p: RailPiece): string {
@@ -567,9 +569,26 @@ export class TrainView {
         const have = first.get(key);
         if (!have || p.id < have.id) first.set(key, p);
       }
+    // Tuiles où deux droites se croisent : dessinées une seule fois, avec le modèle du croisement.
+    const crossed = new Set<RailPiece>();
     for (const p of rails) {
       const base = p.kind === 'straight' ? first.get(`${p.gx},${p.gz},${p.level}`) : undefined;
-      if (base && base !== p && crossesStraight(base, p)) this.addCrossingRails(mb, p);
+      if (base && base !== p && crossesStraight(base, p)) crossed.add(base).add(p);
+    }
+    const crossModel = bakedModel('rail_croisement');
+    for (const p of rails) {
+      const base = p.kind === 'straight' ? first.get(`${p.gx},${p.gz},${p.level}`) : undefined;
+      if (crossModel && crossed.has(p)) {
+        // La plus ancienne des deux porte le modèle du croisement (centré sur la tuile) ; l'autre n'ajoute rien.
+        if (base === p) {
+          const c = centerOf(p);
+          const m = {
+            ...crossModel,
+            min: { x: -crossModel.size.x / 2, y: crossModel.min.y, z: -crossModel.size.z / 2 },
+          };
+          mb.model(m, c.x, p.level, c.z, 0, RAIL_SCALE);
+        }
+      } else if (base && base !== p && crossesStraight(base, p)) this.addCrossingRails(mb, p);
       else this.addPiece(mb, p);
     }
     this.rails.geometry.dispose();
@@ -808,7 +827,10 @@ export class TrainView {
     const graph = state.railGraph();
     this.lastGraph = graph;
     // Le dessin des rails est refait quand la voie change (nouveau graphe) ou quand un modèle arrive.
-    const key = `${bakedModel('rail_droit') ? 1 : 0}${bakedModel('rail_virage') ? 1 : 0}${bakedModel('rail_rampe') ? 1 : 0}`;
+    // Le dessin est refait quand un modèle de voie arrive (chargés après la partie).
+    const key = ['rail_droit', 'rail_virage', 'rail_rampe', 'rail_croisement', 'rail_virage_45']
+      .map((n) => (bakedModel(n) ? 1 : 0))
+      .join('');
     if (graph !== this.builtFor || key !== this.railsKey) {
       this.builtFor = graph;
       this.railsKey = key;
@@ -1420,6 +1442,7 @@ export class TrainView {
     }
     const here = tileOf(aim.x, aim.z);
     const port = this.nearestFreePort(aim);
+    if (port && this.path.length === 0 && this.halfCurve(port, edge)) return;
     // Début du tracé : au bout de la voie la plus proche (la voie se prolonge), sinon sur la tuile visée.
     const startFor = (): { tiles: Tile[]; lead: number; level: number } => {
       if (port) {
@@ -1617,6 +1640,56 @@ export class TrainView {
       this.host.sfx('deny');
       this.host.message(t('train.cannotStation'));
     }
+  }
+
+  /**
+   * Demi-virage (45°) au bout d'une voie : R fait défiler, après le tracé normal, le demi-virage à gauche puis à
+   * droite ; un clic le pose. Au bout d'un demi-virage (port en diagonale), on ne peut poser que la moitié qui
+   * complète le quart de tour (le tracé en tuiles ne sait pas partir en diagonale). Renvoie vrai si c'est le cas.
+   */
+  private halfCurve(port: Port, edge: boolean): boolean {
+    const diagonal = Math.abs(port.dx) > 0.3 && Math.abs(port.dz) > 0.3;
+    const pick = diagonal ? 0 : (this.railTurn % 3) - 1;
+    if (pick < 0 || this.tilt !== 0) return false;
+    const { state } = this.host;
+    // Poses exactes seulement : le port de la pièce tombe pile sur le bout de voie (sinon hors de la grille).
+    const options: PlannedPiece[] = [];
+    for (const kind of ['curve45', 'curve45_b'] as const)
+      for (const m of matesFor(kind, port)) {
+        const ports = portsOf({ id: -1, kind, ...m });
+        if (ports.some((q) => Math.hypot(q.x - port.x, q.z - port.z) < 0.02))
+          options.push({ kind, ...m, cost: RAIL_COST[kind] });
+      }
+    if (options.length === 0) {
+      if (diagonal) this.setGhost([]);
+      return diagonal;
+    }
+    const chosen = options[pick % options.length];
+    const [checked] = this.evaluate([chosen]);
+    this.setGhost([{ piece: checked.piece, ok: checked.ok }]);
+    this.traceInfo = t('train.half45');
+    if (!edge) return true;
+    const blocked = (c: { gx: number; gz: number }): boolean => this.host.blocked(c.gx, c.gz);
+    const r = checked.ok
+      ? state.placeRail(
+          chosen.kind,
+          chosen.gx,
+          chosen.gz,
+          chosen.turns,
+          chosen.level,
+          blocked,
+          true,
+        )
+      : 'blocked';
+    this.ghostKey = '';
+    if (r === 'ok') {
+      this.host.sfx('placeStone');
+      this.host.message(t('train.railPlaced'));
+    } else {
+      this.host.sfx('deny');
+      this.host.message(t('train.railBlocked'));
+    }
+    return true;
   }
 
   private placeCar(

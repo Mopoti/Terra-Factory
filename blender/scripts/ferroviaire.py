@@ -4,11 +4,16 @@ Style low poly stylisé (voir blender/README.md). 1 unité = 1 case = 50 cm. L'a
 
 Voies — une tuile de 2 x 2 cases (1 m), comme les convoyeurs mais sans sens (un train y roule dans les deux sens) :
 - `rail_droit` : tout droit le long de Y ;
+- `rail_croisement` : tuile de 2 x 2 cases où deux voies droites se croisent à angle droit (rails coupés par les
+  ornières, cœurs, contre-rails) ;
 - `rail_virage` : 6 x 6 cases (3 m, pour que les wagons de 3 m passent) ; quart de cercle qui relie le milieu du
   bord -Y au milieu du bord +X (centre du cercle au coin (+3, -3), rayon 3 unités = 1,5 m au milieu de la voie). Sans
   sens, le virage à gauche et le virage à droite sont la même pièce tournée ;
 - `rail_virage_large` (10 x 10 cases, rayon 5 unités) et `rail_virage_tres_large` (14 x 14 cases, rayon 7 unités) :
-  mêmes virages, plus larges (rayons de 6,25 m et 8,75 m dans le jeu) ;
+  mêmes virages, plus larges (rayons de 6,25 m et 8,75 m dans le jeu) ; `rail_virage_grand` (22 x 22, rayon 11) et
+  `rail_virage_geant` (30 x 30, rayon 15) ;
+- `rail_virage_45` / `rail_virage_45_b` : demi-virages (45°), les deux moitiés du virage très large dans son bloc de
+  14 x 14 (de -Y jusqu'à la diagonale, puis de la diagonale jusqu'à +X) ;
 - `rail_rampe` : 2 x 8 cases (4 m), monte de 2 unités (1 m, un niveau) de -Y vers +Y. Sans sens aussi : la descente
   est la même pièce tournée d'un demi-tour. Piliers dessous ;
 - `rail_aiguillage_<d|g>_<droit|devie>` : aiguillage de 6 x 6 cases : pointe au milieu du bord -Y, voie directe vers
@@ -134,14 +139,19 @@ def _arc(N, m=1):
     return p
 
 
-def _virage(lot, N, leger, m=1, ballast=True, traverses=True, rails=(-1, 1), t_min=0.0, dz_ballast=0.0):
+def _virage(lot, N, leger, m=1, ballast=True, traverses=True, rails=(-1, 1), t_min=0.0, dz_ballast=0.0,
+            de=0.0, a=math.pi / 2):
     """Quart de cercle de rayon N unités (bloc de 2N x 2N) : ballast en secteurs, traverses rayonnantes, rails en
     segments. `rails` : côtés posés (-1 : rail intérieur, rayon N - écart ; 1 : extérieur). Traverses à partir de
-    l'angle `t_min` (aiguillage : là où la voie déviée s'est écartée de la voie directe)."""
+    l'angle `t_min` (aiguillage : là où la voie déviée s'est écartée de la voie directe). `de`, `a` : seulement la
+    partie de l'arc entre ces angles (demi-virages : de 0 à pi/4, ou de pi/4 à pi/2)."""
     p = _arc(N, m)
     n = max(8, round((12 if leger else 20) * N / 3))
+    n += n % 2  # nombre pair : le milieu de l'arc (45°) tombe entre deux segments
     for k in range(n):
         t0, t1 = (math.pi / 2) * k / n, (math.pi / 2) * (k + 1) / n
+        if t0 < de - 1e-6 or t1 > a + 1e-6:
+            continue
         tm = (t0 + t1) / 2
         if ballast:
             # Secteur de ballast : sa longueur est celle de l'arc extérieur (pas de trou entre deux secteurs).
@@ -155,11 +165,48 @@ def _virage(lot, N, leger, m=1, ballast=True, traverses=True, rails=(-1, 1), t_m
         nt = round(N * math.pi / 2 / 0.52)  # traverses tous les ~50 cm sur l'arc
         for k in range(nt):
             t = (math.pi / 2) * (k + 0.5) / nt
-            if t < t_min:
+            if t < t_min or t < de - 1e-6 or t >= a - 1e-6:
                 continue
             lot.cube('traverse', (1.7, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
                      tuple(p(N, t) + Vector((0, 0, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01))), 0.01,
                      Matrix.Rotation(-m * t, 3, 'Z'))
+
+
+def rail_croisement(coll, leger=True):
+    """Croisement : tuile de 2 x 2 où deux voies droites se coupent à angle droit (le long de Y et le long de X).
+
+    Les rails de chaque voie sont coupés par les ornières de l'autre (vides de 0,1 où passent les boudins des roues) ;
+    aux quatre points de croisement, un cœur en fonte ; contre-rails à l'intérieur ; plaque d'acier sous le centre et
+    traverses aux quatre bouts."""
+    lot = T.Lot(coll, 'rail')
+    h = 1.0
+    lot.cube('ballast', (2.0, 2.0, Z_BALLAST), (0, 0, Z_BALLAST / 2), 0.02)
+    lot.cube('ballast_sombre', (2.06, 2.06, Z_BALLAST * 0.5), (0, 0, Z_BALLAST * 0.25), 0)
+    # Plaque d'acier sous le carré central, traverses aux quatre bouts (dans le sens de chaque voie).
+    zt = (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01
+    lot.cube('acier_sombre', (1.55, 1.55, Z_TRAVERSE - Z_BALLAST + 0.02), (0, 0, zt), 0.02)
+    for s_ in (-1, 1):
+        d = s_ * 0.86
+        lot.cube('traverse', (1.56, 0.16, Z_TRAVERSE - Z_BALLAST + 0.02), (0, d, zt), 0.01)  # voie le long de Y
+        lot.cube('traverse', (0.16, 1.56, Z_TRAVERSE - Z_BALLAST + 0.02), (d, 0, zt), 0.01)  # voie le long de X
+    # Rails coupés aux croisements : morceaux entre les ornières (de -1 à 1, coupés à ±ECART ± 0,05).
+    g = 0.05
+    coupes = [-h, -ECART - g, -ECART + g, ECART - g, ECART + g, h]
+    for s_ in (-1, 1):
+        for i in range(0, len(coupes), 2):
+            a, b = coupes[i], coupes[i + 1]
+            _rail_segment(lot, (s_ * ECART, a), (s_ * ECART, b))  # voie le long de Y
+            _rail_segment(lot, (a, s_ * ECART), (b, s_ * ECART))  # voie le long de X
+    # Cœurs en fonte aux quatre croisements, contre-rails le long des ornières.
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            lot.cube('fonte', (0.22, 0.22, 0.03), (sx * ECART, sy * ECART, Z_RAIL - 0.02), 0.01)
+    for s_ in (-1, 1):
+        x = s_ * (ECART - 0.12)
+        _rail_segment(lot, (x, -0.42), (x, 0.42), 'acier')
+        _rail_segment(lot, (-0.42, x), (0.42, x), 'acier')
+    lot.finir()
+    T.poser_au_sol(coll, 1.0)
 
 
 def rail_virage(coll, leger=True):
@@ -183,6 +230,39 @@ def rail_virage_tres_large(coll, leger=True):
     """Virage très large : bloc de 14 x 14 (7 x 7 tuiles), rayon 7 unités (8,75 m dans le jeu)."""
     lot = T.Lot(coll, 'rail')
     _virage(lot, 7, leger)
+    lot.finir()
+    T.poser_au_sol(coll, 7.0)
+
+
+def rail_virage_grand(coll, leger=True):
+    """Grand virage : bloc de 22 x 22 (11 x 11 tuiles), rayon 11 unités (13,75 m dans le jeu)."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 11, leger)
+    lot.finir()
+    T.poser_au_sol(coll, 11.0)
+
+
+def rail_virage_geant(coll, leger=True):
+    """Virage géant : bloc de 30 x 30 (15 x 15 tuiles), rayon 15 unités (18,75 m dans le jeu)."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 15, leger)
+    lot.finir()
+    T.poser_au_sol(coll, 15.0)
+
+
+def rail_virage_45(coll, leger=True):
+    """Demi-virage (45°), première moitié du virage très large (bloc de 14 x 14, rayon 7 unités) : du milieu du bord
+    -Y jusqu'au milieu de l'arc, sur la diagonale du bloc. Le jeu le pose dans le même bloc que `rail_virage_45_b`."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 7, leger, a=math.pi / 4)
+    lot.finir()
+    T.poser_au_sol(coll, 7.0)
+
+
+def rail_virage_45_b(coll, leger=True):
+    """Demi-virage (45°), seconde moitié : du milieu de l'arc (diagonale du bloc) au milieu du bord +X."""
+    lot = T.Lot(coll, 'rail')
+    _virage(lot, 7, leger, de=math.pi / 4)
     lot.finir()
     T.poser_au_sol(coll, 7.0)
 
@@ -734,9 +814,14 @@ def wagon_citerne(coll, leger=True):
 
 MODELES = {
     'rail_droit': rail_droit,
+    'rail_croisement': rail_croisement,
     'rail_virage': rail_virage,
     'rail_virage_large': rail_virage_large,
     'rail_virage_tres_large': rail_virage_tres_large,
+    'rail_virage_grand': rail_virage_grand,
+    'rail_virage_geant': rail_virage_geant,
+    'rail_virage_45': rail_virage_45,
+    'rail_virage_45_b': rail_virage_45_b,
     'rail_rampe': rail_rampe,
     'rail_aiguillage_d_droit': rail_aiguillage_d_droit,
     'rail_aiguillage_d_devie': rail_aiguillage_d_devie,

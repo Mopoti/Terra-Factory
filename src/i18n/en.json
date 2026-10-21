@@ -1340,5 +1340,6 @@
   "train.hud.switchLeft": "switch ← left (A / D)",
   "train.hud.switchStraight": "junction ↑ straight (A / D)",
   "train.hud.switchRight": "switch → right (A / D)",
-  "train.switchChosen": "Switch: route changed."
+  "train.switchChosen": "Switch: route changed.",
+  "train.half45": "Half curve (45°): click to place · R: other way, then back to tracing"
 }

@@ -295,9 +295,14 @@ const EXTRA_GROUPS: Record<string, string[]> = {
   // Voies et trains (voir `docs/trains.md`) : les roues des trains tournent par groupes ; les bras d'attelage
   // automatique pivotent à leur traverse de tête pour rejoindre ceux du véhicule voisin (`trainView.ts`).
   rail_droit: [],
+  rail_croisement: [],
   rail_virage: [],
   rail_virage_large: [],
   rail_virage_tres_large: [],
+  rail_virage_grand: [],
+  rail_virage_geant: [],
+  rail_virage_45: [],
+  rail_virage_45_b: [],
   rail_rampe: [],
   rail_aiguillage_d_droit: [],
   rail_aiguillage_d_devie: [],

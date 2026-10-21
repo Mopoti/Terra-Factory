@@ -126,6 +126,8 @@ export const RAIL_COST: Record<RailKind, number> = {
   curve_large: 6,
   curve_big: 9,
   curve_huge: 12,
+  curve45: 3,
+  curve45_b: 3,
   ramp: 4,
   switch_r: 6,
   switch_l: 6,

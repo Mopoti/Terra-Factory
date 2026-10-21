@@ -1340,5 +1340,6 @@
   "train.hud.switchLeft": "aiguillage ← gauche (Q / D)",
   "train.hud.switchStraight": "embranchement ↑ tout droit (Q / D)",
   "train.hud.switchRight": "aiguillage → droite (Q / D)",
-  "train.switchChosen": "Aiguillage : voie changée."
+  "train.switchChosen": "Aiguillage : voie changée.",
+  "train.half45": "Demi-virage (45°) : clic pour le poser · R : autre sens, puis retour au tracé"
 }
