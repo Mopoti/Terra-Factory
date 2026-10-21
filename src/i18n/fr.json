@@ -1336,6 +1336,8 @@
   "prog.save": "Enregistrer",
   "prog.saveRun": "Enregistrer et lancer",
   "prog.stop": "Arrêter le programme",
+  "loco.tab.fuel": "Soute",
+  "loco.tab.program": "Programme",
   "train.noSwitch": "Pas d'aiguillage devant la locomotive.",
   "train.hud.switchLeft": "aiguillage ← gauche (Q / D)",
   "train.hud.switchStraight": "embranchement ↑ tout droit (Q / D)",

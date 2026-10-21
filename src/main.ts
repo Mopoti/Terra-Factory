@@ -33,7 +33,6 @@ import { GuestSync } from './core/net/worldSync';
 import { mergeChanges } from './core/game/playerData';
 import type { WorldChanges } from './core/game/worldChanges';
 import { choiceModal, promptModal } from './ui/modal';
-import { openProgramEditor } from './ui/programEditor';
 import { STATION_NAME_MAX } from './core/rail/station';
 
 initLocale();
@@ -263,13 +262,12 @@ function startGame(
     onMessage: (text) => showToast(text),
     onViewChange: (v) => showToast(t('view.changed', { view: t(`view.${v}` as TranslationKey) })),
     onRequestPause: () => session?.pause.open(),
-    onEditProgram: (consistId) => {
-      view.setUiOpen(true);
-      openProgramEditor({
-        state,
-        consistId,
-        onClose: () => syncPaused(),
-      });
+    onEditProgram: () => {
+      // Le programme se règle dans la fenêtre de la locomotive (onglet « Programme »).
+      const id = view.mountedMachineId();
+      if (id === null || session?.pause.isOpen() || session?.inventory.isOpen()) return;
+      session?.machine.setLocoTab('program');
+      session?.machine.open(id);
     },
     onRenameStation: (id) => {
       void renameStation(id);

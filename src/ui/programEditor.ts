@@ -77,56 +77,48 @@ const itemChoices = (): { value: string; label: string }[] => [
     .sort((a, b) => a.label.localeCompare(b.label)),
 ];
 
-export interface EditorOptions {
+export interface EditorViewOptions {
   state: GameState;
   consistId: number;
-  /** Fermeture de la fenêtre (le jeu reprend la souris). */
-  onClose: () => void;
+  /** Brouillon édité (il survit aux redessins de la fenêtre qui le contient). */
+  draft: Program;
+  /** Redessine l'éditeur après un changement de structure. */
+  redraw: () => void;
+  /** Appelé quand le programme est enregistré (fermer la fenêtre, ou rien dans un onglet). */
+  onSaved?: () => void;
+  /** Bouton d'annulation (fenêtre à part) : absent dans un onglet. */
+  onCancel?: () => void;
 }
 
-/** Ouvre l'éditeur ; renvoie une fonction qui le ferme. */
-export function openProgramEditor(options: EditorOptions): () => void {
-  const { state, consistId } = options;
+/** Brouillon de départ : le programme du convoi, ou une étape qui va à la première station. */
+export function draftFor(state: GameState, consistId: number): Program | null {
   const consist = state.changes.trains.find((c) => c.id === consistId);
-  if (!consist) {
-    options.onClose();
-    return () => {};
-  }
-  const stations = state.changes.stations;
-  const firstStation = stations[0]?.id ?? 1;
-  const draft: Program = consist.program
+  if (!consist) return null;
+  return consist.program
     ? (structuredClone(consist.program) as Program)
     : {
-        steps: [{ mode: 'all', when: [], then: { type: 'goTo', station: firstStation } }],
+        steps: [
+          {
+            mode: 'all',
+            when: [],
+            then: { type: 'goTo', station: state.changes.stations[0]?.id ?? 1 },
+          },
+        ],
         index: 0,
         phase: 'waiting',
         timer: 0,
         running: false,
       };
+}
 
-  const overlay = el('div', 'modal-overlay');
-  const dialog = el('div', 'modal');
-  dialog.setAttribute('role', 'dialog');
-  dialog.setAttribute('aria-modal', 'true');
-  dialog.style.maxWidth = '820px';
-  dialog.style.width = '92vw';
-  dialog.style.maxHeight = '88vh';
-  dialog.style.overflowY = 'auto';
-  overlay.append(dialog);
-
-  function close(): void {
-    window.removeEventListener('keydown', onKey, true);
-    overlay.remove();
-    options.onClose();
-  }
-  function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      close();
-    }
-  }
-
+/** Les étapes du programme et leurs boutons, à mettre dans une fenêtre ou un onglet. */
+export function programEditorView(options: EditorViewOptions): HTMLElement {
+  const { state, consistId, draft } = options;
+  const consist = state.changes.trains.find((c) => c.id === consistId);
+  const stations = state.changes.stations;
+  const firstStation = stations[0]?.id ?? 1;
+  const render = options.redraw;
+  const view = el('div');
   const row = (): HTMLElement => {
     const r = el('div');
     r.style.display = 'flex';
@@ -319,50 +311,48 @@ export function openProgramEditor(options: EditorOptions): () => void {
     return card;
   }
 
-  function render(): void {
-    dialog.replaceChildren();
-    dialog.append(el('h2', undefined, tx('prog.title')), el('p', 'help', tx('prog.intro')));
-    draft.steps.forEach((s, i) => dialog.append(stepCard(s, i)));
-    const add = el('button', 'menu-btn', tx('prog.addStep'));
-    add.type = 'button';
-    add.disabled = draft.steps.length >= MAX_STEPS;
-    add.addEventListener('click', () => {
-      draft.steps.push({ mode: 'all', when: [], then: { type: 'goTo', station: firstStation } });
-      render();
-    });
-    dialog.append(add);
-    if (stations.length === 0) dialog.append(el('p', 'help error', tx('prog.noStations')));
+  view.append(el('p', 'help', tx('prog.intro')));
+  draft.steps.forEach((s, i) => view.append(stepCard(s, i)));
+  const add = el('button', 'menu-btn', tx('prog.addStep'));
+  add.type = 'button';
+  add.disabled = draft.steps.length >= MAX_STEPS;
+  add.addEventListener('click', () => {
+    draft.steps.push({ mode: 'all', when: [], then: { type: 'goTo', station: firstStation } });
+    render();
+  });
+  view.append(add);
+  if (stations.length === 0) view.append(el('p', 'help error', tx('prog.noStations')));
 
-    const actions = el('div', 'modal-actions');
+  const actions = el('div', 'modal-actions');
+  const save = (run: boolean): void => {
+    if (!state.setProgram(consistId, { ...draft, steps: draft.steps })) return;
+    state.setProgramRunning(consistId, run);
+    options.onSaved?.();
+    render();
+  };
+  const saveBtn = el('button', 'menu-btn', tx('prog.save'));
+  saveBtn.type = 'button';
+  saveBtn.addEventListener('click', () => save(false));
+  const run = el('button', 'menu-btn primary', tx('prog.saveRun'));
+  run.type = 'button';
+  run.addEventListener('click', () => save(true));
+  actions.append(saveBtn, run);
+  if (options.onCancel) {
     const cancel = el('button', 'menu-btn', tx('station.cancel'));
     cancel.type = 'button';
-    cancel.addEventListener('click', close);
-    const save = (run: boolean): void => {
-      if (!state.setProgram(consistId, { ...draft, steps: draft.steps })) return;
-      state.setProgramRunning(consistId, run);
-      close();
-    };
-    const saveBtn = el('button', 'menu-btn', tx('prog.save'));
-    saveBtn.type = 'button';
-    saveBtn.addEventListener('click', () => save(false));
-    const run = el('button', 'menu-btn primary', tx('prog.saveRun'));
-    run.type = 'button';
-    run.addEventListener('click', () => save(true));
-    actions.append(cancel, saveBtn, run);
-    if (consist?.program?.running) {
-      const stop = el('button', 'menu-btn', tx('prog.stop'));
-      stop.type = 'button';
-      stop.addEventListener('click', () => {
-        state.setProgramRunning(consistId, false);
-        close();
-      });
-      actions.prepend(stop);
-    }
-    dialog.append(actions);
+    cancel.addEventListener('click', options.onCancel);
+    actions.prepend(cancel);
   }
-
-  window.addEventListener('keydown', onKey, true);
-  document.body.append(overlay);
-  render();
-  return close;
+  if (consist?.program?.running) {
+    const stop = el('button', 'menu-btn', tx('prog.stop'));
+    stop.type = 'button';
+    stop.addEventListener('click', () => {
+      state.setProgramRunning(consistId, false);
+      options.onSaved?.();
+      render();
+    });
+    actions.prepend(stop);
+  }
+  view.append(actions);
+  return view;
 }

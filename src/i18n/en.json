@@ -1336,6 +1336,8 @@
   "prog.save": "Save",
   "prog.saveRun": "Save and start",
   "prog.stop": "Stop the program",
+  "loco.tab.fuel": "Tender",
+  "loco.tab.program": "Program",
   "train.noSwitch": "No switch ahead of the locomotive.",
   "train.hud.switchLeft": "switch ← left (A / D)",
   "train.hud.switchStraight": "junction ↑ straight (A / D)",

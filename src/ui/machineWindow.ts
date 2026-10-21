@@ -3,11 +3,14 @@ import { SOUTE_MAX } from '../core/rail/normalize';
 import {
   CARS,
   carIdOfCargo,
+  carIdOfWindow,
   isCargoWindow,
   isLocoWindow,
   LIQUID_KG_PER_L,
 } from '../core/data/trains';
 import { cargoMassKg, cargoVolumeL } from '../core/rail/train';
+import type { Program } from '../core/rail/program';
+import { draftFor, programEditorView } from './programEditor';
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import {
@@ -60,6 +63,8 @@ import './menu.css';
 
 export interface MachineWindow {
   open(id: number): void;
+  /** Onglet de la locomotive à montrer à la prochaine ouverture (soute ou programme). */
+  setLocoTab(tab: 'fuel' | 'program'): void;
   close(): void;
   isOpen(): boolean;
   /** Machine dont la fenêtre est ouverte (null si fermée). */
@@ -119,6 +124,9 @@ export function mountMachineWindow(
   const capOf = (m: Machine, slot: SlotName): number =>
     isLocoWindow(m.id) ? SOUTE_MAX : slotCap(machineDef(m.type), slot);
   let timer = 0;
+  /** Onglet de la fenêtre d'une locomotive, et brouillons du programme (gardés quand on redessine). */
+  let locoTab: 'fuel' | 'program' = 'fuel';
+  const programDrafts = new Map<number, Program>();
   /** Objet du sac choisi par un clic, à déposer d'un clic dans une case de la machine. */
   let barTimer = 0;
   let selected: string | null = null;
@@ -924,6 +932,42 @@ export function mountMachineWindow(
         current !== null && current < 0 ? vehicleName(current) : itemName(def.item),
       ),
     );
+    if (isLocoWindow(m.id)) {
+      const tabs = el('div', 'craft-tabs');
+      for (const [id, label] of [
+        ['fuel', t('loco.tab.fuel')],
+        ['program', t('loco.tab.program')],
+      ] as const) {
+        const b = el('button', id === locoTab ? 'craft-tab active' : 'craft-tab', label);
+        b.type = 'button';
+        b.addEventListener('click', () => {
+          locoTab = id;
+          render();
+        });
+        tabs.append(b);
+      }
+      panel.append(tabs);
+      if (locoTab === 'program') {
+        // Onglet « Programme » : l'éditeur des étapes du train, à la place de la soute.
+        const carId = carIdOfWindow(m.id);
+        const consist = state.changes.trains.find((c) => c.cars.some((k) => k.id === carId));
+        const draft = consist
+          ? (programDrafts.get(consist.id) ?? draftFor(state, consist.id))
+          : null;
+        if (consist && draft) {
+          programDrafts.set(consist.id, draft);
+          panel.append(programEditorView({ state, consistId: consist.id, draft, redraw: render }));
+        }
+        const x = el('button', 'panel-close', '✕');
+        x.type = 'button';
+        x.title = t('inv.close');
+        x.setAttribute('aria-label', t('inv.close'));
+        x.addEventListener('click', close);
+        panel.append(x);
+        root.replaceChildren(el('div', 'pause-dim'), panel);
+        return;
+      }
+    }
     const status = factory.status(m);
     const statusEl = el('div', `st ${status}`, t(`factory.status.${status}` as TranslationKey));
     live.status = statusEl;
@@ -1134,6 +1178,7 @@ export function mountMachineWindow(
     dragging = false;
     state.returnHand();
     updateHandCursor(state, selected);
+    programDrafts.clear();
     window.clearInterval(timer);
     window.clearInterval(barTimer);
     root.hidden = true;
@@ -1154,6 +1199,9 @@ export function mountMachineWindow(
 
   return {
     open,
+    setLocoTab: (tab) => {
+      locoTab = tab;
+    },
     close,
     isOpen: () => current !== null,
     openedId: () => current,
