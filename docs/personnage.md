@@ -57,6 +57,13 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    droite, bras en vue subjective) ; la combinaison prend la couleur du joueur, les bandes une teinte plus claire. Le
    joueur est un homme en attendant le profil ; les autres joueurs sont homme ou femme selon leur identifiant. Le
    mannequin (`minerModel.ts`) reste en secours si les fichiers manquent.
+   Animation retravaillée le 21 octobre (le PO la trouvait trop rigide, outils mal tenus) : animation procédurale
+   lissée (chaque articulation glisse vers sa pose visée) ; marche et course avec genoux qui plient quand le pied passe
+   devant, bassin qui tourne et descend à chaque pas, buste qui compense et se penche en courant, chevilles, tête
+   stable ; respiration au repos ; outil tenu par le bas du manche, manche relevé devant soi ; coup de pioche à deux
+   mains en poses clés lissées (`STRIKE_KEYS` : préparation, élan au-dessus de la tête, frappe vers l'avant et le bas
+   en se penchant, genoux pliés, retour) ; vue subjective : outil dressé en bas à droite qui s'abat au centre de
+   l'écran (`FP_ROWS`). Le geste en cours se termine en douceur quand on arrête de frapper.
    Retouches du 17 octobre (retours du PO) : **tête et cheveux agrandis** (×1,18 autour du menton, menton plus bas :
    le cou est plus court) ; **10 coupes de cheveux** pour les deux silhouettes, pièces séparées dans le même fichier
    (`<modèle>_coupe_<nom>`) : courte, rasée, en brosse, iroquoise, mi-longue, longue, carré, queue de cheval, chignon,
