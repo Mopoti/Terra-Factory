@@ -1,6 +1,7 @@
 """Famille « végétation » : arbres et buissons de chaque biome (prairie, forêt, désert, toundra).
 
-Style low poly stylisé (voir blender/README.md) : facettes, couleurs unies de la palette, pas de texture.
+Style doux (comme la pioche-hache) : feuillage en boules et troncs à l'ombrage lissé (`T.adoucir`), bords des cônes
+et des coupes nets, couleurs unies de la palette, pas de texture.
 Deux niveaux de détail par modèle (collections `<nom>` et `<nom>_unity`), comme les machines.
 
 Le jeu met chaque arbre à la taille voulue (hauteur d'un arbre moyen : 5,5 m) et chaque buisson à 0,6 m de haut : la
@@ -24,18 +25,34 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(ROOT, 'blender', 'lib'))
 import terra as T  # noqa: E402
 
+import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
 
 # --- Briques communes ------------------------------------------------------------------------------------------------
 
-def _tronc(coll, nom, h, r0, r1, mat='ecorce', seg=7):
+# Finesse des boules de feuillage (subdivisions de l'icosphère) : 2 pour le web, 3 pour Unity (`construire`).
+FINESSE = 2
+
+
+class Lot(T.Lot):
+    """Lot du style doux : boules de feuillage rondes (icosphère plus fine) et un peu aplaties, comme des nuages."""
+
+    def boule(self, mat, p, r):
+        tmp = bmesh.new()
+        bmesh.ops.create_icosphere(tmp, subdivisions=FINESSE, radius=r)
+        bmesh.ops.scale(tmp, vec=Vector((1, 1, 0.88)), verts=tmp.verts)
+        bmesh.ops.translate(tmp, vec=Vector(p), verts=tmp.verts)
+        T._verse(tmp, self.bms.setdefault(mat, bmesh.new()))
+
+
+def _tronc(coll, nom, h, r0, r1, mat='ecorce', seg=9):
     T.cylinder(coll, nom, r0, h, (0, 0, h / 2), mat, segments=seg, radius_top=r1)
 
 
 def _branche(lot, a, b, r, mat='ecorce'):
-    lot.tube(mat, a, b, r, 6)
+    lot.tube(mat, a, b, r, 7)
 
 
 def _boule(lot, mat, c, r, rnd, ecrase=1.0):
@@ -43,7 +60,7 @@ def _boule(lot, mat, c, r, rnd, ecrase=1.0):
     lot.boule(mat, c, r)
 
 
-def _cone(coll, nom, r, h, z, mat, seg=7, rt=0.0, c=(0, 0)):
+def _cone(coll, nom, r, h, z, mat, seg=12, rt=0.0, c=(0, 0)):
     T.cylinder(coll, nom, r, h, (c[0], c[1], z + h / 2), mat, segments=seg, radius_top=rt)
 
 
@@ -57,7 +74,7 @@ def _finir(coll):
 def _ramure(lot, rnd, p, d, l, r, n, mat, neige=None):
     """Branche de `p` dans la direction `d`, qui se divise `n` fois (branches nues, bouts enneigés si `neige`)."""
     q = p + d * l
-    lot.tube(mat, p, q, r, 5)
+    lot.tube(mat, p, q, r, 6)
     if neige is not None and n <= 1:
         neige.boule('neige', tuple(q), max(0.07, r * 2.2))
     if n == 0:
@@ -74,8 +91,8 @@ def _ramure(lot, rnd, p, d, l, r, n, mat, neige=None):
 def arbre_prairie_1(coll, leger=True):
     """Chêne de prairie : tronc épais, branches maîtresses, houppier rond en grappes de trois verts."""
     rnd = random.Random(101)
-    lot = T.Lot(coll, 'feuillage')
-    br = T.Lot(coll, 'branches')
+    lot = Lot(coll, 'feuillage')
+    br = Lot(coll, 'branches')
     _tronc(coll, 'tronc', 4.6, 0.42, 0.26)
     for k in range(4):
         a = k * math.pi / 2 + 0.4
@@ -94,7 +111,7 @@ def arbre_prairie_1(coll, leger=True):
 def arbre_prairie_2(coll, leger=True):
     """Bouleau : tronc fin blanc tacheté de noir, houppier ovale clair et léger."""
     rnd = random.Random(102)
-    lot, ta = T.Lot(coll, 'feuillage'), T.Lot(coll, 'taches')
+    lot, ta = Lot(coll, 'feuillage'), Lot(coll, 'taches')
     _tronc(coll, 'tronc', 7.5, 0.22, 0.12, 'ecorce_claire')
     for k in range(10):
         z = 0.5 + k * 0.65
@@ -114,7 +131,7 @@ def arbre_prairie_2(coll, leger=True):
 def arbre_prairie_3(coll, leger=True):
     """Pommier : tronc court et tordu, houppier large et bas (au-dessus de 40 %), pommes rouges."""
     rnd = random.Random(103)
-    lot, fr, br = T.Lot(coll, 'feuillage'), T.Lot(coll, 'fruits'), T.Lot(coll, 'branches')
+    lot, fr, br = Lot(coll, 'feuillage'), Lot(coll, 'fruits'), Lot(coll, 'branches')
     _tronc(coll, 'tronc', 3.4, 0.3, 0.2)
     for k in range(3):
         a = k * 2 * math.pi / 3
@@ -146,12 +163,12 @@ def _sapin(coll, nom, h, r, etages, mat_a, mat_b, neige=False, z0=None):
         t = k / max(1, etages - 1)
         rk = r * (1 - 0.62 * t)
         zk = z0 + k * (h - z0 - hh * 0.6) / max(1, etages - 1)
-        o = T.cylinder(coll, f'{nom}_etage_{k}', rk, hh, (0, 0, zk + hh / 2), mat_a if k % 2 == 0 else mat_b, segments=7, radius_top=0.0)
+        o = T.cylinder(coll, f'{nom}_etage_{k}', rk, hh, (0, 0, zk + hh / 2), mat_a if k % 2 == 0 else mat_b, segments=12, radius_top=0.0)
         o.rotation_euler = (0, 0, k * 0.45)
         if neige:
-            n = T.cylinder(coll, f'{nom}_neige_{k}', rk * 0.55, hh * 0.45, (0, 0, zk + hh * 0.55 + hh * 0.225), 'neige', segments=7, radius_top=0.0)
+            n = T.cylinder(coll, f'{nom}_neige_{k}', rk * 0.55, hh * 0.45, (0, 0, zk + hh * 0.55 + hh * 0.225), 'neige', segments=12, radius_top=0.0)
             n.rotation_euler = (0, 0, k * 0.45)
-            bord = T.Lot(coll, f'{nom}_bord_{k}')
+            bord = Lot(coll, f'{nom}_bord_{k}')
             for j in range(7):  # bordure de neige au bas de chaque étage
                 a = 2 * math.pi * (j + 0.5) / 7 + k * 0.45
                 rot = Matrix.Rotation(a, 3, 'Z') @ Matrix.Rotation(0.45, 3, 'Y')
@@ -174,7 +191,7 @@ def arbre_foret_2(coll, leger=True):
 def arbre_foret_3(coll, leger=True):
     """Grand hêtre de forêt : tronc haut et lisse, houppier sombre en hauteur, racines apparentes."""
     rnd = random.Random(203)
-    lot, br = T.Lot(coll, 'feuillage'), T.Lot(coll, 'racines')
+    lot, br = Lot(coll, 'feuillage'), Lot(coll, 'racines')
     _tronc(coll, 'tronc', 6.2, 0.38, 0.22, 'ecorce')
     for k in range(5):
         a = k * 2 * math.pi / 5
@@ -194,7 +211,7 @@ def arbre_foret_3(coll, leger=True):
 def arbre_desert_1(coll, leger=True):
     """Acacia : tronc tordu qui se divise, houppier plat en parasol."""
     rnd = random.Random(301)
-    lot, br = T.Lot(coll, 'feuillage'), T.Lot(coll, 'branches')
+    lot, br = Lot(coll, 'feuillage'), Lot(coll, 'branches')
     # Largeur <= 0,75 x hauteur (limite des arbres maison dans le jeu) : tronc haut, parasol de 5,4 de large.
     br.tube('bois_sec', (0, 0, 0), (0.3, 0, 4.4), 0.26, 7)
     for a, d in ((0.3, 1.3), (2.5, 1.2), (4.4, 1.1)):
@@ -213,7 +230,7 @@ def arbre_desert_1(coll, leger=True):
 def arbre_desert_2(coll, leger=True):
     """Arbre mort : tronc gris-brun et branches nues qui se ramifient."""
     rnd = random.Random(302)
-    br = T.Lot(coll, 'branches')
+    br = Lot(coll, 'branches')
     _tronc(coll, 'tronc', 3.0, 0.3, 0.18, 'bois_sec')
     for a, z, l in ((0.3, 2.9, 1.4), (2.4, 2.6, 1.3), (4.3, 2.8, 1.35)):
         d = Vector((math.cos(a), math.sin(a), 2.3)).normalized()  # branches qui montent (arbre pas trop large)
@@ -225,7 +242,7 @@ def arbre_desert_2(coll, leger=True):
 
 def arbre_desert_3(coll, leger=True):
     """Cactus candélabre (saguaro) : fût côtelé et trois bras qui remontent, quelques fleurs."""
-    lot = T.Lot(coll, 'cactus')
+    lot = Lot(coll, 'cactus')
     seg = 8
 
     def bras(base, sx, h0, h1):
@@ -258,7 +275,7 @@ def arbre_toundra_1(coll, leger=True):
 def arbre_toundra_2(coll, leger=True):
     """Bouleau nu givré : tronc blanc, branches fines sans feuilles, neige sur les fourches."""
     rnd = random.Random(402)
-    br, ne = T.Lot(coll, 'branches'), T.Lot(coll, 'neige')
+    br, ne = Lot(coll, 'branches'), Lot(coll, 'neige')
     _tronc(coll, 'tronc', 4.0, 0.22, 0.12, 'ecorce_claire')
     for a, z in ((0.5, 3.0), (2.6, 3.4), (4.5, 3.8)):
         d = Vector((math.cos(a), math.sin(a), 1.3)).normalized()
@@ -272,7 +289,7 @@ def arbre_toundra_2(coll, leger=True):
 def arbre_toundra_3(coll, leger=True):
     """Pin tordu des neiges : tronc penché, quelques touffes d'aiguilles en plateaux couverts de neige."""
     rnd = random.Random(403)
-    lot, br = T.Lot(coll, 'feuillage'), T.Lot(coll, 'branches')
+    lot, br = Lot(coll, 'feuillage'), Lot(coll, 'branches')
     pts = [Vector((0, 0, 0)), Vector((0.4, 0, 2.5)), Vector((0.2, 0.3, 4.5)), Vector((0.6, 0.1, 6.8))]
     for a, b in zip(pts, pts[1:]):
         br.tube('ecorce', a, b, 0.25, 6)
@@ -306,7 +323,7 @@ def _touffe(lot, rnd, n, h, mats, rayon=0.5, z0=0.0):
 def buisson_prairie_1(coll, leger=True):
     """Touffe d'herbes hautes avec des fleurs jaunes et blanches."""
     rnd = random.Random(501)
-    lot = T.Lot(coll, 'herbe')
+    lot = Lot(coll, 'herbe')
     _touffe(lot, rnd, 18 if leger else 28, 1.2, ('feuille', 'feuille_claire'), 0.45)
     for k in range(6):
         a = rnd.uniform(0, 2 * math.pi)
@@ -321,7 +338,7 @@ def buisson_prairie_1(coll, leger=True):
 def buisson_prairie_2(coll, leger=True):
     """Buisson rond feuillu."""
     rnd = random.Random(502)
-    lot = T.Lot(coll, 'feuillage')
+    lot = Lot(coll, 'feuillage')
     for k in range(7 if leger else 11):
         a = rnd.uniform(0, 2 * math.pi)
         d = rnd.uniform(0.1, 0.55)
@@ -333,7 +350,7 @@ def buisson_prairie_2(coll, leger=True):
 def buisson_prairie_3(coll, leger=True):
     """Trèfles et fleurs roses en coussin bas."""
     rnd = random.Random(503)
-    lot = T.Lot(coll, 'trefle')
+    lot = Lot(coll, 'trefle')
     for k in range(14 if leger else 22):
         a = rnd.uniform(0, 2 * math.pi)
         d = rnd.uniform(0, 0.45)
@@ -352,7 +369,7 @@ def buisson_prairie_3(coll, leger=True):
 def buisson_foret_1(coll, leger=True):
     """Fougère : frondes vertes arquées en rosette."""
     rnd = random.Random(601)
-    lot = T.Lot(coll, 'fougere')
+    lot = Lot(coll, 'fougere')
     n = 8 if leger else 12
     for k in range(n):
         a = 2 * math.pi * k / n
@@ -374,7 +391,7 @@ def buisson_foret_1(coll, leger=True):
 def buisson_foret_2(coll, leger=True):
     """Buisson à baies : feuillage sombre et baies rouges."""
     rnd = random.Random(602)
-    lot = T.Lot(coll, 'feuillage')
+    lot = Lot(coll, 'feuillage')
     pts = []
     for k in range(6 if leger else 9):
         a = rnd.uniform(0, 2 * math.pi)
@@ -391,7 +408,7 @@ def buisson_foret_2(coll, leger=True):
 
 def buisson_foret_3(coll, leger=True):
     """Champignons sur une souche moussue."""
-    lot = T.Lot(coll, 'champignons')
+    lot = Lot(coll, 'champignons')
     T.cylinder(coll, 'souche', 0.42, 0.45, (0, 0, 0.225), 'ecorce', segments=8, radius_top=0.38)
     lot.tube('bois', (0, 0, 0.45), (0, 0, 0.46), 0.36, 8)
     lot.boule('feuille_sombre', (0.25, 0.2, 0.42), 0.14)
@@ -409,7 +426,7 @@ def buisson_foret_3(coll, leger=True):
 def buisson_desert_1(coll, leger=True):
     """Buisson sec : touffe d'herbes jaunies raides."""
     rnd = random.Random(701)
-    lot = T.Lot(coll, 'herbe')
+    lot = Lot(coll, 'herbe')
     _touffe(lot, rnd, 20 if leger else 30, 1.0, ('herbe_seche', 'bois_sec', 'herbe_seche'), 0.4)
     lot.finir()
     _finir(coll)
@@ -417,7 +434,7 @@ def buisson_desert_1(coll, leger=True):
 
 def buisson_desert_2(coll, leger=True):
     """Petit groupe de cactus (cierges et boules) avec une fleur."""
-    lot = T.Lot(coll, 'cactus')
+    lot = Lot(coll, 'cactus')
     for (x, y, h, r) in ((0, 0, 1.0, 0.18), (0.32, 0.15, 0.6, 0.14), (-0.25, 0.2, 0.45, 0.13)):
         lot.tube('cactus', (x, y, 0), (x, y, h), r, 7)
         lot.boule('cactus', (x, y, h), r)
@@ -431,7 +448,7 @@ def buisson_desert_2(coll, leger=True):
 def buisson_desert_3(coll, leger=True):
     """Virevoltant : boule de brindilles sèches."""
     rnd = random.Random(703)
-    lot = T.Lot(coll, 'brindilles')
+    lot = Lot(coll, 'brindilles')
     c = Vector((0, 0, 0.5))
     for k in range(24 if leger else 40):
         d = Vector((rnd.uniform(-1, 1), rnd.uniform(-1, 1), rnd.uniform(-1, 1))).normalized()
@@ -444,7 +461,7 @@ def buisson_desert_3(coll, leger=True):
 def buisson_toundra_1(coll, leger=True):
     """Arbuste givré : petites masses sombres coiffées de neige."""
     rnd = random.Random(801)
-    lot = T.Lot(coll, 'arbuste')
+    lot = Lot(coll, 'arbuste')
     for k in range(5 if leger else 8):
         a = rnd.uniform(0, 2 * math.pi)
         d = rnd.uniform(0.1, 0.45)
@@ -458,7 +475,7 @@ def buisson_toundra_1(coll, leger=True):
 def buisson_toundra_2(coll, leger=True):
     """Bruyère : coussin bas de petites touffes violettes et vertes."""
     rnd = random.Random(802)
-    lot = T.Lot(coll, 'bruyere')
+    lot = Lot(coll, 'bruyere')
     for k in range(16 if leger else 26):
         a = rnd.uniform(0, 2 * math.pi)
         d = rnd.uniform(0, 0.4)
@@ -470,7 +487,7 @@ def buisson_toundra_2(coll, leger=True):
 def buisson_toundra_3(coll, leger=True):
     """Touffe d'herbe gelée : brins vert pâle givrés de blanc."""
     rnd = random.Random(803)
-    lot = T.Lot(coll, 'herbe')
+    lot = Lot(coll, 'herbe')
     _touffe(lot, rnd, 16 if leger else 24, 1.0, ('feuille_claire', 'neige', 'herbe_seche'), 0.4)
     lot.boule('neige', (0, 0, 0.05), 0.3)
     lot.finir()
@@ -489,9 +506,15 @@ def construire(noms=None):
     for nom, fabrique in MODELES.items():
         if noms and nom not in noms:
             continue
-        fabrique(T.collection(nom), leger=True)
+        global FINESSE
+        FINESSE = 2
+        web = T.collection(nom)
+        fabrique(web, leger=True)
+        T.adoucir(web)
+        FINESSE = 3
         unity = T.collection(nom + '_unity')
         fabrique(unity, leger=False)
+        T.adoucir(unity)
         bpy.context.view_layer.layer_collection.children[unity.name].hide_viewport = True
 
 

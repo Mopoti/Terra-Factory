@@ -90,8 +90,8 @@ export const NO_MODEL_ITEMS: readonly string[] = [
 
 /** Outils et armes tenus : fichier du modèle et façon de le charger. */
 export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string }> = {
-  tool_stone: { kind: 'pick', file: 'terra/pioche_pierre' },
-  tool_iron: { kind: 'pick', file: 'terra/pioche_fer' },
+  tool_stone: { kind: 'pick', file: 'terra/pioche_hache_pierre' },
+  tool_iron: { kind: 'pick', file: 'terra/pioche_hache' },
   pistol: { kind: 'weapon', file: 'pistolet' },
   rifle: { kind: 'weapon', file: 'fusil' },
 };

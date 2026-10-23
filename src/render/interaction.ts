@@ -140,6 +140,8 @@ export class Interaction {
   working: 'tool' | 'hands' | null = null;
   /** Quelque chose de récoltable, de ramassable ou de démolissable est à portée sous la visée. */
   aimed = false;
+  /** Ressource visée à portée (`tree`, `rock`…), sinon null : l'outil montre sa hache ou sa pioche. */
+  aimedRes: string | null = null;
   private holdingTime = 0;
   private unsubscribe: () => void;
 
@@ -447,6 +449,7 @@ export class Interaction {
     }
     this.working = null;
     this.aimed = false;
+    this.aimedRes = null;
     if (frame.paused) {
       this.hud.hidden = true;
       this.highlight.visible = false;
@@ -466,6 +469,7 @@ export class Interaction {
             : REACH_M,
       );
     this.aimed = reachable;
+    this.aimedRes = reachable && hit.type === 'target' ? hit.target.resId : null;
     this.showHighlight(hit, reachable);
     // En première personne le réticule suffit : pas de boîte blanche autour de la cible.
     if (frame.aimAtCenter || !this.showBoxes) this.highlight.visible = false;

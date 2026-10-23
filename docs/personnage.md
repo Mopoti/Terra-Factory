@@ -69,6 +69,20 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    pied) : genoux pliés, pieds à plat, buste penché, corps abaissé de 42 cm, on avance à 45 % de la marche (pas de
    course) et la vue descend de 45 cm (`CROUCH_FACTOR`, `CROUCH_EYE_DROP_M` dans `gameView.ts`). Outil raccourci : ×1
    en vue extérieure, ×0,75 en vue subjective.
+   Prise en vue subjective (22 octobre, d'après une image de référence du PO) : la caméra ne bouge pas ; le bras est
+   un peu avancé et rapproché du centre (`firstArm.root` en 0,332 / -0,693 / 0,019, puis -0,6 en hauteur), le poing est en bas de l'écran
+   au pied du manche, le manche presque droit, la tête en haut à droite et le pic vers le centre (`FP_HOLD`,
+   `attachHandTool(hand, 0.75, 1.334, 0.395)`). L'outil s'incline désormais autour du poing (le manche reste dans
+   la main). Coup refait (`FP_ROWS`) : l'outil remonte vers soi pendant l'élan, puis la pointe s'abat au centre.
+   Style doux en vue subjective (23 octobre) : le bras du modèle est masqué, remplacé par la main gantée
+   (`main_gantee`, doigts refermés sur le manche, peau à la couleur du joueur) et la manche de la combinaison
+   (`avant_bras`, à sa couleur) dans le prolongement du gant (`Avatar.wearFirstPersonHand`, réglages `GLOVE_*` et
+   `SLEEVE_*` dans `avatarModel.ts`). La main tourne autour du manche pour que l'avant-bras arrive du bas à droite ;
+   bras remonté (`firstArm.root` en y = -0,6) pour que la main ne passe pas sous la barre d'objets.
+   Poignet souple : la manchette du gant est une pièce à part qui plie au poignet ; avec la manche, elle suit en partie
+   le vrai avant-bras animé et garde un léger pli vers le bas de l'écran au repos (`bendWrist`, réglages `WRIST_*`).
+   Prise en poing : le manche est plaqué contre la paume, au pied des doigts (`GLOVE_GRIP`) ; chaque doigt s'enroule
+   autour (angles calculés, `FIST`) et le pouce passe par-dessus l'index (`THUMB`).
    Retouches du 17 octobre (retours du PO) : **tête et cheveux agrandis** (×1,18 autour du menton, menton plus bas :
    le cou est plus court) ; **10 coupes de cheveux** pour les deux silhouettes, pièces séparées dans le même fichier
    (`<modèle>_coupe_<nom>`) : courte, rasée, en brosse, iroquoise, mi-longue, longue, carré, queue de cheval, chignon,

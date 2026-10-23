@@ -156,7 +156,7 @@ import { tickWater } from './groundTextures';
 import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
-import { loadPickModel, loadWeaponModel } from './toolModel';
+import { loadPickModel, loadRawModel, loadWeaponModel } from './toolModel';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -316,15 +316,23 @@ export function startGameView(
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
-    firstArm.root.position.set(0.4, -0.7, 0.12);
+    // Comme la photo de référence : poing en bas, manche presque droit, tête en haut à droite, pic vers le centre.
+    firstArm.root.position.set(0.332, -0.6, 0.019);
     firstArm.root.scale.setScalar(0.8);
     firstArm.root.rotation.y = Math.PI;
     firstArm.clip([firstClip]);
     renderer.localClippingEnabled = true;
     camera.add(firstArm.root);
-    // Vue subjective : outil un peu plus court (il ne masque pas la vue), tourné sur son manche pour que la tête
-    // pointe vers l'avant.
-    firstArm.attachHandTool(hand, 0.75, -0.55);
+    // Vue subjective : outil un peu plus court (il ne masque pas la vue), tourné sur son manche et incliné pour que le
+    // pic pointe vers le centre de l'écran, comme sur la photo de référence.
+    firstArm.attachHandTool(hand, 0.75, 1.334, 0.395);
+    // Style doux : main gantée et manche de combinaison à la place du bras du modèle (si les fichiers sont là).
+    void Promise.all([loadRawModel('terra/main_gantee'), loadRawModel('terra/avant_bras')]).then(
+      ([glove, sleeve]) => {
+        if (glove && viewAlive && firstArm instanceof Avatar)
+          firstArm.wearFirstPersonHand(glove.clone(), sleeve?.clone() ?? null);
+      },
+    );
     bareHand.visible = false;
   });
   // Corps des joueurs tombés (capsule grise couchée) et points de réapparition posés (duvet, lit).
@@ -381,32 +389,42 @@ export function startGameView(
    * de l'outil équipé est visible. Si elles manquent, le piolet importé, teinté selon le matériau.
    */
   const pickPairs: { stone: THREE.Object3D; iron: THREE.Object3D }[] = [];
-  void Promise.all([loadPickModel('terra/pioche_pierre'), loadPickModel('terra/pioche_fer')]).then(
-    ([stone, iron]) => {
-      if (!viewAlive) return;
-      if (stone && iron) {
-        for (const tool of tools) {
-          for (const child of [...tool.children]) tool.remove(child);
-          const pair = { stone: stone.clone(), iron: iron.clone() };
-          tool.add(pair.stone, pair.iron);
-          pickPairs.push(pair);
-        }
-        toolHeads.length = 0;
-        return;
+  /** Pioche-hache : la hache passe devant pour un arbre, la pioche pour le reste (rotation lissée sur le manche). */
+  let axeFront = false;
+  let toolSpin = 0;
+  const loadPair = async (stoneFile: string, ironFile: string) => {
+    const [stone, iron] = await Promise.all([loadPickModel(stoneFile), loadPickModel(ironFile)]);
+    return stone && iron ? ([stone, iron] as const) : null;
+  };
+  void (async () => {
+    const pair =
+      (await loadPair('terra/pioche_hache_pierre', 'terra/pioche_hache')) ??
+      (await loadPair('terra/pioche_pierre', 'terra/pioche_fer'));
+    return pair ?? [null, null];
+  })().then(([stone, iron]) => {
+    if (!viewAlive) return;
+    if (stone && iron) {
+      for (const tool of tools) {
+        for (const child of [...tool.children]) tool.remove(child);
+        const pair = { stone: stone.clone(), iron: iron.clone() };
+        tool.add(pair.stone, pair.iron);
+        pickPairs.push(pair);
       }
-      void loadPickModel().then((model) => {
-        if (!model || !viewAlive) return;
-        for (const tool of tools) {
-          for (const child of [...tool.children]) tool.remove(child);
-          toolHeads.length = 0;
-          const pick = model.clone();
-          const material = (pick.getObjectByProperty('isMesh', true) as THREE.Mesh).material;
-          pickMaterials.push(material as THREE.MeshStandardMaterial);
-          tool.add(pick);
-        }
-      });
-    },
-  );
+      toolHeads.length = 0;
+      return;
+    }
+    void loadPickModel().then((model) => {
+      if (!model || !viewAlive) return;
+      for (const tool of tools) {
+        for (const child of [...tool.children]) tool.remove(child);
+        toolHeads.length = 0;
+        const pick = model.clone();
+        const material = (pick.getObjectByProperty('isMesh', true) as THREE.Mesh).material;
+        pickMaterials.push(material as THREE.MeshStandardMaterial);
+        tool.add(pick);
+      }
+    });
+  });
   const hand = makeTool();
   // En main, la tête de la pioche est loin devant (vers -z de la caméra), le manche vers soi.
   hand.position.set(0.34, -0.36, -0.85);
@@ -3780,9 +3798,12 @@ export function startGameView(
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
+    if (interaction.aimedRes !== null) axeFront = interaction.aimedRes === 'tree';
+    toolSpin += ((axeFront ? Math.PI : 0) - toolSpin) * (1 - Math.exp(-12 * dt));
     for (const p of pickPairs) {
       p.iron.visible = toolId === 'tool_iron';
       p.stone.visible = !p.iron.visible;
+      p.iron.rotation.z = p.stone.rotation.z = toolSpin;
     }
     // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
     const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow && !seat;
@@ -3803,7 +3824,6 @@ export function startGameView(
       firstArm.root.visible =
         rig.view === 'first' && views.first.showHands && holdsTool && !gun.visible;
       firstArm.update(dt, 0, interaction.working !== null);
-      if (firstArm instanceof Avatar) firstArm.root.position.x = 0.4 - 0.16 * firstArm.windup;
     } else bareHand.visible = false; // pas de main nue en vue subjective
     ammoBox.hidden = !armedNow;
     if (armedNow) renderAmmo();

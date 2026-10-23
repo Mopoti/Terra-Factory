@@ -770,5 +770,34 @@ def export_glb(coll, folder, name=None) -> str:
     return path
 
 
+def adoucir(coll, angle_vif=1.0):
+    """Ombrage du style doux : lissé sur les biseaux, faces planes gardées planes (normales pondérées par l'aire).
+
+    Les arêtes plus vives que `angle_vif` (rad, brins d'herbe, cristaux) restent nettes.
+    """
+    dg = bpy.context.evaluated_depsgraph_get()
+    for o in list(coll.objects):
+        if o.type != 'MESH':
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        for f in bm.faces:
+            f.smooth = True
+        for e in bm.edges:
+            e.smooth = not (len(e.link_faces) == 2 and e.calc_face_angle(0) > angle_vif) and len(e.link_faces) == 2
+        bm.to_mesh(o.data)
+        bm.free()
+        m = o.modifiers.new('normales', 'WEIGHTED_NORMAL')
+        m.mode = 'FACE_AREA'
+        m.weight = 50
+        m.keep_sharp = True
+        dg.update()
+        neuf = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        o.modifiers.remove(m)
+        vieux = o.data
+        o.data = neuf
+        bpy.data.meshes.remove(vieux)
+
+
 def save(path) -> None:
     bpy.ops.wm.save_as_mainfile(filepath=path)

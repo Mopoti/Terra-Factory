@@ -1,4 +1,4 @@
-/** Modèle de la pioche tenue en main : un piolet (voir `docs/modeles3d.md`). */
+/** Modèle de l'outil tenu en main : pioche-hache, pioche ou piolet (voir `docs/modeles3d.md`). */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -10,7 +10,8 @@ const loading = new Map<string, Promise<THREE.Group | null>>();
 /**
  * Charge une pioche (une seule fois par fichier) et la met à l'échelle du jeu : manche vers -z, tête vers +z, pointe
  * vers -y, centrée sur l'origine comme les anciennes formes simples. Le fichier est debout (axe y), pointe vers +z :
- * pioches maison (`blender/scripts/outils.py` : `pioche_pierre`, `pioche_fer`) ou l'ancien piolet (`tool/icepick`).
+ * pioches-haches (`blender/scripts/outils.py` : `pioche_hache`, `pioche_hache_pierre`), anciennes pioches maison
+ * (`pioche_pierre`, `pioche_fer`) ou l'ancien piolet (`tool/icepick`).
  * Un échec donne null : l'outil garde ses formes simples.
  */
 export function loadPickModel(
@@ -27,9 +28,10 @@ export function loadPickModel(
         const box = new THREE.Box3().setFromObject(raw);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
-        // Le fichier est debout (axe y) : on le couche sur l'axe z.
+        // Le fichier est debout (axe y) : on le couche sur l'axe z. On centre seulement le long du manche : le manche
+        // reste sur l'axe, donc la main le tient bien et l'outil peut tourner sur lui-même (pioche ou hache devant).
         const inner = new THREE.Group();
-        raw.position.sub(center);
+        raw.position.y -= center.y;
         inner.add(raw);
         inner.rotation.x = Math.PI / 2;
         const outer = new THREE.Group();
@@ -79,5 +81,29 @@ export function loadWeaponModel(
     );
   });
   weapons.set(name, promise);
+  return promise;
+}
+
+const raws = new Map<string, Promise<THREE.Group | null>>();
+
+/**
+ * Charge un modèle tel quel (en mètres, pièces et pivots gardés), par exemple la main gantée `terra/main_gantee` ou
+ * la manche `terra/avant_bras` de la vue subjective. Null si le fichier manque. À cloner avant usage.
+ */
+export function loadRawModel(
+  file: string,
+  baseUrl = import.meta.env.BASE_URL ?? './',
+): Promise<THREE.Group | null> {
+  const known = raws.get(file);
+  if (known) return known;
+  const promise = new Promise<THREE.Group | null>((resolve) => {
+    new GLTFLoader().load(
+      `${baseUrl}models/${file}.glb`,
+      (gltf) => resolve(gltf.scene),
+      undefined,
+      () => resolve(null),
+    );
+  });
+  raws.set(file, promise);
   return promise;
 }

@@ -1,6 +1,7 @@
 """Famille « minéraux » : rochers de chaque biome et amas de minerai des gisements.
 
-Style low poly stylisé (voir blender/README.md) : facettes, couleurs unies de la palette, pas de texture.
+Style doux (comme la pioche-hache) : blocs à grandes facettes et arêtes biseautées, ombrage lissé sur les biseaux,
+couleurs unies de la palette, pas de texture.
 Deux niveaux de détail par modèle (collections `<nom>` et `<nom>_unity`), comme les machines.
 
 Rochers (`rocher_<biome>_<n>`, biomes prairie, foret, desert, toundra) : le jeu les met à la taille voulue (largeur d'un
@@ -49,14 +50,36 @@ def _points(rnd, n, dims, irreg=0.18):
     return pts
 
 
+# Style doux : arêtes biseautées (part de la plus petite dimension du bloc) et nombre de segments du biseau.
+BISEAU = 0.075
+SEGMENTS = 2
+
+
+def _biseauter(tmp, k=BISEAU, segments=SEGMENTS):
+    """Biseaute les arêtes vives du caillou `tmp` (style doux : arêtes arrondies, grandes faces planes)."""
+    if not tmp.verts:
+        return
+    lo = Vector((min(v.co[i] for v in tmp.verts) for i in range(3)))
+    hi = Vector((max(v.co[i] for v in tmp.verts) for i in range(3)))
+    taille = min(hi - lo)
+    aretes = [e for e in tmp.edges if len(e.link_faces) == 2 and e.calc_face_angle(0) > 0.2]
+    if taille <= 0 or not aretes:
+        return
+    bmesh.ops.bevel(tmp, geom=aretes, offset=taille * k, segments=segments, profile=0.5, affect='EDGES',
+                    clamp_overlap=True)
+    bmesh.ops.recalc_face_normals(tmp, faces=tmp.faces)
+
+
 def _coque(bm_cible, pts):
-    """Enveloppe convexe des points `pts`, ajoutée à `bm_cible`."""
+    """Enveloppe convexe des points `pts`, biseautée, ajoutée à `bm_cible`."""
     tmp = bmesh.new()
     vs = [tmp.verts.new(p) for p in pts]
     res = bmesh.ops.convex_hull(tmp, input=vs)
     interieur = list({v for v in res['geom_interior'] + res['geom_unused'] if isinstance(v, bmesh.types.BMVert)})
     if interieur:
         bmesh.ops.delete(tmp, geom=interieur, context='VERTS')
+    bmesh.ops.recalc_face_normals(tmp, faces=tmp.faces)
+    _biseauter(tmp)
     T._verse(tmp, bm_cible)
 
 
@@ -74,18 +97,20 @@ def _bloc(lot, mat, c, dims, rnd, n=14, rot=0.0, sol=0.0, irreg=0.18, penche=(0.
 
 
 def _calotte(lot, mat, pts, seuil=0.5, ep=0.04):
-    """Calotte (mousse, neige, lichen) sur les faces du bloc tournées vers le haut (normale.z > `seuil`).
+    """Calotte (mousse, neige, lichen) posée sur le dessus du bloc dont l'enveloppe passe par les points `pts`.
 
-    Les faces sont reprises de l'enveloppe des points `pts` et extrudées de `ep` vers l'extérieur : la calotte épouse le
-    bloc, facette par facette ; son dessous est collé au bloc.
+    Style doux : le bloc est regonflé de `ep`, biseauté comme le rocher, puis on ne garde que ce qui regarde vers le
+    haut (normale.z > `seuil`) ; le bord suit donc la pente du rocher. La calotte est épaissie vers l'intérieur.
     """
+    c = sum(pts, Vector()) / len(pts)
     tmp = bmesh.new()
-    vs = [tmp.verts.new(p) for p in pts]
+    vs = [tmp.verts.new(p + (p - c).normalized() * ep) for p in pts]
     res = bmesh.ops.convex_hull(tmp, input=vs)
     interieur = list({v for v in res['geom_interior'] + res['geom_unused'] if isinstance(v, bmesh.types.BMVert)})
     if interieur:
         bmesh.ops.delete(tmp, geom=interieur, context='VERTS')
     bmesh.ops.recalc_face_normals(tmp, faces=tmp.faces)
+    _biseauter(tmp)
     bas = [f for f in tmp.faces if f.normal.z <= seuil]
     if len(bas) == len(tmp.faces):
         tmp.free()
@@ -93,10 +118,7 @@ def _calotte(lot, mat, pts, seuil=0.5, ep=0.04):
     bmesh.ops.delete(tmp, geom=bas, context='FACES')
     ext = bmesh.ops.extrude_face_region(tmp, geom=list(tmp.faces))
     for v in [g for g in ext['geom'] if isinstance(g, bmesh.types.BMVert)]:
-        n = Vector()
-        for f in v.link_faces:
-            n += f.normal
-        v.co += (n.normalized() if n.length > 0 else Vector((0, 0, 1))) * ep
+        v.co += (c - v.co).normalized() * ep * 1.6
     bmesh.ops.recalc_face_normals(tmp, faces=tmp.faces)
     T._verse(tmp, lot.bms.setdefault(mat, bmesh.new()))
 
@@ -137,7 +159,8 @@ def _finir(coll, *lots):
 
 def _n(leger, n):
     """Nombre de points d'un bloc : plus de facettes dans la version Unity."""
-    return round(n * 1.25) if leger else int(n * 2.2)
+    # Style doux : peu de points, donc de grandes facettes que le biseau adoucit.
+    return max(7, round(n * 0.75)) if leger else int(n * 1.2)
 
 
 # --- Rochers de la prairie : granite gris, herbe au pied -------------------------------------------------------------
@@ -169,7 +192,7 @@ def rocher_prairie_3(coll, leger=True):
     rnd = random.Random(1103)
     lot, li = T.Lot(coll, 'roche'), T.Lot(coll, 'lichen')
     pts = _bloc(lot, 'pierre_claire', (0, 0, 0.25), (1.05, 0.75, 0.32), rnd, _n(leger, 14), penche=(0.12, -0.08))
-    _calotte(li, 'lichen', [p for p in pts if p.x > -0.2], seuil=0.55, ep=0.025)
+    _calotte(li, 'lichen', pts, seuil=0.88, ep=0.025)
     _bloc(lot, 'pierre', (-0.7, 0.55, 0.12), (0.3, 0.25, 0.2), rnd, _n(leger, 9))
     _finir(coll, lot, li)
 
@@ -337,11 +360,21 @@ def _trancher(tmp, normale, pas, phase=0.0):
 
 
 def _repartir(lot, tmp, choix):
-    """Range chaque facette du caillou dans la teinte que lui donne `choix(facette)`, puis libère le caillou."""
+    """Range chaque facette du caillou dans la teinte que lui donne `choix(facette)`, puis libère le caillou.
+
+    Le caillou est d'abord biseauté ; la teinte est choisie une fois par grande facette d'origine, et chaque facette du
+    biseau prend celle de la facette d'origine dont l'orientation est la plus proche.
+    """
+    tmp.faces.index_update()
+    origine = [(f.normal.copy(), f.calc_center_median().copy()) for f in tmp.faces]
+    teinte = [choix(f) for f in tmp.faces]
+    _biseauter(tmp)
     tmp.faces.index_update()
     groupes = {}
     for f in tmp.faces:
-        groupes.setdefault(choix(f), set()).add(f.index)
+        c = f.calc_center_median()
+        i = max(range(len(origine)), key=lambda k: f.normal.dot(origine[k][0]) - 2 * (c - origine[k][1]).length)
+        groupes.setdefault(teinte[i], set()).add(f.index)
     for mat, garder in groupes.items():
         cp = tmp.copy()
         cp.faces.index_update()
@@ -368,7 +401,7 @@ def _places(nb, rnd):
 
 def _effet_fer(lot, rnd, tmp, c, r, leger):
     """Hématite : rouge sang sombre, facettes rouille et quelques éclats métalliques."""
-    _repartir(lot, tmp, lambda f: rnd.choices(('hematite', 'rouille', 'fer_metal'), (5, 3, 2))[0])
+    _repartir(lot, tmp, lambda f: rnd.choices(('hematite', 'rouille', 'fer_metal'), (6, 3, 1))[0])
 
 
 def _effet_cuivre(lot, rnd, tmp, c, r, leger):
@@ -527,9 +560,12 @@ def construire(noms=None):
     for nom, fabrique in MODELES.items():
         if noms and nom not in noms:
             continue
-        fabrique(T.collection(nom), leger=True)
+        web = T.collection(nom)
+        fabrique(web, leger=True)
+        T.adoucir(web)
         unity = T.collection(nom + '_unity')
         fabrique(unity, leger=False)
+        T.adoucir(unity)
         bpy.context.view_layer.layer_collection.children[unity.name].hide_viewport = True
 
 
