@@ -1019,6 +1019,7 @@ export function startGameView(
       name: t(`item.${def.item}` as TranslationKey),
       seconds: def.type === 'door' ? 1 : PIECE_BREAK_S[def.material],
       usable: def.type === 'door',
+      axe: def.material === 'wood',
       distance: piece!.t,
       box: pieceBox(piece!.key),
     };
@@ -3798,7 +3799,7 @@ export function startGameView(
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
-    if (interaction.aimedRes !== null) axeFront = interaction.aimedRes === 'tree';
+    if (interaction.aimedAxe !== null) axeFront = interaction.aimedAxe;
     toolSpin += ((axeFront ? Math.PI : 0) - toolSpin) * (1 - Math.exp(-12 * dt));
     for (const p of pickPairs) {
       p.iron.visible = toolId === 'tool_iron';

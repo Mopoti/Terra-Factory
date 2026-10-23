@@ -101,3 +101,7 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    valider), profil enregistré (`terra.character`, `src/core/profile/store.ts`), repris dans chaque partie et envoyé aux
    autres joueurs (champ `look`, chaîne courte `encodeLook`/`decodeLook`).
 4. Animations sur le squelette commun.
+
+## Outil dans le bon sens (24 octobre)
+La pioche-hache fait un demi-tour sur son manche selon ce que le joueur a devant lui (`Interaction.aimedAxe`, rotation lissée `toolSpin` dans `gameView.ts`, en vue subjective comme en vue extérieure) : **hache devant** pour un arbre ou une construction en bois (mur, sol, porte, escalier…), **pioche devant** pour tout le reste visé (roche, minerai, machine, voie, construction en pierre). Cela vaut même quand la cible est trop loin : l'outil est prêt avant qu'on arrive. Si rien n'est visé, il garde son dernier sens.
+

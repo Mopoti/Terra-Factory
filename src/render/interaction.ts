@@ -78,6 +78,8 @@ export interface Structure {
   distance: number;
   /** Peut s'ouvrir d'un clic gauche (machine, coffre). */
   usable?: boolean;
+  /** Se démolit à la hache (construction en bois) plutôt qu'à la pioche. */
+  axe?: boolean;
   /** Boîte englobante (m), pour la mise en évidence et la portée. */
   box: { x: number; y: number; z: number; sx: number; sy: number; sz: number };
 }
@@ -140,8 +142,8 @@ export class Interaction {
   working: 'tool' | 'hands' | null = null;
   /** Quelque chose de récoltable, de ramassable ou de démolissable est à portée sous la visée. */
   aimed = false;
-  /** Ressource visée à portée (`tree`, `rock`…), sinon null : l'outil montre sa hache ou sa pioche. */
-  aimedRes: string | null = null;
+  /** Ce que vise le joueur demande la hache (true), la pioche (false), ou rien de particulier (null). */
+  aimedAxe: boolean | null = null;
   private holdingTime = 0;
   private unsubscribe: () => void;
 
@@ -449,7 +451,7 @@ export class Interaction {
     }
     this.working = null;
     this.aimed = false;
-    this.aimedRes = null;
+    this.aimedAxe = null;
     if (frame.paused) {
       this.hud.hidden = true;
       this.highlight.visible = false;
@@ -469,7 +471,15 @@ export class Interaction {
             : REACH_M,
       );
     this.aimed = reachable;
-    this.aimedRes = reachable && hit.type === 'target' ? hit.target.resId : null;
+    // L'outil se retourne selon ce qu'on a devant, à portée ou non : hache pour un arbre ou du bois, pioche sinon.
+    this.aimedAxe =
+      hit === null
+        ? null
+        : hit.type === 'target'
+          ? hit.target.resId === 'tree'
+          : hit.type === 'structure'
+            ? hit.structure.axe === true
+            : null;
     this.showHighlight(hit, reachable);
     // En première personne le réticule suffit : pas de boîte blanche autour de la cible.
     if (frame.aimAtCenter || !this.showBoxes) this.highlight.visible = false;
