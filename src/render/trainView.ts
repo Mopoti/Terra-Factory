@@ -1842,14 +1842,32 @@ export class TrainView {
     return ` · ${t(right ? 'train.hud.switchRight' : 'train.hud.switchLeft')}`;
   }
 
+  private hudSig = '';
+  private hudExtra = '';
+
   private updateHud(): void {
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     if (!c || this.mountedCar === null) {
+      this.hudSig = '';
       this.hud.hidden = this.traceInfo === '';
       this.hud.textContent = this.traceInfo;
       return;
     }
     const loco = c.cars.find((k) => k.id === this.mountedCar);
+    // Sans changement visible, on ne retouche pas le DOM à chaque image.
+    const sig = [
+      Math.round(Math.abs(c.v) * 3.6),
+      Math.abs(c.v) < 0.05 ? 0 : c.v * (loco?.rev ? -1 : 1) > 0 ? 1 : -1,
+      loco?.fuel?.count ?? 0,
+      Math.round(Math.min(100, ((loco?.heatKJ ?? 0) / 9000) * 100)),
+      this.host.held('jump') ? 1 : 0,
+      Math.round(consistMass(c) / 1000),
+      c.cars.length > 1 ? 1 : 0,
+    ].join();
+    const extra = this.switchHud() + this.autoHud(c);
+    if (sig === this.hudSig && extra === this.hudExtra && !this.hud.hidden) return;
+    this.hudSig = sig;
+    this.hudExtra = extra;
     // Sens du convoi par rapport à la locomotive : avant si elle avance dans le sens où elle regarde.
     const v = c.v * (loco?.rev ? -1 : 1);
     const heat = Math.round(Math.min(100, ((loco?.heatKJ ?? 0) / 9000) * 100));
@@ -1869,8 +1887,7 @@ export class TrainView {
       }) +
       brake +
       ` · ${t('train.hud.mass', { t: (consistMass(c) / 1000).toFixed(0) })}` +
-      this.switchHud() +
-      this.autoHud(c) +
+      extra +
       (c.cars.length > 1 ? ` · ${t('train.uncoupleHint')}` : ` · ${t('train.coupleHint')}`);
   }
 }

@@ -91,3 +91,7 @@ Retour du PO : « les ressources ne sont pas regroupées par tas mais complètem
 ## Réglages de partie branchés (chantier 5)
 
 Les trois curseurs de chaque famille agissent sur la génération comme décrit ci-dessus ; pour les ennemis, « taille » règle l'emprise des nids (4 cases = 2 m à ×1, de 2 à 12 cases). L'aperçu de l'écran d'édition utilise le même générateur que le jeu (`src/core/world/preview.ts`).
+
+## Niveaux de détail des décors
+
+Les modèles de décor (arbres, buissons, rochers, minerais) sont lourds. `modelLod.ts` en fabrique des versions simplifiées par regroupement de sommets (mises en cache par modèle). Chaque chunk a un `lod` (0 complet, 1 et 2 simplifiés) selon sa distance au joueur : ≤ 4 chunks → 0, ≤ 6 → 1, au-delà → 2, avec une marge d'hystérésis de 0,8 chunk. `loadMissing` reconstruit un chunk dont le niveau doit changer, dans le même budget de temps que le chargement.

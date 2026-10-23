@@ -17,6 +17,8 @@ export const shade = (c: Rgb, f: number): Rgb => ({
   b: Math.min(1, c.b * f),
 });
 
+import { lowDetail } from './modelLod';
+
 type Vec = [number, number, number];
 
 export class MeshBuilder {
@@ -28,8 +30,11 @@ export class MeshBuilder {
    * Ajoute un modèle 3D préparé (voir `models.ts`) : posé au sol centré sur (x, z), tourné de `turns` quarts de tour
    * autour de la verticale, mis à l'échelle uniformément. `mix` mélange sa couleur avec `tint` (0 = couleur du modèle).
    */
+  /** Niveau de détail des modèles ajoutés (0 = complet, 1 et 2 = simplifiés, pour les chunks éloignés). */
+  lod: 0 | 1 | 2 = 0;
+
   model(
-    m: {
+    model: {
       positions: Float32Array;
       normals: Float32Array;
       colors: Float32Array;
@@ -48,6 +53,7 @@ export class MeshBuilder {
     scaleY = scale,
     scaleZ = scale,
   ): void {
+    const m = this.lod === 0 ? model : lowDetail(model, this.lod);
     const a = (turns * Math.PI) / 2;
     const c = Math.cos(a);
     const s = Math.sin(a);

@@ -33,6 +33,8 @@ const WATER_HEIGHT_M = 0.04;
 
 export interface ChunkMesh {
   group: THREE.Group;
+  /** Niveau de détail des décors (0 = complet). */
+  lod: 0 | 1 | 2;
   /** Cases bloquantes (arbres, rochers, nids, eau) sous la forme « gx,gz ». */
   blocked: string[];
   /** Obstacles solides pour la caméra (rochers, nids) : case « gx,gz » et hauteur en m. */
@@ -249,8 +251,10 @@ function buildProps(
   tall: [string, number][],
   ground: { ore: TexBuf; water: TexBuf },
   biomeAt: (xM: number, zM: number) => BiomeId,
+  lod: 0 | 1 | 2,
 ): THREE.BufferGeometry | null {
   const b = new MeshBuilder();
+  b.lod = lod;
   const rockCache = new Map<BiomeId, ReturnType<typeof rockModelsFor>>();
   const clumpCache = new Map<string, ReturnType<typeof oreClumpModels>>();
   const treeCache = new Map<BiomeId, ReturnType<typeof treeModelsFor>>();
@@ -556,7 +560,11 @@ function buildProps(
 }
 
 /** Fabrique les maillages d'un chunk. Le groupe est placé à l'origine du chunk (précision des nombres). */
-export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh {
+export function buildChunkMesh(
+  gen: WorldGenerator,
+  data: ChunkData,
+  lod: 0 | 1 | 2 = 0,
+): ChunkMesh {
   const group = new THREE.Group();
   group.position.set(data.cx * CHUNK_SIZE_M, 0, data.cz * CHUNK_SIZE_M);
   const blocked: string[] = [];
@@ -569,7 +577,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
 
   ensureGroundTextures();
   const cover = { ore: emptyTexBuf(), water: emptyTexBuf() };
-  const propsGeometry = buildProps(data, blocked, tall, cover, (x, z) => gen.biomeAt(x, z));
+  const propsGeometry = buildProps(data, blocked, tall, cover, (x, z) => gen.biomeAt(x, z), lod);
   if (propsGeometry) {
     const props = new THREE.Mesh(propsGeometry, propsMaterial);
     props.castShadow = true;
@@ -582,6 +590,7 @@ export function buildChunkMesh(gen: WorldGenerator, data: ChunkData): ChunkMesh 
   ];
   return {
     group,
+    lod,
     blocked,
     tall,
     dispose: () => {

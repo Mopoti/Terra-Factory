@@ -391,6 +391,7 @@ export function startGameView(
   const pickPairs: { stone: THREE.Object3D; iron: THREE.Object3D }[] = [];
   /** Pioche-hache : la hache passe devant pour un arbre, la pioche pour le reste (rotation lissée sur le manche). */
   let axeFront = false;
+  let wasStriking = false;
   let toolSpin = 0;
   /** Quart de tour du manche (sens horaire) : la tête de l'outil ne reste plus dans le plan de l'écran. */
   const TOOL_ROLL = -Math.PI / 2;
@@ -1763,6 +1764,9 @@ export function startGameView(
   let wanted: { cx: number; cz: number }[] = [];
   let wantedKey = '';
 
+  const LOD_NEAR = 4;
+  const LOD_FAR = 6;
+
   function updateWanted(pcx: number, pcz: number, radius: number): void {
     const key = `${pcx},${pcz},${radius}`;
     if (key === wantedKey) return;
@@ -1790,6 +1794,19 @@ export function startGameView(
     }
   }
 
+  /** Niveau de détail d'un chunk selon sa distance au joueur ; la marge évite de reconstruire en boucle à la frontière. */
+  function lodFor(cx: number, cz: number, current?: 0 | 1 | 2): 0 | 1 | 2 {
+    const d = Math.hypot(
+      cx - Math.floor(playerX / CHUNK_SIZE_M),
+      cz - Math.floor(playerZ / CHUNK_SIZE_M),
+    );
+    const margin = (level: 0 | 1 | 2, edge: number): number =>
+      current === undefined ? edge : current > level ? edge - 0.8 : edge + 0.8;
+    if (d <= margin(0, LOD_NEAR)) return 0;
+    if (d <= margin(1, LOD_FAR)) return 1;
+    return 2;
+  }
+
   /** Fabrique (ou refabrique) un chunk en tenant compte de ce que le joueur a changé. */
   function buildInto(cx: number, cz: number): void {
     const key = `${cx},${cz}`;
@@ -1801,7 +1818,7 @@ export function startGameView(
       for (const [cell] of old.tall) obstacles.delete(cell);
     }
     const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
-    const mesh = buildChunkMesh(generator, data);
+    const mesh = buildChunkMesh(generator, data, lodFor(cx, cz, old?.lod));
     scene.add(mesh.group);
     for (const cell of mesh.blocked) blocked.add(cell);
     for (const [cell, height] of mesh.tall) obstacles.set(cell, height);
@@ -1813,7 +1830,8 @@ export function startGameView(
     const start = performance.now();
     for (const { cx, cz } of wanted) {
       if (performance.now() - start > CHUNK_BUDGET_MS) return;
-      if (!chunks.has(`${cx},${cz}`)) buildInto(cx, cz);
+      const mesh = chunks.get(`${cx},${cz}`);
+      if (!mesh || mesh.lod !== lodFor(cx, cz, mesh.lod)) buildInto(cx, cz);
     }
   }
 
@@ -3675,7 +3693,7 @@ export function startGameView(
       updateSeason();
       const useKey = pressed('use');
       // Une seule touche, un seul véhicule : le plus proche (quad, buggy ou locomotive) la reçoit, jamais deux à la fois.
-      const claim = vehicleClaimsUse();
+      const claim = useKey && vehicleClaimsUse();
       trainUse = useKey && !claim;
       trainCouple = pressed('couple');
       trainRoute = pressed('route');
@@ -3684,7 +3702,7 @@ export function startGameView(
         trainLevelUp = pressed('levelUp');
         trainLevelDown = pressed('levelDown');
       }
-      vehicleTick(dt, useKey && claim);
+      vehicleTick(dt, claim);
       bodyTick(useKey);
       motion = trains.isMounted() ? { speed: 0, strafe: 0 } : step(dt);
       stepBody(dt);
@@ -3801,7 +3819,10 @@ export function startGameView(
     const toolId = options.state.toolItem();
     for (const head of toolHeads) head.material = toolId === 'tool_iron' ? metal : stoneHead;
     for (const m of pickMaterials) m.color.set(toolId === 'tool_iron' ? 0xffffff : 0xc9a47c);
-    if (interaction.aimedAxe !== null) axeFront = interaction.aimedAxe;
+    // Le côté ne change qu'au début du coup, et seulement si la cible demande l'autre face.
+    const striking = interaction.working !== null;
+    if (striking && !wasStriking && interaction.aimedAxe !== null) axeFront = interaction.aimedAxe;
+    wasStriking = striking;
     toolSpin += ((axeFront ? Math.PI : 0) - toolSpin) * (1 - Math.exp(-12 * dt));
     for (const p of pickPairs) {
       p.iron.visible = toolId === 'tool_iron';
