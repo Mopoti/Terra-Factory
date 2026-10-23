@@ -392,6 +392,8 @@ export function startGameView(
   /** Pioche-hache : la hache passe devant pour un arbre, la pioche pour le reste (rotation lissée sur le manche). */
   let axeFront = false;
   let toolSpin = 0;
+  /** Quart de tour du manche (sens horaire) : la tête de l'outil ne reste plus dans le plan de l'écran. */
+  const TOOL_ROLL = -Math.PI / 2;
   const loadPair = async (stoneFile: string, ironFile: string) => {
     const [stone, iron] = await Promise.all([loadPickModel(stoneFile), loadPickModel(ironFile)]);
     return stone && iron ? ([stone, iron] as const) : null;
@@ -3804,7 +3806,7 @@ export function startGameView(
     for (const p of pickPairs) {
       p.iron.visible = toolId === 'tool_iron';
       p.stone.visible = !p.iron.visible;
-      p.iron.rotation.z = p.stone.rotation.z = toolSpin;
+      p.iron.rotation.z = p.stone.rotation.z = toolSpin + TOOL_ROLL;
     }
     // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
     const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow && !seat;

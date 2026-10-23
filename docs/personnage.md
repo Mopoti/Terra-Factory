@@ -105,3 +105,4 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
 ## Outil dans le bon sens (24 octobre)
 La pioche-hache fait un demi-tour sur son manche selon ce que le joueur a devant lui (`Interaction.aimedAxe`, rotation lissée `toolSpin` dans `gameView.ts`, en vue subjective comme en vue extérieure) : **hache devant** pour un arbre ou une construction en bois (mur, sol, porte, escalier…), **pioche devant** pour tout le reste visé (roche, minerai, machine, voie, construction en pierre). Cela vaut même quand la cible est trop loin : l'outil est prêt avant qu'on arrive. Si rien n'est visé, il garde son dernier sens.
 
+Le manche a en plus un quart de tour fixe (`TOOL_ROLL` dans `gameView.ts`, −90° autour du manche, sens horaire quand on regarde le manche depuis la main vers la tête) : la tête n'est plus dans le plan de l'écran, le pic (ou la lame) part vers l'avant au lieu de rester de profil. Pour l'inverser, changer le signe de `TOOL_ROLL`.
