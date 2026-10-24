@@ -112,6 +112,8 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
 
 ## Outil dans le bon sens (24 octobre)
 
+Vues extérieures (3e personne, dessus) : l'outil est tenu dressé dans le poing ganté (inclinaison du manche −0,7 rad dans `attachHandTool`), tête en haut, au lieu de pointer à l'horizontale devant le personnage.
+
 Le changement de face n'a lieu qu'au début du coup (pas pendant la visée) et seulement si la cible demande l'autre côté.
 La pioche-hache fait un demi-tour sur son manche selon ce que le joueur a devant lui (`Interaction.aimedAxe`, rotation lissée `toolSpin` dans `gameView.ts`, en vue subjective comme en vue extérieure) : **hache devant** pour un arbre ou une construction en bois (mur, sol, porte, escalier…), **pioche devant** pour tout le reste visé (roche, minerai, machine, voie, construction en pierre). Cela vaut même quand la cible est trop loin : l'outil est prêt avant qu'on arrive. Si rien n'est visé, il garde son dernier sens.
 

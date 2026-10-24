@@ -319,7 +319,8 @@ export function startGameView(
     player.add(miner.root);
     (player.material as THREE.Material).visible = false;
     player.castShadow = false;
-    miner.attachHandTool(bodyTool, 1.0);
+    // Vues extérieures : l'outil est tenu dressé (manche incliné vers l'avant, tête en haut), comme porté à la main.
+    miner.attachHandTool(bodyTool, 1.0, 0, -0.7);
     // Style doux en vue extérieure : mains gantées, la droite serre le manche comme en vue subjective.
     void loadRawModel('terra/main_gantee').then((glove) => {
       if (glove && viewAlive && miner instanceof Avatar)
