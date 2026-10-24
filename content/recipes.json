@@ -365,6 +365,34 @@
       "seconds": 4
     },
     {
+      "id": "rubber",
+      "machine": "plastic_press",
+      "in": {
+        "coal": 1
+      },
+      "out": {
+        "rubber": 2
+      },
+      "fluid": {
+        "kind": "polymer",
+        "amount": 30
+      },
+      "seconds": 4
+    },
+    {
+      "id": "motor_heavy",
+      "machine": "builder",
+      "in": {
+        "motor": 1,
+        "rubber": 2,
+        "steel_plate": 2
+      },
+      "out": {
+        "motor_heavy": 1
+      },
+      "seconds": 8
+    },
+    {
       "id": "plastic",
       "machine": "plastic_press",
       "in": {},

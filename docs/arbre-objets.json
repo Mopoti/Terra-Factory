@@ -172,6 +172,7 @@
    "usedIn": [
     "cast_iron_ingot",
     "iron_ingot",
+    "rubber",
     "silicon_raw"
    ],
    "issues": []
@@ -495,10 +496,7 @@
     "tech:electricity",
     "tech:laboratory",
     "tech:research_1",
-    "train_locomotive",
     "vehicle_buggy",
-    "vehicle_quad",
-    "vehicle_tank",
     "zamak_ingot"
    ],
    "issues": []
@@ -731,6 +729,7 @@
     "machine_pumpjack",
     "machine_turret_heavy",
     "machine_washer",
+    "motor",
     "rifle",
     "tech:armor_1a",
     "tech:armor_1b",
@@ -805,13 +804,13 @@
     "machine_sorter",
     "machine_turret_heavy",
     "machine_washer",
+    "motor",
     "rifle",
     "science_pack",
     "sniper",
     "train_locomotive",
     "train_wagon_freight",
-    "train_wagon_tanker",
-    "vehicle_tank"
+    "train_wagon_tanker"
    ],
    "issues": [
     "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
@@ -852,6 +851,7 @@
     "machine_sorter",
     "machine_turret_laser",
     "machine_waterwheel",
+    "motor",
     "rifle",
     "science_pack",
     "silicon_chip",
@@ -1764,6 +1764,97 @@
    ],
    "issues": []
   },
+  "rubber": {
+   "name": "Caoutchouc",
+   "category": null,
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_plastic_press",
+     "in": {
+      "coal": 1
+     },
+     "out": {
+      "rubber": 2
+     },
+     "seconds": 4
+    }
+   ],
+   "usedIn": [
+    "motor_heavy",
+    "vehicle_tank"
+   ],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "motor": {
+   "name": "Moteur",
+   "category": "machining",
+   "tech": [
+    "steam"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_gear": 4,
+      "copper_wire": 6,
+      "iron_plate": 2
+     },
+     "out": {
+      "motor": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "machine_plastic_press",
+    "machine_pump",
+    "machine_pumpjack",
+    "machine_refinery",
+    "motor_heavy",
+    "vehicle_buggy",
+    "vehicle_quad"
+   ],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "motor_heavy": {
+   "name": "Moteur renforcé",
+   "category": null,
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_builder",
+     "in": {
+      "motor": 1,
+      "rubber": 2,
+      "steel_plate": 2
+     },
+     "out": {
+      "motor_heavy": 1
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [
+    "machine_centrifuge",
+    "train_locomotive",
+    "vehicle_tank"
+   ],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
   "cable_insulated": {
    "name": "Câble isolé",
    "category": "science",
@@ -1900,6 +1991,7 @@
     "machine_turret_laser",
     "machine_turret_plasma",
     "machine_vitrifier",
+    "motor_heavy",
     "science_pack_2",
     "science_pack_4",
     "sniper",
@@ -1997,8 +2089,9 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 10,
-      "copper_ingot": 6
+      "iron_ingot": 8,
+      "copper_ingot": 2,
+      "motor": 1
      },
      "out": {
       "machine_pump": 1
@@ -2384,9 +2477,10 @@
      "machine": null,
      "in": {
       "steel_ingot": 10,
-      "iron_gear": 8,
+      "iron_gear": 4,
       "iron_plate": 10,
-      "copper_wire": 6
+      "copper_wire": 6,
+      "motor": 1
      },
      "out": {
       "machine_pumpjack": 1
@@ -2433,9 +2527,10 @@
      "machine": null,
      "in": {
       "steel_ingot": 16,
-      "iron_gear": 10,
+      "iron_gear": 6,
       "copper_wire": 16,
-      "concrete_block": 8
+      "concrete_block": 8,
+      "motor": 1
      },
      "out": {
       "machine_refinery": 1
@@ -2458,8 +2553,9 @@
      "machine": null,
      "in": {
       "steel_ingot": 8,
-      "iron_gear": 6,
-      "copper_wire": 10
+      "iron_gear": 2,
+      "copper_wire": 10,
+      "motor": 1
      },
      "out": {
       "machine_plastic_press": 1
@@ -2668,9 +2764,10 @@
      "machine": null,
      "in": {
       "steel_ingot": 14,
-      "iron_gear": 10,
+      "iron_gear": 6,
       "copper_wire": 14,
-      "concrete_block": 4
+      "concrete_block": 4,
+      "motor_heavy": 1
      },
      "out": {
       "machine_centrifuge": 1
@@ -3045,15 +3142,18 @@
   "vehicle_buggy": {
    "name": "Buggy",
    "category": "equipment",
-   "tech": [],
+   "tech": [
+    "steam"
+   ],
    "paths": [
     {
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 24,
-      "copper_ingot": 8,
-      "wood": 6
+      "iron_ingot": 16,
+      "copper_ingot": 4,
+      "wood": 6,
+      "motor": 1
      },
      "out": {
       "vehicle_buggy": 1
@@ -3062,22 +3162,22 @@
     }
    ],
    "usedIn": [],
-   "issues": [
-    "Disponible dès le départ (aucune technologie)"
-   ]
+   "issues": []
   },
   "vehicle_quad": {
    "name": "Quad",
    "category": "equipment",
-   "tech": [],
+   "tech": [
+    "steam"
+   ],
    "paths": [
     {
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 14,
-      "copper_ingot": 4,
-      "wood": 3
+      "iron_ingot": 10,
+      "wood": 3,
+      "motor": 1
      },
      "out": {
       "vehicle_quad": 1
@@ -3086,23 +3186,23 @@
     }
    ],
    "usedIn": [],
-   "issues": [
-    "Disponible dès le départ (aucune technologie)"
-   ]
+   "issues": []
   },
   "vehicle_tank": {
    "name": "Char",
    "category": "equipment",
-   "tech": [],
+   "tech": [
+    "plastic_3"
+   ],
    "paths": [
     {
      "kind": "hand",
      "machine": null,
      "in": {
       "steel_ingot": 24,
-      "iron_ingot": 30,
-      "iron_gear": 10,
-      "copper_ingot": 8
+      "iron_ingot": 20,
+      "motor_heavy": 2,
+      "rubber": 4
      },
      "out": {
       "vehicle_tank": 1
@@ -3111,9 +3211,7 @@
     }
    ],
    "usedIn": [],
-   "issues": [
-    "Disponible dès le départ (aucune technologie)"
-   ]
+   "issues": []
   },
   "rail": {
    "name": "Rail (tuile de 2,5 m)",
@@ -3141,16 +3239,18 @@
   "train_locomotive": {
    "name": "Locomotive à vapeur",
    "category": "rail",
-   "tech": [],
+   "tech": [
+    "plastic_3"
+   ],
    "paths": [
     {
      "kind": "hand",
      "machine": null,
      "in": {
       "steel_ingot": 20,
-      "iron_ingot": 30,
-      "copper_ingot": 10,
-      "iron_gear": 12
+      "iron_ingot": 24,
+      "iron_gear": 6,
+      "motor_heavy": 2
      },
      "out": {
       "train_locomotive": 1
@@ -3159,9 +3259,7 @@
     }
    ],
    "usedIn": [],
-   "issues": [
-    "Disponible dès le départ (aucune technologie)"
-   ]
+   "issues": []
   },
   "train_wagon_freight": {
    "name": "Wagon de fret",
@@ -4100,7 +4198,11 @@
     "machine_plastic_press",
     "plastic_insulator",
     "cable_insulated",
-    "science_pack_3"
+    "science_pack_3",
+    "rubber",
+    "motor_heavy",
+    "vehicle_tank",
+    "train_locomotive"
    ]
   },
   "fission_4": {
@@ -4369,7 +4471,10 @@
    ],
    "unlocks": [
     "machine_pipe",
-    "machine_pump"
+    "machine_pump",
+    "motor",
+    "vehicle_quad",
+    "vehicle_buggy"
    ]
   },
   "steam_power": {

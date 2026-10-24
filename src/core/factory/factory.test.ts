@@ -1805,6 +1805,20 @@ describe('raffinerie et plastique (7c)', () => {
     expect(p.fluid.polymer).toBeCloseTo(5);
   });
 
+  it('la presse à plastique fait aussi du caoutchouc : 30 L de polymère + 1 charbon → 2', () => {
+    const p = emptyMachine(1, 'plastic_press', 8, 0, 0);
+    p.recipe = 'rubber';
+    p.fluid.polymer = 70;
+    p.slots.push({ item: 'coal', count: 3 });
+    const gen = emptyMachine(90, 'generator', 0, 0, 0);
+    gen.fuel = { item: 'coal', count: 20 };
+    const f = new Factory([gen, emptyMachine(91, 'pole', 4, 0, 0), p], makeWorld().world);
+    run(f, 9);
+    expect(p.stock?.item).toBe('rubber');
+    expect(p.stock?.count).toBeGreaterThanOrEqual(2);
+    expect(p.fluid.polymer).toBeLessThanOrEqual(40);
+  });
+
   it('la raffinerie exige 8 bar : chevalet (4) + 2 surpresseurs (+2 chacun)', () => {
     const oil = { n: 5000 };
     const world: FactoryWorld = {

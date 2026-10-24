@@ -84,6 +84,9 @@ export const NO_MODEL_ITEMS: readonly string[] = [
   'magazine',
   'rifle_magazine',
   'sniper_magazine',
+  'rubber',
+  'motor',
+  'motor_heavy',
   ...['armor1', 'armor2', 'armor4'].flatMap((a) =>
     ['head', 'torso', 'legs', 'feet'].map((s) => `${a}_${s}`),
   ),

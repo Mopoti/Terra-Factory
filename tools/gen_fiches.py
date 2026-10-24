@@ -6,7 +6,9 @@ fr=json.load(open(R+'src/i18n/fr.json'))
 techs=json.load(open(R+'content/techs.json'))['techs']
 rec=json.load(open(R+'content/recipes.json'))['recipes']
 mach=json.load(open(R+'content/machines.json'))['machines']
-img=json.load(open(S+'audit_out.json'))
+from collections import defaultdict
+_img=json.load(open(S+'audit_out.json'))
+img=defaultdict(lambda:{'icon':'data:image/gif;base64,R0lGODlhAQABAAAAACw=','big':None,'model':'aucun'},_img)
 e=html.escape
 name=lambda i: fr.get('item.'+i,i)
 tname=lambda t: fr.get('tech.'+t,t)

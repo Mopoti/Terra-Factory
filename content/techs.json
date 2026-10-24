@@ -122,7 +122,11 @@
         "machine_plastic_press",
         "plastic_insulator",
         "cable_insulated",
-        "science_pack_3"
+        "science_pack_3",
+        "rubber",
+        "motor_heavy",
+        "vehicle_tank",
+        "train_locomotive"
       ]
     },
     {
@@ -316,7 +320,7 @@
         "science_pack": 15
       },
       "requires": ["electricity"],
-      "unlocks": ["machine_pipe", "machine_pump"]
+      "unlocks": ["machine_pipe", "machine_pump", "motor", "vehicle_quad", "vehicle_buggy"]
     },
     {
       "id": "steam_power",
