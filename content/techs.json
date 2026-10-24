@@ -398,7 +398,7 @@
       "cost": {
         "combat_pack": 10
       },
-      "requires": ["weapons_2"],
+      "requires": ["weapons_2", "metallurgy_2"],
       "reveal": ["weapons_2"],
       "unlocks": ["sniper", "sniper_magazine"]
     },

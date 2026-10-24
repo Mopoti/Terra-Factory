@@ -1,0 +1,4685 @@
+{
+ "items": {
+  "wood": {
+   "name": "Bois",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "boots",
+    "machine_chest_wood",
+    "machine_pole",
+    "machine_waterwheel",
+    "piece_door_wood",
+    "piece_slab_wood",
+    "piece_stairs_wood",
+    "piece_wall_wood",
+    "rail",
+    "tool_iron",
+    "tool_stone",
+    "train_station",
+    "train_wagon_freight",
+    "vehicle_buggy",
+    "vehicle_quad"
+   ],
+   "issues": []
+  },
+  "stone": {
+   "name": "Pierre",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "contaminated_glass",
+    "crushed_stone",
+    "machine_boiler",
+    "machine_cooling_tower",
+    "machine_crusher",
+    "machine_drill",
+    "machine_drill_electric",
+    "machine_furnace",
+    "machine_generator",
+    "machine_mixer",
+    "machine_stamper",
+    "machine_washer",
+    "machine_waterwheel",
+    "piece_door_stone",
+    "piece_slab_stone",
+    "piece_stairs_stone",
+    "piece_wall_stone",
+    "tech:metallurgy",
+    "tool_stone"
+   ],
+   "issues": []
+  },
+  "iron_ore": {
+   "name": "Hématite (fer)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "cast_iron_ingot",
+    "iron_ingot",
+    "iron_ore_washed"
+   ],
+   "issues": []
+  },
+  "copper_ore": {
+   "name": "Malachite (cuivre)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "copper_ingot",
+    "copper_ore_washed"
+   ],
+   "issues": []
+  },
+  "zinc_ore": {
+   "name": "Sphalérite (zinc)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "zinc_ingot",
+    "zinc_ore_washed"
+   ],
+   "issues": []
+  },
+  "bauxite": {
+   "name": "Bauxite (aluminium)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "aluminium_ingot"
+   ],
+   "issues": []
+  },
+  "silica_sand": {
+   "name": "Sable siliceux",
+   "category": "resources",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_crusher",
+     "in": {
+      "crushed_stone": 2
+     },
+     "out": {
+      "silica_sand": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "silicon_raw"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Concasseur » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "silicon_raw": {
+   "name": "Silicium brut",
+   "category": null,
+   "tech": [
+    "silicon_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace_electric",
+     "in": {
+      "silica_sand": 4,
+      "coal": 1
+     },
+     "out": {
+      "silicon_raw": 2
+     },
+     "seconds": 4
+    }
+   ],
+   "usedIn": [
+    "silicon_chip"
+   ],
+   "issues": []
+  },
+  "crude_oil": {
+   "name": "Pétrole brut (gisement)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "uraninite": {
+   "name": "Uraninite (uranium)",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "uranium_depleted",
+    "uranium_enriched"
+   ],
+   "issues": []
+  },
+  "coal": {
+   "name": "Charbon",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "cast_iron_ingot",
+    "iron_ingot",
+    "silicon_raw"
+   ],
+   "issues": []
+  },
+  "piece_wall_wood": {
+   "name": "Mur en bois",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 2
+     },
+     "out": {
+      "piece_wall_wood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_door_wood": {
+   "name": "Porte en bois",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 8
+     },
+     "out": {
+      "piece_door_wood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_door_stone": {
+   "name": "Porte en pierre",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 8
+     },
+     "out": {
+      "piece_door_stone": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_wall_stone": {
+   "name": "Mur en pierre",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 2
+     },
+     "out": {
+      "piece_wall_stone": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_stairs_wood": {
+   "name": "Escalier en bois",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 4
+     },
+     "out": {
+      "piece_stairs_wood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_stairs_stone": {
+   "name": "Escalier en pierre",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 4
+     },
+     "out": {
+      "piece_stairs_stone": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_slab_wood": {
+   "name": "Dalle en bois",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 2
+     },
+     "out": {
+      "piece_slab_wood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_slab_stone": {
+   "name": "Dalle en pierre",
+   "category": "buildings",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 2
+     },
+     "out": {
+      "piece_slab_stone": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "piece_pillar_wood": {
+   "name": "Pilier en bois",
+   "category": null,
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": [
+    "Aucune recette : impossible à obtenir",
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "piece_pillar_stone": {
+   "name": "Pilier en pierre",
+   "category": null,
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": [
+    "Aucune recette : impossible à obtenir",
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "iron_ingot": {
+   "name": "Lingot de fer",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "iron_ore": 2,
+      "coal": 1
+     },
+     "out": {
+      "iron_ingot": 2
+     },
+     "seconds": 10
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "iron_ore_washed": 2,
+      "coal": 1
+     },
+     "out": {
+      "iron_ingot": 2
+     },
+     "seconds": 10
+    }
+   ],
+   "usedIn": [
+    "bed",
+    "compass",
+    "iron_gear",
+    "iron_plate",
+    "machine_arm",
+    "machine_arm_electric",
+    "machine_assembler",
+    "machine_boiler",
+    "machine_chest_iron",
+    "machine_conveyor",
+    "machine_crusher",
+    "machine_drill",
+    "machine_drill_electric",
+    "machine_generator",
+    "machine_lab",
+    "machine_merger",
+    "machine_pole",
+    "machine_pump",
+    "machine_splitter",
+    "machine_stamper",
+    "machine_turbine",
+    "machine_turret",
+    "magazine",
+    "pistol",
+    "rail",
+    "rifle_magazine",
+    "sniper_magazine",
+    "tech:electricity",
+    "tech:laboratory",
+    "tech:metallurgy",
+    "tech:research_1",
+    "tool_iron",
+    "train_locomotive",
+    "train_station",
+    "train_wagon_freight",
+    "train_wagon_tanker",
+    "vehicle_buggy",
+    "vehicle_quad",
+    "vehicle_tank",
+    "waypoint"
+   ],
+   "issues": []
+  },
+  "copper_ingot": {
+   "name": "Lingot de cuivre",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "copper_ore": 2
+     },
+     "out": {
+      "copper_ingot": 2
+     },
+     "seconds": 8
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "copper_ore_washed": 2
+     },
+     "out": {
+      "copper_ingot": 2
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [
+    "compass",
+    "copper_plate",
+    "copper_wire",
+    "machine_arm_electric",
+    "machine_assembler",
+    "machine_booster",
+    "machine_drill_electric",
+    "machine_lab",
+    "machine_pipe_2",
+    "machine_pump",
+    "machine_turbine",
+    "machine_turret",
+    "machine_turret_heavy",
+    "rifle_magazine",
+    "sniper_magazine",
+    "tech:electricity",
+    "tech:laboratory",
+    "tech:research_1",
+    "train_locomotive",
+    "vehicle_buggy",
+    "vehicle_quad",
+    "vehicle_tank",
+    "zamak_ingot"
+   ],
+   "issues": []
+  },
+  "zinc_ingot": {
+   "name": "Lingot de zinc",
+   "category": null,
+   "tech": [
+    "metallurgy_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "zinc_ore": 2
+     },
+     "out": {
+      "zinc_ingot": 2
+     },
+     "seconds": 8
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "zinc_ore_washed": 2
+     },
+     "out": {
+      "zinc_ingot": 2
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [
+    "machine_pipe_2",
+    "zamak_ingot"
+   ],
+   "issues": []
+  },
+  "crushed_stone": {
+   "name": "Pierre écrasée",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_crusher",
+     "in": {
+      "stone": 1
+     },
+     "out": {
+      "crushed_stone": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "concrete_block",
+    "silica_sand"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Concasseur » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "cast_iron_ingot": {
+   "name": "Lingot de fonte",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "iron_ore": 2,
+      "coal": 3
+     },
+     "out": {
+      "cast_iron_ingot": 2
+     },
+     "seconds": 15
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "iron_ore_washed": 2,
+      "coal": 3
+     },
+     "out": {
+      "cast_iron_ingot": 2
+     },
+     "seconds": 15
+    }
+   ],
+   "usedIn": [
+    "mould_gear",
+    "mould_plate",
+    "mould_wire",
+    "slag",
+    "steel_ingot"
+   ],
+   "issues": []
+  },
+  "steel_ingot": {
+   "name": "Lingot d'acier",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_bessemer",
+     "in": {
+      "cast_iron_ingot": 2
+     },
+     "out": {
+      "steel_ingot": 2,
+      "slag": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "barrel_empty",
+    "machine_arm_filter",
+    "machine_barreler",
+    "machine_centrifuge",
+    "machine_conveyor_2",
+    "machine_conveyor_3",
+    "machine_drill_eco",
+    "machine_furnace_electric",
+    "machine_heavy_press",
+    "machine_pipe_3",
+    "machine_plastic_press",
+    "machine_pumpjack",
+    "machine_refinery",
+    "machine_sorter",
+    "steel_plate",
+    "train_locomotive",
+    "train_wagon_tanker",
+    "vehicle_tank"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Convertisseur Bessemer » (technologie « Métallurgie T2 »), pas par une technologie à son nom"
+   ]
+  },
+  "slag": {
+   "name": "Scorie",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_bessemer",
+     "in": {
+      "cast_iron_ingot": 2
+     },
+     "out": {
+      "steel_ingot": 2,
+      "slag": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "concrete_block"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Convertisseur Bessemer » (technologie « Métallurgie T2 »), pas par une technologie à son nom"
+   ]
+  },
+  "concrete_block": {
+   "name": "Bloc de béton",
+   "category": null,
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_mixer",
+     "in": {
+      "crushed_stone": 1,
+      "slag": 1
+     },
+     "out": {
+      "concrete_block": 2
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "machine_centrifuge",
+    "machine_evaporation_tower",
+    "machine_fission_reactor",
+    "machine_fusion_reactor",
+    "machine_refinery",
+    "machine_vitrifier"
+   ],
+   "issues": []
+  },
+  "iron_plate": {
+   "name": "Plaque de fer",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "iron_ingot": 2
+     },
+     "out": {
+      "iron_plate": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "armor1_feet",
+    "armor1_head",
+    "armor1_legs",
+    "armor1_torso",
+    "machine_bessemer",
+    "machine_booster",
+    "machine_builder",
+    "machine_cooling_tower",
+    "machine_crank",
+    "machine_mixer",
+    "machine_pumpjack",
+    "machine_turret_heavy",
+    "machine_washer",
+    "rifle",
+    "tech:armor_1a",
+    "tech:armor_1b",
+    "tech:defense",
+    "tech:weapons_1"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "copper_plate": {
+   "name": "Plaque de cuivre",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "copper_ingot": 2
+     },
+     "out": {
+      "copper_plate": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "machine_pipe",
+    "tech:waterwheel"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "iron_gear": {
+   "name": "Engrenage en fer",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "iron_ingot": 2
+     },
+     "out": {
+      "iron_gear": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "machine_arm_filter",
+    "machine_barreler",
+    "machine_bessemer",
+    "machine_booster",
+    "machine_builder",
+    "machine_centrifuge",
+    "machine_conveyor_2",
+    "machine_conveyor_3",
+    "machine_cooling_tower",
+    "machine_crank",
+    "machine_drill_eco",
+    "machine_evaporation_tower",
+    "machine_furnace_electric",
+    "machine_heavy_press",
+    "machine_mixer",
+    "machine_plastic_press",
+    "machine_pumpjack",
+    "machine_refinery",
+    "machine_sorter",
+    "machine_turret_heavy",
+    "machine_washer",
+    "rifle",
+    "science_pack",
+    "sniper",
+    "train_locomotive",
+    "train_wagon_freight",
+    "train_wagon_tanker",
+    "vehicle_tank"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "copper_wire": {
+   "name": "Fil de cuivre",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "copper_ingot": 1
+     },
+     "out": {
+      "copper_wire": 2
+     },
+     "seconds": 2.5
+    }
+   ],
+   "usedIn": [
+    "cable_insulated",
+    "machine_arm_filter",
+    "machine_barreler",
+    "machine_bessemer",
+    "machine_booster",
+    "machine_builder",
+    "machine_centrifuge",
+    "machine_conveyor_3",
+    "machine_drill_eco",
+    "machine_furnace_electric",
+    "machine_heavy_press",
+    "machine_plastic_press",
+    "machine_pumpjack",
+    "machine_refinery",
+    "machine_sorter",
+    "machine_turret_laser",
+    "machine_waterwheel",
+    "rifle",
+    "science_pack",
+    "silicon_chip",
+    "sniper",
+    "waypoint"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "mould_plate": {
+   "name": "Moule de plaque (fonte)",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "cast_iron_ingot": 2
+     },
+     "out": {
+      "mould_plate": 1
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "mould_gear": {
+   "name": "Moule d'engrenage (fonte)",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "cast_iron_ingot": 3
+     },
+     "out": {
+      "mould_gear": 1
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "mould_wire": {
+   "name": "Moule de fil (fonte)",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace",
+     "in": {
+      "cast_iron_ingot": 2
+     },
+     "out": {
+      "mould_wire": 1
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "machine_drill": {
+   "name": "Foreuse",
+   "category": "extraction",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 6,
+      "stone": 6
+     },
+     "out": {
+      "machine_drill": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "machine_furnace": {
+   "name": "Fourneau",
+   "category": "smelting",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 10
+     },
+     "out": {
+      "machine_furnace": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "machine_stamper": {
+   "name": "Estampeuse",
+   "category": "smelting",
+   "tech": [
+    "metallurgy"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 12,
+      "stone": 10
+     },
+     "out": {
+      "machine_stamper": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_crusher": {
+   "name": "Concasseur",
+   "category": "smelting",
+   "tech": [
+    "metallurgy"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 8,
+      "stone": 12
+     },
+     "out": {
+      "machine_crusher": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_bessemer": {
+   "name": "Convertisseur Bessemer",
+   "category": "smelting",
+   "tech": [
+    "metallurgy_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 10,
+      "iron_gear": 6,
+      "copper_wire": 8
+     },
+     "out": {
+      "machine_bessemer": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_mixer": {
+   "name": "Bétonnière",
+   "category": "smelting",
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 8,
+      "iron_gear": 4,
+      "stone": 10
+     },
+     "out": {
+      "machine_mixer": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_conveyor": {
+   "name": "Tapis roulant",
+   "category": "logistics",
+   "tech": [
+    "logistics"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 2
+     },
+     "out": {
+      "machine_conveyor": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_conveyor_2": {
+   "name": "Tapis rapide (T2)",
+   "category": "logistics",
+   "tech": [
+    "logistics_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 1,
+      "iron_gear": 1
+     },
+     "out": {
+      "machine_conveyor_2": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_conveyor_3": {
+   "name": "Tapis express (T3)",
+   "category": "logistics",
+   "tech": [
+    "logistics_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 2,
+      "iron_gear": 2,
+      "copper_wire": 2
+     },
+     "out": {
+      "machine_conveyor_3": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_chest_wood": {
+   "name": "Coffre en bois",
+   "category": "logistics",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 16
+     },
+     "out": {
+      "machine_chest_wood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "machine_chest_iron": {
+   "name": "Coffre en fer",
+   "category": "logistics",
+   "tech": [
+    "handling"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 16
+     },
+     "out": {
+      "machine_chest_iron": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_generator": {
+   "name": "Générateur à combustible",
+   "category": "energy",
+   "tech": [
+    "electricity_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 12,
+      "stone": 12
+     },
+     "out": {
+      "machine_generator": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_waterwheel": {
+   "name": "Roue à aubes",
+   "category": "energy",
+   "tech": [
+    "waterwheel"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 12,
+      "stone": 4,
+      "copper_wire": 4
+     },
+     "out": {
+      "machine_waterwheel": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_crank": {
+   "name": "Manivelle de réamorçage",
+   "category": "energy",
+   "tech": [
+    "electricity"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 4,
+      "iron_gear": 2
+     },
+     "out": {
+      "machine_crank": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_pole": {
+   "name": "Poteau électrique",
+   "category": "energy",
+   "tech": [
+    "electricity"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 2,
+      "wood": 4
+     },
+     "out": {
+      "machine_pole": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_drill_electric": {
+   "name": "Foreuse électrique",
+   "category": "extraction",
+   "tech": [
+    "power_generation_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 12,
+      "copper_ingot": 8,
+      "stone": 4
+     },
+     "out": {
+      "machine_drill_electric": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_drill_eco": {
+   "name": "Foreuse économe (T3)",
+   "category": "extraction",
+   "tech": [
+    "extraction_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 12,
+      "iron_gear": 8,
+      "copper_wire": 12
+     },
+     "out": {
+      "machine_drill_eco": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_splitter": {
+   "name": "Séparateur",
+   "category": "logistics",
+   "tech": [
+    "routing"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 10
+     },
+     "out": {
+      "machine_splitter": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_merger": {
+   "name": "Groupeur",
+   "category": "logistics",
+   "tech": [
+    "routing"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 10
+     },
+     "out": {
+      "machine_merger": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_arm": {
+   "name": "Bras robotique",
+   "category": "logistics",
+   "tech": [
+    "logistics"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 12
+     },
+     "out": {
+      "machine_arm": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_arm_electric": {
+   "name": "Bras robotique électrique",
+   "category": "logistics",
+   "tech": [
+    "automation"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 12,
+      "copper_ingot": 6
+     },
+     "out": {
+      "machine_arm_electric": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_arm_filter": {
+   "name": "Bras filtrant (T3)",
+   "category": "logistics",
+   "tech": [
+    "logistics_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 4,
+      "iron_gear": 4,
+      "copper_wire": 8
+     },
+     "out": {
+      "machine_arm_filter": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_sorter": {
+   "name": "Trieur (T3)",
+   "category": "logistics",
+   "tech": [
+    "sorting_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 3,
+      "iron_gear": 2,
+      "copper_wire": 6
+     },
+     "out": {
+      "machine_sorter": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_assembler": {
+   "name": "Assembleur",
+   "category": "machining",
+   "tech": [
+    "automation"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 24,
+      "copper_ingot": 12
+     },
+     "out": {
+      "machine_assembler": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "fiber": {
+   "name": "Fibre",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "cloth"
+   ],
+   "issues": []
+  },
+  "compass": {
+   "name": "Boussole",
+   "category": "equipment",
+   "tech": [
+    "navigation"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 2,
+      "copper_ingot": 1
+     },
+     "out": {
+      "compass": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "cloth": {
+   "name": "Tissu",
+   "category": "equipment",
+   "tech": [
+    "textile"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "fiber": 8
+     },
+     "out": {
+      "cloth": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "armor1_feet",
+    "armor1_legs",
+    "armor1_torso",
+    "backpack",
+    "bed",
+    "boots",
+    "gloves",
+    "hood",
+    "sleeping_bag",
+    "trousers"
+   ],
+   "issues": []
+  },
+  "backpack": {
+   "name": "Sac à dos",
+   "category": "equipment",
+   "tech": [
+    "textile"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 12
+     },
+     "out": {
+      "backpack": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "hood": {
+   "name": "Capuche",
+   "category": "equipment",
+   "tech": [
+    "textile"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 6
+     },
+     "out": {
+      "hood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "trousers": {
+   "name": "Pantalon",
+   "category": "equipment",
+   "tech": [
+    "clothing"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 8
+     },
+     "out": {
+      "trousers": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "boots": {
+   "name": "Bottes",
+   "category": "equipment",
+   "tech": [
+    "clothing"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 6,
+      "wood": 2
+     },
+     "out": {
+      "boots": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "sleeping_bag": {
+   "name": "Duvet d'exploration",
+   "category": "equipment",
+   "tech": [
+    "bedding"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 10
+     },
+     "out": {
+      "sleeping_bag": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "bed": {
+   "name": "Lit",
+   "category": "equipment",
+   "tech": [
+    "bedding"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 8,
+      "cloth": 12
+     },
+     "out": {
+      "bed": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "gloves": {
+   "name": "Gants",
+   "category": "equipment",
+   "tech": [
+    "handwear"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 4
+     },
+     "out": {
+      "gloves": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "science_pack": {
+   "name": "Paquet de science",
+   "category": "science",
+   "tech": [
+    "laboratory"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_gear": 1,
+      "copper_wire": 1
+     },
+     "out": {
+      "science_pack": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "tech:automation",
+    "tech:bedding",
+    "tech:clothing",
+    "tech:construction_2",
+    "tech:electricity_2",
+    "tech:fluids_2",
+    "tech:handling",
+    "tech:handwear",
+    "tech:logistics",
+    "tech:logistics_2",
+    "tech:manufacturing_2",
+    "tech:metallurgy_2",
+    "tech:navigation",
+    "tech:power_generation",
+    "tech:power_generation_2",
+    "tech:research_2",
+    "tech:routing",
+    "tech:steam",
+    "tech:steam_power",
+    "tech:textile",
+    "tech:washing_2"
+   ],
+   "issues": []
+  },
+  "cable_insulated": {
+   "name": "Câble isolé",
+   "category": "science",
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "copper_wire": 4,
+      "plastic_insulator": 1
+     },
+     "out": {
+      "cable_insulated": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "machine_accumulator",
+    "machine_antenna",
+    "machine_fission_reactor",
+    "machine_fusion_reactor",
+    "machine_relay",
+    "machine_vitrifier",
+    "science_pack_3"
+   ],
+   "issues": []
+  },
+  "silicon_chip": {
+   "name": "Puce en silicium",
+   "category": "science",
+   "tech": [
+    "silicon_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "silicon_raw": 1,
+      "copper_wire": 2
+     },
+     "out": {
+      "silicon_chip": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "armor4_feet",
+    "armor4_head",
+    "armor4_legs",
+    "armor4_torso",
+    "machine_accumulator",
+    "machine_antenna",
+    "machine_fission_reactor",
+    "machine_fusion_reactor",
+    "machine_relay",
+    "machine_turret_laser",
+    "machine_turret_plasma",
+    "machine_vitrifier",
+    "science_pack_3",
+    "science_pack_4"
+   ],
+   "issues": []
+  },
+  "science_pack_3": {
+   "name": "Paquet de science T3",
+   "category": "science",
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "silicon_chip": 1,
+      "cable_insulated": 1
+     },
+     "out": {
+      "science_pack_3": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "tech:beacon_5",
+    "tech:fission_4",
+    "tech:fusion_5",
+    "tech:reactor_4",
+    "tech:research_4",
+    "tech:waste_4"
+   ],
+   "issues": []
+  },
+  "steel_plate": {
+   "name": "Plaque d'acier",
+   "category": null,
+   "tech": [
+    "metallurgy_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "steel_ingot": 1
+     },
+     "out": {
+      "steel_plate": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "armor2_feet",
+    "armor2_head",
+    "armor2_legs",
+    "armor2_torso",
+    "armor4_feet",
+    "armor4_head",
+    "armor4_legs",
+    "armor4_torso",
+    "machine_accumulator",
+    "machine_antenna",
+    "machine_evaporation_tower",
+    "machine_fission_reactor",
+    "machine_fusion_reactor",
+    "machine_relay",
+    "machine_turret_laser",
+    "machine_turret_plasma",
+    "machine_vitrifier",
+    "science_pack_2",
+    "science_pack_4",
+    "sniper",
+    "uranium_rod"
+   ],
+   "issues": []
+  },
+  "science_pack_2": {
+   "name": "Paquet de science T2",
+   "category": "science",
+   "tech": [
+    "manufacturing_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 1,
+      "machine_pipe_2": 1
+     },
+     "out": {
+      "science_pack_2": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "tech:barrels_3",
+    "tech:extraction_3",
+    "tech:heavy_press_3",
+    "tech:logistics_3",
+    "tech:oil_3",
+    "tech:plastic_3",
+    "tech:research_3",
+    "tech:silicon_3",
+    "tech:sorting_3",
+    "tech:storage_3"
+   ],
+   "issues": []
+  },
+  "machine_lab": {
+   "name": "Laboratoire",
+   "category": "science",
+   "tech": [
+    "laboratory"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 20,
+      "copper_ingot": 16
+     },
+     "out": {
+      "machine_lab": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_pipe": {
+   "name": "Tuyau en cuivre",
+   "category": "fluids",
+   "tech": [
+    "steam"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "copper_plate": 1
+     },
+     "out": {
+      "machine_pipe": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_pump": {
+   "name": "Pompe à eau électrique",
+   "category": "extraction",
+   "tech": [
+    "steam"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 10,
+      "copper_ingot": 6
+     },
+     "out": {
+      "machine_pump": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_barreler": {
+   "name": "Remplisseuse / videuse de barils (T3)",
+   "category": "fluids",
+   "tech": [
+    "barrels_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 4,
+      "iron_gear": 4,
+      "copper_wire": 8
+     },
+     "out": {
+      "machine_barreler": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "barrel_empty": {
+   "name": "Baril vide",
+   "category": "fluids",
+   "tech": [
+    "barrels_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 2
+     },
+     "out": {
+      "barrel_empty": 1
+     },
+     "seconds": null
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_barreler",
+     "in": {
+      "barrel_oil": 1
+     },
+     "out": {
+      "barrel_empty": 1
+     },
+     "seconds": 3
+    },
+    {
+     "kind": "machine",
+     "machine": "machine_barreler",
+     "in": {
+      "barrel_water": 1
+     },
+     "out": {
+      "barrel_empty": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "barrel_oil",
+    "barrel_water"
+   ],
+   "issues": []
+  },
+  "barrel_water": {
+   "name": "Baril d'eau (100 L)",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_barreler",
+     "in": {
+      "barrel_empty": 1
+     },
+     "out": {
+      "barrel_water": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "barrel_empty"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Remplisseuse / videuse de barils (T3) » (technologie « Logistique : barils T3 »), pas par une technologie à son nom",
+    "Ingrédient « Baril vide » n'est pas encore disponible : débloqué par « Logistique : barils T3 » (cet objet n'a pas de technologie : il est disponible dès le départ)"
+   ]
+  },
+  "machine_pipe_2": {
+   "name": "Tuyau de laiton (T2)",
+   "category": null,
+   "tech": [
+    "manufacturing_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_builder",
+     "in": {
+      "copper_ingot": 1,
+      "zinc_ingot": 1
+     },
+     "out": {
+      "machine_pipe_2": 2
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "science_pack_2"
+   ],
+   "issues": []
+  },
+  "machine_pipe_3": {
+   "name": "Tuyau d'acier (T3)",
+   "category": null,
+   "tech": [
+    "heavy_press_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_heavy_press",
+     "in": {
+      "steel_ingot": 2
+     },
+     "out": {
+      "machine_pipe_3": 2
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "machine_builder": {
+   "name": "Constructeur (T2)",
+   "category": "machining",
+   "tech": [
+    "manufacturing_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 10,
+      "iron_gear": 6,
+      "copper_wire": 10
+     },
+     "out": {
+      "machine_builder": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_heavy_press": {
+   "name": "Presse hydraulique lourde (T3)",
+   "category": "machining",
+   "tech": [
+    "heavy_press_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 12,
+      "iron_gear": 8,
+      "copper_wire": 12
+     },
+     "out": {
+      "machine_heavy_press": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_washer": {
+   "name": "Station de lavage (T2)",
+   "category": "smelting",
+   "tech": [
+    "washing_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 8,
+      "iron_gear": 4,
+      "stone": 10
+     },
+     "out": {
+      "machine_washer": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "iron_ore_washed": {
+   "name": "Minerai de fer purifié",
+   "category": null,
+   "tech": [
+    "washing_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_washer",
+     "in": {
+      "iron_ore": 2
+     },
+     "out": {
+      "iron_ore_washed": 3
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "cast_iron_ingot",
+    "iron_ingot"
+   ],
+   "issues": []
+  },
+  "copper_ore_washed": {
+   "name": "Minerai de cuivre purifié",
+   "category": null,
+   "tech": [
+    "washing_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_washer",
+     "in": {
+      "copper_ore": 2
+     },
+     "out": {
+      "copper_ore_washed": 3
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "copper_ingot"
+   ],
+   "issues": []
+  },
+  "zinc_ore_washed": {
+   "name": "Minerai de zinc purifié",
+   "category": null,
+   "tech": [
+    "washing_2"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_washer",
+     "in": {
+      "zinc_ore": 2
+     },
+     "out": {
+      "zinc_ore_washed": 3
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "zinc_ingot"
+   ],
+   "issues": []
+  },
+  "machine_booster": {
+   "name": "Surpresseur (T2)",
+   "category": "fluids",
+   "tech": [
+    "fluids_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 6,
+      "iron_gear": 4,
+      "copper_wire": 6,
+      "copper_ingot": 4
+     },
+     "out": {
+      "machine_booster": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_cooling_tower": {
+   "name": "Tour de refroidissement (T2)",
+   "category": "fluids",
+   "tech": [
+    "fluids_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 12,
+      "iron_gear": 4,
+      "stone": 10
+     },
+     "out": {
+      "machine_cooling_tower": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_furnace_electric": {
+   "name": "Four électrique (T3)",
+   "category": "smelting",
+   "tech": [
+    "silicon_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 8,
+      "iron_gear": 6,
+      "copper_wire": 12
+     },
+     "out": {
+      "machine_furnace_electric": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_pumpjack": {
+   "name": "Chevalet de pompage (T3)",
+   "category": "extraction",
+   "tech": [
+    "oil_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 10,
+      "iron_gear": 8,
+      "iron_plate": 10,
+      "copper_wire": 6
+     },
+     "out": {
+      "machine_pumpjack": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "barrel_oil": {
+   "name": "Baril de pétrole (100 L)",
+   "category": null,
+   "tech": [
+    "oil_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_barreler",
+     "in": {
+      "barrel_empty": 1
+     },
+     "out": {
+      "barrel_oil": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "barrel_empty"
+   ],
+   "issues": []
+  },
+  "machine_refinery": {
+   "name": "Raffinerie (T3)",
+   "category": "machining",
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 16,
+      "iron_gear": 10,
+      "copper_wire": 16,
+      "concrete_block": 8
+     },
+     "out": {
+      "machine_refinery": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_plastic_press": {
+   "name": "Presse à plastique (T3)",
+   "category": "machining",
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 8,
+      "iron_gear": 6,
+      "copper_wire": 10
+     },
+     "out": {
+      "machine_plastic_press": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "plastic_insulator": {
+   "name": "Isolant en plastique",
+   "category": null,
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_plastic_press",
+     "in": {},
+     "out": {
+      "plastic_insulator": 4
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "cable_insulated",
+    "contaminated_glass"
+   ],
+   "issues": []
+  },
+  "aluminium_ingot": {
+   "name": "Lingot d'aluminium",
+   "category": null,
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace_electric",
+     "in": {
+      "bauxite": 2
+     },
+     "out": {
+      "aluminium_ingot": 1
+     },
+     "seconds": 4
+    }
+   ],
+   "usedIn": [
+    "zamak_ingot"
+   ],
+   "issues": []
+  },
+  "zamak_ingot": {
+   "name": "Lingot de zamak",
+   "category": null,
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_furnace_electric",
+     "in": {
+      "zinc_ingot": 1,
+      "copper_ingot": 1,
+      "aluminium_ingot": 1
+     },
+     "out": {
+      "zamak_ingot": 2
+     },
+     "seconds": 4
+    }
+   ],
+   "usedIn": [
+    "machine_accumulator",
+    "machine_antenna",
+    "machine_fission_reactor",
+    "machine_fusion_reactor",
+    "uranium_rod"
+   ],
+   "issues": []
+  },
+  "uranium_enriched": {
+   "name": "Uranium enrichi",
+   "category": null,
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_centrifuge",
+     "in": {
+      "uraninite": 4
+     },
+     "out": {
+      "uranium_enriched": 1,
+      "uranium_depleted": 3
+     },
+     "seconds": 6
+    }
+   ],
+   "usedIn": [
+    "uranium_rod"
+   ],
+   "issues": []
+  },
+  "uranium_depleted": {
+   "name": "Uranium appauvri (déchet)",
+   "category": null,
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_centrifuge",
+     "in": {
+      "uraninite": 4
+     },
+     "out": {
+      "uranium_enriched": 1,
+      "uranium_depleted": 3
+     },
+     "seconds": 6
+    }
+   ],
+   "usedIn": [
+    "science_pack_4"
+   ],
+   "issues": []
+  },
+  "uranium_rod": {
+   "name": "Barre d'uranium",
+   "category": "energy",
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "uranium_enriched": 2,
+      "zamak_ingot": 2,
+      "steel_plate": 2
+     },
+     "out": {
+      "uranium_rod": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "nuclear_waste": {
+   "name": "Déchet nucléaire solide",
+   "category": null,
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "science_pack_4": {
+   "name": "Paquet de science T4",
+   "category": "science",
+   "tech": [
+    "reactor_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "silicon_chip": 1,
+      "steel_plate": 1,
+      "uranium_depleted": 1
+     },
+     "out": {
+      "science_pack_4": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "tech:beacon_5",
+    "tech:fusion_5"
+   ],
+   "issues": []
+  },
+  "machine_centrifuge": {
+   "name": "Centrifugeuse (T4)",
+   "category": "machining",
+   "tech": [
+    "fission_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 14,
+      "iron_gear": 10,
+      "copper_wire": 14,
+      "concrete_block": 4
+     },
+     "out": {
+      "machine_centrifuge": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_fission_reactor": {
+   "name": "Réacteur à fission (T4)",
+   "category": "energy",
+   "tech": [
+    "reactor_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 30,
+      "concrete_block": 40,
+      "cable_insulated": 20,
+      "silicon_chip": 10,
+      "zamak_ingot": 20
+     },
+     "out": {
+      "machine_fission_reactor": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "contaminated_glass": {
+   "name": "Cylindre de verre contaminé",
+   "category": null,
+   "tech": [
+    "waste_4"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_vitrifier",
+     "in": {
+      "stone": 4,
+      "plastic_insulator": 2
+     },
+     "out": {
+      "contaminated_glass": 1
+     },
+     "seconds": 8
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ne sert d'ingrédient à rien"
+   ]
+  },
+  "machine_evaporation_tower": {
+   "name": "Tour d'évaporation (T4)",
+   "category": "fluids",
+   "tech": [
+    "waste_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 12,
+      "concrete_block": 20,
+      "iron_gear": 6
+     },
+     "out": {
+      "machine_evaporation_tower": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_vitrifier": {
+   "name": "Station de vitrification (T4)",
+   "category": "fluids",
+   "tech": [
+    "waste_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 16,
+      "concrete_block": 20,
+      "cable_insulated": 8,
+      "silicon_chip": 4
+     },
+     "out": {
+      "machine_vitrifier": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_accumulator": {
+   "name": "Accumulateur (T3)",
+   "category": "energy",
+   "tech": [
+    "storage_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 8,
+      "cable_insulated": 6,
+      "zamak_ingot": 4,
+      "silicon_chip": 2
+     },
+     "out": {
+      "machine_accumulator": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Lingot de zamak » n'est pas encore disponible : débloqué par « Fission T4 »"
+   ]
+  },
+  "machine_fusion_reactor": {
+   "name": "Réacteur à fusion magnétique",
+   "category": "energy",
+   "tech": [
+    "fusion_5"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 200,
+      "concrete_block": 200,
+      "cable_insulated": 100,
+      "silicon_chip": 50,
+      "zamak_ingot": 100
+     },
+     "out": {
+      "machine_fusion_reactor": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_relay": {
+   "name": "Relais émetteur hyperfréquence",
+   "category": "energy",
+   "tech": [
+    "beacon_5"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 10,
+      "cable_insulated": 10,
+      "silicon_chip": 6
+     },
+     "out": {
+      "machine_relay": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_antenna": {
+   "name": "Antenne d'alignement quantique",
+   "category": "energy",
+   "tech": [
+    "beacon_5"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 20,
+      "zamak_ingot": 10,
+      "cable_insulated": 20,
+      "silicon_chip": 10
+     },
+     "out": {
+      "machine_antenna": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_boiler": {
+   "name": "Chaudière",
+   "category": "energy",
+   "tech": [
+    "steam_power"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 20,
+      "stone": 10
+     },
+     "out": {
+      "machine_boiler": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_turbine": {
+   "name": "Turbine à vapeur",
+   "category": "energy",
+   "tech": [
+    "steam_power"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 24,
+      "copper_ingot": 16
+     },
+     "out": {
+      "machine_turbine": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "pistol": {
+   "name": "Pistolet",
+   "category": "tools",
+   "tech": [
+    "weapons_1"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 16
+     },
+     "out": {
+      "pistol": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "magazine": {
+   "name": "Chargeur (12 balles)",
+   "category": "tools",
+   "tech": [
+    "weapons_1"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 4
+     },
+     "out": {
+      "magazine": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "tool_stone": {
+   "name": "Outil en pierre",
+   "category": "tools",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 6,
+      "stone": 4
+     },
+     "out": {
+      "tool_stone": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "tool_iron": {
+   "name": "Outil en fer",
+   "category": "tools",
+   "tech": [
+    "power_generation"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 6,
+      "wood": 4
+     },
+     "out": {
+      "tool_iron": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_turret": {
+   "name": "Tourelle légère",
+   "category": "tools",
+   "tech": [
+    "defense"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 16,
+      "copper_ingot": 6
+     },
+     "out": {
+      "machine_turret": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "vehicle_buggy": {
+   "name": "Buggy",
+   "category": "equipment",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 24,
+      "copper_ingot": 8,
+      "wood": 6
+     },
+     "out": {
+      "vehicle_buggy": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "vehicle_quad": {
+   "name": "Quad",
+   "category": "equipment",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 14,
+      "copper_ingot": 4,
+      "wood": 3
+     },
+     "out": {
+      "vehicle_quad": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "vehicle_tank": {
+   "name": "Char",
+   "category": "equipment",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 24,
+      "iron_ingot": 30,
+      "iron_gear": 10,
+      "copper_ingot": 8
+     },
+     "out": {
+      "vehicle_tank": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "rail": {
+   "name": "Rail (tuile de 2,5 m)",
+   "category": "rail",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 2,
+      "wood": 1
+     },
+     "out": {
+      "rail": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "train_locomotive": {
+   "name": "Locomotive à vapeur",
+   "category": "rail",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 20,
+      "iron_ingot": 30,
+      "copper_ingot": 10,
+      "iron_gear": 12
+     },
+     "out": {
+      "train_locomotive": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "train_wagon_freight": {
+   "name": "Wagon de fret",
+   "category": "rail",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 30,
+      "wood": 20,
+      "iron_gear": 4
+     },
+     "out": {
+      "train_wagon_freight": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "train_wagon_tanker": {
+   "name": "Wagon-citerne",
+   "category": "rail",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_ingot": 14,
+      "iron_ingot": 20,
+      "iron_gear": 4
+     },
+     "out": {
+      "train_wagon_tanker": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)"
+   ]
+  },
+  "train_station": {
+   "name": "Station",
+   "category": "rail",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 20,
+      "wood": 12
+     },
+     "out": {
+      "train_station": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Disponible dès le départ (aucune technologie)",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "carapace": {
+   "name": "Carapace",
+   "category": null,
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "armor1_feet",
+    "armor1_head",
+    "armor1_legs",
+    "armor1_torso",
+    "armor2_feet",
+    "armor2_head",
+    "armor2_legs",
+    "armor2_torso",
+    "armor4_feet",
+    "armor4_head",
+    "armor4_legs",
+    "armor4_torso",
+    "combat_pack",
+    "machine_turret_plasma"
+   ],
+   "issues": []
+  },
+  "living_tissue": {
+   "name": "Tissu vivant",
+   "category": null,
+   "tech": [],
+   "paths": [],
+   "usedIn": [
+    "combat_pack"
+   ],
+   "issues": []
+  },
+  "combat_pack": {
+   "name": "Paquet de combat",
+   "category": "science",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 2,
+      "living_tissue": 1
+     },
+     "out": {
+      "combat_pack": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [
+    "tech:armor_2a",
+    "tech:armor_2b",
+    "tech:armor_4a",
+    "tech:armor_4b",
+    "tech:turret_2",
+    "tech:turret_3",
+    "tech:turret_4",
+    "tech:weapons_2",
+    "tech:weapons_3"
+   ],
+   "issues": []
+  },
+  "rifle": {
+   "name": "Fusil automatique",
+   "category": "tools",
+   "tech": [
+    "weapons_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_gear": 6,
+      "iron_plate": 10,
+      "copper_wire": 4
+     },
+     "out": {
+      "rifle": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "rifle_magazine": {
+   "name": "Chargeur de fusil (30 balles)",
+   "category": "tools",
+   "tech": [
+    "weapons_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 3,
+      "copper_ingot": 2
+     },
+     "out": {
+      "rifle_magazine": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "sniper": {
+   "name": "Fusil de précision (sniper)",
+   "category": "tools",
+   "tech": [
+    "weapons_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_gear": 8,
+      "steel_plate": 6,
+      "copper_wire": 6
+     },
+     "out": {
+      "sniper": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "sniper_magazine": {
+   "name": "Chargeur de sniper (5 balles)",
+   "category": "tools",
+   "tech": [
+    "weapons_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 3,
+      "copper_ingot": 3
+     },
+     "out": {
+      "sniper_magazine": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "machine_turret_heavy": {
+   "name": "Tourelle lourde",
+   "category": "tools",
+   "tech": [
+    "turret_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_plate": 20,
+      "iron_gear": 8,
+      "copper_ingot": 8
+     },
+     "out": {
+      "machine_turret_heavy": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "machine_turret_laser": {
+   "name": "Tourelle laser",
+   "category": "tools",
+   "tech": [
+    "turret_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 10,
+      "copper_wire": 16,
+      "silicon_chip": 4
+     },
+     "out": {
+      "machine_turret_laser": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »"
+   ]
+  },
+  "machine_turret_plasma": {
+   "name": "Tourelle à plasma",
+   "category": "tools",
+   "tech": [
+    "turret_4"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 20,
+      "silicon_chip": 10,
+      "carapace": 10
+     },
+     "out": {
+      "machine_turret_plasma": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »"
+   ]
+  },
+  "armor1_head": {
+   "name": "Casque renforcé",
+   "category": "armor",
+   "tech": [
+    "armor_1a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 2,
+      "iron_plate": 4
+     },
+     "out": {
+      "armor1_head": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor1_torso": {
+   "name": "Plastron renforcé",
+   "category": "armor",
+   "tech": [
+    "armor_1a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 5,
+      "cloth": 4,
+      "iron_plate": 8
+     },
+     "out": {
+      "armor1_torso": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Tissu » n'est pas encore disponible : débloqué par « Textile »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor1_legs": {
+   "name": "Jambières renforcées",
+   "category": "armor",
+   "tech": [
+    "armor_1b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 4,
+      "cloth": 4,
+      "iron_plate": 6
+     },
+     "out": {
+      "armor1_legs": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Tissu » n'est pas encore disponible : débloqué par « Textile »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor1_feet": {
+   "name": "Bottes renforcées",
+   "category": "armor",
+   "tech": [
+    "armor_1b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 2,
+      "cloth": 2,
+      "iron_plate": 4
+     },
+     "out": {
+      "armor1_feet": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Tissu » n'est pas encore disponible : débloqué par « Textile »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor2_head": {
+   "name": "Casque blindé",
+   "category": "armor",
+   "tech": [
+    "armor_2a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 3,
+      "steel_plate": 2
+     },
+     "out": {
+      "armor2_head": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor2_torso": {
+   "name": "Plastron blindé",
+   "category": "armor",
+   "tech": [
+    "armor_2a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 6,
+      "steel_plate": 5
+     },
+     "out": {
+      "armor2_torso": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor2_legs": {
+   "name": "Jambières blindées",
+   "category": "armor",
+   "tech": [
+    "armor_2b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 5,
+      "steel_plate": 4
+     },
+     "out": {
+      "armor2_legs": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor2_feet": {
+   "name": "Bottes blindées",
+   "category": "armor",
+   "tech": [
+    "armor_2b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 3,
+      "steel_plate": 2
+     },
+     "out": {
+      "armor2_feet": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor4_head": {
+   "name": "Casque à blindage lourd",
+   "category": "armor",
+   "tech": [
+    "armor_4a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 4,
+      "steel_plate": 4,
+      "silicon_chip": 1
+     },
+     "out": {
+      "armor4_head": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor4_torso": {
+   "name": "Plastron à blindage lourd",
+   "category": "armor",
+   "tech": [
+    "armor_4a"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 8,
+      "steel_plate": 8,
+      "silicon_chip": 2
+     },
+     "out": {
+      "armor4_torso": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor4_legs": {
+   "name": "Jambières à blindage lourd",
+   "category": "armor",
+   "tech": [
+    "armor_4b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 6,
+      "steel_plate": 6,
+      "silicon_chip": 2
+     },
+     "out": {
+      "armor4_legs": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "armor4_feet": {
+   "name": "Bottes à blindage lourd",
+   "category": "armor",
+   "tech": [
+    "armor_4b"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "carapace": 4,
+      "steel_plate": 4,
+      "silicon_chip": 1
+     },
+     "out": {
+      "armor4_feet": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Ingrédient « Plaque d'acier » n'est pas encore disponible : débloqué par « Métallurgie T2 »",
+    "Ingrédient « Puce en silicium » n'est pas encore disponible : débloqué par « Silicium T3 »",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "waypoint": {
+   "name": "Balise",
+   "category": "buildings",
+   "tech": [
+    "handling"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "iron_ingot": 4,
+      "copper_wire": 2
+     },
+     "out": {
+      "waypoint": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_iron_ore": {
+   "name": "Case d'hématite",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_copper_ore": {
+   "name": "Case de malachite",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_coal": {
+   "name": "Case de charbon",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_zinc_ore": {
+   "name": "Case de sphalérite",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_bauxite": {
+   "name": "Case de bauxite",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_stone_ore": {
+   "name": "Case de pierre",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_uraninite": {
+   "name": "Case d'uraninite",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_sand": {
+   "name": "Case de sable",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_oil": {
+   "name": "Case de pétrole",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_tree": {
+   "name": "Arbre",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_rock": {
+   "name": "Rocher",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_fiber_bush": {
+   "name": "Buisson de fibres",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  },
+  "res_water": {
+   "name": "Case d'eau",
+   "category": "resources",
+   "tech": [],
+   "paths": [],
+   "usedIn": [],
+   "issues": []
+  }
+ },
+ "techs": {
+  "logistics": {
+   "name": "Automatisation",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "machine_conveyor",
+    "machine_arm"
+   ]
+  },
+  "handling": {
+   "name": "Manutention",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_chest_iron",
+    "waypoint"
+   ]
+  },
+  "metallurgy": {
+   "name": "Métallurgie",
+   "tier": 1,
+   "cost": {
+    "iron_ingot": 20,
+    "stone": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "machine_stamper",
+    "machine_crusher"
+   ]
+  },
+  "metallurgy_2": {
+   "name": "Métallurgie T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "metallurgy",
+    "laboratory"
+   ],
+   "unlocks": [
+    "zinc_ingot",
+    "machine_bessemer",
+    "steel_plate"
+   ]
+  },
+  "construction_2": {
+   "name": "Construction T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_mixer",
+    "concrete_block"
+   ]
+  },
+  "manufacturing_2": {
+   "name": "Fabrication T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 40
+   },
+   "requires": [
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_builder",
+    "machine_pipe_2",
+    "science_pack_2"
+   ]
+  },
+  "fluids_2": {
+   "name": "Fluides T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 40
+   },
+   "requires": [
+    "manufacturing_2"
+   ],
+   "unlocks": [
+    "machine_booster",
+    "machine_cooling_tower"
+   ]
+  },
+  "washing_2": {
+   "name": "Métallurgie : lavage T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 40
+   },
+   "requires": [
+    "manufacturing_2"
+   ],
+   "unlocks": [
+    "machine_washer",
+    "iron_ore_washed",
+    "copper_ore_washed",
+    "zinc_ore_washed"
+   ]
+  },
+  "heavy_press_3": {
+   "name": "Presse lourde T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 100
+   },
+   "requires": [
+    "manufacturing_2",
+    "construction_2"
+   ],
+   "unlocks": [
+    "machine_heavy_press",
+    "machine_pipe_3"
+   ]
+  },
+  "silicon_3": {
+   "name": "Silicium T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 120
+   },
+   "requires": [
+    "heavy_press_3"
+   ],
+   "unlocks": [
+    "machine_furnace_electric",
+    "silicon_raw",
+    "silicon_chip"
+   ]
+  },
+  "oil_3": {
+   "name": "Pétrole T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 140
+   },
+   "requires": [
+    "barrels_3",
+    "heavy_press_3"
+   ],
+   "unlocks": [
+    "machine_pumpjack",
+    "barrel_oil"
+   ]
+  },
+  "plastic_3": {
+   "name": "Plastique T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 160
+   },
+   "requires": [
+    "oil_3",
+    "silicon_3"
+   ],
+   "unlocks": [
+    "machine_refinery",
+    "machine_plastic_press",
+    "plastic_insulator",
+    "cable_insulated",
+    "science_pack_3"
+   ]
+  },
+  "fission_4": {
+   "name": "Fission T4",
+   "tier": 4,
+   "cost": {
+    "science_pack_3": 200
+   },
+   "requires": [
+    "plastic_3"
+   ],
+   "unlocks": [
+    "machine_centrifuge",
+    "aluminium_ingot",
+    "zamak_ingot",
+    "uranium_enriched",
+    "uranium_depleted",
+    "uranium_rod"
+   ]
+  },
+  "reactor_4": {
+   "name": "Réacteur T4",
+   "tier": 4,
+   "cost": {
+    "science_pack_3": 300
+   },
+   "requires": [
+    "fission_4"
+   ],
+   "unlocks": [
+    "machine_fission_reactor",
+    "science_pack_4"
+   ]
+  },
+  "waste_4": {
+   "name": "Déchets T4",
+   "tier": 4,
+   "cost": {
+    "science_pack_3": 250
+   },
+   "requires": [
+    "reactor_4"
+   ],
+   "unlocks": [
+    "machine_evaporation_tower",
+    "machine_vitrifier",
+    "contaminated_glass"
+   ]
+  },
+  "storage_3": {
+   "name": "Stockage T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 120
+   },
+   "requires": [
+    "plastic_3"
+   ],
+   "unlocks": [
+    "machine_accumulator"
+   ]
+  },
+  "fusion_5": {
+   "name": "Fusion",
+   "tier": 5,
+   "cost": {
+    "science_pack_4": 200,
+    "science_pack_3": 100
+   },
+   "requires": [
+    "waste_4",
+    "storage_3"
+   ],
+   "unlocks": [
+    "machine_fusion_reactor"
+   ]
+  },
+  "beacon_5": {
+   "name": "Balise hyperfréquence",
+   "tier": 5,
+   "cost": {
+    "science_pack_4": 300,
+    "science_pack_3": 150
+   },
+   "requires": [
+    "fusion_5"
+   ],
+   "unlocks": [
+    "machine_relay",
+    "machine_antenna"
+   ]
+  },
+  "logistics_2": {
+   "name": "Logistique T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 40
+   },
+   "requires": [
+    "logistics",
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_conveyor_2"
+   ]
+  },
+  "logistics_3": {
+   "name": "Logistique T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 100
+   },
+   "requires": [
+    "logistics_2"
+   ],
+   "unlocks": [
+    "machine_conveyor_3",
+    "machine_arm_filter"
+   ]
+  },
+  "sorting_3": {
+   "name": "Logistique : tri T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 120
+   },
+   "requires": [
+    "logistics_3"
+   ],
+   "unlocks": [
+    "machine_sorter"
+   ]
+  },
+  "extraction_3": {
+   "name": "Extraction T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 60
+   },
+   "requires": [
+    "metallurgy_2",
+    "power_generation"
+   ],
+   "unlocks": [
+    "machine_drill_eco"
+   ]
+  },
+  "textile": {
+   "name": "Textile",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "cloth",
+    "backpack",
+    "hood"
+   ]
+  },
+  "clothing": {
+   "name": "Vêtements",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "trousers",
+    "boots"
+   ]
+  },
+  "handwear": {
+   "name": "Gants",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "gloves"
+   ]
+  },
+  "bedding": {
+   "name": "Couchage",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "sleeping_bag",
+    "bed"
+   ]
+  },
+  "electricity": {
+   "name": "Électricité",
+   "tier": 1,
+   "cost": {
+    "iron_ingot": 15,
+    "copper_ingot": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "machine_pole",
+    "machine_crank"
+   ]
+  },
+  "power_generation": {
+   "name": "Production d'énergie",
+   "tier": 1,
+   "cost": {
+    "science_pack": 15
+   },
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "tool_iron"
+   ]
+  },
+  "laboratory": {
+   "name": "Laboratoire",
+   "tier": 1,
+   "cost": {
+    "iron_ingot": 10,
+    "copper_ingot": 10
+   },
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_lab",
+    "science_pack"
+   ]
+  },
+  "automation": {
+   "name": "Automatisation T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "electricity",
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_arm_electric",
+    "machine_assembler"
+   ]
+  },
+  "steam": {
+   "name": "Vapeur",
+   "tier": 1,
+   "cost": {
+    "science_pack": 15
+   },
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_pipe",
+    "machine_pump"
+   ]
+  },
+  "steam_power": {
+   "name": "Vapeur : chaudière et turbine",
+   "tier": 1,
+   "cost": {
+    "science_pack": 15
+   },
+   "requires": [
+    "steam"
+   ],
+   "unlocks": [
+    "machine_boiler",
+    "machine_turbine"
+   ]
+  },
+  "barrels_3": {
+   "name": "Logistique : barils T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 80
+   },
+   "requires": [
+    "steam",
+    "logistics_3"
+   ],
+   "unlocks": [
+    "machine_barreler",
+    "barrel_empty"
+   ]
+  },
+  "navigation": {
+   "name": "Navigation",
+   "tier": 1,
+   "cost": {
+    "science_pack": 5
+   },
+   "requires": [],
+   "unlocks": [
+    "compass"
+   ]
+  },
+  "defense": {
+   "name": "Tourelle légère",
+   "tier": 1,
+   "cost": {
+    "iron_plate": 10
+   },
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_turret"
+   ]
+  },
+  "weapons_1": {
+   "name": "Pistolet",
+   "tier": 1,
+   "cost": {
+    "iron_plate": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "pistol",
+    "magazine"
+   ]
+  },
+  "armor_1a": {
+   "name": "Armure renforcée (casque, plastron)",
+   "tier": 1,
+   "cost": {
+    "iron_plate": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "armor1_head",
+    "armor1_torso"
+   ]
+  },
+  "armor_1b": {
+   "name": "Armure renforcée (jambes, bottes)",
+   "tier": 1,
+   "cost": {
+    "iron_plate": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "armor1_legs",
+    "armor1_feet"
+   ]
+  },
+  "weapons_2": {
+   "name": "Fusil automatique",
+   "tier": 2,
+   "cost": {
+    "combat_pack": 5
+   },
+   "requires": [
+    "weapons_1"
+   ],
+   "unlocks": [
+    "rifle",
+    "rifle_magazine"
+   ]
+  },
+  "weapons_3": {
+   "name": "Sniper",
+   "tier": 3,
+   "cost": {
+    "combat_pack": 10
+   },
+   "requires": [
+    "weapons_2",
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "sniper",
+    "sniper_magazine"
+   ]
+  },
+  "armor_2a": {
+   "name": "Armure blindée (casque, plastron)",
+   "tier": 2,
+   "cost": {
+    "combat_pack": 5
+   },
+   "requires": [
+    "armor_1a"
+   ],
+   "unlocks": [
+    "armor2_head",
+    "armor2_torso"
+   ]
+  },
+  "armor_2b": {
+   "name": "Armure blindée (jambes, bottes)",
+   "tier": 2,
+   "cost": {
+    "combat_pack": 5
+   },
+   "requires": [
+    "armor_1b"
+   ],
+   "unlocks": [
+    "armor2_legs",
+    "armor2_feet"
+   ]
+  },
+  "turret_2": {
+   "name": "Tourelle lourde",
+   "tier": 2,
+   "cost": {
+    "combat_pack": 5
+   },
+   "requires": [
+    "defense"
+   ],
+   "unlocks": [
+    "machine_turret_heavy"
+   ]
+  },
+  "turret_3": {
+   "name": "Tourelle laser",
+   "tier": 3,
+   "cost": {
+    "combat_pack": 10
+   },
+   "requires": [
+    "turret_2"
+   ],
+   "unlocks": [
+    "machine_turret_laser"
+   ]
+  },
+  "armor_4a": {
+   "name": "Armure à blindage lourd (casque, plastron)",
+   "tier": 4,
+   "cost": {
+    "combat_pack": 20
+   },
+   "requires": [
+    "armor_2a"
+   ],
+   "unlocks": [
+    "armor4_head",
+    "armor4_torso"
+   ]
+  },
+  "armor_4b": {
+   "name": "Armure à blindage lourd (jambes, bottes)",
+   "tier": 4,
+   "cost": {
+    "combat_pack": 20
+   },
+   "requires": [
+    "armor_2b"
+   ],
+   "unlocks": [
+    "armor4_legs",
+    "armor4_feet"
+   ]
+  },
+  "turret_4": {
+   "name": "Tourelle à plasma",
+   "tier": 4,
+   "cost": {
+    "combat_pack": 20
+   },
+   "requires": [
+    "turret_3"
+   ],
+   "unlocks": [
+    "machine_turret_plasma"
+   ]
+  },
+  "routing": {
+   "name": "Aiguillage",
+   "tier": 1,
+   "cost": {
+    "science_pack": 10
+   },
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_splitter",
+    "machine_merger"
+   ]
+  },
+  "electricity_2": {
+   "name": "Électricité T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_generator"
+   ]
+  },
+  "power_generation_2": {
+   "name": "Production d'énergie T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "power_generation"
+   ],
+   "unlocks": [
+    "machine_drill_electric"
+   ]
+  },
+  "waterwheel": {
+   "name": "Roue à aubes",
+   "tier": 1,
+   "cost": {
+    "copper_plate": 10
+   },
+   "requires": [],
+   "unlocks": [
+    "machine_waterwheel"
+   ]
+  },
+  "research_1": {
+   "name": "Recherche T1",
+   "tier": 1,
+   "cost": {
+    "iron_ingot": 20,
+    "copper_ingot": 20
+   },
+   "requires": [
+    "laboratory"
+   ],
+   "unlocks": []
+  },
+  "research_2": {
+   "name": "Recherche T2",
+   "tier": 2,
+   "cost": {
+    "science_pack": 30
+   },
+   "requires": [
+    "research_1"
+   ],
+   "unlocks": []
+  },
+  "research_3": {
+   "name": "Recherche T3",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 80
+   },
+   "requires": [
+    "research_2"
+   ],
+   "unlocks": []
+  },
+  "research_4": {
+   "name": "Recherche T4",
+   "tier": 4,
+   "cost": {
+    "science_pack_3": 150
+   },
+   "requires": [
+    "research_3"
+   ],
+   "unlocks": []
+  }
+ }
+}
