@@ -125,6 +125,8 @@
   "action.hotbar7": "Emplacement 7",
   "action.hotbar8": "Emplacement 8",
   "action.hotbar9": "Emplacement 9",
+  "action.hotbarNext": "Case suivante de la barre",
+  "action.hotbarPrev": "Case précédente de la barre",
   "action.hotbar10": "Emplacement 10",
   "key.mouse0": "Clic gauche",
   "key.mouse1": "Clic molette",

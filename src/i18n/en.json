@@ -125,6 +125,8 @@
   "action.hotbar7": "Slot 7",
   "action.hotbar8": "Slot 8",
   "action.hotbar9": "Slot 9",
+  "action.hotbarNext": "Next hotbar slot",
+  "action.hotbarPrev": "Previous hotbar slot",
   "action.hotbar10": "Slot 10",
   "key.mouse0": "Left click",
   "key.mouse1": "Middle click",

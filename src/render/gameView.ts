@@ -1861,6 +1861,19 @@ export function startGameView(
     : null;
 
   // Manette : déplacement, regard, actions, et navigation dans les menus (voir input/gamepad.ts).
+  /** Passe à la case suivante (1) ou précédente (-1) de la barre, en sautant les cases vides. */
+  function stepHotbar(step: number): void {
+    const hotbar = options.state.changes.hotbar;
+    let i = options.state.selectedSlot ?? (step > 0 ? -1 : 0);
+    for (let n = 0; n < hotbar.length; n++) {
+      i = (i + step + hotbar.length) % hotbar.length;
+      if (hotbar[i]) {
+        if (options.state.selectedSlot !== i) options.state.selectSlot(i);
+        return;
+      }
+    }
+  }
+
   const gamepad = mountGamepad({
     input,
     inMenu: () => paused || uiOpen,
@@ -1868,17 +1881,7 @@ export function startGameView(
       rig.look(dx, dy, getSettings().views);
       signalLook(dx, dy, 0.5);
     },
-    onHotbarStep: (step) => {
-      const hotbar = options.state.changes.hotbar;
-      let i = options.state.selectedSlot ?? (step > 0 ? -1 : 0);
-      for (let n = 0; n < hotbar.length; n++) {
-        i = (i + step + hotbar.length) % hotbar.length;
-        if (hotbar[i]) {
-          if (options.state.selectedSlot !== i) options.state.selectSlot(i);
-          return;
-        }
-      }
-    },
+    onHotbarStep: stepHotbar,
   });
 
   let rightMoved = 0;
@@ -3687,8 +3690,15 @@ export function startGameView(
             renderBuildHud();
           }
         }
-        if (repeating('zoomIn', dt)) rig.zoom(1, views);
-        if (repeating('zoomOut', dt)) rig.zoom(-1, views);
+        const zoomIn = repeating('zoomIn', dt);
+        const zoomOut = repeating('zoomOut', dt);
+        if (zoomIn) rig.zoom(1, views);
+        if (zoomOut) rig.zoom(-1, views);
+        // Molette : haut = case suivante de la barre, bas = précédente (sauf si elle sert au zoom).
+        if (!zoomIn && !zoomOut) {
+          if (pressed('hotbarNext')) stepHotbar(1);
+          if (pressed('hotbarPrev')) stepHotbar(-1);
+        }
       }
       updateSeason();
       const useKey = pressed('use');

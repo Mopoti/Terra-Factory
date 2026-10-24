@@ -90,8 +90,8 @@ export const ACTIONS = [
   { id: 'paste', category: 'build', defaults: ['Control+L:V', null] },
   { id: 'undo', category: 'build', defaults: ['Control+L:Z', null] },
   { id: 'redo', category: 'build', defaults: ['Control+L:Y', null] },
-  { id: 'zoomIn', category: 'camera', defaults: ['WheelUp', 'Equal'] },
-  { id: 'zoomOut', category: 'camera', defaults: ['WheelDown', 'Minus'] },
+  { id: 'zoomIn', category: 'camera', defaults: ['Control+WheelUp', 'Equal'] },
+  { id: 'zoomOut', category: 'camera', defaults: ['Control+WheelDown', 'Minus'] },
   { id: 'rotateLeft', category: 'camera', defaults: ['ArrowLeft', null] },
   { id: 'rotateRight', category: 'camera', defaults: ['ArrowRight', null] },
   hotbar(1),
@@ -103,6 +103,8 @@ export const ACTIONS = [
   hotbar(7),
   hotbar(8),
   hotbar(9),
+  { id: 'hotbarNext', category: 'hotbar', defaults: ['WheelUp', null] },
+  { id: 'hotbarPrev', category: 'hotbar', defaults: ['WheelDown', null] },
   { id: 'hotbar10', category: 'hotbar', defaults: ['Digit0', null] },
 ] as const satisfies readonly ActionDef[];
 
