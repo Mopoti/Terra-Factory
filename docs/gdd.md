@@ -198,7 +198,7 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 ### 4.5 Outils et récolte ✅
 
 - **À mains nues**, la récolte est **×3 plus lente**.
-- L'outil se place dans une **case de la barre** (la case choisie, sinon la première qui en contient un) (il n'apparaît dans les mains que pendant l'action) :
+- L'outil se place dans une **case de la barre** (il n'est en main, et ne récolte, que lorsqu'on appuie sur la touche de sa case ; sinon mains nues) (il n'apparaît dans les mains que pendant l'action) :
 
 | Outil           | Vitesse de récolte | Unités par coup | Recette                      |
 | --------------- | ------------------ | --------------- | ---------------------------- |

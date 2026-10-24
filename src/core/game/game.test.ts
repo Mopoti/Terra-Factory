@@ -829,12 +829,14 @@ describe('piles du sac, objet en main et outils', () => {
     expect(s.selectedItem()).toBeNull();
   });
 
-  it("l'outil de la barre de raccourcis change la récolte ; sans outil dans la barre, mains nues", () => {
+  it("l'outil de la case choisie change la récolte ; sinon mains nues", () => {
     const s = new GameState({ inventory: { tool_stone: 1, tool_iron: 1, stone: 1 } });
     expect(s.harvestTool()).toBeNull();
     s.assignSlot(0, 'stone');
     expect(s.harvestTool()).toBeNull();
     s.assignSlot(1, 'tool_stone');
+    expect(s.harvestTool()).toBeNull();
+    s.selectSlot(1);
     expect(s.harvestTool()?.speed).toBe(2);
     s.assignSlot(9, 'tool_iron');
     s.selectSlot(9);
@@ -844,7 +846,7 @@ describe('piles du sac, objet en main et outils', () => {
   it("l'outil d'une ancienne case d'outils passe dans le sac et dans la dernière case de la barre, une seule fois", () => {
     const changes = { ...emptyChanges(), tools: ['tool_stone'] } as Record<string, unknown>;
     const s = new GameState({ inventory: {}, changes });
-    expect(s.toolItem()).toBe('tool_stone');
+    expect(s.toolItem()).toBeNull();
     expect(s.inventory.tool_stone).toBe(1);
     expect(s.changes.hotbar[9]).toBe('tool_stone');
     const again = new GameState(s.snapshot());
@@ -857,7 +859,6 @@ describe('piles du sac, objet en main et outils', () => {
     delete changes.toolsHeld;
     const s = new GameState({ inventory: { tool_stone: 1 }, changes });
     expect(s.inventory.tool_stone).toBe(1);
-    expect(s.toolItem()).toBe('tool_stone');
   });
 
   it('un tapis posé par-dessus un autre le remplace (palier, sens) et rend l’ancien', () => {

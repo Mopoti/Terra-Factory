@@ -3829,7 +3829,7 @@ export function startGameView(
       p.stone.visible = !p.iron.visible;
       p.iron.rotation.z = p.stone.rotation.z = toolSpin + TOOL_ROLL;
     }
-    // Vue subjective : l'outil du slot reste visible en bas à droite ; sans outil, pas de main.
+    // L'outil n'est en main que si sa case de la barre est choisie ; sinon, pas de main.
     const holdsTool = toolId !== null && !isWeapon(toolId) && !armedNow && !seat;
     hand.visible = rig.view === 'first' && views.first.showHands && holdsTool;
     bodyTool.visible = rig.view !== 'first' && holdsTool;

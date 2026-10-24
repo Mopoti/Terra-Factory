@@ -728,13 +728,12 @@ export class GameState {
     this.emit({ type: 'hotbar' });
   }
 
-  /** Outil de récolte de la barre de raccourcis (celui de la case choisie, sinon le premier), ou null : mains nues. */
+  /** Outil de récolte en main : celui de la case choisie dans la barre (visible en main), sinon null : mains nues. */
   toolItem(): string | null {
-    const isTool = (id: string | null): id is string =>
-      id !== null && (this.inventory[id] ?? 0) > 0 && !!itemById(id).tool;
     const picked = this.selectedItem();
-    if (isTool(picked)) return picked;
-    return this.changes.hotbar.find(isTool) ?? null;
+    return picked !== null && (this.inventory[picked] ?? 0) > 0 && itemById(picked).tool
+      ? picked
+      : null;
   }
 
   /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
