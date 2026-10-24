@@ -431,6 +431,7 @@ function controlsTab(): HTMLElement {
 
   function redraw(): void {
     box.replaceChildren(presetRow(), el('p', 'note', t('settings.controls.note')));
+    let warnBox: HTMLElement | null = null;
     if (pending) {
       const p = pending;
       const warn = el('div', 'conflict');
@@ -465,7 +466,7 @@ function controlsTab(): HTMLElement {
           'menu-btn',
         ),
       );
-      box.append(warn);
+      warnBox = warn;
     }
     for (const category of ACTION_CATEGORIES) {
       box.append(el('h3', undefined, t(`actioncat.${category}` as TranslationKey)));
@@ -476,6 +477,12 @@ function controlsTab(): HTMLElement {
         control.append(slotButton(a.id, 0), slotButton(a.id, 1));
         row.append(control);
         box.append(row);
+        // La demande de confirmation s'affiche juste sous la ligne modifiée (pas en haut de la liste, hors de vue).
+        if (warnBox && pending?.action === a.id) {
+          box.append(warnBox);
+          const shown = warnBox;
+          queueMicrotask(() => shown.scrollIntoView({ block: 'center' }));
+        }
       }
     }
   }
