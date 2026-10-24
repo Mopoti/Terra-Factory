@@ -65,6 +65,12 @@ export const GUN_PROFILES: Record<GunKind, GunProfile> = {
   },
 };
 
+/**
+ * Inclinaison de la poignée de chaque modèle (rad) : angle entre l'axe de la poignée (vers le haut) et la verticale,
+ * le bas de la poignée partant vers l'arrière. Sert à placer la main gantée et l'arme dans le poing.
+ */
+export const GRIP_TILT: Record<GunKind, number> = { pistol: 0.33, rifle: 0.29, sniper: 0.29 };
+
 /** Arme du jeu → modèle. */
 export const GUN_FILES: Record<GunKind, string> = {
   pistol: 'pistolet',
@@ -273,4 +279,59 @@ function makeFlash(): THREE.Object3D {
   g.add(face, side, top);
   g.renderOrder = 5;
   return g;
+}
+
+/** Main gantée sur une arme en vue subjective : taille, centre du manche dans le poing (repère du gant, m). */
+const FP_GLOVE_SCALE = 1.0;
+const FP_GLOVE_GRIP = new THREE.Vector3(0, -0.031, 0.09);
+/** Manche de la combinaison : longueur du modèle (m), étirement, pli du poignet vers le bas (rad). */
+const FP_SLEEVE_LENGTH_M = 0.24;
+const FP_SLEEVE_STRETCH = 1.6;
+const FP_WRIST_BEND = 0.55;
+
+/**
+ * Vue subjective : pose la main gantée droite sur la poignée de l'arme `model` (repère du fichier : canon vers +z, haut
+ * +y, origine au milieu de la poignée) et la manche dans le prolongement, le poignet cassé vers le bas. Le gant et la
+ * manche sont des enfants du modèle : ils suivent le recul et le rechargement. Renvoie les objets à habiller (couleurs).
+ */
+export function holdGunGrip(
+  model: THREE.Object3D,
+  kind: GunKind,
+  glove: THREE.Object3D,
+  sleeve: THREE.Object3D | null,
+): THREE.Object3D[] {
+  const a = GRIP_TILT[kind];
+  // Axe de la poignée (vers le haut, la culasse) et avant de la main (vers le canon) ; gant : pouce +X, dos +Y, doigts +Z.
+  const s = new THREE.Vector3(0, Math.cos(a), Math.sin(a));
+  const f = new THREE.Vector3(0, -Math.sin(a), Math.cos(a));
+  const back = new THREE.Vector3().crossVectors(f, s);
+  glove.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(s, back, f));
+  glove.scale.setScalar(FP_GLOVE_SCALE);
+  glove.position
+    .copy(FP_GLOVE_GRIP)
+    .multiplyScalar(FP_GLOVE_SCALE)
+    .applyQuaternion(glove.quaternion)
+    .negate();
+  model.add(glove);
+  if (!sleeve) return [glove];
+  // Avant-bras : du poignet vers l'arrière et vers le bas (poignet cassé), la manchette du gant tournée vers lui.
+  const toElbow = f
+    .clone()
+    .negate()
+    .multiplyScalar(Math.cos(FP_WRIST_BEND))
+    .addScaledVector(s, -Math.sin(FP_WRIST_BEND))
+    .normalize();
+  const forward = toElbow.clone().negate();
+  const cuff = glove.getObjectByName('manchette');
+  if (cuff) {
+    const local = forward.clone().applyQuaternion(glove.quaternion.clone().invert());
+    cuff.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), local);
+  }
+  sleeve.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), forward);
+  sleeve.scale.set(1, 1, FP_SLEEVE_STRETCH);
+  sleeve.position
+    .copy(glove.position)
+    .addScaledVector(toElbow, 0.035 + FP_SLEEVE_LENGTH_M * FP_SLEEVE_STRETCH);
+  model.add(sleeve);
+  return [glove, sleeve];
 }

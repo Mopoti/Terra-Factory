@@ -160,14 +160,18 @@ const STRIKE_KEYS: StrikeKey[] = ROWS.map(([t, r, l, lean, turn, knees]) => ({
   knees,
 }));
 
-/**
- * Vue subjective (bras droit seul, vu de l'épaule) : outil tenu en bas à droite, manche dressé un peu penché vers
- * l'avant ; au coup, la main monte et l'outil part en arrière par-dessus l'épaule, puis s'abat au centre de l'écran.
- */
 /** Main gantée : centre du manche, plaqué contre la paume au pied des doigts, dans le repère du modèle exporté (m, doigts vers +Z). */
 const GLOVE_GRIP = new THREE.Vector3(0, -0.031, 0.09);
 /** Main gantée tournée autour du manche (rad) : l'avant-bras arrive du bas à droite de l'écran. */
 const GLOVE_ROLL = -0.6;
+/** Poses des bras avec une arme (vues extérieures) : pistolet tenu bras tendu, arme longue épaulée. */
+const GUN_ARM_PISTOL: ArmPose = arm(-1.45, 0.02, 0.1, 0.05, 0.25);
+const GUN_ARM_LONG_RIGHT: ArmPose = arm(-0.25, 0.15, 1.35, 0.05, 0.3);
+const GUN_ARM_LONG_LEFT: ArmPose = arm(-1.0, 0.0, 0.7, 0.1, 0.6);
+/** Main gantée en vue extérieure : un peu plus petite qu'en vue subjective (proportions du corps entier). */
+const GLOVE_SCALE_OUTSIDE = 1.05;
+/** Échelle des os des mains du modèle quand les mains gantées les remplacent (repliées au poignet). */
+const HIDDEN_HAND = 0.02;
 /** Main gantée un peu plus grande que nature (style cartoon, comme l'image de référence). */
 const GLOVE_SCALE = 1.3;
 /** Longueur du modèle de manche `avant_bras` (m), étirement et épaisseur en vue subjective, recouvrement du gant (m). */
@@ -196,6 +200,10 @@ const THUMB: [number, number][] = [
   [0.7, 0],
 ];
 
+/**
+ * Vue subjective (bras droit seul, vu de l'épaule) : outil tenu en bas à droite, manche dressé un peu penché vers
+ * l'avant ; au coup, la main monte et l'outil part en arrière par-dessus l'épaule, puis s'abat au centre de l'écran.
+ */
 const FP_HOLD: ArmPose = arm(-1.62, -0.21, 0.08, -0.23, 0.41);
 // prettier-ignore
 const FP_ROWS: [number, number[]][] = [
@@ -304,6 +312,11 @@ export class Avatar {
   private wasAirborne = false;
   /** Prise de l'outil (dans l'os de la main) et pivot de l'outil, posés par `attachHandTool`. */
   private toolHolder: THREE.Object3D | null = null;
+  private mount: THREE.Object3D | null = null;
+  /** Arme en main (vues extérieures) : bras droit tendu vers l'avant ; arme longue : bras gauche sous le garde-main. */
+  gunPose: 'none' | 'pistol' | 'long' = 'none';
+  /** Gants des vues extérieures et os de l'avant-bras correspondant (manchette tournée vers le coude). */
+  private readonly cuffs: { glove: THREE.Object3D; fore: THREE.Bone }[] = [];
   /** Vue subjective, style doux : manche, gant, axe du gant (dans la prise) et os de l'avant-bras. */
   private fpSleeve: {
     sleeve: THREE.Object3D;
@@ -560,39 +573,30 @@ export class Avatar {
     hand.add(holder);
   }
 
-  /**
-   * Vue subjective, style doux : remplace le bras du modèle par la main gantée (`main_gantee`, doigts refermés sur
-   * le manche) et la manche de la combinaison (`avant_bras`, étirée sur l'avant-bras). À appeler après
-   * `attachHandTool` (la main se place autour du manche) et après `look` (couleurs de peau et de combinaison).
-   */
-  wearFirstPersonHand(glove: THREE.Object3D, sleeve: THREE.Object3D | null): void {
-    const holder = this.toolHolder;
-    const grip = this.toolGrip;
-    const fore = this.bones.get(ARM.d[1]);
-    if (!holder || !grip || !fore) return;
-    for (const mesh of this.bodyMeshes) mesh.visible = false;
+  /** Matériaux propres à un modèle porté (gant, manche) : peau et combinaison aux couleurs du joueur, découpe. */
+  private tintGlove(root: THREE.Object3D): void {
     const planes = this.materials[0]?.clippingPlanes ?? null;
-    const tint = (root: THREE.Object3D): void => {
-      root.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        mesh.castShadow = false;
-        mesh.frustumCulled = false;
-        const own = (m: THREE.Material): THREE.Material => {
-          const c = (m as THREE.MeshStandardMaterial).clone();
-          const name = m.name.replace(/\.\d+$/, '');
-          const same = this.named.get(name === 'peau_main' ? 'peau' : name);
-          if (same) c.color.copy(same.color);
-          c.clippingPlanes = planes;
-          return c;
-        };
-        mesh.material = Array.isArray(mesh.material)
-          ? mesh.material.map(own)
-          : own(mesh.material as THREE.Material);
-      });
-    };
-    tint(glove);
-    // Doigts refermés autour du manche, pouce par-dessus.
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.castShadow = !this.firstPerson;
+      mesh.frustumCulled = false;
+      const own = (m: THREE.Material): THREE.Material => {
+        const c = (m as THREE.MeshStandardMaterial).clone();
+        const name = m.name.replace(/\.\d+$/, '');
+        const same = this.named.get(name === 'peau_main' ? 'peau' : name);
+        if (same) c.color.copy(same.color);
+        c.clippingPlanes = planes;
+        return c;
+      };
+      mesh.material = Array.isArray(mesh.material)
+        ? mesh.material.map(own)
+        : own(mesh.material as THREE.Material);
+    });
+  }
+
+  /** Doigts de la main gantée refermés en poing (autour d'un manche), pouce par-dessus l'index. */
+  private static clench(glove: THREE.Object3D): void {
     for (const [finger, angles] of Object.entries(FIST))
       angles.forEach((angle, k) => {
         const o = glove.getObjectByName(`${finger}_${k + 1}`);
@@ -602,24 +606,115 @@ export class Avatar {
     THUMB.forEach(([x, up], k) =>
       glove.getObjectByName(`pouce_${k + 1}`)?.rotation.set(x, up, 0, 'YXZ'),
     );
-    // Repère de la main (dans celui de la prise) : jointures le long du manche (pouce vers la tête de l'outil),
-    // doigts à l'opposé du coude ; le point creux du poing est sur l'axe du manche.
-    // La main tourne autour du manche pour que le poignet regarde le coude (mesuré à la pose de repos) : la manche
-    // prolonge alors le gant.
+  }
+
+  /**
+   * Met la main gantée droite autour du manche de l'outil (dans la prise posée par `attachHandTool`) : jointures le
+   * long du manche (pouce vers la tête de l'outil), doigts à l'opposé du coude (mesuré à la pose de repos), puis
+   * tournée de `roll` autour du manche ; le manche passe dans le creux du poing. Renvoie l'axe du gant (du poignet
+   * vers les doigts, dans la prise), ou null sans outil.
+   */
+  private gripGlove(glove: THREE.Object3D, roll: number, size = GLOVE_SCALE): THREE.Vector3 | null {
+    const holder = this.toolHolder;
+    const grip = this.toolGrip;
+    const fore = this.bones.get(ARM.d[1]);
+    if (!holder || !grip || !fore) return null;
+    this.tintGlove(glove);
+    Avatar.clench(glove);
     this.resetPose();
     this.root.updateMatrixWorld(true);
     const s = new THREE.Vector3(0, 0, 1).applyQuaternion(grip.quaternion);
     const f = holder.worldToLocal(fore.getWorldPosition(new THREE.Vector3())).negate();
-    f.addScaledVector(s, -s.dot(f)).normalize().applyAxisAngle(s, GLOVE_ROLL);
+    f.addScaledVector(s, -s.dot(f)).normalize().applyAxisAngle(s, roll);
     // Modèle exporté (Y en haut) : pouce vers +X, dos de la main vers +Y, doigts vers +Z.
     const back = new THREE.Vector3().crossVectors(f, s);
     glove.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(s, back, f));
-    glove.scale.setScalar(GLOVE_SCALE);
-    glove.position
-      .copy(GLOVE_GRIP)
-      .multiplyScalar(GLOVE_SCALE)
-      .applyQuaternion(glove.quaternion)
-      .negate();
+    glove.scale.setScalar(size);
+    glove.position.copy(GLOVE_GRIP).multiplyScalar(size).applyQuaternion(glove.quaternion).negate();
+    return f;
+  }
+
+  /** Prépare un gant à porter ailleurs que sur ce personnage (arme en vue subjective) : couleurs du joueur, poing fermé. */
+  dressGlove(glove: THREE.Object3D): void {
+    this.tintGlove(glove);
+    Avatar.clench(glove);
+  }
+
+  /**
+   * Repère pour tenir une arme dans la main droite (vues extérieures) : son axe Y est celui du manche de l'outil (là
+   * où le poing se referme), son axe Z part vers l'avant de la main (du coude vers les doigts). Une arme posée avec sa
+   * poignée le long de Y et le canon vers Z tombe dans le poing ganté. Null sans outil attaché.
+   */
+  gunMount(): THREE.Object3D | null {
+    if (this.mount) return this.mount;
+    const holder = this.toolHolder;
+    const grip = this.toolGrip;
+    const fore = this.bones.get(ARM.d[1]);
+    if (!holder || !grip || !fore) return null;
+    this.resetPose();
+    this.root.updateMatrixWorld(true);
+    const s = new THREE.Vector3(0, 0, 1).applyQuaternion(grip.quaternion);
+    const f = holder.worldToLocal(fore.getWorldPosition(new THREE.Vector3())).negate();
+    f.addScaledVector(s, -s.dot(f)).normalize();
+    const x = new THREE.Vector3().crossVectors(s, f);
+    this.mount = new THREE.Object3D();
+    this.mount.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, s, f));
+    holder.add(this.mount);
+    return this.mount;
+  }
+
+  /**
+   * Vues extérieures (3e personne, vue du dessus), style doux : les mains du modèle se replient dans la manche et les
+   * mains gantées les remplacent ; la droite serre le manche de l'outil comme en vue subjective, la gauche (le même
+   * modèle en miroir) est fermée en poing. À appeler après `attachHandTool` et `look`.
+   */
+  wearGloves(right: THREE.Object3D, left: THREE.Object3D | null): void {
+    const holder = this.toolHolder;
+    const handD = this.bones.get(ARM.d[2]);
+    const handG = this.bones.get(ARM.g[2]);
+    if (!holder || !handD || !this.gripGlove(right, 0, GLOVE_SCALE_OUTSIDE)) return;
+    holder.add(right);
+    this.cuffs.push({ glove: right, fore: this.bones.get(ARM.d[1])! });
+    // Gant gauche : même place dans la main gauche que le droit dans la droite, en miroir (os symétriques).
+    if (left && handG) {
+      this.tintGlove(left);
+      Avatar.clench(left);
+      this.root.updateMatrixWorld(true);
+      const local = handD.matrixWorld.clone().invert().multiply(right.matrixWorld);
+      const mirror = new THREE.Matrix4().makeScale(-1, 1, 1);
+      local.premultiply(mirror).multiply(mirror);
+      local.decompose(left.position, left.quaternion, left.scale);
+      left.scale.x *= -1;
+      handG.add(left);
+      const foreG = this.bones.get(ARM.g[1]);
+      if (foreG) this.cuffs.push({ glove: left, fore: foreG });
+    }
+    // Les mains du modèle (sans doigts) se replient au poignet, cachées par le gant ; ce qui est accroché aux os
+    // (outil, gants) garde sa taille.
+    for (const hand of [handD, handG]) {
+      if (!hand) continue;
+      hand.scale.setScalar(HIDDEN_HAND);
+      for (const c of hand.children) {
+        if ((c as THREE.Bone).isBone) continue;
+        c.scale.multiplyScalar(1 / HIDDEN_HAND);
+        c.position.multiplyScalar(1 / HIDDEN_HAND);
+      }
+    }
+  }
+
+  /**
+   * Vue subjective, style doux : remplace le bras du modèle par la main gantée (`main_gantee`, doigts refermés sur
+   * le manche) et la manche de la combinaison (`avant_bras`, étirée sur l'avant-bras). À appeler après
+   * `attachHandTool` (la main se place autour du manche) et après `look` (couleurs de peau et de combinaison).
+   */
+  wearFirstPersonHand(glove: THREE.Object3D, sleeve: THREE.Object3D | null): void {
+    const holder = this.toolHolder;
+    const fore = this.bones.get(ARM.d[1]);
+    if (!holder || !fore) return;
+    for (const mesh of this.bodyMeshes) mesh.visible = false;
+    const tint = (root: THREE.Object3D): void => this.tintGlove(root);
+    const f = this.gripGlove(glove, GLOVE_ROLL);
+    if (!f) return;
     holder.add(glove);
     if (!sleeve) return;
     tint(sleeve);
@@ -679,6 +774,29 @@ export class Avatar {
     const end = wrist.clone().addScaledVector(dir, -SLEEVE_TUCK_M * GLOVE_SCALE);
     sleeve.quaternion.setFromUnitVectors(axis, dir).multiply(glove.quaternion);
     sleeve.position.copy(end).addScaledVector(dir, -SLEEVE_LENGTH_M * SLEEVE_STRETCH);
+  }
+
+  /** Vues extérieures : la manchette de chaque gant se tourne vers le coude (poignet souple, pas de jour avec la manche). */
+  private alignCuffs(): void {
+    if (this.cuffs.length === 0) return;
+    this.root.updateMatrixWorld(true);
+    const elbow = new THREE.Vector3();
+    const wrist = new THREE.Vector3();
+    for (const { glove, fore } of this.cuffs) {
+      const cuff = glove.getObjectByName('manchette');
+      if (!cuff) continue;
+      // Direction du coude vers le poignet, dans le repère du gant (les doigts y sont vers +Z, la manchette vers -Z).
+      glove.worldToLocal(fore.getWorldPosition(elbow));
+      wrist.set(0, 0, 0);
+      const dir = wrist.sub(elbow).normalize();
+      const axis = new THREE.Vector3(0, 0, 1);
+      const angle = dir.angleTo(axis);
+      if (angle > WRIST_MAX_BEND) {
+        const n = new THREE.Vector3().crossVectors(axis, dir).normalize();
+        dir.copy(axis).applyAxisAngle(n, WRIST_MAX_BEND);
+      }
+      cuff.quaternion.setFromUnitVectors(axis, dir);
+    }
   }
 
   /** Vue subjective : 0 au repos, 1 au plus haut de l'élan (le bras se rapproche alors du centre de l'écran). */
@@ -811,6 +929,12 @@ export class Avatar {
     const carry = arm(-0.35 + swingD * 0.15, 0.04, 0.85 + 0.06 * Math.sin(ph * 2) * a, 0.55, 0.18);
     let right = this.holding ? carry : rest(swingD);
     let left = rest(swingG);
+    // Arme en main : bras tendu vers l'avant (pistolet) ; arme longue épaulée, main gauche sous le garde-main.
+    if (this.gunPose === 'pistol') right = GUN_ARM_PISTOL;
+    else if (this.gunPose === 'long') {
+      right = GUN_ARM_LONG_RIGHT;
+      left = GUN_ARM_LONG_LEFT;
+    }
     // En l'air : bras écartés et levés pour l'équilibre ; accroupi : bras en avant, près des genoux.
     const balance = (p: ArmPose): ArmPose =>
       blend(
@@ -818,8 +942,10 @@ export class Avatar {
         arm(-0.65, 0.18, 0.75, 0.15, 0.1),
         cm * 0.8,
       );
-    left = balance(left);
-    if (!this.holding) right = balance(right);
+    if (this.gunPose === 'none') {
+      left = balance(left);
+      if (!this.holding) right = balance(right);
+    }
     if (strike) {
       right = blend(right, strike.right, k);
       left = blend(left, strike.left, k);
@@ -827,6 +953,7 @@ export class Avatar {
     this.armTo('d', right);
     this.armTo('g', left);
     this.settle(dt, strike && k > 0.5 ? 30 : 14);
+    this.alignCuffs();
   }
 
   /** Vue subjective : seul le bras droit se voit ; outil tenu en bas à droite, le coup part vers le centre de l'écran. */
@@ -870,5 +997,6 @@ export class Avatar {
       this.armTo('d', arm(-0.75, 0.06, 0.6, 0.1));
     }
     this.settle(dt, 10);
+    this.alignCuffs();
   }
 }

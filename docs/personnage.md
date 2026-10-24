@@ -83,6 +83,14 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    le vrai avant-bras animé et garde un léger pli vers le bas de l'écran au repos (`bendWrist`, réglages `WRIST_*`).
    Prise en poing : le manche est plaqué contre la paume, au pied des doigts (`GLOVE_GRIP`) ; chaque doigt s'enroule
    autour (angles calculés, `FIST`) et le pouce passe par-dessus l'index (`THUMB`).
+   Vues extérieures (3e personne, vue du dessus), 24 octobre : les mains du modèle (sans doigts) se replient au
+   poignet (os `main_d` / `main_g` réduits, `HIDDEN_HAND`) et les mains gantées les remplacent (`Avatar.wearGloves`) :
+   la droite serre le manche comme en vue subjective (même prise, un peu plus petite : `GLOVE_SCALE_OUTSIDE`), la
+   gauche est la même main en miroir, fermée en poing ; la manchette de chaque gant se tourne vers le coude.
+   Armes : en vue extérieure, l'arme est dans la main droite (`Avatar.gunMount` : poignée dans l'axe du poing, canon
+   dans l'axe de l'avant-bras), pistolet bras tendu, fusil et sniper tenus à la hanche, main gauche vers le garde-main
+   (`gunPose`, `GUN_ARM_*`) ; en vue subjective, main gantée sur la poignée et manche de la combinaison
+   (`holdGunGrip` dans `gunAnim.ts`), qui suivent le recul et le rechargement.
    Retouches du 17 octobre (retours du PO) : **tête et cheveux agrandis** (×1,18 autour du menton, menton plus bas :
    le cou est plus court) ; **10 coupes de cheveux** pour les deux silhouettes, pièces séparées dans le même fichier
    (`<modèle>_coupe_<nom>`) : courte, rasée, en brosse, iroquoise, mi-longue, longue, carré, queue de cheval, chignon,

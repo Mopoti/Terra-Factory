@@ -157,7 +157,7 @@ import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
 import { loadPickModel, loadRawModel, loadWeaponModel } from './toolModel';
-import { GUN_FILES, GunRig } from './gunAnim';
+import { GRIP_TILT, GUN_FILES, GunRig, holdGunGrip } from './gunAnim';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -299,6 +299,12 @@ export function startGameView(
   // encore de support aux objets portés).
   let miner: Miner | Avatar | null = null;
   let firstArm: Miner | Avatar | null = null;
+  /** Ce qui attend le bras de la vue subjective (couleurs du joueur pour les mains gantées des armes). */
+  const onFirstArm: ((arm: Avatar) => void)[] = [];
+  const whenFirstArm = (cb: (arm: Avatar) => void): void => {
+    if (firstArm instanceof Avatar) cb(firstArm);
+    else onFirstArm.push(cb);
+  };
   const firstClip = new THREE.Plane();
   const clipDir = new THREE.Vector3();
   const clipPos = new THREE.Vector3();
@@ -314,6 +320,18 @@ export function startGameView(
     (player.material as THREE.Material).visible = false;
     player.castShadow = false;
     miner.attachHandTool(bodyTool, 1.0);
+    // Style doux en vue extérieure : mains gantées, la droite serre le manche comme en vue subjective.
+    void loadRawModel('terra/main_gantee').then((glove) => {
+      if (glove && viewAlive && miner instanceof Avatar)
+        miner.wearGloves(glove.clone(), glove.clone());
+    });
+    // L'arme portée va dans la main droite : sa poignée dans le poing ganté, le canon dans l'axe de l'avant-bras.
+    const mount = miner instanceof Avatar ? miner.gunMount() : null;
+    if (mount) {
+      mount.add(gunBody);
+      gunBody.position.set(0, 0, 0);
+      gunBody.rotation.set(0, 0, 0);
+    }
     // Vue subjective : le vrai bras du personnage remplace la main en forme de boîte ; tout ce qui est derrière la
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
@@ -327,6 +345,7 @@ export function startGameView(
     // Vue subjective : outil un peu plus court (il ne masque pas la vue), tourné sur son manche et incliné pour que le
     // pic pointe vers le centre de l'écran, comme sur la photo de référence.
     firstArm.attachHandTool(hand, 0.75, 1.334, 0.395);
+    if (firstArm instanceof Avatar) for (const cb of onFirstArm.splice(0)) cb(firstArm);
     // Style doux : main gantée et manche de combinaison à la place du bras du modèle (si les fichiers sont là).
     void Promise.all([loadRawModel('terra/main_gantee'), loadRawModel('terra/avant_bras')]).then(
       ([glove, sleeve]) => {
@@ -3170,7 +3189,9 @@ export function startGameView(
     loadWeaponModel(GUN_FILES.pistol),
     loadWeaponModel(GUN_FILES.rifle),
     loadWeaponModel(GUN_FILES.sniper),
-  ]).then(([pistol, rifle, sniper]) => {
+    loadRawModel('terra/main_gantee'),
+    loadRawModel('terra/avant_bras'),
+  ]).then(([pistol, rifle, sniper, glove, sleeve]) => {
     if (!pistol || !rifle || !sniper || !viewAlive) return;
     for (const [g, first] of [
       [gun, true],
@@ -3188,6 +3209,14 @@ export function startGameView(
         if (first) {
           m.rotation.y = Math.PI;
           wrapper.position.set(...GUN_FIRST_OFFSET[kind]);
+          // Vue subjective : main gantée sur la poignée et manche de la combinaison (aux couleurs du joueur).
+          if (glove) {
+            const hand = holdGunGrip(m, kind, glove.clone(), sleeve?.clone() ?? null);
+            whenFirstArm((arm) => hand.forEach((o) => arm.dressGlove(o)));
+          }
+        } else {
+          // Vues extérieures : la poignée suit l'axe du poing (voir `Avatar.gunMount`).
+          wrapper.rotation.x = -GRIP_TILT[kind];
         }
         wrapper.add(m);
         wrapper.visible = false;
@@ -3368,6 +3397,9 @@ export function startGameView(
     // À la lunette, l'arme s'efface : on ne voit que l'image de la lunette.
     gun.visible = gunOut && rig.view === 'first' && rig.scope <= 0.5;
     gunBody.visible = gunOut && rig.view !== 'first';
+    if (miner instanceof Avatar)
+      miner.gunPose =
+        !gunBody.visible || !weapon ? 'none' : weapon.id === 'pistol' ? 'pistol' : 'long';
     if (armed) {
       if (pressed('rotate') && !gunBusy(weapon.id)) {
         const result = options.state.reload(weapon.id);
