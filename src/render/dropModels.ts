@@ -95,7 +95,7 @@ export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string
   tool_iron: { kind: 'pick', file: 'terra/pioche_hache' },
   pistol: { kind: 'weapon', file: 'pistolet' },
   rifle: { kind: 'weapon', file: 'fusil' },
-  sniper: { kind: 'weapon', file: 'fusil' },
+  sniper: { kind: 'weapon', file: 'sniper' },
 };
 
 /** Modèle (en miniature) d'une machine, du buggy ou d'une balise posés au sol ; null si ce n'est pas une machine. */

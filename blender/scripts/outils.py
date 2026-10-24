@@ -3,8 +3,9 @@
 Style low poly stylisé (voir blender/README.md). Conventions (1 unité = 50 cm) :
 - pioches : debout, le manche de Z = 0 vers le haut, la tête en haut, la pointe vers -Y ; le jeu les couche et les met
   à 0,75 m (`src/render/toolModel.ts`) ;
-- armes : le canon vers l'avant (-Y), la crosse ou la poignée vers le bas ; origine à la poignée. Le jeu les tient
-  dans la main droite. Pistolet ~0,25 m de long, fusil ~0,95 m.
+- armes : le canon vers l'avant (-Y), la crosse ou la poignée vers le bas ; origine au milieu de la poignée. Le jeu
+  les tient dans la main droite. Pistolet ~0,2 m de long, fusil automatique ~1 m, sniper ~1,3 m. En pièces
+  animées (culasse ou levier, chargeur, détente, bipied) et repères `bouche` / `ejection`.
 
 Lancer :  blender --background --python blender/scripts/outils.py
 Produit :  blender/outils.blend, export/<nom>.glb et export/unity/<nom>.glb
@@ -57,10 +58,21 @@ TEINTES = {
     'combinaison': '#d9822b',
     'bande': '#f0b26a',
     'couture': '#9c5a1c',
+    # Armes au style doux : acier gris bleuté, noir mat, bois orangé comme le manche de la pioche-hache.
+    'arme_acier': '#5b616d',
+    'arme_acier_clair': '#8b93a0',
+    'arme_noir': '#2e3138',
+    'arme_bois': '#c4743f',
+    'arme_bois_clair': '#dc9361',
+    'arme_sable': '#b3a274',
+    'arme_sable_sombre': '#8a7c55',
+    'arme_cuivre': '#d9a441',
+    'verre_lunette': '#7fc1e6',
 }
 
 # Teintes qui brillent un peu (métal poli) : rugosité plus faible que le reste de la palette.
-BRILLANTS = {'acier_lavande': 0.42, 'acier_fil': 0.32, 'acier_bague': 0.4, 'acier_ombre': 0.55}
+BRILLANTS = {'acier_lavande': 0.42, 'acier_fil': 0.32, 'acier_bague': 0.4, 'acier_ombre': 0.55,
+             'arme_acier': 0.45, 'arme_acier_clair': 0.38, 'arme_noir': 0.6, 'verre_lunette': 0.15, 'arme_cuivre': 0.35}
 
 
 def _palette():
@@ -448,38 +460,237 @@ def pioche_fer(coll, leger=True):
     lot.finir()
 
 
+def _rond(piece, mat, a, b, ax, az, n, k=None, r=None):
+    """Boîte arrondie (style doux) de `a` à `b` : demi-largeur `ax` (côté), demi-hauteur `az`, bouts chanfreinés `k`."""
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    u, v = _repere(d)
+    k = min(ax, az) * 0.35 if k is None else k
+    r = min(ax, az) * 0.45 if r is None else r
+    L = (b - a).length
+    k = min(k, L * 0.3)
+    _loft(piece, mat, [(a, u, v, ax - k, az - k, r - k * 0.5), (a + d * k, u, v, ax, az, r),
+                       (b - d * k, u, v, ax, az, r), (b, u, v, ax - k, az - k, r - k * 0.5)], n)
+
+
+def _cyl(piece, mat, a, b, r, n, k=None):
+    """Cylindre aux bords adoucis de `a` à `b` (canon, lunette, goupille)."""
+    a, b = Vector(a), Vector(b)
+    d = (b - a).normalized()
+    u, v = _repere(d)
+    k = r * 0.2 if k is None else k
+    _loft(piece, mat, [(a, u, v, r - k, r - k, r), (a + d * k, u, v, r, r, r), (b - d * k, u, v, r, r, r),
+                       (b, u, v, r - k, r - k, r)], n + 1)
+
+
+def _point(coll, nom, pos, parent):
+    """Repère vide (bout du canon, fenêtre d'éjection) accroché à une pièce, pour le code du jeu."""
+    o = bpy.data.objects.new(nom, None)
+    coll.objects.link(o)
+    o.parent = parent
+    o.location = Vector(pos) - Vector(parent['origine'])
+    return o
+
+
+def _echelle(coll, k):
+    """Met tout le modèle (pièces et repères, autour de l'origine) à l'échelle `k`."""
+    for o in coll.objects:
+        if o.data:
+            o.data.transform(Matrix.Scale(k, 4))
+        o.location *= k
+
+
 def pistolet(coll, leger=True):
-    """Pistolet : culasse anguleuse gris acier, canon devant (-Y), poignée inclinée à plaquettes de bois."""
-    sg = 6 if leger else 10
-    lot = T.Lot(coll, 'pistolet')
-    lot.cube('arme', (0.1, 0.42, 0.11), (0, -0.12, 0.13), 0.015)  # culasse
-    lot.cube('arme_claire', (0.08, 0.38, 0.03), (0, -0.12, 0.2), 0.008)  # bande
-    lot.tube('arme', (0, -0.33, 0.12), (0, -0.36, 0.12), 0.03, sg)  # bouche
-    lot.cube('noir', (0.03, 0.01, 0.03), (0, -0.362, 0.12))
-    lot.cube('crosse', (0.09, 0.12, 0.24), (0, 0.04, -0.03), 0.015, Matrix.Rotation(-0.25, 3, 'X'))  # poignée
-    lot.cube('arme', (0.07, 0.1, 0.02), (0, -0.06, 0.04))  # pontet
-    lot.cube('arme', (0.02, 0.02, 0.06), (0, -0.1, 0.06))  # détente
-    lot.cube('arme_claire', (0.03, 0.03, 0.03), (0, -0.3, 0.21))  # guidon
-    lot.finir()
+    """Pistolet simple (semi-automatique classique) au style doux, en pièces animées. Canon vers l'avant (-Y), origine
+    au milieu de la poignée.
+
+    Culasse longue et fine en acier, carcasse noire, poignée courte et inclinée à plaquettes de bois, chargeur caché dans
+    la poignée (seule la semelle dépasse). Pièces : `corps` (carcasse, poignée, pontet, chien) > `culasse` (recule au
+    tir), `chargeur` (sort par le bas de la poignée, le long de son axe), `detente` ; repères `bouche` et `ejection`.
+    Environ 20 cm de long.
+    """
+    n = 3 if leger else 5
+    corps, culasse, chargeur, detente = Piece(), Piece(), Piece(), Piece()
+    zb = 0.175  # axe du canon
+    # Poignée courte et inclinée (vers l'arrière en bas), plaquettes de bois.
+    haut, bas = Vector((0, -0.02, 0.115)), Vector((0, 0.055, -0.105))
+    ax = (bas - haut).normalized()
+    _rond(corps, 'arme_noir', haut, bas, 0.032, 0.047, n, k=0.012)
+    for sx in (1, -1):
+        _rond(corps, 'arme_bois', haut + ax * 0.05 + Vector((sx * 0.022, 0, 0)), bas - ax * 0.035 + Vector((sx * 0.022, 0, 0)),
+              0.013, 0.037, n, k=0.006)
+    # Carcasse sous la culasse, pontet arrondi, petit chien à l'arrière.
+    _rond(corps, 'arme_noir', (0, 0.045, 0.12), (0, -0.27, 0.12), 0.03, 0.025, n, k=0.01)
+    _loft(corps, 'arme_noir', [((0, -0.055, 0.1), Y, Z, 0.016, 0.008, 0.006), ((0, -0.1, 0.055), Y, Z, 0.016, 0.008, 0.006),
+                               ((0, -0.16, 0.05), Y, Z, 0.016, 0.008, 0.006), ((0, -0.185, 0.08), Y, Z, 0.016, 0.008, 0.006),
+                               ((0, -0.19, 0.105), Y, Z, 0.016, 0.008, 0.006)], n)
+    _cyl(corps, 'arme_acier_clair', (0, -0.3, zb), (0, -0.345, zb), 0.016, n)  # bout du canon
+    _rond(corps, 'arme_acier', (0, 0.055, zb + 0.005), (0, 0.085, zb + 0.03), 0.014, 0.016, n, k=0.005)  # chien
+    racine = corps.finir(coll, 'corps', (0, 0, 0))
+    # Culasse : longue et fine, stries à l'arrière, guidon et hausse.
+    _rond(culasse, 'arme_acier', (0, 0.07, zb), (0, -0.335, zb), 0.032, 0.04, n, k=0.012)
+    for i in range(3):
+        y = 0.04 - i * 0.018
+        for sx in (1, -1):
+            culasse.cube('arme_noir', (0.006, 0.006, 0.05), (sx * 0.032, y, zb), 0.0015)
+    culasse.cube('arme_noir', (0.022, 0.06, 0.004), (0, -0.12, zb + 0.04), 0.001)  # fenêtre d'éjection
+    _rond(culasse, 'arme_noir', (0, -0.3, zb + 0.038), (0, -0.315, zb + 0.05), 0.006, 0.009, n, k=0.003)  # guidon
+    _rond(culasse, 'arme_noir', (0, 0.035, zb + 0.038), (0, 0.055, zb + 0.052), 0.022, 0.009, n, k=0.003)  # hausse
+    culasse.finir(coll, 'culasse', (0, 0, zb), racine)
+    # Chargeur caché dans la poignée : seule la semelle dépasse en bas.
+    _rond(chargeur, 'arme_acier_clair', haut + ax * 0.04, bas, 0.024, 0.036, n, k=0.008)
+    _rond(chargeur, 'arme_noir', bas - ax * 0.004, bas + ax * 0.018, 0.034, 0.05, n, k=0.007)
+    chargeur.finir(coll, 'chargeur', tuple(bas), racine)
+    _rond(detente, 'arme_acier', (0, -0.1, 0.105), (0, -0.115, 0.065), 0.007, 0.009, n, k=0.003)
+    detente.finir(coll, 'detente', (0, -0.1, 0.105), racine)
+    _point(coll, 'bouche', (0, -0.35, zb), racine)
+    _point(coll, 'ejection', (0, -0.12, zb + 0.045), racine)
+    _brillant()
 
 
 def fusil(coll, leger=True):
-    """Fusil : crosse et garde-main en bois, boîtier d'acier, long canon devant (-Y), chargeur courbe, lunette."""
-    sg = 6 if leger else 10
-    lot = T.Lot(coll, 'fusil')
-    lot.cube('crosse', (0.09, 0.5, 0.16), (0, 0.45, -0.02), 0.02, Matrix.Rotation(0.12, 3, 'X'))  # crosse
-    lot.cube('arme', (0.1, 0.06, 0.22), (0, 0.72, -0.04), 0.01, Matrix.Rotation(0.12, 3, 'X'))  # plaque de couche
-    lot.cube('arme', (0.1, 0.5, 0.13), (0, -0.05, 0.08), 0.015)  # boîtier
-    lot.cube('crosse', (0.1, 0.5, 0.1), (0, -0.52, 0.06), 0.015)  # garde-main
-    lot.tube('arme', (0, -0.3, 0.11), (0, -1.2, 0.11), 0.025, sg)  # canon
-    lot.tube('arme_claire', (0, -1.2, 0.11), (0, -1.26, 0.11), 0.035, sg)  # cache-flamme
-    lot.cube('arme', (0.07, 0.12, 0.2), (0, -0.12, -0.08), 0.01, Matrix.Rotation(0.3, 3, 'X'))  # chargeur
-    lot.cube('crosse', (0.08, 0.1, 0.18), (0, 0.15, -0.06), 0.012, Matrix.Rotation(-0.3, 3, 'X'))  # poignée
-    lot.tube('noir', (0, 0.12, 0.22), (0, -0.2, 0.22), 0.035, sg)  # lunette
-    for y in (0.12, -0.2):
-        lot.tube('arme', (0, y + 0.02, 0.22), (0, y - 0.02, 0.22), 0.045, sg)
-    lot.cube('arme', (0.04, 0.05, 0.06), (0, -0.04, 0.17))
-    lot.finir()
+    """Fusil automatique (fusil d'assaut) au style doux, en pièces animées. Canon vers l'avant (-Y), origine au milieu
+    de la poignée.
+
+    Bois orangé (crosse, garde-main), boîtier gris acier, chargeur courbe, guidon et hausse. Pièces : `corps` >
+    `levier` (levier d'armement à droite, recule au tir), `chargeur` (se décroche vers le bas et l'avant), `detente` ;
+    repères `bouche` et `ejection`. Environ 1 m de long.
+    """
+    n = 3 if leger else 5
+    corps, levier, chargeur, detente = Piece(), Piece(), Piece(), Piece()
+    zb = 0.3  # axe du canon
+    # Poignée pistolet.
+    haut, bas = Vector((0, -0.03, 0.2)), Vector((0, 0.07, -0.13))
+    _rond(corps, 'arme_noir', haut, bas, 0.042, 0.058, n)
+    # Boîtier, couvercle et rail.
+    _rond(corps, 'arme_acier', (0, 0.25, zb - 0.01), (0, -0.48, zb - 0.01), 0.055, 0.085, n, k=0.02)
+    _rond(corps, 'arme_acier_clair', (0, 0.22, zb + 0.08), (0, -0.4, zb + 0.08), 0.045, 0.02, n, k=0.01)
+    _rond(corps, 'arme_noir', (0, -0.36, zb - 0.03), (0, -0.4, zb - 0.09), 0.05, 0.018, n, k=0.006)  # arrêtoir
+    # Garde-main en bois avec fentes, canon, tube de gaz, guidon, cache-flamme.
+    _rond(corps, 'arme_bois', (0, -0.48, zb - 0.02), (0, -0.98, zb - 0.02), 0.062, 0.07, n, k=0.02)
+    for i in range(4):
+        y = -0.58 - i * 0.1
+        for sx in (1, -1):
+            corps.cube('arme_noir', (0.006, 0.05, 0.022), (sx * 0.062, y, zb - 0.02), 0.004)
+    _cyl(corps, 'arme_acier', (0, -0.98, zb), (0, -1.66, zb), 0.026, n)
+    _cyl(corps, 'arme_acier', (0, -0.98, zb + 0.06), (0, -1.28, zb + 0.06), 0.018, n)
+    _rond(corps, 'arme_acier', (0, -1.26, zb - 0.01), (0, -1.31, zb + 0.13), 0.022, 0.028, n, k=0.008)
+    _rond(corps, 'arme_noir', (0, -1.57, zb + 0.03), (0, -1.6, zb + 0.13), 0.01, 0.014, n, k=0.004)
+    _cyl(corps, 'arme_noir', (0, -1.62, zb), (0, -1.76, zb), 0.04, n)
+    for i in range(3):
+        corps.cube('arme_acier_clair', (0.084, 0.012, 0.012), (0, -1.66 - i * 0.035, zb + 0.026), 0.003)
+    _rond(corps, 'arme_noir', (0, 0.06, zb + 0.11), (0, 0.13, zb + 0.11), 0.035, 0.02, n, k=0.006)  # hausse
+    # Crosse en bois : du boîtier à la plaque de couche, plus haute à l'arrière.
+    _loft(corps, 'arme_bois', [((0, 0.24, zb - 0.02), X, Z, 0.05, 0.075, 0.04), ((0, 0.3, zb - 0.035), X, Z, 0.055, 0.085, 0.045),
+                               ((0, 0.6, zb - 0.08), X, Z, 0.058, 0.13, 0.05), ((0, 0.92, zb - 0.11), X, Z, 0.06, 0.17, 0.05)],
+          n, (True, False))
+    _loft(corps, 'arme_noir', [((0, 0.915, zb - 0.11), X, Z, 0.062, 0.172, 0.05), ((0, 0.96, zb - 0.11), X, Z, 0.058, 0.165, 0.048)],
+          n)
+    # Pontet.
+    _rond(corps, 'arme_noir', (0, -0.04, 0.12), (0, -0.2, 0.12), 0.02, 0.01, n, k=0.005)
+    _rond(corps, 'arme_noir', (0, -0.2, 0.12), (0, -0.22, 0.22), 0.02, 0.01, n, k=0.005)
+    racine = corps.finir(coll, 'corps', (0, 0, 0))
+    # Levier d'armement, côté droit (-X) du boîtier.
+    _rond(levier, 'arme_acier_clair', (-0.05, -0.2, zb + 0.03), (-0.05, -0.32, zb + 0.03), 0.01, 0.014, n, k=0.004)
+    _rond(levier, 'arme_noir', (-0.055, -0.3, zb + 0.03), (-0.11, -0.31, zb + 0.03), 0.018, 0.018, n, k=0.006)
+    levier.finir(coll, 'levier', (-0.05, -0.3, zb + 0.03), racine)
+    # Chargeur courbe (banane), nervures.
+    secs = []
+    for i in range(7 if leger else 11):
+        t = i / (6 if leger else 10)
+        ang = 0.55 * t
+        c = Vector((0, -0.23 - 0.42 * math.sin(ang) * 0.9, zb - 0.06 - 0.5 * t))
+        dz = Vector((0, -math.sin(ang), -math.cos(ang)))
+        u, v = X, dz.cross(X).normalized()
+        if v.y > 0:
+            v = -v
+        secs.append((c, u, v, 0.04, 0.075, 0.03))
+    _loft(chargeur, 'arme_noir', secs, n)
+    c_bas = secs[-1][0]
+    chargeur.cube('arme_acier', (0.09, 0.17, 0.03), tuple(c_bas + Vector((0, -0.01, -0.012))), 0.01,
+                  Matrix.Rotation(-0.55, 3, 'X'))
+    m = len(secs) - 1
+    for i in (m // 3, 2 * m // 3):
+        cc = secs[i][0]
+        chargeur.cube('arme_acier', (0.085, 0.155, 0.012), tuple(cc), 0.004, Matrix.Rotation(-0.55 * i / m, 3, 'X'))
+    chargeur.finir(coll, 'chargeur', (0, -0.23, zb - 0.06), racine)
+    _rond(detente, 'arme_acier', (0, -0.1, 0.2), (0, -0.115, 0.14), 0.009, 0.012, n, k=0.004)
+    detente.finir(coll, 'detente', (0, -0.1, 0.2), racine)
+    _point(coll, 'bouche', (0, -1.77, zb), racine)
+    _point(coll, 'ejection', (-0.06, -0.15, zb + 0.04), racine)
+    _echelle(coll, 0.74)  # environ 1 m
+    _brillant()
+
+
+def sniper(coll, leger=True):
+    """Fusil de précision (sniper) à verrou au style doux, en pièces animées. Canon vers l'avant (-Y), origine au milieu
+    de la poignée.
+
+    Crosse et fût sable à appui-joue, long canon, frein de bouche, grosse lunette (verre bleuté), bipied replié sous le
+    canon. Pièces : `corps` > `culasse` (verrou à levier boule à droite : se lève puis recule, pivot sur son axe),
+    `chargeur` (boîte, sort par le bas), `detente`, `bipied_g` et `bipied_d` (pivot à la charnière, rotation pour les
+    déplier) ; repères `bouche` et `ejection`. Environ 1,3 m de long.
+    """
+    n = 3 if leger else 5
+    corps, culasse, chargeur, detente, bg, bd = Piece(), Piece(), Piece(), Piece(), Piece(), Piece()
+    zb = 0.3
+    haut, bas = Vector((0, -0.02, 0.21)), Vector((0, 0.08, -0.12))
+    _rond(corps, 'arme_sable', haut, bas, 0.044, 0.06, n)
+    # Fût et crosse sable (une pièce), appui-joue, plaque de couche.
+    _rond(corps, 'arme_sable', (0, -0.3, zb - 0.06), (0, -1.0, zb - 0.06), 0.06, 0.06, n, k=0.025)
+    _loft(corps, 'arme_sable', [((0, -0.3, zb - 0.06), X, Z, 0.06, 0.06, 0.05), ((0, 0.15, zb - 0.07), X, Z, 0.058, 0.08, 0.05),
+                                ((0, 0.4, zb - 0.1), X, Z, 0.055, 0.1, 0.045), ((0, 0.75, zb - 0.1), X, Z, 0.058, 0.15, 0.05),
+                                ((0, 1.12, zb - 0.1), X, Z, 0.06, 0.18, 0.05)], n, (False, False))
+    _rond(corps, 'arme_sable_sombre', (0, 0.5, zb + 0.06), (0, 0.95, zb + 0.06), 0.05, 0.03, n, k=0.012)  # appui-joue
+    _loft(corps, 'arme_noir', [((0, 1.115, zb - 0.1), X, Z, 0.062, 0.182, 0.05), ((0, 1.16, zb - 0.1), X, Z, 0.058, 0.175, 0.048)], n)
+    # Boîtier acier et canon, frein de bouche.
+    _cyl(corps, 'arme_acier', (0, 0.2, zb), (0, -0.36, zb), 0.05, n)
+    _cyl(corps, 'arme_acier', (0, -0.36, zb), (0, -1.9, zb), 0.03, n)
+    _rond(corps, 'arme_noir', (0, -1.9, zb), (0, -2.04, zb), 0.045, 0.045, n, k=0.012)
+    for i in range(3):
+        for sx in (1, -1):
+            corps.cube('arme_acier_clair', (0.01, 0.022, 0.05), (sx * 0.045, -1.93 - i * 0.035, zb), 0.003)
+    # Lunette : tube, bague avant évasée, oculaire, tourelles, colliers.
+    zs = zb + 0.17
+    _cyl(corps, 'arme_noir', (0, 0.2, zs), (0, -0.42, zs), 0.042, n + 1)
+    _loft(corps, 'arme_noir', [((0, -0.36, zs), X, Z, 0.042, 0.042, 0.042), ((0, -0.46, zs), X, Z, 0.068, 0.068, 0.068),
+                               ((0, -0.55, zs), X, Z, 0.07, 0.07, 0.07)], n + 1, (False, False))
+    _loft(corps, 'verre_lunette', [((0, -0.548, zs), X, Z, 0.06, 0.06, 0.06), ((0, -0.556, zs), X, Z, 0.058, 0.058, 0.058)], n + 1)
+    _loft(corps, 'arme_noir', [((0, 0.18, zs), X, Z, 0.042, 0.042, 0.042), ((0, 0.24, zs), X, Z, 0.058, 0.058, 0.058),
+                               ((0, 0.3, zs), X, Z, 0.056, 0.056, 0.056)], n + 1, (False, True))
+    _loft(corps, 'verre_lunette', [((0, 0.298, zs), X, Z, 0.046, 0.046, 0.046), ((0, 0.305, zs), X, Z, 0.044, 0.044, 0.044)], n + 1)
+    _cyl(corps, 'arme_noir', (0, -0.1, zs + 0.03), (0, -0.1, zs + 0.085), 0.03, n)
+    _cyl(corps, 'arme_noir', (-0.03, -0.1, zs), (-0.085, -0.1, zs), 0.026, n)
+    for y in (0.08, -0.25):
+        _rond(corps, 'arme_acier', (0, y, zb + 0.03), (0, y, zs - 0.03), 0.03, 0.022, n, k=0.006)
+        _cyl(corps, 'arme_acier', (0, y + 0.025, zs), (0, y - 0.025, zs), 0.05, n)
+    # Pontet, charnière du bipied.
+    _rond(corps, 'arme_noir', (0, -0.02, 0.13), (0, -0.18, 0.13), 0.02, 0.01, n, k=0.005)
+    _rond(corps, 'arme_noir', (0, -0.18, 0.13), (0, -0.2, 0.22), 0.02, 0.01, n, k=0.005)
+    _rond(corps, 'arme_noir', (0, -0.88, zb - 0.12), (0, -0.96, zb - 0.12), 0.05, 0.025, n, k=0.008)
+    racine = corps.finir(coll, 'corps', (0, 0, 0))
+    # Verrou : cylindre dans le boîtier, levier coudé à boule à droite (-X).
+    _cyl(culasse, 'arme_acier_clair', (0, 0.22, zb), (0, 0.06, zb), 0.032, n)
+    _rond(culasse, 'arme_acier_clair', (-0.02, 0.15, zb), (-0.15, 0.17, zb - 0.05), 0.016, 0.016, n, k=0.005)
+    culasse.boule('arme_noir', (-0.16, 0.172, zb - 0.055), 0.038)
+    culasse.finir(coll, 'culasse', (0, 0.15, zb), racine)
+    # Chargeur boîte.
+    _rond(chargeur, 'arme_noir', (0, -0.08, zb - 0.06), (0, -0.08, zb - 0.26), 0.04, 0.075, n, k=0.012)
+    chargeur.finir(coll, 'chargeur', (0, -0.08, zb - 0.26), racine)
+    _rond(detente, 'arme_acier', (0, -0.08, 0.21), (0, -0.095, 0.15), 0.009, 0.012, n, k=0.004)
+    detente.finir(coll, 'detente', (0, -0.08, 0.21), racine)
+    # Bipied replié vers l'avant le long du canon (pieds écartés de part et d'autre).
+    for piece, sx, nom in ((bg, 1, 'bipied_g'), (bd, -1, 'bipied_d')):
+        pivot = Vector((sx * 0.04, -0.92, zb - 0.13))
+        _rond(piece, 'arme_noir', pivot, pivot + Vector((sx * 0.01, -0.42, 0.0)), 0.014, 0.014, n, k=0.004)
+        _rond(piece, 'arme_acier_clair', pivot + Vector((sx * 0.01, -0.3, 0)), pivot + Vector((sx * 0.012, -0.5, 0)), 0.011,
+              0.011, n, k=0.004)
+        piece.boule('arme_noir', tuple(pivot + Vector((sx * 0.012, -0.52, 0))), 0.02)
+        piece.finir(coll, nom, tuple(pivot), racine)
+    _point(coll, 'bouche', (0, -2.05, zb), racine)
+    _point(coll, 'ejection', (-0.05, 0.1, zb + 0.04), racine)
+    _echelle(coll, 0.8)  # environ 1,3 m
+    _brillant()
 
 
 MODELES = {
@@ -491,6 +702,7 @@ MODELES = {
     'avant_bras': avant_bras,
     'pistolet': pistolet,
     'fusil': fusil,
+    'sniper': sniper,
 }
 
 
@@ -506,7 +718,7 @@ def construire(noms=None):
 
 
 # Modèles en pièces séparées (hiérarchie et pivots gardés à l'export).
-EN_PIECES = {'pioche_hache', 'pioche_hache_pierre', 'main_gantee', 'avant_bras'}
+EN_PIECES = {'pioche_hache', 'pioche_hache_pierre', 'main_gantee', 'avant_bras', 'pistolet', 'fusil', 'sniper'}
 
 
 def exporter(noms=None):

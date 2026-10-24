@@ -157,6 +157,7 @@ import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
 import { loadPickModel, loadRawModel, loadWeaponModel } from './toolModel';
+import { GUN_FILES, GunRig } from './gunAnim';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
 import type { Vehicle } from '../core/game/worldChanges';
@@ -3157,23 +3158,48 @@ export function startGameView(
   gunBody.visible = false;
   player.add(gunBody);
   /** Armes maison (pistolet, fusil), une fois chargées : remplacent les formes simples, en vraie grandeur. */
-  const gunModels: { pistol: THREE.Object3D; rifle: THREE.Object3D }[] = [];
-  void Promise.all([loadWeaponModel('pistolet'), loadWeaponModel('fusil')]).then(
-    ([pistol, rifle]) => {
-      if (!pistol || !rifle || !viewAlive) return;
-      for (const [g, firstPerson] of [
-        [gun, true],
-        [gunBody, false],
+  /** Armes en pièces animées (tir, rechargement), en vue subjective et portées par le personnage. */
+  const gunRigs: { rig: GunRig; wrapper: THREE.Object3D; first: boolean }[] = [];
+  /** Place de chaque arme dans la vue subjective (par rapport à `gun`) : le fusil, plus long, est plus près et plus bas. */
+  const GUN_FIRST_OFFSET: Record<WeaponSpec['id'], [number, number, number]> = {
+    pistol: [-0.04, 0.04, 0.26],
+    rifle: [-0.02, -0.02, 0.12],
+    sniper: [-0.02, -0.04, 0.12],
+  };
+  void Promise.all([
+    loadWeaponModel(GUN_FILES.pistol),
+    loadWeaponModel(GUN_FILES.rifle),
+    loadWeaponModel(GUN_FILES.sniper),
+  ]).then(([pistol, rifle, sniper]) => {
+    if (!pistol || !rifle || !sniper || !viewAlive) return;
+    for (const [g, first] of [
+      [gun, true],
+      [gunBody, false],
+    ] as const) {
+      for (const child of [...g.children]) g.remove(child);
+      for (const [kind, model] of [
+        ['pistol', pistol],
+        ['rifle', rifle],
+        ['sniper', sniper],
       ] as const) {
-        for (const child of [...g.children]) g.remove(child);
-        const pair = { pistol: pistol.clone(), rifle: rifle.clone() };
+        const wrapper = new THREE.Group();
+        const m = model.clone();
         // Le canon du fichier est vers +z ; en vue subjective, la caméra regarde vers -z.
-        if (firstPerson) for (const m of [pair.pistol, pair.rifle]) m.rotation.y = Math.PI;
-        g.add(pair.pistol, pair.rifle);
-        gunModels.push(pair);
+        if (first) {
+          m.rotation.y = Math.PI;
+          wrapper.position.set(...GUN_FIRST_OFFSET[kind]);
+        }
+        wrapper.add(m);
+        wrapper.visible = false;
+        g.add(wrapper);
+        gunRigs.push({ rig: new GunRig(kind, wrapper, first ? -1 : 1), wrapper, first });
       }
-    },
-  );
+    }
+  });
+  /** L'arme tenue (vue subjective) recharge ou manœuvre son verrou : pas de tir. */
+  const gunBusy = (kind: WeaponSpec['id']): boolean =>
+    gunRigs.some((g) => g.first && g.rig.kind === kind && g.rig.busy);
+  let gunKindShown: WeaponSpec['id'] | null = null;
   const ammoBox = document.createElement('div');
   ammoBox.className = 'ammo-box';
   ammoBox.hidden = true;
@@ -3325,30 +3351,40 @@ export function startGameView(
     rig.scope += ((aiming ? 1 : 0) - rig.scope) * (1 - Math.exp(-14 * dt));
     if (rig.scope < 0.005) rig.scope = 0;
     scopeOverlay.hidden = !(rig.view === 'first' && rig.scope > 0.5);
-    if (gunModels.length > 0) {
+    if (gunRigs.length > 0) {
       gun.scale.setScalar(1);
       gunBody.scale.setScalar(1);
-      for (const p of gunModels) {
-        p.rifle.visible = longGun;
-        p.pistol.visible = !longGun;
+      const kind = weapon?.id ?? null;
+      for (const g of gunRigs) {
+        g.wrapper.visible = g.rig.kind === kind;
+        if (kind !== gunKindShown) g.rig.reset();
+        if (g.wrapper.visible) g.rig.update(dt);
       }
+      gunKindShown = kind;
     } else {
       gun.scale.set(1, 1, longGun ? 1.7 : 1);
       gunBody.scale.set(1.4, 1.4, longGun ? 2.4 : 1.4);
     }
-    gun.visible = gunOut && rig.view === 'first';
+    // À la lunette, l'arme s'efface : on ne voit que l'image de la lunette.
+    gun.visible = gunOut && rig.view === 'first' && rig.scope <= 0.5;
     gunBody.visible = gunOut && rig.view !== 'first';
     if (armed) {
-      if (pressed('rotate')) {
+      if (pressed('rotate') && !gunBusy(weapon.id)) {
         const result = options.state.reload(weapon.id);
         if (result === 'ok') {
+          for (const g of gunRigs) if (g.rig.kind === weapon.id) g.rig.reload();
           playSfx('reload');
           options.onMessage?.(t('weapon.reloaded'));
         } else if (result === 'noMagazine') options.onMessage?.(t('weapon.noMagazine'));
       }
       // Pistolet de la case d'outils : on tire quand il n'y a rien à récolter sous la visée.
       const canShoot = isWeapon(options.state.selectedItem()) || !interaction.aimed;
-      if (attackCooldown <= 0 && canShoot && input.isActionActive('interact')) {
+      if (
+        attackCooldown <= 0 &&
+        canShoot &&
+        !gunBusy(weapon.id) &&
+        input.isActionActive('interact')
+      ) {
         attackCooldown = weapon.every;
         if (!options.state.fire(weapon.id)) {
           playSfx('deny');
@@ -3375,8 +3411,15 @@ export function startGameView(
           if (nestAt !== null) shot.distance = nestAt;
           playSfx('shot');
           const end = rayOrigin.clone().addScaledVector(rayDir, shot.distance);
+          for (const g of gunRigs) if (g.rig.kind === weapon.id) g.rig.fire();
           const start = rayOrigin.clone().addScaledVector(rayDir, 0.6);
-          if (rig.view !== 'first') start.set(playerX, playerY + 1.1, playerZ);
+          // La traînée part du bout du canon de l'arme visible.
+          const muzzle = gunRigs.find(
+            (g) => g.rig.kind === weapon.id && g.first === (rig.view === 'first'),
+          )?.rig.muzzle;
+          if (muzzle && (rig.view === 'first' ? gun.visible : gunBody.visible))
+            muzzle.getWorldPosition(start);
+          else if (rig.view !== 'first') start.set(playerX, playerY + 1.1, playerZ);
           tracer.geometry.setFromPoints([start, end]);
           tracerLife = 0.07;
           if (shot.result === 'kill') playSfx('rockBreak');

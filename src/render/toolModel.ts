@@ -58,8 +58,8 @@ export function loadPickModel(
 const weapons = new Map<string, Promise<THREE.Group | null>>();
 
 /**
- * Charge une arme tenue en main (`blender/scripts/outils.py` : `pistolet`, `fusil`), en mètres, le canon vers +z et
- * la poignée vers -y, l'origine à la poignée. Null si le fichier manque (formes simples).
+ * Charge une arme tenue en main (`blender/scripts/outils.py` : `pistolet`, `fusil`, `sniper`), en mètres, le canon vers
+ * +z et la poignée vers -y, l'origine au milieu de la poignée ; en pièces animées (voir `gunAnim.ts`). Null si le fichier manque (formes simples).
  */
 export function loadWeaponModel(
   name: string,
