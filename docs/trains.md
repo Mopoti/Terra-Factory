@@ -76,3 +76,11 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 ## À faire / à discuter
 - Multijoueur : un invité ne peut pas encore poser de voie ni conduire (seul l'hôte simule les convois).
 - Signalisation ; locomotive électrique ; chargement des wagons (coffre de fret, citerne à fluides, peinture de la citerne) ; sifflet, bruit de roulement, fumée ; tunnels (non prévus par les modèles).
+
+## Croisements à niveau généralisés (24 octobre)
+
+`crossesAtLevel(a, b)` (track.ts) : deux pièces (droites ou virages, hors aiguillages et rampes) à la même hauteur dont les lignes de voie se coupent en travers (plus de 30°) loin de leurs bouts peuvent se chevaucher : `railsOverlapping` ne les compte plus comme collision. Les voies ne se raccordent pas (le graphe ne suit que les ports) : chaque convoi traverse. Un bout qui touche l'autre voie reste un raccord ou un embranchement tangent, pas un croisement.
+
+## Tracé : arrêt avant l'obstacle et annulation
+
+Clic gauche maintenu depuis le point choisi, patron vert (possible) puis rouge à partir du premier obstacle ; au relâchement seule la partie verte est posée. Clic droit pendant le tracé : annulation (patron et départ). Départ : une tuile libre, ou le bout de voie le plus proche s'il est à portée.

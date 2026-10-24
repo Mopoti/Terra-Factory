@@ -520,6 +520,57 @@ export function crossesStraight(a: RailPiece, b: RailPiece): boolean {
   );
 }
 
+/** Points de la voie d'une pièce, tous les ~0,3 m, avec le cap : de quoi chercher où deux voies se coupent. */
+function centreline(
+  p: RailPiece,
+): { x: number; z: number; tx: number; tz: number; end: boolean }[] {
+  const len = lengthOfPiece(p);
+  const n = Math.max(2, Math.ceil(len / 0.3));
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const u = (len * i) / n;
+    const q = poseOn(p, u);
+    out.push({
+      x: q.x,
+      z: q.z,
+      tx: Math.sin(q.yaw),
+      tz: Math.cos(q.yaw),
+      end: u < 0.5 || u > len - 0.5,
+    });
+  }
+  return out;
+}
+
+/**
+ * Croisement à niveau de deux pièces quelconques (droite, virage…) : à la même hauteur, leurs voies se coupent en
+ * travers (plus de 30°), loin des bouts, sans se raccorder. Les trains traversent chacune sans passer sur l'autre.
+ */
+export function crossesAtLevel(a: RailPiece, b: RailPiece): boolean {
+  if (
+    a.id === b.id ||
+    isSwitch(a.kind) ||
+    isSwitch(b.kind) ||
+    a.kind === 'ramp' ||
+    b.kind === 'ramp'
+  )
+    return false;
+  if (Math.abs(a.level - b.level) > 0.05) return false;
+  if (crossesStraight(a, b)) return true;
+  const pa = centreline(a);
+  const pb = centreline(b);
+  let crossing = false;
+  for (const p of pa)
+    for (const q of pb) {
+      if (Math.hypot(p.x - q.x, p.z - q.z) > 0.45) continue;
+      // Un bout qui touche l'autre voie est un raccord ou un embranchement, pas un croisement.
+      if (p.end || q.end) return false;
+      const cos = Math.abs(p.tx * q.tx + p.tz * q.tz);
+      if (cos > Math.cos((30 * Math.PI) / 180)) return false;
+      crossing = true;
+    }
+  return crossing;
+}
+
 const SHARE_M = 11.5;
 /**
  * Deux pièces dont les cases se chevauchent forment-elles un embranchement tangent ? Un virage part d'un point de la
