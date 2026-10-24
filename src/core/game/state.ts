@@ -61,7 +61,7 @@ import {
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
 import { TECHS, isSciencePack, scienceCost, techById, techFor, type TechDef } from '../data/techs';
 import { DEFAULT_DIFFICULTY, type Difficulty } from '../save/saveIndex';
-import { WEAPONS, isWeapon, type WeaponSpec } from '../data/weapons';
+import { WEAPONS, type WeaponSpec } from '../data/weapons';
 import {
   isSmith,
   isTurret,
@@ -199,14 +199,21 @@ export class GameState {
   ) {
     this.inventory = normalizeInventory(saved?.inventory);
     this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
-    // Ancienne sauvegarde : l'outil de la case est aussi compté dans le sac ; il n'y reste plus qu'à un seul endroit.
-    if (!this.changes.toolsHeld) {
-      this.changes.toolsHeld = true;
-      this.changes.tools = this.changes.tools.map((id) => {
-        if (!id || (this.inventory[id] ?? 0) < 1) return null;
-        this.inventory = remove(this.inventory, id, 1).inventory;
-        return id;
-      });
+    this.migrateToolSlot();
+  }
+
+  /** Ancienne case d'outils : l'outil rejoint le sac et une case ordinaire de la barre (de préférence la dernière). */
+  private migrateToolSlot(): void {
+    const legacy = this.changes.tools.filter((id): id is string => !!id);
+    const held = this.changes.toolsHeld;
+    this.changes.tools = this.changes.tools.map(() => null);
+    this.changes.toolsHeld = true;
+    for (const id of legacy) {
+      if (held) this.inventory = add(this.inventory, id, 1);
+      if (this.changes.hotbar.includes(id)) continue;
+      const bar = this.changes.hotbar;
+      const free = bar[bar.length - 1] === null ? bar.length - 1 : bar.indexOf(null);
+      if (free >= 0) bar[free] = id;
     }
   }
 
@@ -721,9 +728,13 @@ export class GameState {
     this.emit({ type: 'hotbar' });
   }
 
-  /** Outil rangé dans la case d'outils (s'il en reste dans le sac), ou null : mains nues. */
-  toolItem(index = 0): string | null {
-    return this.changes.tools[index] ?? null;
+  /** Outil de récolte de la barre de raccourcis (celui de la case choisie, sinon le premier), ou null : mains nues. */
+  toolItem(): string | null {
+    const isTool = (id: string | null): id is string =>
+      id !== null && (this.inventory[id] ?? 0) > 0 && !!itemById(id).tool;
+    const picked = this.selectedItem();
+    if (isTool(picked)) return picked;
+    return this.changes.hotbar.find(isTool) ?? null;
   }
 
   /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
@@ -742,33 +753,6 @@ export class GameState {
   harvestTool(): { speed: number; yield: number } | null {
     const id = this.toolItem();
     return id ? itemById(id).tool : null;
-  }
-
-  /** Range un outil (ou le pistolet) dans la case d'outils, ou la vide (`null`). */
-  assignTool(index: number, item: string | null): boolean {
-    if (index < 0 || index >= this.changes.tools.length) return false;
-    if (item !== null) {
-      const def = itemById(item);
-      if (!def.tool && !isWeapon(def.id)) return false;
-    }
-    const previous = this.changes.tools[index] ?? null;
-    if (previous === item) return true;
-    // L'outil quitte le sac pour la case (comme un équipement) ; celui qui y était y retourne.
-    if (item !== null && (this.inventory[item] ?? 0) < 1) return false;
-    const saved = this.inventory;
-    if (item !== null) this.inventory = remove(this.inventory, item, 1).inventory;
-    if (previous) {
-      if (maxAddable(this.inventory, previous, this.limits) < 1) {
-        this.inventory = saved;
-        return false;
-      }
-      this.inventory = add(this.inventory, previous, 1);
-    }
-    this.changes.tools[index] = item;
-    this.carried = null;
-    this.emit({ type: 'inventory' });
-    this.emit({ type: 'hotbar' });
-    return true;
   }
 
   /** Range un objet dans une case (un objet n'occupe qu'une case) ou la vide (`null`). */

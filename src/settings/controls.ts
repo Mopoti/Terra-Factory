@@ -103,6 +103,7 @@ export const ACTIONS = [
   hotbar(7),
   hotbar(8),
   hotbar(9),
+  { id: 'hotbar10', category: 'hotbar', defaults: ['Digit0', null] },
 ] as const satisfies readonly ActionDef[];
 
 export type ActionId = (typeof ACTIONS)[number]['id'];

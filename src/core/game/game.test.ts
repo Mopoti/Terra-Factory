@@ -829,38 +829,35 @@ describe('piles du sac, objet en main et outils', () => {
     expect(s.selectedItem()).toBeNull();
   });
 
-  it("l'outil de la case d'outils change la récolte ; seuls outils et pistolet y vont", () => {
+  it("l'outil de la barre de raccourcis change la récolte ; sans outil dans la barre, mains nues", () => {
     const s = new GameState({ inventory: { tool_stone: 1, tool_iron: 1, stone: 1 } });
     expect(s.harvestTool()).toBeNull();
-    expect(s.assignTool(0, 'stone')).toBe(false);
-    expect(s.assignTool(0, 'tool_stone')).toBe(true);
+    s.assignSlot(0, 'stone');
+    expect(s.harvestTool()).toBeNull();
+    s.assignSlot(1, 'tool_stone');
     expect(s.harvestTool()?.speed).toBe(2);
-    s.assignTool(0, 'tool_iron');
+    s.assignSlot(9, 'tool_iron');
+    s.selectSlot(9);
     expect(s.harvestTool()?.yield).toBe(2);
-    expect(s.snapshot().changes.tools[0]).toBe('tool_iron');
   });
 
-  it("un outil mis dans la case quitte le sac et y revient quand on l'enlève ou le remplace", () => {
-    const s = new GameState({ inventory: { tool_stone: 1, tool_iron: 1 } });
-    expect(s.assignTool(0, 'tool_stone')).toBe(true);
-    expect(s.inventory.tool_stone ?? 0).toBe(0);
-    expect(s.assignTool(0, 'tool_iron')).toBe(true);
+  it("l'outil d'une ancienne case d'outils passe dans le sac et dans la dernière case de la barre, une seule fois", () => {
+    const changes = { ...emptyChanges(), tools: ['tool_stone'] } as Record<string, unknown>;
+    const s = new GameState({ inventory: {}, changes });
+    expect(s.toolItem()).toBe('tool_stone');
     expect(s.inventory.tool_stone).toBe(1);
-    expect(s.inventory.tool_iron ?? 0).toBe(0);
-    expect(s.assignTool(0, null)).toBe(true);
-    expect(s.inventory.tool_iron).toBe(1);
-    expect(s.toolItem()).toBeNull();
+    expect(s.changes.hotbar[9]).toBe('tool_stone');
+    const again = new GameState(s.snapshot());
+    expect(again.inventory.tool_stone).toBe(1);
+    expect(again.changes.hotbar.filter((x) => x === 'tool_stone')).toHaveLength(1);
   });
 
-  it('une ancienne sauvegarde (outil aussi dans le sac) est corrigée au chargement, une seule fois', () => {
+  it('une ancienne sauvegarde (outil aussi dans le sac) ne le double pas', () => {
     const changes = { ...emptyChanges(), tools: ['tool_stone'] } as Record<string, unknown>;
     delete changes.toolsHeld;
     const s = new GameState({ inventory: { tool_stone: 1 }, changes });
+    expect(s.inventory.tool_stone).toBe(1);
     expect(s.toolItem()).toBe('tool_stone');
-    expect(s.inventory.tool_stone ?? 0).toBe(0);
-    const again = new GameState(s.snapshot());
-    expect(again.toolItem()).toBe('tool_stone');
-    expect(again.inventory.tool_stone ?? 0).toBe(0);
   });
 
   it('un tapis posé par-dessus un autre le remplace (palier, sens) et rend l’ancien', () => {

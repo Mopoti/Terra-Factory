@@ -1113,10 +1113,6 @@
   justify-content: flex-end;
   text-align: left;
 }
-.tool-slot {
-  margin-left: 14px;
-  border-color: #a49886;
-}
 .hot-slot.empty {
   background: #e6e0d7;
   border-bottom-color: #d3cbbe;
@@ -2937,9 +2933,6 @@ body.touch-mode .menu-corner {
 }
 .icon-btn.danger {
   color: #c4455f;
-}
-.tool-slot {
-  border-color: var(--sun);
 }
 .panel.editor,
 .panel.wide,

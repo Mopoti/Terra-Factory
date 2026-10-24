@@ -193,7 +193,7 @@ export const FOOTPRINT_VERSION = 6;
 /** Balles d'un chargeur. */
 export const MAGAZINE_ROUNDS = 12;
 
-export const HOTBAR_SLOTS = 9;
+export const HOTBAR_SLOTS = 10;
 /** Cases d'outils (plus tard, un vêtement pourra en ajouter). */
 export const TOOL_SLOTS = 1;
 

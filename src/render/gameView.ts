@@ -126,7 +126,7 @@ import { showFinale } from '../ui/finale';
 import { isTouchMode, mountTouchControls } from '../ui/touchControls';
 import { mountGamepad } from '../input/gamepad';
 import { onDeviceChange } from '../input/lastDevice';
-import { cellKey } from '../core/game/worldChanges';
+import { cellKey, HOTBAR_SLOTS } from '../core/game/worldChanges';
 import { resourceById, type DepositResource } from '../core/data/resources';
 import { FactoryView } from './factoryView';
 import type { Structure } from './interaction';
@@ -317,7 +317,7 @@ export function startGameView(
     // caméra (tête, torse) est découpé.
     firstArm = make(true);
     // Comme la photo de référence : poing en bas, manche presque droit, tête en haut à droite, pic vers le centre.
-    firstArm.root.position.set(0.332, -0.6, 0.019);
+    firstArm.root.position.set(0.332, -0.67, 0.019);
     firstArm.root.scale.setScalar(0.8);
     firstArm.root.rotation.y = Math.PI;
     firstArm.clip([firstClip]);
@@ -3114,7 +3114,7 @@ export function startGameView(
   // Pistolet : en main (1ère personne) et au bout du bras du personnage.
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x4a4f57 });
   const gripMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22 });
-  /** Un pistolet est prêt : dans la case d'outils, ou choisi dans la barre de raccourcis. */
+  /** Un pistolet est prêt : choisi dans la barre de raccourcis. */
   const weaponInHand = (): WeaponSpec | null => {
     const picked = options.state.selectedItem();
     const id = isWeapon(picked) ? picked : options.state.toolItem();
@@ -3589,7 +3589,7 @@ export function startGameView(
     if (!paused && uiOpen) {
       const chosen = options.state.carried ?? options.state.pointed;
       if (chosen) {
-        for (let i = 1; i <= 9; i++) {
+        for (let i = 1; i <= HOTBAR_SLOTS; i++) {
           if (pressed(`hotbar${i}` as ActionId)) {
             options.state.assignSlot(i - 1, chosen);
             playSfx('select');
@@ -3613,7 +3613,7 @@ export function startGameView(
           if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
         }
         // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
-        for (let i = 1; i <= 9; i++) {
+        for (let i = 1; i <= HOTBAR_SLOTS; i++) {
           if (pressed(`hotbar${i}` as ActionId)) {
             options.state.selectSlot(i - 1);
             playSfx('select');

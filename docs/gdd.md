@@ -193,12 +193,12 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 - Gestes de souris unifiés (sac, coffres, machines, buggy) : clic = pile au curseur ; clic droit = la moitié ; **Ctrl** = quantité choisie ; **Maj** = transfert direct vers/depuis le sac ; glisser hors de la fenêtre = jeter ; glisser sur la barre = raccourci.
 - Un objet **posable** peut rester « en main » à la fermeture du sac ; clic droit mains vides = vider les mains.
 - **Fabrication à la main** (dans le sac) par onglets : _Machines_, _Ustensiles_, _Constructions_, _Équipements_. Seuls les objets **débloqués** (technologie) sont fabricables ; les matières premières ne figurent pas dans le panneau.
-- **Barre de raccourcis** (touches 1 à 9) et **case d'outils** dédiée.
+- **Barre de raccourcis** de 10 cases (touches 1 à 9 puis 0). Il n'y a plus de case d'outils dédiée : l'outil se range dans une case ordinaire.
 
 ### 4.5 Outils et récolte ✅
 
 - **À mains nues**, la récolte est **×3 plus lente**.
-- L'outil se place dans la **case d'outils** (il n'apparaît dans les mains que pendant l'action) :
+- L'outil se place dans une **case de la barre** (la case choisie, sinon la première qui en contient un) (il n'apparaît dans les mains que pendant l'action) :
 
 | Outil           | Vitesse de récolte | Unités par coup | Recette                      |
 | --------------- | ------------------ | --------------- | ---------------------------- |
@@ -226,7 +226,7 @@ Tous se fabriquent à partir de **tissu** (8 fibres par tissu, technologie _Text
 
 - **Pistolet** (16 lingots de fer) : 10 dégâts par tir (rayon, portée 40 m), cadence 0,35 s ; **chargeur** (4 lingots de fer) = **12 balles** ; recharge avec **R**. Tracé de tir visible, bruitages.
 - **Corps à corps** (sans pistolet) : 12 dégâts, portée 2,6 m.
-- Le pistolet de la case d'outils ne sort que pendant l'action de tir. Les **nids** encaissent aussi les tirs (§9).
+- Le pistolet (choisi dans la barre) ne sort que pendant l'action de tir. Les **nids** encaissent aussi les tirs (§9).
 
 ### 4.8 Le buggy ✅
 
@@ -505,7 +505,7 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Menu d'accueil** : _Continuer_ (nom de la partie + date de sa dernière sauvegarde), _Nouvelle partie_, _Charger une partie_, _Paramètres_, _Quitter_ (masqué en version web).
 - **Éditeur de partie** : nom, seed (avec mélange aléatoire), curseurs des familles du monde, options ennemis, réalisme, **jour/nuit/saisons + camembert**.
 - **Gestion des parties** : charger, renommer, dupliquer, supprimer ; une partie = un dossier de sauvegardes manuelles et automatiques.
-- **En jeu** : barre de raccourcis, case d'outils, fenêtre de sac / fabrication / équipement, fenêtres de machines, de coffres et du buggy, **carte (M)**, **technologies (T)**, **pause (Échap)**, aides de construction à l'écran, notifications.
+- **En jeu** : barre de raccourcis, fenêtre de sac / fabrication / équipement, fenêtres de machines, de coffres et du buggy, **carte (M)**, **technologies (T)**, **pause (Échap)**, aides de construction à l'écran, notifications.
 
 ### 11.2 Mode débogage (F9) ✅
 
