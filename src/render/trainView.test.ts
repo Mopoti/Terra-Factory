@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { CELL_SIZE_M } from '../core/constants';
 import { GameState } from '../core/game/state';
 import { TILE_M, flip, matesFor, portsOf } from '../core/rail/track';
 import { anchorOffset } from '../core/rail/train';
@@ -23,6 +24,7 @@ function bench() {
   state.creative = true;
   state.held = 'rail';
   const down = new Set<string>();
+  let blockBelowGz = -1e9;
   let aim: { x: number; z: number } | null = null;
   const view = new TrainView({
     scene: new THREE.Scene(),
@@ -30,7 +32,7 @@ function bench() {
     material: new THREE.MeshBasicMaterial(),
     container: fake() as never,
     aim: () => aim,
-    blocked: () => false,
+    blocked: (_gx: number, gz: number) => gz < blockBelowGz,
     held: (a: string) => down.has(a),
     message: (m: string) => msgs.push(m),
     sfx: (n: string) => sfxs.push(n),
@@ -76,8 +78,46 @@ function bench() {
   const tick = (n: number, dt = 0.05, at = { x: 0, z: 0 }): void => {
     for (let i = 0; i < n; i++) view.update({ ...frame, dt }, at);
   };
-  return { state, drag, tick };
+  return {
+    state,
+    view,
+    drag,
+    tick,
+    step,
+    /** Tout ce qui est plus au nord que cette ligne de tuiles est un obstacle. */
+    blockNorthOf: (tz: number) => (blockBelowGz = (tz * TILE_M) / CELL_SIZE_M),
+  };
 }
+
+describe('tracé : obstacle et annulation', () => {
+  it("la pose s'arrête avant l'obstacle (seule la partie libre est posée)", () => {
+    const { state, drag, blockNorthOf } = bench();
+    blockNorthOf(12);
+    drag([20, 20], [[0, -1, 14]]);
+    const rails = state.changes.rails;
+    expect(rails.length).toBeGreaterThan(5);
+    expect(rails.length).toBeLessThan(15);
+    for (const p of rails) expect(p.gz).toBeGreaterThanOrEqual((12 * TILE_M) / CELL_SIZE_M - 1);
+    expect(msgs.at(-1)).toContain('obstacle');
+  });
+
+  it("le clic droit pendant le tracé l'annule : rien n'est posé au relâchement", () => {
+    const { state, view, step } = bench();
+    step(20, 20, false);
+    step(20, 20, true);
+    for (let tz = 19; tz >= 12; tz--) step(20, tz, true);
+    expect(view.isTracing()).toBe(true);
+    expect(view.cancelTrace()).toBe(true);
+    step(20, 12, true);
+    step(20, 12, false);
+    expect(state.changes.rails).toHaveLength(0);
+    // Un nouveau tracé repart normalement.
+    step(20, 20, true);
+    for (let tz = 19; tz >= 15; tz--) step(20, tz, true);
+    step(20, 15, false);
+    expect(state.changes.rails.length).toBeGreaterThan(0);
+  });
+});
 
 describe('tracé à la souris depuis une voie existante', () => {
   it('un virage tracé depuis la ligne en garde toute la longueur (deux chemins)', () => {

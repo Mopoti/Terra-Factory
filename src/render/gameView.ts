@@ -1902,8 +1902,13 @@ export function startGameView(
   };
   window.addEventListener('mousemove', onMouseMove);
   let rightDownAt = 0;
+  let rightCancelledTrace = false;
   const onMouseDown = (e: MouseEvent): void => {
-    if (e.button === 2) rightDownAt = performance.now();
+    if (e.button === 2) {
+      rightDownAt = performance.now();
+      // Pendant le tracé d'une voie, le clic droit l'annule (et ne range pas l'objet tenu).
+      rightCancelledTrace = !paused && !uiOpen && trains.cancelTrace();
+    }
   };
   window.addEventListener('mousedown', onMouseDown);
   const onMouseUp = (e?: Event): void => {
@@ -1915,6 +1920,7 @@ export function startGameView(
       !paused &&
       !uiOpen &&
       (options.state.held || building) &&
+      !rightCancelledTrace &&
       performance.now() - rightDownAt < 300 &&
       rightMoved < 10 &&
       !demolishChain

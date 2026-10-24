@@ -1310,6 +1310,24 @@ export class TrainView {
   private traceInfo = '';
   /** Le tracé en cours part d'un bout de voie : sa route est recalculée vers le curseur à chaque image. */
   private fromPort = false;
+  private traceCancelled = false;
+
+  /** Tracé de voie en cours (clic gauche maintenu) ? */
+  isTracing(): boolean {
+    return this.path.length > 0 && this.wasDown;
+  }
+
+  /** Clic droit pendant le tracé : le patron et le point de départ sont annulés. */
+  cancelTrace(): boolean {
+    if (!this.isTracing()) return false;
+    this.path = [];
+    this.branch = null;
+    this.traceCancelled = true;
+    this.ghostKey = '';
+    this.setGhost([]);
+    this.traceInfo = '';
+    return true;
+  }
 
   private handlePlacing(
     graph: TrackGraph,
@@ -1519,6 +1537,14 @@ export class TrainView {
       this.setGhost([]);
       return;
     }
+    // Tracé annulé au clic droit : rien ne se pose tant que le clic gauche n'est pas relâché.
+    if (this.traceCancelled) {
+      if (!down) this.traceCancelled = false;
+      this.path = [];
+      this.branch = null;
+      this.setGhost([]);
+      return;
+    }
     const here = tileOf(aim.x, aim.z);
     const port = this.nearestFreePort(aim);
     if (port && this.path.length === 0 && this.halfCurve(port, edge)) return;
@@ -1658,6 +1684,9 @@ export class TrainView {
         }) + curves.join('');
     }
     const checked = this.evaluate(planned);
+    // On s'arrête avant le premier obstacle : tout ce qui suit est rouge et ne sera pas posé.
+    const stop = checked.findIndex((c) => !c.ok);
+    if (stop >= 0) for (let i = stop; i < checked.length; i++) checked[i].ok = false;
     this.setGhost(checked.map(({ piece, ok }) => ({ piece, ok })));
     if (release && this.path.length > 0 && planned.length === 0) {
       this.path = [];
@@ -1684,7 +1713,7 @@ export class TrainView {
       this.ghostKey = '';
       if (placed > 0) {
         this.host.sfx('placeStone');
-        this.host.message(t('train.railPlaced'));
+        this.host.message(t(stop >= 0 ? 'train.railStopped' : 'train.railPlaced'));
       } else {
         this.host.sfx('deny');
         this.host.message(t('train.railBlocked'));
