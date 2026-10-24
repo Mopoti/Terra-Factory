@@ -393,6 +393,16 @@
       "unlocks": ["rifle", "rifle_magazine"]
     },
     {
+      "id": "weapons_3",
+      "tier": 3,
+      "cost": {
+        "combat_pack": 10
+      },
+      "requires": ["weapons_2"],
+      "reveal": ["weapons_2"],
+      "unlocks": ["sniper", "sniper_magazine"]
+    },
+    {
       "id": "armor_2a",
       "tier": 2,
       "cost": {

@@ -1480,6 +1480,31 @@
       }
     },
     {
+      "id": "sniper",
+      "stack": 1,
+      "category": "tools",
+      "weightKg": 4.5,
+      "volumeL": 5,
+      "color": "#2f3a2f",
+      "recipe": {
+        "iron_gear": 8,
+        "steel_plate": 6,
+        "copper_wire": 6
+      }
+    },
+    {
+      "id": "sniper_magazine",
+      "stack": 50,
+      "category": "tools",
+      "weightKg": 0.4,
+      "volumeL": 0.4,
+      "color": "#7a8472",
+      "recipe": {
+        "iron_ingot": 3,
+        "copper_ingot": 3
+      }
+    },
+    {
       "id": "machine_turret_heavy",
       "stack": 10,
       "category": "tools",

@@ -50,6 +50,9 @@ export class CameraRig {
   private readonly pan = new THREE.Vector2();
   private readonly shown = new THREE.Vector3();
   private shownReady = false;
+  /** Visée à la lunette : 0 (aucune) à 1 (pleine), vers `scopeFov` (°) ; ignorée de la vue du dessus. */
+  scope = 0;
+  scopeFov = 14;
   private bobPhase = 0;
   private bobAmount = 0;
   private roll = 0;
@@ -273,6 +276,7 @@ export class CameraRig {
       this.roll = 0;
     }
 
+    if (this.view !== 'top' && this.scope > 0) fov += (this.scopeFov - fov) * this.scope;
     if (Math.abs(this.camera.fov - fov) > 0.01) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();

@@ -31,6 +31,8 @@ describe('technologies de combat', () => {
       'magazine',
       'rifle',
       'rifle_magazine',
+      'sniper',
+      'sniper_magazine',
       'machine_turret',
       'machine_turret_heavy',
       'machine_turret_laser',
@@ -137,5 +139,19 @@ describe('dépouilles', () => {
     ]);
     expect(itemById('carapace').recipe).toBeNull();
     expect(itemById('living_tissue').recipe).toBeNull();
+  });
+
+  it('le sniper tire peu, fort et loin ; sans visée il disperse, avec la lunette il est précis', () => {
+    expect(WEAPONS.sniper.damage).toBeGreaterThan(WEAPONS.rifle.damage * 3);
+    expect(WEAPONS.sniper.range).toBeGreaterThan(WEAPONS.rifle.range);
+    expect(WEAPONS.sniper.hipSpread).toBeGreaterThan(0);
+    expect(WEAPONS.sniper.scopeFov).not.toBeNull();
+    const s = new GameState({ inventory: { sniper_magazine: 1 } });
+    expect(s.fire('sniper')).toBe(false);
+    expect(s.reload('sniper')).toBe('ok');
+    expect(s.ammoOf('sniper')).toBe(WEAPONS.sniper.rounds);
+    expect(s.fire('sniper')).toBe(true);
+    expect(s.ammoOf('sniper')).toBe(WEAPONS.sniper.rounds - 1);
+    expect(s.ammoOf('pistol')).toBe(0);
   });
 });

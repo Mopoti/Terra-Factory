@@ -178,6 +178,8 @@ export interface WorldChanges {
   ammo: number;
   /** Balles dans le fusil. */
   rifleAmmo: number;
+  /** Balles dans le sniper. */
+  sniperAmmo: number;
   /** Unité de `fuelLeft` des machines : 1 = kilojoules (avant : secondes de combustion). */
   energyVersion: number;
   /** Ressources posées en mode Créatif (voir `PlacedResource`). */
@@ -243,6 +245,7 @@ export function emptyChanges(): WorldChanges {
     nests: [],
     ammo: 0,
     rifleAmmo: 0,
+    sniperAmmo: 0,
     energyVersion: 1,
     placed: [],
     dried: [],
@@ -571,6 +574,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   if (isNum(r.ammo)) result.ammo = Math.max(0, Math.min(MAGAZINE_ROUNDS, Math.floor(r.ammo)));
   if (isNum(r.rifleAmmo))
     result.rifleAmmo = Math.max(0, Math.min(WEAPONS.rifle.rounds, Math.floor(r.rifleAmmo)));
+  if (isNum(r.sniperAmmo))
+    result.sniperAmmo = Math.max(0, Math.min(WEAPONS.sniper.rounds, Math.floor(r.sniperAmmo)));
   if (typeof r.groundPollution === 'object' && r.groundPollution !== null) {
     for (const [k, v] of Object.entries(r.groundPollution as Record<string, unknown>)) {
       if (/^-?\d+,-?\d+$/.test(k) && isNum(v) && v > 0) result.groundPollution[k] = v;

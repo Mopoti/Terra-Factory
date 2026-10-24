@@ -89,6 +89,7 @@ export const LOADOUT_KEYS = [
   'equipment',
   'ammo',
   'rifleAmmo',
+  'sniperAmmo',
   'tutorialDone',
   'tutorialSkipped',
 ] as const;

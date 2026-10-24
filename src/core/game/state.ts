@@ -1960,7 +1960,9 @@ export class GameState {
 
   /** Balles restantes dans l'arme. */
   ammoOf(weapon: WeaponSpec['id'] = 'pistol'): number {
-    return weapon === 'rifle' ? this.changes.rifleAmmo : this.changes.ammo;
+    if (weapon === 'rifle') return this.changes.rifleAmmo;
+    if (weapon === 'sniper') return this.changes.sniperAmmo;
+    return this.changes.ammo;
   }
 
   /** Recharge l'arme avec un chargeur du sac. */
@@ -1970,6 +1972,7 @@ export class GameState {
     if ((this.inventory[spec.magazine] ?? 0) <= 0) return 'noMagazine';
     this.inventory = remove(this.inventory, spec.magazine, 1).inventory;
     if (weapon === 'rifle') this.changes.rifleAmmo = spec.rounds;
+    else if (weapon === 'sniper') this.changes.sniperAmmo = spec.rounds;
     else this.changes.ammo = spec.rounds;
     this.emit({ type: 'inventory' });
     return 'ok';
@@ -1979,6 +1982,7 @@ export class GameState {
   fire(weapon: WeaponSpec['id'] = 'pistol'): boolean {
     if (this.ammoOf(weapon) <= 0) return false;
     if (weapon === 'rifle') this.changes.rifleAmmo--;
+    else if (weapon === 'sniper') this.changes.sniperAmmo--;
     else this.changes.ammo--;
     return true;
   }

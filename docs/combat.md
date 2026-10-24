@@ -29,3 +29,11 @@ Une technologie de palier 2 et plus n'apparaît que lorsque son équivalent du p
 ## Pas encore fait (palier 3 et 4)
 - **Grenades** (palier 3) : demandent un jet d'objet et une explosion à zone.
 - **Véhicule blindé** (palier 3) et **tank** (palier 4) : il existe déjà un véhicule à monter dans le jeu ; à préciser avec le PO (stats, armement, coût).
+
+## Sniper (24 octobre)
+
+Fusil de précision débloqué par la technologie **Sniper** (`weapons_3`, après le fusil automatique, 10 paquets de combat). Chargeur de 5 balles (`sniper_magazine`), 60 dégâts, un tir toutes les 1,3 s, portée 140 m. Modèle provisoire : celui du fusil (à remplacer par un modèle Blender).
+
+- **Visée** : clic droit maintenu (action `secondary`, réaffectable) → zoom lunette (champ de vision 14°, `CameraRig.scope`), voile sombre en vue subjective, souris ralentie jusqu'à 70 %.
+- **Sans visée** : le tir part dans un cône (`hipSpread` ≈ 5°) : de loin, il faut viser pour toucher.
+- Les munitions sont sauvegardées (`sniperAmmo`, profil du joueur et invité).

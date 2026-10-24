@@ -83,6 +83,7 @@ export const NO_MODEL_ITEMS: readonly string[] = [
   'bed',
   'magazine',
   'rifle_magazine',
+  'sniper_magazine',
   ...['armor1', 'armor2', 'armor4'].flatMap((a) =>
     ['head', 'torso', 'legs', 'feet'].map((s) => `${a}_${s}`),
   ),
@@ -94,6 +95,7 @@ export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string
   tool_iron: { kind: 'pick', file: 'terra/pioche_hache' },
   pistol: { kind: 'weapon', file: 'pistolet' },
   rifle: { kind: 'weapon', file: 'fusil' },
+  sniper: { kind: 'weapon', file: 'fusil' },
 };
 
 /** Modèle (en miniature) d'une machine, du buggy ou d'une balise posés au sol ; null si ce n'est pas une machine. */

@@ -1895,7 +1895,8 @@ export function startGameView(
     if (input.isBindingActive('Mouse2')) rightMoved += Math.hypot(e.movementX, e.movementY);
     else rightMoved = 0;
     if (isLocked() || input.isBindingActive('Mouse2')) {
-      rig.look(e.movementX, e.movementY, getSettings().views);
+      const slow = 1 - 0.7 * rig.scope;
+      rig.look(e.movementX * slow, e.movementY * slow, getSettings().views);
       signalLook(e.movementX, e.movementY);
     }
   };
@@ -2816,6 +2817,10 @@ export function startGameView(
   }
 
   // --- Réticule, indice, réglages, FPS, infos ----------------------------------------------
+  const scopeOverlay = document.createElement('div');
+  scopeOverlay.className = 'scope-overlay';
+  scopeOverlay.hidden = true;
+  container.appendChild(scopeOverlay);
   const crosshair = document.createElement('div');
   crosshair.className = 'crosshair';
   container.appendChild(crosshair);
@@ -3306,7 +3311,14 @@ export function startGameView(
     // L'arme de la case d'outils ne sort que pendant l'action de tir ; celle de la barre reste en main.
     const gunOut =
       armed && (isWeapon(options.state.selectedItem()) || input.isActionActive('interact'));
-    const longGun = weapon?.id === 'rifle';
+    const longGun = weapon?.id === 'rifle' || weapon?.id === 'sniper';
+    // Visée à la lunette : clic droit maintenu avec une arme qui en a une (pas en vue du dessus).
+    const aiming =
+      armed && weapon?.scopeFov != null && rig.view !== 'top' && input.isActionActive('secondary');
+    rig.scopeFov = weapon?.scopeFov ?? 14;
+    rig.scope += ((aiming ? 1 : 0) - rig.scope) * (1 - Math.exp(-14 * dt));
+    if (rig.scope < 0.005) rig.scope = 0;
+    scopeOverlay.hidden = !(rig.view === 'first' && rig.scope > 0.5);
     if (gunModels.length > 0) {
       gun.scale.setScalar(1);
       gunBody.scale.setScalar(1);
@@ -3337,6 +3349,19 @@ export function startGameView(
           options.onMessage?.(t('weapon.empty'));
         } else {
           computeRay();
+          // Sans visée, une arme de précision tire dans un cône : il faut viser (clic droit) pour toucher de loin.
+          if (weapon.hipSpread > 0 && !aiming) {
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * weapon.hipSpread;
+            const side = new THREE.Vector3()
+              .crossVectors(rayDir, new THREE.Vector3(0, 1, 0))
+              .normalize();
+            const upv = new THREE.Vector3().crossVectors(side, rayDir).normalize();
+            rayDir
+              .addScaledVector(side, Math.cos(a) * r)
+              .addScaledVector(upv, Math.sin(a) * r)
+              .normalize();
+          }
           const shot = threat.shoot(rayOrigin, rayDir, weapon.range, weapon.damage);
           guest?.client.fire(rayOrigin, rayDir, weapon.id);
           // Un nid sur la ligne de tir (et plus près qu'un ennemi touché) encaisse le tir.
@@ -4092,6 +4117,7 @@ export function startGameView(
       corpseMaterial.dispose();
       renderer.domElement.remove();
       crosshair.remove();
+      scopeOverlay.remove();
       compass.remove();
       hint.remove();
       fpsBox.remove();

@@ -522,6 +522,20 @@
   color: #332a1d;
 }
 
+.scope-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent 30%,
+    rgba(0, 0, 0, 0.85) 52%
+  );
+}
+.scope-overlay[hidden] {
+  display: none;
+}
 .crosshair {
   position: fixed;
   left: 50%;
