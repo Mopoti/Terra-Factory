@@ -27,10 +27,8 @@ import {
   trackCellsOf,
   freePorts,
   footprintOf,
-  isSwitch,
   matesFor,
   portsOf,
-  leverOf,
   lengthOfPiece,
   crossesStraight,
   flip,
@@ -38,7 +36,6 @@ import {
   lengthOf,
   poseOn,
   radiusOf,
-  routesOf,
   type Port,
   type RailKind,
   type RailPiece,
@@ -66,7 +63,7 @@ import { AUTO_SPEED, autoControl as autoThrottle, findRoute, type Route } from '
 import { bakedModel } from './models';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 
-const RAIL_MODEL: Record<Exclude<RailKind, 'switch_r' | 'switch_l'>, string> = {
+const RAIL_MODEL: Record<RailKind, string> = {
   straight: 'rail_droit',
   curve: 'rail_virage',
   curve_wide: 'rail_virage_large',
@@ -77,15 +74,11 @@ const RAIL_MODEL: Record<Exclude<RailKind, 'switch_r' | 'switch_l'>, string> = {
   curve45: 'rail_virage_45',
   curve45_b: 'rail_virage_45_b',
 };
-/** Modèle d'une pièce de voie : un aiguillage a un modèle par côté et par position des lames. */
+/** Modèle d'une pièce de voie. */
 export function railModelName(p: RailPiece): string {
-  if (!isSwitch(p.kind)) return RAIL_MODEL[p.kind];
-  return `rail_aiguillage_${p.kind === 'switch_r' ? 'd' : 'g'}_${p.branch === 1 ? 'devie' : 'droit'}`;
+  return RAIL_MODEL[p.kind];
 }
-/** Formes de voie qu'on choisit avec B : la taille des virages du tracé, ou l'aiguillage. */
-/** Distance (m) au levier d'un aiguillage pour le manœuvrer à pied (touche F). */
-const LEVER_REACH_M = 2.5;
-/** Distance (m) jusqu'à laquelle on cherche, depuis la locomotive, l'aiguillage à manœuvrer (touche R). */
+/** Distance (m) jusqu'à laquelle on regarde, devant la locomotive, l'embranchement à prendre (touches gauche / droite). */
 const SWITCH_AHEAD_M = 60;
 const GREEN: Rgb = hexToRgb('#4cd964');
 const RED: Rgb = hexToRgb('#ff5a4a');
@@ -345,23 +338,23 @@ export class TrainView {
     maxDist: number,
   ): { piece: RailPiece; t: number } | null {
     let best: { piece: RailPiece; t: number } | null = null;
-    for (const piece of this.host.state.changes.rails)
-      for (const route of routesOf(piece)) {
-        const len = lengthOfPiece(route);
-        for (let u = 0; u <= len + 1e-6; u += 0.8) {
-          const p = poseOn(route, Math.min(u, len));
-          const wx = p.x - o.x;
-          const wy = p.y + RAIL_TOP_M - o.y;
-          const wz = p.z - o.z;
-          const t0 = wx * d.x + wy * d.y + wz * d.z;
-          if (t0 < 0 || t0 > maxDist) continue;
-          const rx = wx - t0 * d.x;
-          const ry = wy - t0 * d.y;
-          const rz = wz - t0 * d.z;
-          if (rx * rx + ry * ry + rz * rz > 1.1 * 1.1) continue;
-          if (!best || t0 < best.t) best = { piece, t: t0 };
-        }
+    for (const piece of this.host.state.changes.rails) {
+      const route = piece;
+      const len = lengthOfPiece(route);
+      for (let u = 0; u <= len + 1e-6; u += 0.8) {
+        const p = poseOn(route, Math.min(u, len));
+        const wx = p.x - o.x;
+        const wy = p.y + RAIL_TOP_M - o.y;
+        const wz = p.z - o.z;
+        const t0 = wx * d.x + wy * d.y + wz * d.z;
+        if (t0 < 0 || t0 > maxDist) continue;
+        const rx = wx - t0 * d.x;
+        const ry = wy - t0 * d.y;
+        const rz = wz - t0 * d.z;
+        if (rx * rx + ry * ry + rz * rz > 1.1 * 1.1) continue;
+        if (!best || t0 < best.t) best = { piece, t: t0 };
       }
+    }
     return best;
   }
 
@@ -606,10 +599,7 @@ export class TrainView {
 
   private setGhost(pieces: { piece: RailPiece; ok: boolean }[]): void {
     const key = pieces
-      .map(
-        ({ piece: p, ok }) =>
-          `${p.kind}${p.gx},${p.gz},${p.turns},${p.level},${p.branch ?? 0}${ok ? '+' : '-'}`,
-      )
+      .map(({ piece: p, ok }) => `${p.kind}${p.gx},${p.gz},${p.turns},${p.level}${ok ? '+' : '-'}`)
       .join(';');
     this.ghost.visible = pieces.length > 0;
     if (key === this.ghostKey) return;
@@ -953,6 +943,8 @@ export class TrainView {
       left -= h;
       for (const c of trains) {
         const auto = c.goTo !== undefined ? this.autoControl(graph, c, h) : null;
+        // Voie prise aux embranchements : l'itinéraire du pilote, les touches gauche / droite du conducteur, sinon tout droit.
+        c.pick = auto ? this.routePicks(c) : c === driven ? this.steerPicks(graph, c) : undefined;
         if (c === driven) this.engineEffort = Math.abs((auto ?? ctrlDriven).throttle);
         stepConsist(graph, c, h, auto ?? (c === driven ? ctrlDriven : IDLE));
         const e = auto ? this.autos.get(c.id) : undefined;
@@ -970,25 +962,13 @@ export class TrainView {
     player: { x: number; z: number },
   ): void {
     const { state } = this.host;
-    if (frame.rotate && this.mountedCar !== null) this.switchAheadOfLoco(graph);
     if (frame.route && this.mountedCar !== null) this.chooseDestination();
-    // Aux commandes : D / Q (droite / gauche) mettent l'aiguillage devant la locomotive sur la voie qui part de ce côté.
-    const right = this.host.held('right');
-    const left = this.host.held('left');
-    if (this.mountedCar !== null) {
-      if (right && !this.wasRight) this.steerAhead(graph, 'right');
-      if (left && !this.wasLeft) this.steerAhead(graph, 'left');
-    }
-    this.wasRight = right;
-    this.wasLeft = left;
     if (frame.use) {
       if (this.mountedCar !== null) this.dismount(true);
       else {
         const near = this.carNear(player.x, player.z);
-        const lever = this.leverNear(player.x, player.z);
         const station = this.stationAimed(player);
         if (station !== null) this.host.renameStation(station);
-        else if (lever !== null) this.toggleSwitch(lever);
         else if (near && this.host.held('sprint')) {
           const r = state.pickUpCar(near.consist.id);
           if (r === 'ok') {
@@ -1030,30 +1010,6 @@ export class TrainView {
     }
   }
 
-  /** Aiguillage dont le levier est à portée du joueur à pied (le plus proche), ou null. */
-  private leverNear(x: number, z: number): number | null {
-    let best: { id: number; d: number } | null = null;
-    for (const p of this.host.state.changes.rails) {
-      if (!isSwitch(p.kind)) continue;
-      const l = leverOf(p);
-      const d = Math.hypot(l.x - x, l.z - z);
-      if (d <= LEVER_REACH_M && (!best || d < best.d)) best = { id: p.id, d };
-    }
-    return best?.id ?? null;
-  }
-
-  /** Manœuvre un aiguillage (message et son), sauf si un convoi est dessus. */
-  private toggleSwitch(id: number): void {
-    const r = this.host.state.toggleSwitch(id);
-    if (r === null) {
-      this.host.sfx('deny');
-      this.host.message(t('train.switchBusy'));
-      return;
-    }
-    this.host.sfx('select');
-    this.host.message(t(r === 1 ? 'train.switchDiverge' : 'train.switchStraight'));
-  }
-
   /** Premier choix de voie devant la locomotive (dans le sens où elle regarde). */
   private choiceAheadOfLoco(graph: TrackGraph): ReturnType<TrackGraph['choiceAhead']> {
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
@@ -1062,21 +1018,6 @@ export class TrainView {
     // La locomotive regarde vers la tête du convoi, sauf si elle est retournée.
     const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
     return graph.choiceAhead(from, SWITCH_AHEAD_M);
-  }
-
-  /** Depuis la locomotive : manœuvre le premier aiguillage (ou embranchement) devant elle. */
-  private switchAheadOfLoco(graph: TrackGraph): void {
-    const ahead = this.choiceAheadOfLoco(graph);
-    if (!ahead) {
-      this.host.sfx('deny');
-      this.host.message(t('train.noSwitch'));
-    } else if (ahead.kind === 'switch') this.toggleSwitch(ahead.id);
-    else {
-      // Embranchement tangent : on passe à la voie suivante.
-      const at = ahead.options.findIndex((o) => o.open);
-      const next = ahead.options[(at + 1) % ahead.options.length];
-      this.selectRoute(ahead, next.piece);
-    }
   }
 
   /** Station dont le quai est sous le curseur, et assez près du joueur pour la renommer. */
@@ -1117,25 +1058,33 @@ export class TrainView {
     });
   }
 
-  /** Règle les aiguillages de l'itinéraire qui sont à moins de 60 m devant le convoi. */
-  private setRouteSwitches(
-    graph: TrackGraph,
-    e: { route: Route; remaining: number; total: number },
-  ): void {
+  /** Voies de l'itinéraire à prendre aux embranchements qui sont à moins de 60 m devant le convoi. */
+  private routePicks(c: Consist): number[] | undefined {
+    const e = this.autos.get(c.id);
+    if (!e) return undefined;
     const travelled = e.total - e.remaining;
-    for (const d of e.route.decisions) {
-      if (d.at - travelled > 60 || d.at < travelled - 2) continue;
-      if (graph.neighbour(d.piece, d.port)?.piece === d.chosen) continue;
-      const chosen = graph.byId.get(d.chosen);
-      if (!chosen) continue;
-      if (chosen.route !== undefined)
-        this.host.state.setSwitch(Math.abs(d.chosen), d.chosen < 0 ? 1 : 0);
-      else
-        this.host.state.selectRoute(
-          d.chosen,
-          graph.linksAt(d.piece, d.port).map((l) => Math.abs(l.piece)),
-        );
-    }
+    const picks = e.route.decisions
+      .filter((d) => d.at - travelled <= 60 && d.at >= travelled - 2)
+      .map((d) => d.chosen);
+    return picks.length > 0 ? picks : undefined;
+  }
+
+  /**
+   * Voie que prend le conducteur au prochain embranchement : celle qui tourne du côté où il appuie (gauche / droite),
+   * sinon tout droit. L'embranchement n'est pas un levier : c'est le train qui choisit.
+   */
+  private steerPicks(graph: TrackGraph, c: Consist): number[] | undefined {
+    const left = this.host.held('left');
+    const right = this.host.held('right');
+    if (left === right) return undefined;
+    const ahead = this.choiceAheadOfLoco(graph);
+    if (!ahead) return undefined;
+    const sign = right ? 1 : -1;
+    const turning = ahead.options.filter((o) => o.lateral * sign > 0.3);
+    if (turning.length === 0) return undefined;
+    const best = turning.reduce((a, b) => (b.lateral * sign > a.lateral * sign ? b : a));
+    void c;
+    return [best.piece];
   }
 
   /** Commande du pilote automatique pour ce convoi ; null si l'ordre est annulé (pas de chemin, plus de combustible). */
@@ -1186,7 +1135,6 @@ export class TrainView {
       this.host.message(t('train.noFuelAuto'));
       return null;
     }
-    this.setRouteSwitches(graph, e);
     const ctrl = autoThrottle(c, e.remaining, AUTO_SPEED);
     if (ctrl.parked) {
       state.sendTrain(c.id, null);
@@ -1198,48 +1146,6 @@ export class TrainView {
       }
     }
     return ctrl;
-  }
-
-  private wasRight = false;
-  private wasLeft = false;
-
-  private selectRoute(ahead: { options: { piece: number }[] }, chosen: number): void {
-    const ok = this.host.state.selectRoute(
-      chosen,
-      ahead.options.map((o) => o.piece),
-    );
-    this.host.sfx(ok ? 'select' : 'deny');
-    this.host.message(t(ok ? 'train.switchChosen' : 'train.switchBusy'));
-  }
-
-  /** Met la voie devant la locomotive du côté demandé (l'autre : tout droit). */
-  private steerAhead(graph: TrackGraph, side: 'left' | 'right'): void {
-    const ahead = this.choiceAheadOfLoco(graph);
-    if (!ahead) return;
-    if (ahead.kind === 'junction') {
-      // Voie qui tourne le plus de ce côté ; à défaut de voie qui tourne, la plus droite.
-      const sign = side === 'right' ? 1 : -1;
-      const turning = ahead.options.filter((o) => o.lateral * sign > 0.3);
-      const pool = turning.length > 0 ? turning : ahead.options;
-      const best =
-        turning.length > 0
-          ? pool.reduce((a, b) => (b.lateral * sign > a.lateral * sign ? b : a))
-          : pool.reduce((a, b) => (Math.abs(b.lateral) < Math.abs(a.lateral) ? b : a));
-      this.selectRoute(ahead, best.piece);
-      return;
-    }
-    const piece = this.host.state.changes.rails.find((p) => p.id === ahead.id);
-    if (!piece) return;
-    // La voie déviée d'un aiguillage « droit » part à droite ; celle d'un aiguillage « gauche », à gauche.
-    const diverges = (piece.kind === 'switch_r') === (side === 'right');
-    const r = this.host.state.setSwitch(piece.id, diverges ? 1 : 0);
-    if (r === null) {
-      this.host.sfx('deny');
-      this.host.message(t('train.switchBusy'));
-      return;
-    }
-    this.host.sfx('select');
-    this.host.message(t(side === 'right' ? 'train.steerRight' : 'train.steerLeft'));
   }
 
   private dismount(announce: boolean): void {
@@ -1419,7 +1325,6 @@ export class TrainView {
         gz: plan.gz,
         turns: plan.turns,
         level: plan.level,
-        ...(isSwitch(plan.kind) ? { branch: 0 as const } : {}),
       };
       if (state.railAlready(plan.kind, plan.gx, plan.gz, plan.turns, plan.level))
         return { piece, ok: true, plan };
@@ -1449,20 +1354,20 @@ export class TrainView {
   }
 
   /**
-   * Aiguillage d'un tracé qui quitte une ligne de côté : le bloc est centré sur la tuile de départ, sa branche sort
-   * du côté où l'on glisse. R choisit de quel bout de la ligne part la pointe.
+   * Embranchement d'un tracé qui quitte une ligne de côté : un virage serré posé dans le prolongement de la ligne
+   * (voies tangentes), centré sur la tuile de départ, dont la sortie va du côté où l'on glisse. R choisit de quel bout
+   * de la ligne part le virage. Il n'y a pas de pièce « aiguillage » : le train choisit sa voie (gauche / droite).
    */
-  private branchSwitch(line: RailPiece, side: Tile): PlannedPiece | null {
+  private branchCurve(line: RailPiece, side: Tile): PlannedPiece | null {
     const c = centerOf(line);
     const want = { x: c.x + side.tx * 1.5 * TILE_M, z: c.z + side.tz * 1.5 * TILE_M };
     const found: PlannedPiece[] = [];
-    for (const turns of [line.turns % 2, (line.turns % 2) + 2])
-      for (const kind of ['switch_r', 'switch_l'] as const) {
-        const at = { ...cornerFor(kind, turns, c.x, c.z), turns, level: line.level };
-        const exit = portsOf({ id: -1, kind, ...at, branch: 0 })[2];
-        if (exit && Math.hypot(exit.x - want.x, exit.z - want.z) < 0.3)
-          found.push({ kind, ...at, cost: RAIL_COST[kind] });
-      }
+    for (let turns = 0; turns < 4; turns++) {
+      const at = { ...cornerFor('curve', turns, c.x, c.z), turns, level: line.level };
+      const exit = portsOf({ id: -1, kind: 'curve', ...at })[1];
+      if (Math.hypot(exit.x - want.x, exit.z - want.z) < 0.3)
+        found.push({ kind: 'curve', ...at, cost: RAIL_COST.curve });
+    }
     return found.length > 0 ? found[this.railTurn % found.length] : null;
   }
 
@@ -1635,7 +1540,7 @@ export class TrainView {
       }
     }
     let planned: PlannedPiece[];
-    // Une ligne droite est quittée de côté (départ) ou jointe de côté (arrivée) : un aiguillage s'y pose.
+    // Une ligne droite est quittée de côté (départ) ou jointe de côté (arrivée) : un embranchement tangent s'y pose.
     const perpendicular = (line: RailPiece, d: Tile): boolean =>
       line.turns % 2 === 0 ? d.tx !== 0 : d.tz !== 0;
     let sw: PlannedPiece | null = null;
@@ -1643,7 +1548,7 @@ export class TrainView {
     let restTilt: -1 | 0 | 1 = this.tilt;
     if (this.branch && tiles.length >= 2) {
       const side = { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz };
-      if (perpendicular(this.branch, side)) sw = this.branchSwitch(this.branch, side);
+      if (perpendicular(this.branch, side)) sw = this.branchCurve(this.branch, side);
       rest = tiles.slice(1);
     } else if (!this.branch && this.pathLead === 0 && this.path.length >= 3) {
       const end = this.path[this.path.length - 1];
@@ -1651,14 +1556,14 @@ export class TrainView {
       const line = this.straightAt(end);
       const side = { tx: prev.tx - end.tx, tz: prev.tz - end.tz };
       if (line && perpendicular(line, side)) {
-        sw = this.branchSwitch(line, side);
-        // Le tracé est lu de la ligne vers son départ : la branche du côté de l'aiguillage, le reste la prolonge.
+        sw = this.branchCurve(line, side);
+        // Le tracé est lu de la ligne vers son départ : la branche du côté de l'embranchement, le reste la prolonge.
         rest = this.path.slice(0, -1).reverse();
         restTilt = 0;
       }
     }
     if (sw) {
-      const exit = portsOf({ id: -1, ...sw, branch: 0 })[2];
+      const exit = portsOf({ id: -1, ...sw })[1];
       planned = [sw, ...planRails(rest, { level: exit.y, tilt: restTilt, lead: 1, curve: 'auto' })];
     } else {
       planned = planRails(tiles, { level, tilt: this.tilt, lead, curve: 'auto' });
@@ -1845,30 +1750,24 @@ export class TrainView {
     return `${progText} · ${t('train.routeHint')}`;
   }
 
-  /** Prochain aiguillage devant la locomotive, pour le tableau de bord : « aiguillage ← gauche (Q / D) ». */
+  /** Prochain embranchement devant la locomotive, pour le tableau de bord : voies qui tournent et touches à presser. */
   private switchHud(): string {
     const graph = this.lastGraph;
     const c = this.mountedCar !== null ? this.consistOf(this.mountedCar) : null;
     const loco = c?.cars.find((k) => k.id === this.mountedCar);
     if (!graph || !c || !loco) return '';
-    const from = loco.rev ? endPos(graph, c, 'rear') : c.head;
-    const ahead = graph.choiceAhead(from, SWITCH_AHEAD_M);
+    const ahead = this.choiceAheadOfLoco(graph);
     if (!ahead) return '';
-    if (ahead.kind === 'junction') {
-      const open = ahead.options.find((o) => o.open) ?? ahead.options[0];
-      const key =
-        open.lateral > 0.3
-          ? 'train.hud.switchRight'
-          : open.lateral < -0.3
-            ? 'train.hud.switchLeft'
-            : 'train.hud.switchStraight';
-      return ` · ${t(key)}`;
-    }
-    const p = this.host.state.changes.rails.find((q) => q.id === ahead.id);
-    if (!p) return '';
-    // Aiguillage à droite : la voie déviée part à droite, la directe à gauche ; l'inverse pour un aiguillage à gauche.
-    const right = (p.kind === 'switch_r') === (p.branch === 1);
-    return ` · ${t(right ? 'train.hud.switchRight' : 'train.hud.switchLeft')}`;
+    const left = ahead.options.some((o) => o.lateral < -0.3);
+    const right = ahead.options.some((o) => o.lateral > 0.3);
+    if (!left && !right) return '';
+    const key =
+      left && right
+        ? 'train.hud.junctionBoth'
+        : left
+          ? 'train.hud.junctionLeft'
+          : 'train.hud.junctionRight';
+    return ` · ${t(key)}`;
   }
 
   private hudSig = '';

@@ -142,8 +142,6 @@ describe('itinéraires', () => {
       if (s.placeRail('curve_huge', m.gx, m.gz, m.turns, m.level, free, true) === 'ok') break;
     const curve = s.changes.rails[s.changes.rails.length - 1];
     expect(curve.kind).toBe('curve_huge');
-    // Par défaut le train va tout droit : le virage est fermé.
-    expect(curve.closed).toBe(true);
     const g = s.railGraph();
     const len = lengthOfPiece(g.byId.get(curve.id)!);
     // Port du virage qui touche l'embranchement : l'autre bout du virage est loin.
@@ -183,5 +181,24 @@ describe('itinéraires', () => {
     );
     expect(onCurve).toBeLessThan(0.6);
     expect(onStraight).toBeGreaterThan(1.5);
+  });
+
+  it("à l'embranchement, le convoi va tout droit sans consigne et prend le virage si on le choisit", () => {
+    for (const pick of [false, true]) {
+      const { s, curveId, lineIds } = network();
+      s.inventory.train_locomotive = 1;
+      const loco = s.placeCar('locomotive_steam', { piece: lineIds[0], u: 1, dir: 1 })!;
+      loco.cars[0].fuel = { item: 'coal', count: 30 };
+      if (pick) loco.pick = [curveId];
+      const g = s.railGraph();
+      const seen = new Set<number>();
+      for (let i = 0; i < 20 * 40; i++) {
+        stepConsist(g, loco, 0.05, { throttle: 1, brake: 0, parked: false });
+        seen.add(loco.head.piece);
+        if (loco.head.piece === curveId || loco.head.piece === lineIds[5]) break;
+      }
+      expect(seen.has(curveId)).toBe(pick);
+      expect(seen.has(lineIds[5])).toBe(!pick);
+    }
   });
 });

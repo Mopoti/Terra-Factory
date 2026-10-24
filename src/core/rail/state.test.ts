@@ -3,7 +3,7 @@ import { CARS, carIdOfWindow, locoWindowId } from '../data/trains';
 import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
 import { planRails } from './plan';
-import { TILE_CELLS, TILE_M, centerOf, cornerFor, matesFor, portsOf } from './track';
+import { TILE_CELLS, TILE_M, matesFor, portsOf } from './track';
 
 const free = (): boolean => false;
 
@@ -183,49 +183,13 @@ describe('voies et trains dans la partie', () => {
   });
 });
 
-describe('aiguillages dans la partie', () => {
+describe('embranchements et croisements dans la partie', () => {
   const start = (): GameState => {
     const s = new GameState({ inventory: { rail: 40, train_wagon_freight: 1 } });
     s.creative = true;
     for (let k = 0; k < 10; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
     return s;
   };
-  /** Aiguillage centré sur la tuile `k` de la ligne, voie directe dans l'axe. */
-  const onLine = (s: GameState, k: number, turns = 0) => {
-    const c = centerOf(s.changes.rails[k]);
-    return { ...cornerFor('switch_r', turns, c.x, c.z), turns };
-  };
-
-  it('posé sur une ligne, il remplace ses trois tuiles droites (rendues dans le prix)', () => {
-    const s = start();
-    const before = s.inventory.rail ?? 0;
-    const at = onLine(s, 5);
-    expect(s.placeRail('switch_r', at.gx, at.gz, at.turns, 0, free)).toBe('ok');
-    expect(s.changes.rails.filter((p) => p.kind === 'straight')).toHaveLength(7);
-    expect(s.inventory.rail).toBe(before - 6 + 3);
-    // La ligne reste continue au travers de la voie directe.
-    const g = s.railGraph();
-    const run = g.advance({ piece: s.changes.rails[0].id, u: 0, dir: 1 }, 24);
-    expect(run.blocked).toBe(false);
-  });
-
-  it('on change de voie, sauf quand un convoi est sur l’aiguillage', () => {
-    const s = start();
-    const at = onLine(s, 5);
-    s.placeRail('switch_r', at.gx, at.gz, at.turns, 0, free);
-    const sw = s.changes.rails.find((p) => p.kind === 'switch_r')!;
-    expect(s.toggleSwitch(sw.id)).toBe(1);
-    expect(s.toggleSwitch(sw.id)).toBe(0);
-    expect(s.setSwitch(sw.id, 1)).toBe(1);
-    expect(s.setSwitch(sw.id, 1)).toBe(1);
-    expect(s.setSwitch(sw.id, 0)).toBe(0);
-    expect(s.placeCar('wagon_freight', { piece: sw.id, u: 3.75, dir: 1 })).not.toBeNull();
-    expect(s.toggleSwitch(sw.id)).toBeNull();
-    // Déjà dans la position demandée : rien à bouger, accepté même sous un train.
-    expect(s.setSwitch(sw.id, 0)).toBe(0);
-    expect(s.removeRail(sw.id, { x: 0, z: 0 })).toBe(false);
-  });
-
   it('une voie reposée par-dessus la voie existante la remplace', () => {
     const s = start();
     const before = s.changes.rails.length;
@@ -241,27 +205,6 @@ describe('aiguillages dans la partie', () => {
     expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false)).toBe('blocked');
     expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false, true)).toBe('ok');
     expect(s.changes.rails).not.toContain(mid);
-  });
-
-  it('une branche part de la tuile voisine : sa sortie touche la tuile du tracé, des deux côtés', () => {
-    const s = start();
-    for (const k of [0, 1]) {
-      const line = s.changes.rails[4];
-      const c = centerOf(line);
-      for (const side of [-1, 1]) {
-        const hits = [];
-        for (const turns of [line.turns % 2, (line.turns % 2) + 2])
-          for (const kind of ['switch_r', 'switch_l'] as const) {
-            const at = { ...cornerFor(kind, turns, c.x, c.z), turns, level: 0 };
-            const exit = portsOf({ id: -1, kind, ...at, branch: 0 })[2];
-            // Ligne le long de z : la branche sort de côté, à 1,5 tuile du centre.
-            if (Math.hypot(exit.x - (c.x + side * 1.5 * TILE_M), exit.z - c.z) < 0.3)
-              hits.push(kind);
-          }
-        expect(hits.length).toBeGreaterThanOrEqual(2);
-      }
-      void k;
-    }
   });
 
   it.each(['curve_wide', 'curve_large', 'curve_big', 'curve_huge'] as const)(
@@ -285,14 +228,14 @@ describe('aiguillages dans la partie', () => {
       expect(curve).not.toBeNull();
       // Rien n'a été remplacé : la ligne reste, le virage s'y ajoute.
       expect(s.changes.rails).toHaveLength(before + 1);
-      // Par défaut, tout droit ; le virage est fermé.
+      // Sans consigne, tout droit.
       const g = s.railGraph();
       expect(g.neighbour(line[2].id, 1)?.piece).toBe(line[3].id);
-      expect(curve!.closed).toBe(true);
-      // On choisit la voie qui tourne : un train qui arrive par la pointe la prend.
-      const group = g.junctions().find((j) => j.includes(curve!.id))!;
-      expect(s.selectRoute(curve!.id, group)).toBe(true);
-      expect(s.railGraph().neighbour(line[2].id, 1)?.piece).toBe(curve!.id);
+      // Le train qui choisit la voie qui tourne (gauche / droite, ou itinéraire) la prend.
+      const turned = g.advance({ piece: line[2].id, u: 0, dir: 1 }, 4, new Set([curve!.id]));
+      expect(turned.pos.piece).toBe(curve!.id);
+      const straight = g.advance({ piece: line[2].id, u: 0, dir: 1 }, 4);
+      expect(straight.pos.piece).toBe(line[3].id);
       // La pointe est un choix de voie pour le train qui arrive.
       expect(s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60)).not.toBeNull();
     },

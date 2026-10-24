@@ -18,14 +18,9 @@ import { SOUTE_MAX } from '../rail/normalize';
 import {
   TrackGraph,
   baseId,
-  blockTiles,
   flip,
   tangentOverlap,
   crossesAtLevel,
-  branchId,
-  centerOf,
-  isSwitch,
-  portsOf,
   trackCellsOf,
   type RailKind,
   type RailPiece,
@@ -1303,7 +1298,6 @@ export class GameState {
   private railRevision = 0;
   private railsChanged(): void {
     this.railRevision++;
-    this.settleJunctions();
     this.emit({ type: 'rails' });
     this.emit({ type: 'inventory' });
   }
@@ -1323,31 +1317,10 @@ export class GameState {
     );
   }
 
-  /**
-   * Tuiles droites qu'un aiguillage remplace : celles posées sur sa voie directe (même hauteur, même axe). On pose
-   * ainsi un aiguillage sur une ligne existante pour en faire partir une branche.
-   */
-  railsUnderSwitch(piece: RailPiece): RailPiece[] {
-    if (!isSwitch(piece.kind)) return [];
-    const [a, b] = portsOf(piece);
-    const len = Math.hypot(b.x - a.x, b.z - a.z);
-    const ux = (b.x - a.x) / len;
-    const uz = (b.z - a.z) / len;
-    return this.changes.rails.filter((p) => {
-      if (p.kind !== 'straight' || Math.abs(p.level - piece.level) > 0.05) return false;
-      const [pa, pb] = portsOf(p);
-      if (Math.abs((pb.x - pa.x) * uz - (pb.z - pa.z) * ux) > 0.05) return false; // pas parallèle
-      const c = centerOf(p);
-      const along = (c.x - a.x) * ux + (c.z - a.z) * uz;
-      const side = (c.x - a.x) * uz - (c.z - a.z) * ux;
-      return Math.abs(side) < 0.05 && along > 0 && along < len;
-    });
-  }
-
   /** Pièces de voie qu'une nouvelle pièce remplacerait : celles dont une case est prise, et les tuiles sous un aiguillage. */
   railsOverlapping(piece: RailPiece): RailPiece[] {
     const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
-    const out = new Set(this.railsUnderSwitch(piece));
+    const out = new Set<RailPiece>();
     for (const p of this.changes.rails)
       if (
         trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
@@ -1356,36 +1329,6 @@ export class GameState {
       )
         out.add(p);
     return [...out];
-  }
-
-  /** À chaque embranchement tangent, une seule voie est donnée : la plus droite, si le joueur n'a rien choisi. */
-  private settleJunctions(): void {
-    const byId = new Map(this.changes.rails.map((p) => [p.id, p]));
-    const straightness = (k: RailKind): number => (k === 'straight' ? -100 : -blockTiles(k));
-    for (const ids of new TrackGraph(this.changes.rails).junctions()) {
-      const group = ids
-        .map((id) => byId.get(id))
-        .filter((p): p is RailPiece => !!p && !isSwitch(p.kind));
-      if (group.length < 2 || group.filter((p) => !p.closed).length === 1) continue;
-      const keep = [...group].sort((a, b) => straightness(a.kind) - straightness(b.kind))[0];
-      for (const p of group) {
-        if (p === keep) delete p.closed;
-        else p.closed = true;
-      }
-    }
-  }
-
-  /** Donne la voie `chosen` d'un embranchement tangent (les autres sont fermées) ; refusé si un convoi y est. */
-  selectRoute(chosen: number, group: readonly number[]): boolean {
-    const pieces = group.map((id) => this.changes.rails.find((p) => p.id === id));
-    if (pieces.some((p) => !p) || !group.includes(chosen)) return false;
-    if (group.some((id) => this.railOccupied(id))) return false;
-    for (const p of pieces as RailPiece[]) {
-      if (p.id === chosen) delete p.closed;
-      else p.closed = true;
-    }
-    this.railsChanged();
-    return true;
   }
 
   /** La même pièce est-elle déjà posée exactement là ? */
@@ -1417,9 +1360,8 @@ export class GameState {
     if (replace && this.railAlready(kind, gx, gz, turns, level)) return 'ok';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
     const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
-    if (isSwitch(kind)) piece.branch = 0;
-    // `replace` : on pose par-dessus la voie existante (changer de forme) ; sinon seul l'aiguillage remplace des tuiles.
-    const replaced = replace ? this.railsOverlapping(piece) : this.railsUnderSwitch(piece);
+    // `replace` : on pose par-dessus la voie existante (changer de forme).
+    const replaced = replace ? this.railsOverlapping(piece) : [];
     if (replaced.some((p) => this.railOccupied(p.id))) return 'blocked';
     const refund = replaced.reduce((n, p) => n + RAIL_COST[p.kind], 0);
     const cost = RAIL_COST[kind];
@@ -1439,7 +1381,7 @@ export class GameState {
     const graph = this.railGraph();
     return this.changes.trains.some((c) => {
       const under = piecesUnder(graph, c);
-      return under.has(id) || under.has(branchId(id));
+      return under.has(id);
     });
   }
 
@@ -1457,30 +1399,6 @@ export class GameState {
     }
     this.railsChanged();
     return true;
-  }
-
-  /**
-   * Inverse la voie donnée par un aiguillage (directe ↔ déviée). Refusé si un convoi est sur l'aiguillage : on ne
-   * bouge pas les lames sous un train. Renvoie la nouvelle voie, ou null.
-   */
-  toggleSwitch(id: number): 0 | 1 | null {
-    const piece = this.changes.rails.find((p) => p.id === id);
-    if (!piece || !isSwitch(piece.kind)) return null;
-    return this.setSwitch(id, piece.branch === 1 ? 0 : 1);
-  }
-
-  /**
-   * Donne la voie `branch` (0 : directe, 1 : déviée) à un aiguillage ; null s'il faudrait bouger les lames sous un
-   * convoi (déjà dans la bonne position : accepté).
-   */
-  setSwitch(id: number, branch: 0 | 1): 0 | 1 | null {
-    const piece = this.changes.rails.find((p) => p.id === id);
-    if (!piece || !isSwitch(piece.kind)) return null;
-    if ((piece.branch ?? 0) === branch) return branch;
-    if (this.railOccupied(id)) return null;
-    piece.branch = branch;
-    this.railsChanged();
-    return branch;
   }
 
   private newConsistId(): number {

@@ -37,6 +37,11 @@ export interface Consist {
   goTo?: number;
   /** Pièces que la tête a parcourues dernièrement : la queue du convoi les suit aux embranchements. */
   trail?: number[];
+  /**
+   * Voies à prendre aux prochains embranchements (pièces choisies par le conducteur avec gauche / droite, ou par le
+   * pilote automatique). Rien : tout droit. Réévalué à chaque image, jamais sauvegardé.
+   */
+  pick?: number[];
   /** Programme en boucle (étapes « quand… alors… »), voir `program.ts`. */
   program?: Program;
 }
@@ -124,6 +129,19 @@ export function preferOf(c: Consist): ReadonlySet<number> | undefined {
   if (!set) {
     set = new Set(trail);
     trailSets.set(trail, set);
+  }
+  return set;
+}
+
+const pickSets = new WeakMap<number[], Set<number>>();
+/** Les voies que le convoi doit prendre aux embranchements devant lui, ou rien (tout droit). */
+export function wantOf(c: Consist): ReadonlySet<number> | undefined {
+  const pick = c.pick;
+  if (!pick || pick.length === 0) return undefined;
+  let set = pickSets.get(pick);
+  if (!set) {
+    set = new Set(pick);
+    pickSets.set(pick, set);
   }
   return set;
 }
@@ -356,7 +374,7 @@ export function stepConsist(graph: TrackGraph, c: Consist, dt: number, ctrl: Con
   if (v === 0) return;
   const moved =
     v > 0
-      ? graph.advance(c.head, v * dt)
+      ? graph.advance(c.head, v * dt, wantOf(c))
       : (() => {
           const r = graph.advance(flip(c.head), -v * dt);
           return { ...r, pos: flip(r.pos) };

@@ -2,7 +2,7 @@
  * Stations : un point d'arrêt nommé sur la voie, où un convoi sous pilote automatique vient s'arrêter (voir
  * `docs/trains-programmation.md`). Le point est repéré comme un train : une pièce du graphe et une abscisse.
  */
-import { baseId, lengthOfPiece, routesOf, type RailPiece } from './track';
+import { baseId, lengthOfPiece, type RailPiece } from './track';
 
 export interface Station {
   id: number;
@@ -34,14 +34,12 @@ export function normalizeStations(raw: unknown, rails: readonly RailPiece[]): St
     if (!isNum(id) || !isNum(piece) || !isNum(u) || ids.has(id) || id < 1) continue;
     const base = rails.find((p) => p.id === baseId(piece));
     if (!base) continue;
-    const route = routesOf(base).find((p) => p.id === piece);
-    if (!route) continue;
     ids.add(id);
     out.push({
       id: Math.floor(id),
       name: cleanStationName(typeof s.name === 'string' ? s.name : '') || `Station ${id}`,
-      piece,
-      u: Math.max(0, Math.min(lengthOfPiece(route), u)),
+      piece: base.id,
+      u: Math.max(0, Math.min(lengthOfPiece(base), u)),
     });
   }
   return out;

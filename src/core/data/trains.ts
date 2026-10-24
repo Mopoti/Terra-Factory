@@ -129,8 +129,6 @@ export const RAIL_COST: Record<RailKind, number> = {
   curve45: 3,
   curve45_b: 3,
   ramp: 4,
-  switch_r: 6,
-  switch_l: 6,
 };
 
 /** Identifiants (négatifs) de la fenêtre d'une locomotive : −(base + identifiant du véhicule), hors de ceux des buggys. */

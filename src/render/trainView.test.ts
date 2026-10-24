@@ -137,14 +137,24 @@ describe('tracé à la souris depuis une voie existante', () => {
     expect(state.changes.rails.some((p) => p.kind.startsWith('curve'))).toBe(true);
   });
 
-  it('glisser de côté depuis la ligne pose un aiguillage et ne retire que ses trois tuiles', () => {
+  it('glisser de côté depuis la ligne pose un embranchement tangent : la ligne reste entière', () => {
     const { state, drag } = bench();
     drag([20, 20], [[0, -1, 13]]);
     const line = state.changes.rails.map((p) => p.id);
     drag([20, 14], [[-1, 0, 5]]);
     const kept = new Set(state.changes.rails.map((p) => p.id));
-    expect(line.filter((id) => !kept.has(id))).toHaveLength(3);
-    expect(state.changes.rails.some((p) => p.kind.startsWith('switch'))).toBe(true);
+    expect(line.filter((id) => !kept.has(id))).toHaveLength(0);
+    expect(state.changes.rails.length).toBeGreaterThan(line.length);
+    expect(state.changes.rails.some((p) => p.kind.startsWith('curve'))).toBe(true);
+    // Un embranchement : une voie de la ligne a deux suites, la ligne droite d'abord (tout droit sans consigne).
+    const g = state.railGraph();
+    const curve = state.changes.rails.find((p) => p.kind.startsWith('curve'))!;
+    const forks = line.flatMap((id) =>
+      ([0, 1] as const).map((port) => g.linksAt(id, port)).filter((l) => l.length > 1),
+    );
+    expect(forks).toHaveLength(1);
+    expect(forks[0].map((l) => l.piece)).toContain(curve.id);
+    expect(forks[0][0].piece).not.toBe(curve.id);
   });
 
   it("un clic loin devant le bout de la voie la prolonge jusqu'au curseur", () => {

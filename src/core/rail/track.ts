@@ -6,12 +6,11 @@
  *  - `curve`, `curve_wide`, `curve_large` : virages serré (3 × 3 tuiles, rayon 3,75 m), large (5 × 5, 6,25 m) et très
  *    large (7 × 7, 8,75 m) ; quart de cercle reliant le milieu de deux bords voisins du bloc ;
  *  - `ramp` : 1 × 4 tuiles (10 m), monte de 2,5 m ; la descente est la même pièce tournée d'un demi-tour ;
- *  - `switch_r`, `switch_l` : aiguillages (3 × 3 tuiles) : du port 0, la voie directe va tout droit au port 1, la voie
- *    déviée tourne (vers la droite ou la gauche, en virage serré) jusqu'au port 2. `branch` dit laquelle est donnée.
  * Une pièce est posée sur la grille de cases ; ses extrémités (« ports ») se raccordent à celles d'une pièce voisine.
  * Un train est repéré sur la voie par une pièce, une abscisse `u` (m le long de la voie, depuis le port 0) et un sens.
- * Dans le graphe, un aiguillage compte pour deux pièces : sa voie directe (son identifiant) et sa voie déviée (l'opposé
- * de son identifiant, voir `branchId`), qui partagent le port 0.
+ * Il n'y a pas de pièce « aiguillage » : un embranchement est un virage posé dans le prolongement d'une ligne (voies
+ * tangentes). Le conducteur (touches gauche / droite) ou le pilote automatique choisit la voie à prendre ; sans choix,
+ * on va tout droit.
  */
 import { CELL_SIZE_M } from '../constants';
 
@@ -23,8 +22,6 @@ export type RailKind =
   | 'curve_big'
   | 'curve_huge'
   | 'ramp'
-  | 'switch_r'
-  | 'switch_l'
   | 'curve45'
   | 'curve45_b';
 export const RAIL_KINDS: readonly RailKind[] = [
@@ -35,8 +32,6 @@ export const RAIL_KINDS: readonly RailKind[] = [
   'curve_big',
   'curve_huge',
   'ramp',
-  'switch_r',
-  'switch_l',
   'curve45',
   'curve45_b',
 ];
@@ -57,8 +52,6 @@ export const isCurve = (k: RailKind): k is CurveKind =>
  */
 export const isHalfCurve = (k: RailKind): k is 'curve45' | 'curve45_b' =>
   k === 'curve45' || k === 'curve45_b';
-export const isSwitch = (k: RailKind): k is 'switch_r' | 'switch_l' =>
-  k === 'switch_r' || k === 'switch_l';
 
 export interface RailPiece {
   id: number;
@@ -70,17 +63,9 @@ export interface RailPiece {
   turns: number;
   /** Hauteur (m) du bas de la pièce : 0 au sol, 1 sur une rampe qui a monté… */
   level: number;
-  /** Aiguillage : voie donnée aux trains qui arrivent par le port 0 (0 : directe, 1 : déviée). */
-  branch?: 0 | 1;
-  /** Dans le graphe seulement : voie d'un aiguillage que représente cette pièce (0 : directe, 1 : déviée). */
-  route?: 0 | 1;
-  /** Embranchement tangent : cette voie n'est pas celle donnée aux trains qui arrivent par la pointe. */
-  closed?: boolean;
 }
 
-/** Identifiant de la voie déviée d'un aiguillage dans le graphe (et inversement). */
-export const branchId = (id: number): number => -id;
-/** Pièce posée (dans `changes.rails`) à laquelle appartient une pièce du graphe. */
+/** Pièce posée (dans `changes.rails`) à laquelle appartient une pièce du graphe (les deux sont la même). */
 export const baseId = (id: number): number => Math.abs(id);
 
 /** Agrandissement des modèles de voie (créés pour une voie étroite de 60 cm) : écartement de 1,5 m. */
@@ -147,26 +132,16 @@ function turn(x: number, z: number, turns: number): [number, number] {
   }
 }
 
-/** Longueur de la voie d'une pièce (m), de son port 0 à son port 1 (aiguillage : de la voie `route`). */
-export function lengthOf(kind: RailKind, route: 0 | 1 = 0): number {
+/** Longueur de la voie d'une pièce (m), de son port 0 à son port 1. */
+export function lengthOf(kind: RailKind): number {
   if (kind === 'straight') return TILE_M;
   if (kind === 'ramp') return Math.hypot(RAMP_RUN_M, RAMP_RISE_M);
-  if (isSwitch(kind) && route === 0) return 2 * radiusOf(kind);
   if (isHalfCurve(kind)) return (radiusOf(kind) * Math.PI) / 4;
   return (radiusOf(kind) * Math.PI) / 2;
 }
 
-/** Longueur de la voie d'une pièce du graphe (la voie déviée d'un aiguillage n'a pas la longueur de la directe). */
-export const lengthOfPiece = (p: RailPiece): number => lengthOf(p.kind, p.route ?? 0);
-
-/** Les voies d'une pièce posée : elle-même, ou les deux voies d'un aiguillage (pièces du graphe). */
-export function routesOf(p: RailPiece): RailPiece[] {
-  if (!isSwitch(p.kind) || p.route !== undefined) return [p];
-  return [
-    { ...p, route: 0 },
-    { ...p, id: branchId(p.id), route: 1 },
-  ];
-}
+/** Longueur de la voie d'une pièce posée. */
+export const lengthOfPiece = (p: RailPiece): number => lengthOf(p.kind);
 
 export interface Pose {
   x: number;
@@ -182,24 +157,18 @@ export interface Pose {
 function local(
   kind: RailKind,
   u: number,
-  route: 0 | 1 = 0,
 ): { x: number; y: number; z: number; tx: number; tz: number; dy: number } {
   if (kind === 'straight') return { x: 0, y: 0, z: TILE_M / 2 - u, tx: 0, tz: -1, dy: 0 };
-  if (isSwitch(kind) && route === 0) {
-    const r = radiusOf(kind);
-    return { x: 0, y: 0, z: r - u, tx: 0, tz: -1, dy: 0 };
-  }
   if (kind !== 'ramp') {
-    // Quart de cercle du milieu du bord +z au milieu du bord +x (aiguillage à gauche : vers le bord −x).
+    // Quart de cercle du milieu du bord +z au milieu du bord +x.
     const r = radiusOf(kind);
-    const m = kind === 'switch_l' ? -1 : 1;
     // La seconde moitié d'un demi-virage commence au milieu de l'arc (45° plus loin).
     const th = Math.PI + (kind === 'curve45_b' ? Math.PI / 4 : 0) + u / r;
     return {
-      x: m * (r + r * Math.cos(th)),
+      x: r + r * Math.cos(th),
       y: 0,
       z: r + r * Math.sin(th),
-      tx: -m * Math.sin(th),
+      tx: -Math.sin(th),
       tz: Math.cos(th),
       dy: 0,
     };
@@ -217,8 +186,7 @@ function local(
 
 /** Position et cap sur la voie d'une pièce, à l'abscisse `u`, en marchant dans le sens `dir` (+1 : vers le port 1). */
 export function poseOn(p: RailPiece, u: number, dir: 1 | -1 = 1): Pose {
-  const route = p.route ?? 0;
-  const l = local(p.kind, Math.max(0, Math.min(lengthOf(p.kind, route), u)), route);
+  const l = local(p.kind, Math.max(0, Math.min(lengthOf(p.kind), u)));
   const [rx, rz] = turn(l.x, l.z, p.turns);
   const [tx, tz] = turn(l.tx, l.tz, p.turns);
   const c = centerOf(p);
@@ -240,29 +208,14 @@ export interface Port {
   dz: number;
 }
 
-/**
- * Les extrémités (ports) d'une pièce : deux, ou trois pour un aiguillage posé (port 0 commun, port 1 au bout de la voie
- * directe, port 2 au bout de la voie déviée). Une pièce du graphe (une voie d'aiguillage) n'en a que deux.
- */
+/** Les extrémités (ports) d'une pièce : son port 0 et son port 1. */
 export function portsOf(p: RailPiece): Port[] {
-  const out: Port[] = [];
-  for (const r of routesOf(p)) {
-    const a = poseOn(r, 0);
-    const b = poseOn(r, lengthOfPiece(r));
-    if (out.length === 0)
-      out.push({ x: a.x, y: a.y, z: a.z, dx: -Math.sin(a.yaw), dz: -Math.cos(a.yaw) });
-    out.push({ x: b.x, y: b.y, z: b.z, dx: Math.sin(b.yaw), dz: Math.cos(b.yaw) });
-  }
-  return out;
-}
-
-/** Position du levier d'un aiguillage (m), sur le côté opposé à la voie déviée, près de la pointe. */
-export function leverOf(p: RailPiece): { x: number; y: number; z: number } {
-  const r = radiusOf(p.kind);
-  const m = p.kind === 'switch_l' ? -1 : 1;
-  const [rx, rz] = turn(-m * 0.5 * r, 0.75 * r, p.turns);
-  const c = centerOf(p);
-  return { x: c.x + rx, y: p.level, z: c.z + rz };
+  const a = poseOn(p, 0);
+  const b = poseOn(p, lengthOfPiece(p));
+  return [
+    { x: a.x, y: a.y, z: a.z, dx: -Math.sin(a.yaw), dz: -Math.cos(a.yaw) },
+    { x: b.x, y: b.y, z: b.z, dx: Math.sin(b.yaw), dz: Math.cos(b.yaw) },
+  ];
 }
 
 export interface PortLink {
@@ -286,14 +239,14 @@ export interface TrackPos {
 
 export const flip = (p: TrackPos): TrackPos => ({ ...p, dir: p.dir === 1 ? -1 : 1 });
 
-/** Les pièces posées et leurs raccords (un aiguillage y compte pour ses deux voies, voir `routesOf`). */
+/** Les pièces posées et leurs raccords. */
 export class TrackGraph {
   readonly byId = new Map<number, RailPiece>();
   /** Pour chaque pièce du graphe et chacun de ses deux ports : les pièces qui s'y raccordent. */
   private readonly links = new Map<number, [PortLink[], PortLink[]]>();
 
   constructor(pieces: readonly RailPiece[]) {
-    const all = pieces.flatMap(routesOf);
+    const all = pieces;
     for (const p of all) this.byId.set(p.id, p);
     const ports = new Map<number, Port[]>();
     // Grille de 60 cm : on ne compare un port qu'à ceux des cases voisines (la voie peut compter des milliers de pièces).
@@ -328,53 +281,39 @@ export class TrackGraph {
       }
       this.links.set(p.id, out);
     }
-  }
-
-  /** La voie d'un aiguillage est-elle celle qu'il donne (toujours vrai pour une autre pièce) ? */
-  private active(id: number): boolean {
-    const p = this.byId.get(id);
-    if (p?.closed) return false;
-    if (!p || p.route === undefined) return true;
-    return (p.branch ?? 0) === p.route;
+    // Devant un embranchement, la voie la plus droite d'abord (c'est celle que prend un train sans consigne).
+    for (const lists of this.links.values())
+      for (const list of lists)
+        if (list.length > 1) {
+          const lat = new Map(list.map((l) => [l, Math.abs(this.lateralOf(l))] as const));
+          list.sort((a, b) => (lat.get(a) as number) - (lat.get(b) as number) || a.piece - b.piece);
+        }
   }
 
   /**
-   * La pièce raccordée à ce port, ou null (bout de voie). Devant la pointe d'un aiguillage (son port 0), c'est la voie
-   * qu'il donne ; en venant du talon (ports 1 et 2), on passe toujours.
+   * La pièce raccordée à ce port, ou null (bout de voie). Devant un embranchement (plusieurs voies qui partent du même
+   * point), c'est la plus droite : sans choix du conducteur ou du pilote, on va tout droit.
    */
   neighbour(piece: number, port: 0 | 1): PortLink | null {
-    const list = this.links.get(piece)?.[port] ?? [];
-    if (list.length <= 1) return list[0] ?? null;
-    return list.find((l) => this.active(l.piece)) ?? list[0];
+    return this.links.get(piece)?.[port]?.[0] ?? null;
   }
 
-  /** Voies qui partent d'un même point dans le même sens (embranchements tangents), groupées par pointe. */
-  junctions(): number[][] {
-    const seen = new Set<string>();
-    const out: number[][] = [];
-    for (const lists of this.links.values())
-      for (const list of lists) {
-        const ids = [...new Set(list.map((l) => baseId(l.piece)))].sort((a, b) => a - b);
-        if (ids.length < 2) continue;
-        const key = ids.join(',');
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push(ids);
-      }
-    return out;
+  /** Écart latéral (m, > 0 : à droite) de la voie qui part d'un port, mesuré à 5 m : sert à reconnaître « tout droit ». */
+  private lateralOf(link: PortLink): number {
+    const s = this.byId.get(link.piece) as RailPiece;
+    const sl = lengthOfPiece(s);
+    const at = portsOf(s)[link.port];
+    const q = poseOn(s, link.port === 0 ? Math.min(5, sl) : sl - Math.min(5, sl));
+    return (q.x - at.x) * -at.dz + (q.z - at.z) * at.dx;
   }
 
   /**
-   * Premier choix de voie devant `pos`, à moins de `maxDist` mètres : un aiguillage pris par la pointe, ou un
-   * embranchement tangent (plusieurs voies qui partent du même point). `lateral` : écart à 5 m (> 0 : à droite).
+   * Premier choix de voie devant `pos`, à moins de `maxDist` mètres : un embranchement tangent (plusieurs voies qui partent du même point). `lateral` : écart à 5 m (> 0 : à droite).
    */
   choiceAhead(
     pos: TrackPos,
     maxDist: number,
-  ):
-    | { kind: 'switch'; id: number }
-    | { kind: 'junction'; options: { piece: number; lateral: number; open: boolean }[] }
-    | null {
+  ): { kind: 'junction'; options: { piece: number; lateral: number; open: boolean }[] } | null {
     let cur = { ...pos };
     let dist = 0;
     for (let guard = 0; guard < 400; guard++) {
@@ -388,26 +327,18 @@ export class TrackGraph {
       if (new Set(list.map((l) => baseId(l.piece))).size > 1) {
         return {
           kind: 'junction',
-          options: list.map((l) => {
-            const s = this.byId.get(l.piece) as RailPiece;
-            const sl = lengthOfPiece(s);
-            const at = portsOf(s)[l.port];
-            const d = Math.min(5, sl);
-            const q = poseOn(s, l.port === 0 ? d : sl - d);
-            return {
-              piece: l.piece,
-              lateral: (q.x - at.x) * -at.dz + (q.z - at.z) * at.dx,
-              open: this.active(l.piece),
-            };
-          }),
+          options: list.map((l, i) => ({
+            piece: l.piece,
+            lateral: this.lateralOf(l),
+            // La première voie de la liste est celle que prend un train sans consigne : tout droit.
+            open: i === 0,
+          })),
         };
       }
       const link = this.neighbour(cur.piece, port);
       if (!link) return null;
       const next = this.byId.get(link.piece);
       if (!next) return null;
-      if (next.route !== undefined && link.port === 0)
-        return { kind: 'switch', id: baseId(next.id) };
       cur =
         link.port === 0
           ? { piece: next.id, u: 0, dir: 1 }
@@ -477,32 +408,6 @@ export class TrackGraph {
     }
     return { pos: cur, blocked: true, left };
   }
-
-  /**
-   * Premier aiguillage pris par la pointe (par son port 0) en avançant depuis `pos`, à moins de `maxDist` mètres :
-   * celui dont la position décide de la route du train. Renvoie l'identifiant de la pièce posée, ou null.
-   */
-  switchAhead(pos: TrackPos, maxDist: number): number | null {
-    let cur = { ...pos };
-    let dist = 0;
-    for (let guard = 0; guard < 400; guard++) {
-      const p = this.byId.get(cur.piece);
-      if (!p) return null;
-      const len = lengthOfPiece(p);
-      dist += cur.dir === 1 ? len - cur.u : cur.u;
-      if (dist > maxDist) return null;
-      const link = this.neighbour(cur.piece, cur.dir === 1 ? 1 : 0);
-      if (!link) return null;
-      const next = this.byId.get(link.piece);
-      if (!next) return null;
-      if (next.route !== undefined && link.port === 0) return baseId(next.id);
-      cur =
-        link.port === 0
-          ? { piece: next.id, u: 0, dir: 1 }
-          : { piece: next.id, u: lengthOfPiece(next), dir: -1 };
-    }
-    return null;
-  }
 }
 
 /**
@@ -546,14 +451,7 @@ function centreline(
  * travers (plus de 30°), loin des bouts, sans se raccorder. Les trains traversent chacune sans passer sur l'autre.
  */
 export function crossesAtLevel(a: RailPiece, b: RailPiece): boolean {
-  if (
-    a.id === b.id ||
-    isSwitch(a.kind) ||
-    isSwitch(b.kind) ||
-    a.kind === 'ramp' ||
-    b.kind === 'ramp'
-  )
-    return false;
+  if (a.id === b.id || a.kind === 'ramp' || b.kind === 'ramp') return false;
   if (Math.abs(a.level - b.level) > 0.05) return false;
   if (crossesStraight(a, b)) return true;
   const pa = centreline(a);
@@ -617,8 +515,6 @@ export function freePorts(
   for (const p of graph.byId.values()) {
     const ports = portsOf(p);
     for (const i of [0, 1] as const) {
-      // Le port 0 d'une voie déviée est celui de la voie directe : compté une fois.
-      if (i === 0 && p.route === 1) continue;
       if (!graph.neighbour(p.id, i)) out.push({ piece: p.id, port: i, at: ports[i] });
     }
   }
@@ -693,7 +589,8 @@ export function trackCellsOf(p: RailPiece): [number, number][] {
   const { w, d } = footprintOf(p.kind, p.turns);
   const reach = 1.6; // demi-écartement + marge (m)
   const span = Math.ceil(reach / CELL_SIZE_M);
-  for (const r of routesOf(p)) {
+  {
+    const r = p;
     const len = lengthOfPiece(r);
     for (let u = 0; u <= len + 1e-6; u += CELL_SIZE_M / 2) {
       const q = poseOn(r, Math.min(u, len));

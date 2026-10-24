@@ -22,7 +22,7 @@ Un même moteur de règles sert aux trains (maintenant) et plus tard aux signaux
 
 ## 3. Itinéraire et pilotage automatique
 - **Recherche de chemin** (Dijkstra sur le graphe de voie, états = (pièce, sens)) : coût = longueur (*plus court*) ou temps estimé (*plus rapide* : longueur / vitesse permise, plus lente dans les virages serrés et sur la rampe). Un train ne fait pas demi-tour sur la voie ; il peut repartir en sens inverse à un cul-de-sac (butoir) si le programme l'autorise.
-- **Aiguillages et embranchements** : le pilote règle ceux de son itinéraire en approchant (comme le joueur avec Q / D) ; si un convoi est dessus, il attend.
+- **Embranchements** : le pilote prend, à chaque embranchement de son itinéraire (60 m avant), la voie du chemin le plus court (`Consist.pick`) ; il n'y a plus d'aiguillage ni de levier.
 - **Conduite** : le pilote commande la poussée et le frein existants (`Control`), avec un profil de vitesse : limite en virage (racine du rayon), freinage pour s'arrêter sur le repère de la station, sans dépasser la vitesse maximale de la locomotive. Il demande du combustible (alerte) quand la soute est vide.
 - Un convoi sous programme peut être repris à la main (monter dans la locomotive suspend le programme).
 

@@ -16,7 +16,7 @@ import {
 import { POLLUTION_CELL_M, type Threat } from '../core/game/threat';
 import { CARS } from '../core/data/trains';
 import { carPoses } from '../core/rail/train';
-import { lengthOfPiece, poseOn, routesOf, type TrackGraph } from '../core/rail/track';
+import { lengthOfPiece, poseOn, type TrackGraph } from '../core/rail/track';
 import { getLocale, t, type TranslationKey } from '../i18n';
 import './menu.css';
 
@@ -201,18 +201,18 @@ export function mountMap(root: HTMLElement, options: MapOptions): MapWindow {
     if (graph === railGraph) return railLines;
     railGraph = graph;
     railLines = [];
-    for (const piece of options.state.changes.rails)
-      for (const route of routesOf(piece)) {
-        const len = lengthOfPiece(route);
-        const steps = Math.max(2, Math.ceil(len / 1.2));
-        const pts: [number, number][] = [];
-        for (let k = 0; k <= steps; k++) {
-          const q = poseOn(route, (len * k) / steps);
-          pts.push([q.x / CELL_SIZE_M, q.z / CELL_SIZE_M]);
-        }
-        const mid = pts[Math.floor(pts.length / 2)];
-        railLines.push({ cx: mid[0], cz: mid[1], pts });
+    for (const piece of options.state.changes.rails) {
+      const route = piece;
+      const len = lengthOfPiece(route);
+      const steps = Math.max(2, Math.ceil(len / 1.2));
+      const pts: [number, number][] = [];
+      for (let k = 0; k <= steps; k++) {
+        const q = poseOn(route, (len * k) / steps);
+        pts.push([q.x / CELL_SIZE_M, q.z / CELL_SIZE_M]);
       }
+      const mid = pts[Math.floor(pts.length / 2)];
+      railLines.push({ cx: mid[0], cz: mid[1], pts });
+    }
     return railLines;
   }
 

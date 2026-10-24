@@ -1,6 +1,7 @@
+import { CELL_SIZE_M } from '../constants';
 import { itemById } from '../data/items';
 import { CARS, isCarKind, isLiquid } from '../data/trains';
-import { RAIL_KINDS, baseId, isSwitch, lengthOf, type RailKind, type RailPiece } from './track';
+import { RAIL_KINDS, TILE_M, cornerFor, lengthOf, type RailKind, type RailPiece } from './track';
 import { normalizeProgram, type Program } from './program';
 import type { Car, Consist } from './train';
 
@@ -14,15 +15,56 @@ export const MAX_RAILS = 4000;
 export const MAX_CONSISTS = 200;
 export const SOUTE_MAX = 50;
 
-/** Relit les pièces de voie enregistrées ; ignore ce qui est invalide ou en double. */
+/** Les tuiles de 2,5 m que fait la voie directe d'un ancien aiguillage (3 × 3 tuiles), dans l'ordre du port 0 au port 1. */
+function legacySwitchTiles(gx: number, gz: number, turns: number): { gx: number; gz: number }[] {
+  const side = 3 * TILE_M;
+  // Centre du bloc (carré : les quarts de tour ne le déplacent pas), en mètres.
+  const cx = gx * CELL_SIZE_M + side / 2;
+  const cz = gz * CELL_SIZE_M + side / 2;
+  return [TILE_M, 0, -TILE_M].map((z) => {
+    // La voie directe suit l'axe z local ; on le tourne de `turns` quarts de tour (même convention que le rendu).
+    const [rx, rz] = [
+      (x: number, y: number) => [x, y],
+      (x: number, y: number) => [y, -x],
+      (x: number, y: number) => [-x, -y],
+      (x: number, y: number) => [-y, x],
+    ][turns](0, z);
+    return cornerFor('straight', turns, cx + rx, cz + rz);
+  });
+}
+
+/**
+ * Relit les pièces de voie enregistrées ; ignore ce qui est invalide ou en double. Les anciens aiguillages (supprimés :
+ * un embranchement est maintenant un virage tangent) deviennent trois tuiles droites, sur leur voie directe.
+ */
 export function normalizeRails(raw: unknown): RailPiece[] {
   if (!Array.isArray(raw)) return [];
   const out: RailPiece[] = [];
   const ids = new Set<number>();
+  let nextId =
+    1 + raw.reduce((m: number, r) => (isRec(r) && isNum(r.id) ? Math.max(m, r.id) : m), 0);
   for (const r of raw.slice(0, MAX_RAILS)) {
     if (!isRec(r) || !isNum(r.id) || ids.has(r.id)) continue;
-    if (!isNum(r.gx) || !isNum(r.gz) || !RAIL_KINDS.includes(r.kind as RailKind)) continue;
-    if (r.id < 1) continue; // les identifiants négatifs désignent les voies déviées des aiguillages
+    if (!isNum(r.gx) || !isNum(r.gz)) continue;
+    if (r.id < 1) continue; // les identifiants négatifs désignaient les voies déviées des aiguillages
+    if (r.kind === 'switch_r' || r.kind === 'switch_l') {
+      const turns = isNum(r.turns) ? ((Math.floor(r.turns) % 4) + 4) % 4 : 0;
+      const level = isNum(r.level)
+        ? Math.max(-40, Math.min(40, Math.round(r.level * 100) / 100))
+        : 0;
+      ids.add(r.id);
+      legacySwitchTiles(Math.floor(r.gx), Math.floor(r.gz), turns).forEach((c, i) =>
+        out.push({
+          id: i === 0 ? Math.floor(r.id as number) : nextId++,
+          kind: 'straight',
+          ...c,
+          turns,
+          level,
+        }),
+      );
+      continue;
+    }
+    if (!RAIL_KINDS.includes(r.kind as RailKind)) continue;
     ids.add(r.id);
     const piece: RailPiece = {
       id: Math.floor(r.id),
@@ -32,8 +74,6 @@ export function normalizeRails(raw: unknown): RailPiece[] {
       turns: isNum(r.turns) ? ((Math.floor(r.turns) % 4) + 4) % 4 : 0,
       level: isNum(r.level) ? Math.max(-40, Math.min(40, Math.round(r.level * 100) / 100)) : 0,
     };
-    if (isSwitch(piece.kind)) piece.branch = r.branch === 1 ? 1 : 0;
-    if (r.closed === true && !isSwitch(piece.kind)) piece.closed = true;
     out.push(piece);
   }
   return out;
@@ -102,12 +142,10 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
     if (!isRec(r) || !isNum(r.id) || ids.has(r.id) || !isRec(r.head) || !Array.isArray(r.cars))
       continue;
     const head = r.head as Record<string, unknown>;
-    // La tête peut être sur la voie déviée d'un aiguillage (identifiant négatif).
-    const piece = isNum(head.piece)
-      ? rails.find((p) => p.id === baseId(head.piece as number))
-      : undefined;
+    // Un convoi sur la voie déviée d'un ancien aiguillage (identifiant négatif) n'a plus de voie : il disparaît.
+    const piece =
+      isNum(head.piece) && head.piece > 0 ? rails.find((p) => p.id === head.piece) : undefined;
     if (!piece || !isNum(head.u)) continue;
-    const onBranch = (head.piece as number) < 0 && isSwitch(piece.kind);
     const cars = r.cars
       .slice(0, 40)
       .map((c) => normalizeCar(c, carIds))
@@ -127,8 +165,8 @@ export function normalizeTrains(raw: unknown, rails: readonly RailPiece[]): Cons
         : {}),
       id: Math.floor(r.id),
       head: {
-        piece: onBranch ? -piece.id : piece.id,
-        u: Math.max(0, Math.min(lengthOf(piece.kind, onBranch ? 1 : 0), head.u)),
+        piece: piece.id,
+        u: Math.max(0, Math.min(lengthOf(piece.kind), head.u)),
         dir: head.dir === -1 ? -1 : 1,
       },
       v: isNum(r.v) ? Math.max(-30, Math.min(30, r.v)) : 0,
