@@ -62,6 +62,8 @@ describe('touches par défaut', () => {
       for (const id of ACTION_IDS) {
         for (const code of c[id]) {
           if (!code) continue;
+          // S'accroupir (à pied) et atteler (dans un véhicule) ne se servent jamais en même temps.
+          if (id === 'couple' && seen.get(code) === 'crouch') continue;
           expect(seen.get(code), `${code} utilisé par ${seen.get(code)} et ${id}`).toBeUndefined();
           seen.set(code, id);
         }

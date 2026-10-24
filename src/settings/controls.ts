@@ -62,7 +62,7 @@ export const ACTIONS = [
   { id: 'right', category: 'movement', defaults: ['L:D', null] },
   { id: 'jump', category: 'movement', defaults: ['Space', null] },
   { id: 'sprint', category: 'movement', defaults: ['ShiftLeft', null] },
-  { id: 'crouch', category: 'movement', defaults: ['ControlLeft', null] },
+  { id: 'crouch', category: 'movement', defaults: ['L:C', null] },
   { id: 'cycleView', category: 'views', defaults: ['L:V', null] },
   { id: 'viewFirst', category: 'views', defaults: [null, null] },
   { id: 'viewThird', category: 'views', defaults: [null, null] },

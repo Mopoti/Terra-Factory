@@ -14,7 +14,7 @@ import { defaultSettings, type SectionName, type Settings } from './schema';
 
 const STORAGE_KEY = 'terra.settings';
 /** Version du format enregistré. À incrémenter quand la structure change (voir `migrate`). */
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -65,6 +65,7 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
  * Met à niveau des réglages enregistrés par une ancienne version (sans modifier l'original).
  * - v2 : la rotation de la vue du dessus passe par défaut de « par pas de 90° » à « libre » ;
  *   l'ancienne valeur par défaut enregistrée est abandonnée (le joueur peut la re-choisir).
+ * - v3 : s'accroupir passe de Ctrl gauche à C (la touche d'atteler, inutile à pied) ; l'ancienne valeur par défaut est abandonnée.
  */
 export function migrate(data: Record<string, unknown>, version: number): Record<string, unknown> {
   const out = structuredClone(data);
@@ -72,6 +73,17 @@ export function migrate(data: Record<string, unknown>, version: number): Record<
     const views = out.views;
     const top = isRecord(views) ? views.top : undefined;
     if (isRecord(top) && top.rotation === 'step') delete top.rotation;
+  }
+  if (version < 3) {
+    const controls = out.controls;
+    const crouch = isRecord(controls) ? controls.crouch : undefined;
+    if (
+      isRecord(controls) &&
+      Array.isArray(crouch) &&
+      crouch[0] === 'ControlLeft' &&
+      crouch[1] === null
+    )
+      delete controls.crouch;
   }
   return out;
 }
