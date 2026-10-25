@@ -1,7 +1,27 @@
 # Passation — Terra Factory
 
 > Fichier de transmission entre discussions. Mettre à jour à chaque fin de session.
-> Dernière mise à jour : 2026-10-18
+> Dernière mise à jour : 2026-10-25 (tour 230)
+
+## État courant (à lire en premier)
+
+**Où on en est** : prototype jouable très avancé (monde, usine, électricité, fluides, combat, véhicules, trains, construction jusqu'à l'aluminium). Branche de travail : `claude/sleepy-bell-vvkepj`. 772 tests (`npx vitest run`). Les modèles 3D sont faits par une session parallèle (`blender/`, `export/`, `public/models/terra` : ne pas y toucher depuis cette session).
+
+**Avant de pousser** : `npx tsc --noEmit`, `npx eslint src`, `npx prettier --write src`, `npx vitest run`. Commit avec les lignes `Co-Authored-By` et `Claude-Session` demandées par la session, puis `git pull --rebase origin <branche>` et `git push -u origin <branche>`. Jamais de PR sans demande. Jamais de `pkill` dans une commande.
+
+**Bugs ouverts / non reproduits** (une ligne par bug : date, symptôme, ce qui a été essayé, ce qui manque) :
+- 25/10 · Rails : depuis un virage violet (large), D ne mène pas sur un virage marron (très large) qui part du même point que la ligne droite ; le PO pense qu'aucun embranchement n'est créé. Non reproduit : en test (virage → ligne + virage tangents au même port, `choiceAhead` + `stepConsist` avec `pick`), l'embranchement existe et D le prend. Manque : la sauvegarde ou l'ordre de pose exact. Piste : le virage marron part peut-être de la ligne vers le côté d'où vient le train (demi-tour impossible).
+
+**Chantiers en attente** : programmation de la locomotive (`docs/trains-programmation.md`), essai « sans virages grand/géant » (sinon l'inverse), courbes à 45°, prérequis des technologies de début de partie, import de l'arbre des compétences (Ludicart), hitbox de la gare à ajuster à l'œil (`SOLIDS`), icônes de la benne sans quantité ni touche de basculement, contrôle visuel des couleurs de virages.
+
+**Ce qu'il faut consigner pour un bug** (à demander au PO, ou à prélever d'un enregistrement) :
+1. l'action faite, pas à pas, et ce qui était attendu / constaté ;
+2. la sauvegarde (export de la partie) ou, à défaut, l'ordre de pose des pièces ;
+3. la position du joueur, la vue, l'objet en main, le véhicule ou le train conduit ;
+4. la version (dernier commit) et les réglages touchés (touches, qualité) ;
+5. une capture d'écran, et les erreurs de la console du navigateur.
+
+**Règles de mise à jour du fichier** : une ligne « Tour N » par unité de travail (la plus récente en haut de la liste des tours), avec ce qui a changé, ce qui n'a pas été vérifié à l'écran, et la décision du PO si elle a été prise. Mettre à jour cette section (bugs ouverts, chantiers) à chaque fin de session, et les `docs/*.md` concernés.
 
 ## Rôles
 - **Utilisateur = Product Owner** : décide de l'avancement et donne les directives. Non développeur (aucun langage maîtrisé).
