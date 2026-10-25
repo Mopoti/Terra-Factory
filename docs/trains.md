@@ -84,3 +84,8 @@ Première version (octobre 2026) : le joueur pose des rails, des véhicules, con
 ## Tracé : arrêt avant l'obstacle et annulation
 
 Clic gauche maintenu depuis le point choisi, patron vert (possible) puis rouge à partir du premier obstacle ; au relâchement seule la partie verte est posée. Clic droit pendant le tracé : annulation (patron et départ). Départ : une tuile libre, ou le bout de voie le plus proche s'il est à portée.
+
+## Départ du tracé et patron au repos (25 octobre)
+
+- Le départ s'accroche à un bout de voie seulement si le curseur est sur sa tuile ou la suivante (≈ 1,9 m, `SNAP_M`). Sur un terrain sans voie, un clic loin devant un bout de voie le prolonge toujours (portée 30 m) ; au milieu de la voie (curseur à moins de 2,2 m d'un rail), le départ est la tuile visée.
+- Après une pose, ou après un clic droit au repos, le patron sous le curseur disparaît jusqu'à ce qu'on change de tuile (`TrainView.hideHover`).

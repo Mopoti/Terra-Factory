@@ -119,6 +119,44 @@ describe('tracé : obstacle et annulation', () => {
   });
 });
 
+describe('départ du tracé et patron au repos', () => {
+  it('au milieu de la voie, le tracé part de la tuile visée et non du bout de voie voisin', () => {
+    const { state, drag } = bench();
+    drag([20, 20], [[0, -1, 4]]); // 5 tuiles : tz 20 à 16, bout libre au nord (tz = 15,5 en tuiles)
+    const before = state.changes.rails.length;
+    const endZ = Math.min(...state.changes.rails.map((p) => p.gz));
+    // On part de la tuile du milieu (tz = 18, à 5 m du bout) et on glisse de côté.
+    drag([20, 18], [[-1, 0, 4]]);
+    const added = state.changes.rails.slice(before);
+    expect(added.length).toBeGreaterThan(0);
+    // Rien n'est posé dans le prolongement du bout de voie : la voie de départ n'a pas été prolongée.
+    expect(state.changes.rails.every((p) => p.gz >= endZ)).toBe(true);
+  });
+
+  it('après une pose, le patron sous le curseur disparaît jusqu’à ce qu’on change de tuile', () => {
+    const { drag, step, view } = bench();
+    drag([20, 20], [[0, -1, 2]]);
+    step(20, 18, false);
+    // Le patron du repos est caché (rien à poser tant qu'on n'a pas bougé) ; un déplacement le fait revenir.
+    const ghost = (view as unknown as { ghost: { visible: boolean } }).ghost;
+    expect(ghost.visible).toBe(false);
+    step(25, 12, false);
+    expect(ghost.visible).toBe(true);
+  });
+
+  it('un clic droit au repos cache le patron ; il revient quand on change de tuile', () => {
+    const { step, view } = bench();
+    const ghost = (view as unknown as { ghost: { visible: boolean } }).ghost;
+    step(20, 20, false);
+    expect(ghost.visible).toBe(true);
+    expect(view.cancelTrace()).toBe(false);
+    step(20, 20, false);
+    expect(ghost.visible).toBe(false);
+    step(23, 20, false);
+    expect(ghost.visible).toBe(true);
+  });
+});
+
 describe('tracé à la souris depuis une voie existante', () => {
   it('un virage tracé depuis la ligne en garde toute la longueur (deux chemins)', () => {
     const { state, drag } = bench();

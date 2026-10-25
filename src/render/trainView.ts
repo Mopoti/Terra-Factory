@@ -89,8 +89,8 @@ const REACH_M = 4;
 const CAR_HEIGHT_M = 3.8;
 /** Hauteur des tampons et des attelages au-dessus du rail (m), comme dans `ferroviaire.py` (2,1 unités). */
 const CAR_COUPLER_Y_M = 1.05;
-/** Distance (m) à laquelle un bout de voie libre attire la pièce qu'on pose. */
-const SNAP_M = 7;
+/** Distance (m) à laquelle un bout de voie libre attire le départ : le curseur sur sa tuile ou la suivante. */
+const SNAP_M = 1.9;
 /** Portée d'un bout de voie : le curseur peut être bien plus loin s'il est devant lui (le tracé le rejoint). */
 const PORT_REACH_M = 30;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
@@ -1223,9 +1223,21 @@ export class TrainView {
     return this.path.length > 0 && this.wasDown;
   }
 
-  /** Clic droit pendant le tracé : le patron et le point de départ sont annulés. */
+  private hideHover = false;
+  private hideAt: Tile = { tx: 0, tz: 0 };
+  private lastHere: Tile = { tx: 0, tz: 0 };
+
+  /** Clic droit : annule le tracé en cours (patron et point de départ) ; au repos, il fait disparaître le patron sous le curseur. */
   cancelTrace(): boolean {
-    if (!this.isTracing()) return false;
+    if (!this.isTracing()) {
+      if (this.host.state.selectedItem() === RAIL_ITEM) {
+        this.hideHover = true;
+        this.hideAt = this.lastHere;
+        this.setGhost([]);
+        this.traceInfo = '';
+      }
+      return false;
+    }
     this.path = [];
     this.branch = null;
     this.traceCancelled = true;
@@ -1296,14 +1308,37 @@ export class TrainView {
     this.host.message(t(key));
   }
 
-  /** Bout de voie libre le plus proche du point visé, s'il est assez près pour prolonger la voie. */
+  /** Le point visé est-il sur la voie existante, ou à moins de `margin` m d'elle ? */
+  private onTrack(aim: { x: number; z: number }, margin: number): boolean {
+    for (const piece of this.host.state.changes.rails) {
+      const c = centerOf(piece);
+      // Une pièce tient dans un bloc d'au plus 7 tuiles : trop loin, inutile de la regarder de près.
+      if (Math.hypot(c.x - aim.x, c.z - aim.z) > 7 * TILE_M) continue;
+      const len = lengthOfPiece(piece);
+      for (let u = 0; u <= len + 1e-6; u += 0.8) {
+        const q = poseOn(piece, Math.min(u, len));
+        if (Math.hypot(q.x - aim.x, q.z - aim.z) <= margin) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Bout de voie libre où le tracé s'accroche : celui dont le curseur est tout près (une tuile), ou, sur un terrain sans
+   * voie, celui devant lequel le curseur se trouve même loin. Au milieu de la voie, le départ est la tuile visée.
+   */
   private nearestFreePort(aim: { x: number; z: number }): Port | null {
     let best: { port: Port; d: number } | null = null;
+    let onTrack: boolean | null = null;
     for (const p of freePorts(this.host.state.changes.rails)) {
       const d = Math.hypot(p.at.x - aim.x, p.at.z - aim.z);
       // Devant le bout de voie (pas derrière lui) : le plus proche du curseur, même loin.
       const along = (aim.x - p.at.x) * p.at.dx + (aim.z - p.at.z) * p.at.dz;
-      const near = d <= SNAP_M || (along > -3 * TILE_M && d <= PORT_REACH_M);
+      let near = d <= SNAP_M;
+      if (!near && along > -3 * TILE_M && d <= PORT_REACH_M) {
+        onTrack ??= this.onTrack(aim, 2.2);
+        near = !onTrack;
+      }
       if (near && (!best || d < best.d)) best = { port: p.at, d };
     }
     return best?.port ?? null;
@@ -1451,6 +1486,17 @@ export class TrainView {
       return;
     }
     const here = tileOf(aim.x, aim.z);
+    this.lastHere = here;
+    // Après une pose ou un clic droit, le patron sous le curseur disparaît jusqu'à ce qu'on change de tuile.
+    if (!down && this.path.length === 0 && this.hideHover) {
+      if (here.tx === this.hideAt.tx && here.tz === this.hideAt.tz) {
+        this.setGhost([]);
+        this.traceInfo = '';
+        return;
+      }
+      this.hideHover = false;
+    }
+    if (down) this.hideHover = false;
     const port = this.nearestFreePort(aim);
     if (port && this.path.length === 0 && this.halfCurve(port, edge)) return;
     // Début du tracé : au bout de la voie la plus proche (la voie se prolonge), sinon sur la tuile visée.
@@ -1616,6 +1662,8 @@ export class TrainView {
       this.path = [];
       this.branch = null;
       this.ghostKey = '';
+      this.hideHover = true;
+      this.hideAt = here;
       if (placed > 0) {
         this.host.sfx('placeStone');
         this.host.message(t(stop >= 0 ? 'train.railStopped' : 'train.railPlaced'));
