@@ -50,7 +50,11 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
         slot.title = t('hotbar.empty');
       }
       slot.addEventListener('click', () => {
-        if (state.carried) state.assignSlot(i, state.carried);
+        if (state.hand) {
+          // La pile tenue au curseur donne son objet à la case, puis retourne dans le sac.
+          state.assignSlot(i, state.hand.item);
+          state.returnHand();
+        } else if (state.carried) state.assignSlot(i, state.carried);
         else {
           state.selectSlot(i);
           playSfx('select');

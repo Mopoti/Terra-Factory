@@ -1352,3 +1352,16 @@ describe('piliers posés à la main', () => {
     expect(s.place('slab_stone', high)).toBe('ok');
   });
 });
+
+describe('sac : clic gauche sur une pile', () => {
+  it('prend la pile cliquée seulement, pas les autres piles du même objet', () => {
+    const s = new GameState({ inventory: { iron_ingot: 70 } });
+    const piles = s.bagSlots().filter((x) => x?.item === 'iron_ingot');
+    expect(piles.length).toBeGreaterThan(1);
+    const index = s.bagSlots().findIndex((x) => x?.item === 'iron_ingot' && x.count === 20);
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(s.takeToHand('iron_ingot', 20, index)).toBe(20);
+    expect(s.hand).toEqual({ item: 'iron_ingot', count: 20 });
+    expect(s.inventory.iron_ingot).toBe(50);
+  });
+});

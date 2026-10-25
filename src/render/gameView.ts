@@ -118,6 +118,7 @@ import {
   type Machine,
 } from '../core/factory/factory';
 import { pipeMaxBar } from '../core/factory/fluids';
+import { machineRates, type FlowLine } from '../core/factory/rates';
 import { Tutorial } from '../core/game/tutorial';
 import { WorldSimulation, type SimEvent } from '../core/game/simulation';
 import { CommandBus, type CommandContext } from '../core/game/commands';
@@ -1516,6 +1517,93 @@ export function startGameView(
   const duration = (sec: number): string =>
     sec >= 60 ? `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s` : `${Math.round(sec)} s`;
 
+  const rate = (n: number): string =>
+    t('mp.perSec', {
+      n: (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+    });
+  const flowName = (l: FlowLine): string =>
+    l.kind === 'fluid'
+      ? t(`mp.fluid.${l.id}` as TranslationKey)
+      : l.id === 'ore'
+        ? t('mp.ore')
+        : l.id === 'belt'
+          ? t('mp.belt')
+          : t(`item.${l.id}` as TranslationKey);
+  const flowUnit = (l: FlowLine): string =>
+    l.kind === 'fluid'
+      ? t('mp.litersPerSec', { n: String(Math.round(l.perSec * 100) / 100) })
+      : rate(l.perSec);
+
+  /** Haut du panneau : nom, état, consommation, recette en cours, flux entrants / sortants et rejets. */
+  function machinePanelTop(m: Machine, status: string): string {
+    const def = machineDef(m.type);
+    const r = machineRates(m.type, m.recipe, m.tier);
+    const out: string[] = [];
+    out.push(
+      `<div class="mp-head"><strong>${t(`item.${itemOfTier(def, m.tier)}` as TranslationKey)}</strong><span class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</span></div>`,
+    );
+    const cycle = factory.cycleFraction(m);
+    if (cycle !== null)
+      out.push(
+        `<div class="cycle-bar"><div style="width:${Math.round(cycle * 100)}%"></div></div>`,
+      );
+    // Consommation : électricité et combustible, ou ce que la machine produit comme courant.
+    const power: string[] = [];
+    if (r.consumeKw > 0) {
+      const g = factory.gridInfo(m);
+      power.push(
+        `<div><b>${t('mp.kw', { n: String(r.consumeKw) })}</b> ${
+          g
+            ? t('mp.grid', { pct: String(Math.round(g.satisfaction * 100)) })
+            : `<span class="warn">${t('mp.noGrid')}</span>`
+        }</div>`,
+      );
+    }
+    if (r.produceKw > 0)
+      power.push(
+        `<div><b>+${t('mp.kw', { n: String(r.produceKw) })}</b> ${t('mp.produced')}</div>`,
+      );
+    if (def.fuel) {
+      const secs = factory.fuelSecondsLeft(m);
+      power.push(
+        `<div><b>${t('mp.kw', { n: String(r.burnKw) })}</b> ${t('mp.fuel', { v: stackText(m.fuel, slotCap(def, 'fuel')), time: duration(secs) })}</div>`,
+      );
+    }
+    if (power.length > 0)
+      out.push(`<div class="mp-sec"><h4>${t('mp.consumption')}</h4>${power.join('')}</div>`);
+    if (r.recipe) {
+      const name = isAssembler(m.type)
+        ? t(`item.${r.recipe.id}` as TranslationKey)
+        : t(`recipe.${r.recipe.id}` as TranslationKey);
+      out.push(
+        `<div class="mp-sec"><h4>${t('mp.recipe')}</h4><div><b>${name}</b> · ${t('mp.seconds', { n: String(r.recipe.seconds) })}</div></div>`,
+      );
+    } else if (isSmith(m.type) || isAssembler(m.type)) {
+      out.push(
+        `<div class="mp-sec"><h4>${t('mp.recipe')}</h4><div class="sub">${t('machine.recipeNone')}</div></div>`,
+      );
+    }
+    if (r.inputs.length > 0 || r.outputs.length > 0) {
+      const lines = (flows: FlowLine[], cls: string): string =>
+        flows.map((l) => `<div class="${cls}">${flowName(l)} <b>${flowUnit(l)}</b></div>`).join('');
+      out.push(
+        `<div class="mp-sec"><h4>${t('mp.flows')}</h4>${r.inputs.length > 0 ? `<div class="mp-flow"><span class="dir">${t('mp.in')}</span><div>${lines(r.inputs, 'in')}</div></div>` : ''}${r.outputs.length > 0 ? `<div class="mp-flow"><span class="dir">${t('mp.out')}</span><div>${lines(r.outputs, 'out')}</div></div>` : ''}</div>`,
+      );
+    }
+    const emit: string[] = [];
+    if (r.pollution)
+      emit.push(
+        `<div>${t(`mp.pollution.${r.pollution.kind}` as TranslationKey)} <b>${rate(r.pollution.perSec)}</b></div>`,
+      );
+    if (r.dirtyWaterPerSec > 0)
+      emit.push(
+        `<div>${t('mp.dirty')} <b>${t('mp.litersPerSec', { n: String(r.dirtyWaterPerSec) })}</b></div>`,
+      );
+    if (emit.length > 0)
+      out.push(`<div class="mp-sec emit"><h4>${t('mp.emissions')}</h4>${emit.join('')}</div>`);
+    return out.join('');
+  }
+
   function refreshMachinePanel(): void {
     const m = aimedMachine;
     if (!m || building) {
@@ -1525,14 +1613,6 @@ export function startGameView(
     const def = machineDef(m.type);
     const status = factory.status(m);
     const rows: string[] = [];
-    rows.push(`<strong>${t(`item.${itemOfTier(def, m.tier)}` as TranslationKey)}</strong>`);
-    rows.push(`<div class="st ${status}">${t(`factory.status.${status}` as TranslationKey)}</div>`);
-    // Temps qui s'écoule dans la machine (cycle en cours).
-    const cycle = factory.cycleFraction(m);
-    if (cycle !== null)
-      rows.push(
-        `<div class="cycle-bar"><div style="width:${Math.round(cycle * 100)}%"></div></div>`,
-      );
     if (status === 'noPower') rows.push(`<div class="sub">${t('factory.hint.noPower')}</div>`);
     if (status === 'noWater' && m.type === 'boiler')
       rows.push(`<div class="sub">${t('factory.hint.noWater')}</div>`);
@@ -1737,36 +1817,6 @@ export function startGameView(
         );
       }
     }
-    if ((def.pollution ?? 0) > 0) {
-      rows.push(
-        `<div class="sub">${t(`threat.pollution.${def.pollutionKind ?? 'air'}` as TranslationKey, { v: String(Math.round(factory.pollutionRate(m) * 60)) })}</div>`,
-      );
-    }
-    if (def.fuel) {
-      const secs = factory.fuelSecondsLeft(m);
-      rows.push(
-        `<div>${t('factory.fuel', { v: stackText(m.fuel, slotCap(def, 'fuel')), time: duration(secs) })}</div>`,
-      );
-      if (def.burnKw)
-        rows.push(`<div class="sub">${t('factory.burn', { v: String(def.burnKw) })}</div>`);
-    }
-    if (def.consumesKw) {
-      const g = factory.gridInfo(m);
-      rows.push(
-        `<div>${t('factory.power.line', {
-          v: g
-            ? t('factory.power.consumer', {
-                kw: String(def.consumesKw),
-                demand: String(Math.round(g.demandKw)),
-                cap: String(Math.round(g.capacityKw)),
-                pct: String(Math.round(g.satisfaction * 100)),
-              })
-            : t('factory.power.none', { m: String(machineDef('pole').linkReachM ?? 4) }),
-        })}</div>`,
-      );
-    } else if (!def.producesKw && m.type !== 'pole' && !isRouter(m.type)) {
-      rows.push(`<div>${t('factory.power', { v: t('factory.noPower') })}</div>`);
-    }
     if (isChest(m.type)) rows.push(`<small>${t('factory.useHint')}</small>`);
     if (m.type === 'generator') rows.push(`<small>${t('factory.useHint')}</small>`);
     if (hasOutput(m.type) || isArm(m.type)) {
@@ -1777,7 +1827,8 @@ export function startGameView(
       );
       rows.push(`<small>${t('factory.useHint')}</small>`);
     }
-    machinePanel.innerHTML = rows.join('');
+    machinePanel.innerHTML =
+      machinePanelTop(m, status) + `<div class="mp-details">${rows.join('')}</div>`;
     machinePanel.hidden = false;
   }
 
@@ -3825,7 +3876,7 @@ export function startGameView(
     let motion = { speed: 0, strafe: 0 };
     // Sac ouvert : une touche 1 à 9 range l'objet choisi (ou sous le curseur) dans cette case de la barre.
     if (!paused && uiOpen) {
-      const chosen = options.state.carried ?? options.state.pointed;
+      const chosen = options.state.hand?.item ?? options.state.carried ?? options.state.pointed;
       if (chosen) {
         for (let i = 1; i <= HOTBAR_SLOTS; i++) {
           if (pressed(`hotbar${i}` as ActionId)) {

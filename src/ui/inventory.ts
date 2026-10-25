@@ -77,8 +77,6 @@ export function mountInventory(
 ): InventoryWindow {
   let isOpenNow = false;
   let selected: string | null = null;
-  /** Case du sac de la pile choisie (pour fusionner avec une autre pile du même objet). */
-  let selectedSlot: number | null = null;
   let craftTab: ItemCategory | null = null;
   let hovered: string | null = null;
   let message = '';
@@ -180,7 +178,11 @@ export function mountInventory(
       return;
     }
     const def = itemById(hovered);
-    tooltip.replaceChildren(el('strong', undefined, itemName(hovered)));
+    // Nom et quantité totale dans le sac, bien lisibles dès le survol.
+    tooltip.replaceChildren(
+      el('strong', undefined, itemName(hovered)),
+      el('div', 'inv-total', t('inv.total', { n: String(state.inventory[hovered] ?? 0) })),
+    );
     const recipe = state.recipeFor(def.id);
     if (recipe) {
       tooltip.append(
@@ -230,7 +232,6 @@ export function mountInventory(
     if (!state.isUnlocked(hovered)) {
       tooltip.append(el('div', 'lack', lockedReason(hovered)));
     }
-    tooltip.append(el('small', undefined, `${t('inv.count')} : ${state.inventory[hovered] ?? 0}`));
     tooltip.hidden = false;
     const w = tooltip.offsetWidth;
     const h = tooltip.offsetHeight;
@@ -387,18 +388,8 @@ export function mountInventory(
             void takeAsked(state, slot.item, itemName(slot.item), slot.count, e, i).then(render);
             return;
           }
-          // Une pile est déjà choisie et on clique une autre pile du même objet : elles fusionnent.
-          if (selected === slot.item && selectedSlot !== null && selectedSlot !== i) {
-            state.moveBagSlot(selectedSlot, i);
-            selectedSlot = null;
-            playSfx('pickup');
-            render();
-            return;
-          }
-          selected = selected === slot.item ? null : slot.item;
-          selectedSlot = selected ? i : null;
-          // L'objet choisi peut être rangé dans une case de la barre de raccourcis d'un clic.
-          state.carried = selected;
+          // Clic gauche : on prend la pile cliquée, elle seule (même s'il y a d'autres piles du même objet).
+          if (state.takeToHand(slot.item, slot.count, i) > 0) playSfx('pickup');
           render();
         });
         cell.addEventListener('contextmenu', (e) => {
@@ -456,7 +447,6 @@ export function mountInventory(
         e.preventDefault();
         if (state.trashBagSlot(Number(from)) > 0) playSfx('pickup');
         selected = null;
-        selectedSlot = null;
         render();
       });
       bag.append(trash);

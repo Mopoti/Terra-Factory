@@ -2996,3 +2996,59 @@ input[type='range'] {
   border-color: #e9693a;
   text-shadow: 0 1px 0 rgba(150, 60, 20, 0.45);
 }
+.inv-tooltip .inv-total {
+  font-weight: 600;
+  color: var(--coral);
+  margin: 2px 0 6px;
+}
+/* Panneau d'une machine visée : nom et état, puis consommation, recette, flux et rejets en sections. */
+.machine-panel .mp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+}
+.machine-panel .mp-sec {
+  display: grid;
+  gap: 2px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+.machine-panel .mp-sec h4 {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a6a52;
+}
+.machine-panel .mp-flow {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 6px;
+  align-items: start;
+}
+.machine-panel .mp-flow .dir {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a7d4a;
+}
+.machine-panel .mp-flow:last-child .dir {
+  color: #b0682f;
+}
+.machine-panel .mp-flow b,
+.machine-panel .mp-sec b {
+  font-variant-numeric: tabular-nums;
+}
+.machine-panel .mp-sec.emit {
+  color: #8a4a2a;
+}
+.machine-panel .mp-details {
+  display: grid;
+  gap: 4px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+.machine-panel .mp-details:empty {
+  display: none;
+}
