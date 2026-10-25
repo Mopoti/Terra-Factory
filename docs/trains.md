@@ -94,3 +94,8 @@ Clic gauche maintenu depuis le point choisi, patron vert (possible) puis rouge �
 ### Quai de gare : collisions et panneau (25 octobre)
 
 Le quai a des boîtes de collision (`SOLIDS` dans `stationView.ts`, repère du quai) : parois de l'abri, banc, lampadaires, poubelle et mât du panneau ; le quai lui-même se monte à pied. Le mât du panneau s'arrête sous le panneau (2,2 m), qui n'est plus coupé. Les boîtes sont estimées d'après `ferroviaire.py` (échelle ½) : à ajuster à l'œil en jeu.
+
+
+### Couleur des virages (25 octobre)
+
+Chaque taille de virage a sa teinte (`CURVE_TINT` dans `trainView.ts`), identique pour la pièce posée et pour son patron : serré bleu, large violet, très large (et demi-virages 45°) marron, grand orange, géant turquoise. Un patron non posable reste rouge ; les droites et rampes gardent leur couleur.

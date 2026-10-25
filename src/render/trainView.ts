@@ -82,6 +82,16 @@ export function railModelName(p: RailPiece): string {
 const SWITCH_AHEAD_M = 60;
 const GREEN: Rgb = hexToRgb('#4cd964');
 const RED: Rgb = hexToRgb('#ff5a4a');
+/** Couleur des virages selon leur taille (posés comme en patron) : serré bleu, large violet, très large marron… */
+const CURVE_TINT: Partial<Record<RailPiece['kind'], Rgb>> = {
+  curve: hexToRgb('#3d7de0'),
+  curve_wide: hexToRgb('#9a55d6'),
+  curve_large: hexToRgb('#a0663a'),
+  curve45: hexToRgb('#a0663a'),
+  curve45_b: hexToRgb('#a0663a'),
+  curve_big: hexToRgb('#e0912f'),
+  curve_huge: hexToRgb('#2fb5a8'),
+};
 const STEP = 1 / 60;
 /** Portée (m) pour monter dans une locomotive ou reprendre un véhicule (en plus de sa demi-longueur). */
 const REACH_M = 4;
@@ -425,11 +435,23 @@ export class TrainView {
     return { ...m, min: { x: -m.size.x / 2, y: m.min.y, z: -m.size.z / 2 } };
   }
 
-  private addPiece(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
+  private addPiece(mb: MeshBuilder, p: RailPiece, tint?: Rgb, valid = true): void {
     const model = this.railModel(p);
     const c = centerOf(p);
+    // Un virage garde la couleur de sa taille (posé comme en patron) ; un patron non posable reste rouge.
+    const own = CURVE_TINT[p.kind];
+    if (own && valid) tint = own;
     if (model) {
-      mb.model(model, c.x, p.level, c.z, p.turns, RAIL_SCALE, tint, tint ? 0.55 : 0);
+      mb.model(
+        model,
+        c.x,
+        p.level,
+        c.z,
+        p.turns,
+        RAIL_SCALE,
+        tint,
+        tint ? (own && valid ? 0.6 : 0.55) : 0,
+      );
       return;
     }
     // Forme de secours tant que le modèle n'est pas chargé : une dalle à la taille de la voie.
@@ -605,7 +627,7 @@ export class TrainView {
     if (key === this.ghostKey) return;
     this.ghostKey = key;
     const mb = new MeshBuilder();
-    for (const { piece, ok } of pieces) this.addPiece(mb, piece, ok ? GREEN : RED);
+    for (const { piece, ok } of pieces) this.addPiece(mb, piece, ok ? GREEN : RED, ok);
     this.ghost.geometry.dispose();
     this.ghost.geometry = this.geometryOf(mb);
   }
