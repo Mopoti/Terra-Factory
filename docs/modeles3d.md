@@ -169,3 +169,27 @@ Faits : foreuses (foret, volant, poulies, gyrophare), chevalet (manivelle, balan
 - **tir** : recul de l'arme (en arrière, canon relevé), culasse du pistolet ou levier du fusil qui recule puis revient, éclair au bout du canon (repère `bouche`), traînée partant du canon ; sniper : cycle du verrou (lever, tirer, pousser, rabattre) après chaque tir ;
 - **rechargement** (touche Recharger) : l'arme se relève et tourne pour montrer le logement, le chargeur sort le long de son axe et disparaît, un plein remonte, puis on réarme (culasse, levier ou verrou). Pistolet 1,1 s, fusil 1,6 s, sniper 1,8 s ; on ne tire pas pendant le rechargement (les munitions sont rechargées dès le début du geste).
 - Réglages par arme : `GUN_PROFILES` (durées, recul, course de la culasse, direction et course du chargeur) ; place en vue subjective : `GUN_FIRST_OFFSET` (`gameView.ts`).
+
+## Modèles ajoutés le 25 octobre (objets qui n'avaient pas de modèle)
+
+Tous au style doux (`T.adoucir`, formes de `outils.py`).
+- **Véhicules** (`vehicules.py`) : `camionnette` (camion à benne : cabine orangée, benne d'acier à ridelles, roues
+  `roue_avg`… qui roulent, siège à gauche) et `charrette` (charrette à bras en bois, roues à rayons `roue_g` / `roue_d`,
+  brancards vers l'arrière). Plateaux de chargement alignés dans `gameView.ts` (`CARGO_BED`).
+- **Gare** (`ferroviaire.py`, `gare`) : quai de 2,4 × 9 m (bordure, bande jaune), abri vitré avec banc, lampadaires,
+  poubelle ; dessiné par `stationView.ts` (le panneau au nom de la station reste fait par le code). Icône de l'objet.
+- **Pièces béton et aluminium** (`construction.py`) : `mur_`, `dalle_`, `escalier_`, `pilier_*_{bas,fut,haut,seul}` pour
+  `beton` et `aluminium`, `porte_aluminium` (+ `_battant` vitré) ; `porte_garage_aluminium` sert d'icône (la porte de
+  garage du jeu est dessinée par segments). `buildingView.ts` les pose comme le bois et la pierre.
+- **Matériaux** (`objets.py`) : `objet_caoutchouc`, `objet_tige` (fer et acier, à leur couleur), `objet_moteur`,
+  `objet_moteur_renforce`, et `objet_eau` (icône de la ressource eau).
+- **Équipement, munitions, armures** (nouvelle famille `equipement.py`) : `objet_boussole`, `objet_sac_a_dos`,
+  `objet_capuche`, `objet_pantalon`, `objet_bottes`, `objet_gants`, `objet_sac_couchage`, `objet_lit`,
+  `objet_chargeur_pistolet`, `objet_chargeur_fusil`, `objet_chargeur_sniper`, et `objet_armure{1,2,4}_{casque,plastron,
+  jambieres,bottes}` (palier 1 : cuir et rivets ; 2 : plaques d'acier ; 4 : alliage sombre et lignes lumineuses). Faces
+  magenta = couleur de l'objet (`dropShape`, `dropModels.ts`). Ce sont les modèles au sol et en icône ; l'équipement
+  porté sur le personnage garde ses formes simples pour l'instant.
+- **Ressources du monde** (`res_*`, mode Créatif) : icône du décor qu'elles posent (arbre, rocher, buisson, amas de
+  minerai du gisement, flaque d'eau).
+- **Icônes des outils** : la pioche-hache est montrée dressée en diagonale, tête en haut (`itemIcon.ts`).
+- `NO_MODEL_ITEMS` est vide : plus aucun objet ne garde la caisse.

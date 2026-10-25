@@ -97,10 +97,15 @@ export function itemIconUrl(item: string): string | null {
     const model = heldObject(item);
     if (model) {
       const copy = model.clone();
-      copy.rotation.y = HELD_MODELS[item].kind === 'pick' ? -Math.PI / 4 : -Math.PI / 5;
+      const pick = HELD_MODELS[item].kind === 'pick';
+      // Outil : manche dressé en diagonale, tête en haut (pioche et hache de profil) ; arme : de trois quarts.
+      if (pick) copy.rotation.set(-Math.PI / 2, -Math.PI / 4, 0, 'YXZ');
+      else copy.rotation.y = -Math.PI / 5;
       const holder = new THREE.Group();
       holder.add(copy);
-      url = snapshot(holder, HELD_MODELS[item].kind === 'pick' ? 0.4 : 0.6);
+      // Penché vers la droite de l'image (autour de l'axe de visée).
+      if (pick) holder.rotateOnAxis(new THREE.Vector3(1, 0, 1).normalize(), -0.55);
+      url = snapshot(holder, pick ? 0.8 : item === 'pistol' ? 0.72 : 0.95);
     }
   } else {
     // Un objet dont le modèle n'est pas encore chargé n'a pas d'icône (et pas la caisse par défaut).

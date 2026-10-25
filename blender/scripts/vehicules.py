@@ -27,6 +27,25 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
+sys.path.insert(0, HERE)
+import outils as O  # noqa: E402  (formes du style doux : _rond, _cyl, _loft)
+
+TEINTES = {
+    'camion': '#d9603b',
+    'camion_clair': '#ec8a5f',
+    'benne': '#8d939c',
+    'benne_sombre': '#5f646c',
+    'pneu': '#2a2b2f',
+    'jante': '#c9ccd1',
+    'phare': '#fff2c4',
+    'feu': '#e04a3a',
+    'planche_charrette': '#b9814e',
+    'planche_charrette_claire': '#cf9a63',
+    'bois_roue': '#8d5f37',
+}
+for _k, _v in TEINTES.items():
+    T.PALETTE.setdefault(_k, _v)
+
 
 #: Buggy : dessiné petit puis agrandi de K_BUGGY ; hauteur de l'arceau et du coussin du siège avant agrandissement.
 K_BUGGY = 1.7
@@ -601,10 +620,164 @@ def tank(coll, leger=True):
     _au_sol(coll)
 
 
+def _roue_douce(coll, nom, c, r, larg, n, seg):
+    """Roue de camionnette (groupe `nom`) au style doux : pneu arrondi, jante claire, moyeu ; pivot sur son axe (X)."""
+    g = T.Lot(coll, nom)
+    x, y, z = c
+    s = 1 if x > 0 else -1
+    secs = []
+    for k, (dx, rr) in enumerate(((-0.5, 0.82), (-0.42, 0.97), (-0.2, 1.0), (0.2, 1.0), (0.42, 0.97), (0.5, 0.82))):
+        secs.append(((x + dx * larg, y, z), Vector((0, 1, 0)), Vector((0, 0, 1)), r * rr, r * rr, r * rr))
+    O._loft(g, 'pneu', secs, max(3, seg // 4))
+    O._cyl(g, 'jante', (x + s * larg * 0.38, y, z), (x + s * larg * 0.52, y, z), r * 0.58, max(3, seg // 4))
+    O._cyl(g, 'benne_sombre', (x + s * larg * 0.5, y, z), (x + s * larg * 0.58, y, z), r * 0.22, 2)
+    for k in range(5):
+        a = 2 * math.pi * k / 5
+        g.cube('benne_sombre', (0.04, 0.05, 0.05), (x + s * larg * 0.53, y + r * 0.4 * math.cos(a), z + r * 0.4 * math.sin(a)))
+    g.finir()
+    T.pivot(coll, 'pivot_' + nom, c, (1, 0, 0))
+
+
+def camionnette(coll, leger=True):
+    """Camionnette à benne (camion benne) au style doux : environ 1,7 m de large, 4 m de long (avant = -Y).
+
+    Cabine orangée arrondie (vitres, rétroviseurs, phares, calandre, pare-chocs), châssis sombre, benne basculante en
+    acier gris à nervures et ridelles, feux rouges à l'arrière. Volant à gauche (+X), siège du conducteur `siege`.
+    Pièces mobiles : `roue_avg`, `roue_avd`, `roue_arg`, `roue_ard`. Plateau de la benne (lu par le jeu pour poser les
+    icônes du chargement) : centre à Y = +1,3, hauteur 1,42, 2,3 × 3,3 (unités).
+    """
+    n = 3 if leger else 5
+    seg = 14 if leger else 24
+    lot = T.Lot(coll, 'carrosserie')
+    r, larg = 0.78, 0.5
+    xr, yav, yar = 1.42, -2.35, 2.0
+    # Châssis.
+    for sx in (-1, 1):
+        O._rond(lot, 'benne_sombre', (sx * 0.75, -3.1, 1.0), (sx * 0.75, 3.15, 1.0), 0.14, 0.18, n)
+    O._rond(lot, 'benne_sombre', (0, 3.1, 0.95), (0, 3.3, 0.95), 1.6, 0.16, n, k=0.04)  # pare-chocs arrière
+    # Capot et avant.
+    O._rond(lot, 'camion', (0, -2.35, 1.75), (0, -3.45, 1.7), 1.48, 0.52, n, k=0.12)
+    O._rond(lot, 'benne_sombre', (0, -3.4, 1.55), (0, -3.5, 1.55), 1.05, 0.3, n, k=0.04)  # calandre
+    for i in range(4):
+        lot.cube('benne', (1.9, 0.04, 0.05), (0, -3.52, 1.36 + i * 0.13), 0.01)
+    O._rond(lot, 'benne_sombre', (0, -3.45, 1.02), (0, -3.68, 1.02), 1.62, 0.2, n, k=0.05)  # pare-chocs avant
+    for sx in (-1, 1):
+        O._cyl(lot, 'benne', (sx * 1.15, -3.42, 1.72), (sx * 1.15, -3.5, 1.72), 0.2, n)
+        O._cyl(lot, 'phare', (sx * 1.15, -3.5, 1.72), (sx * 1.15, -3.52, 1.72), 0.15, n)
+    # Cabine : grande boîte arrondie, vitres, toit.
+    O._rond(lot, 'camion', (0, -0.6, 2.25), (0, -2.45, 2.25), 1.52, 1.1, n, k=0.18)
+    O._rond(lot, 'camion_clair', (0, -0.75, 3.38), (0, -2.25, 3.38), 1.4, 0.06, n, k=0.04)  # toit
+    O._rond(lot, 'verre', (0, -2.43, 2.75), (0, -2.47, 2.75), 1.3, 0.42, n, k=0.02)  # pare-brise
+    for sx in (-1, 1):
+        O._rond(lot, 'verre', (sx * 1.52, -1.0, 2.75), (sx * 1.52, -2.15, 2.75), 0.03, 0.4, n, k=0.02)  # vitres latérales
+        O._rond(lot, 'benne_sombre', (sx * 1.6, -2.3, 2.7), (sx * 1.85, -2.3, 2.7), 0.04, 0.04, n, k=0.01)  # bras
+        O._rond(lot, 'benne_sombre', (sx * 1.88, -2.25, 2.7), (sx * 1.88, -2.35, 2.7), 0.1, 0.22, n, k=0.03)  # rétro
+        lot.cube('benne_sombre', (0.06, 0.4, 0.05), (sx * 1.53, -1.5, 2.2), 0.01)  # poignée
+    # Garde-boue.
+    for sx in (-1, 1):
+        for y in (yav, yar):
+            O._rond(lot, 'benne_sombre', (sx * xr, y - 0.95, r + 0.95), (sx * xr, y + 0.95, r + 0.95), larg * 0.62, 0.06, n,
+                    k=0.03)
+    # Volant à gauche, sièges (vus par les vitres).
+    O._cyl(lot, 'pneu', (0.62, -1.95, 2.55), (0.62, -1.88, 2.62), 0.26, n)
+    for sx in (-1, 1):
+        O._rond(lot, 'pneu', (sx * 0.62, -1.15, 2.0), (sx * 0.62, -1.55, 2.0), 0.36, 0.1, n, k=0.04)
+        O._rond(lot, 'pneu', (sx * 0.62, -0.9, 2.0), (sx * 0.62, -0.9, 2.8), 0.36, 0.08, n, k=0.04)
+    # Échappement vertical derrière la cabine.
+    O._cyl(lot, 'benne', (-1.35, -0.45, 1.6), (-1.35, -0.45, 3.6), 0.08, n)
+    # Benne : fond, ridelles, panneau avant haut (protège la cabine), hayon, nervures.
+    lot_b = T.Lot(coll, 'benne')
+    O._rond(lot_b, 'benne', (0, -0.35, 1.32), (0, 2.95, 1.32), 1.2, 0.1, n, k=0.03)
+    for sx in (-1, 1):
+        O._rond(lot_b, 'benne', (sx * 1.2, -0.35, 1.85), (sx * 1.2, 2.95, 1.85), 0.06, 0.5, n, k=0.03)
+        for y in (0.2, 0.9, 1.6, 2.3):
+            O._rond(lot_b, 'benne_sombre', (sx * 1.27, y, 1.4), (sx * 1.27, y, 2.32), 0.03, 0.05, n, k=0.01)
+        O._rond(lot_b, 'benne_sombre', (sx * 1.25, -0.35, 2.36), (sx * 1.25, 2.95, 2.36), 0.07, 0.04, n, k=0.02)
+    O._rond(lot_b, 'benne', (0, -0.38, 2.15), (0, -0.28, 2.15), 1.26, 0.82, n, k=0.03)  # panneau avant
+    O._rond(lot_b, 'benne', (0, 2.92, 1.85), (0, 2.99, 1.85), 1.26, 0.5, n, k=0.02)  # hayon
+    for sx in (-1, 1):
+        O._rond(lot_b, 'feu', (sx * 1.35, 3.28, 1.18), (sx * 1.35, 3.33, 1.18), 0.16, 0.08, n, k=0.02)
+    # Roues.
+    for nom, x, y in (('roue_avg', xr, yav), ('roue_avd', -xr, yav), ('roue_arg', xr, yar), ('roue_ard', -xr, yar)):
+        _roue_douce(coll, nom, (x, y, r), r, larg, n, seg)
+    T.reperer(coll, 'siege', (0.62, -1.35, 2.05))
+    lot.finir()
+    lot_b.finir()
+    O._brillant()
+    T.adoucir(coll)
+    _au_sol(coll)
+
+
+def _roue_bois(coll, nom, c, r, larg, n, rayons):
+    """Roue de charrette en bois (groupe `nom`) : jante, rayons, moyeu ; pivot sur son axe (X)."""
+    g = T.Lot(coll, nom)
+    x, y, z = c
+    # Jante : un anneau de segments de bois (on voit les rayons au travers).
+    m = 16 if n <= 3 else 24
+    for k in range(m):
+        a0, a1 = 2 * math.pi * k / m, 2 * math.pi * (k + 1.08) / m
+        rr = r * 0.91
+        g.barre('bois_roue', (x, y + rr * math.cos(a0), z + rr * math.sin(a0)), (x, y + rr * math.cos(a1), z + rr * math.sin(a1)),
+                r * 0.17, 0.02)
+    for k in range(rayons):
+        a = 2 * math.pi * k / rayons
+        g.barre('bois_roue', (x, y, z), (x, y + r * 0.86 * math.cos(a), z + r * 0.86 * math.sin(a)), 0.07, 0.015)
+    O._cyl(g, 'bois_sombre', (x - larg * 0.9, y, z), (x + larg * 0.9, y, z), r * 0.18, 2)
+    g.finir()
+    T.pivot(coll, 'pivot_' + nom, c, (1, 0, 0))
+
+
+def charrette(coll, leger=True):
+    """Charrette à bras en bois (poussée à pied), environ 1,1 m de large (avant = -Y, brancards vers l'arrière +Y).
+
+    Caisse en planches sur deux grandes roues en bois à rayons, ridelles basses, béquille à l'avant, deux brancards qui
+    finissent en poignées à hauteur de main. Pièces mobiles : `roue_g`, `roue_d`. Plateau (lu par le jeu pour poser les
+    icônes du chargement) : centre à Y = -0,3, hauteur 1,2, 1,6 × 2,2 (unités).
+    """
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'caisse')
+    r, larg = 0.68, 0.12
+    xr, yr = 1.02, 0.0
+    # Fond en planches.
+    for i in range(5):
+        x = -0.72 + i * 0.36
+        O._rond(lot, 'planche_charrette' if i % 2 == 0 else 'planche_charrette_claire', (x, -1.4, 1.1), (x, 0.8, 1.1),
+                0.17, 0.05, n, k=0.02)
+    for y in (-1.25, -0.3, 0.65):
+        O._rond(lot, 'bois_roue', (-0.95, y, 0.99), (0.95, y, 0.99), 0.08, 0.07, n, k=0.02)
+    # Ridelles basses : deux planches de chaque côté, devant et derrière.
+    for sx in (-1, 1):
+        for z, t in ((1.28, 'planche_charrette'), (1.5, 'planche_charrette_claire')):
+            O._rond(lot, t, (sx * 0.86, -1.42, z), (sx * 0.86, 0.82, z), 0.04, 0.1, n, k=0.02)
+        for y in (-1.38, -0.3, 0.78):
+            O._rond(lot, 'bois_roue', (sx * 0.9, y, 1.12), (sx * 0.9, y, 1.66), 0.05, 0.05, n, k=0.015)
+    for y, sgn in ((-1.44, 1), (0.84, -1)):
+        for z, t in ((1.28, 'planche_charrette_claire'), (1.5, 'planche_charrette')):
+            O._rond(lot, t, (-0.86, y, z), (0.86, y, z), 0.04, 0.1, n, k=0.02)
+    # Essieu, béquille avant.
+    O._cyl(lot, 'bois_sombre', (-1.05, yr, r), (1.05, yr, r), 0.06, n)
+    for sx in (-1, 1):
+        O._rond(lot, 'bois_roue', (sx * 0.6, yr, r), (sx * 0.6, yr, 1.0), 0.06, 0.08, n, k=0.02)
+    O._rond(lot, 'bois_roue', (0, -1.2, 1.0), (0, -1.3, 0.0), 0.07, 0.07, n, k=0.02)
+    # Brancards et poignées (vers l'arrière, à hauteur de main).
+    for sx in (-1, 1):
+        O._rond(lot, 'bois_roue', (sx * 0.62, -1.3, 0.97), (sx * 0.62, 0.95, 0.97), 0.06, 0.07, n, k=0.02)  # sous la caisse
+        O._rond(lot, 'bois_roue', (sx * 0.62, 0.88, 0.97), (sx * 0.68, 2.4, 1.72), 0.06, 0.07, n, k=0.02)  # vers les mains
+        O._cyl(lot, 'bois_sombre', (sx * 0.69, 2.3, 1.7), (sx * 0.71, 2.65, 1.78), 0.075, n)
+    O._rond(lot, 'bois_roue', (-0.66, 1.9, 1.6), (0.66, 1.9, 1.6), 0.04, 0.05, n, k=0.015)  # traverse
+    for nom, x in (('roue_g', xr), ('roue_d', -xr)):
+        _roue_bois(coll, nom, (x, yr, r), r, larg, n, 8 if leger else 10)
+    lot.finir()
+    T.adoucir(coll)
+    _au_sol(coll)
+
+
 MODELES = {
     'buggy': buggy,
     'quad': quad,
     'tank': tank,
+    'camionnette': camionnette,
+    'charrette': charrette,
 }
 
 

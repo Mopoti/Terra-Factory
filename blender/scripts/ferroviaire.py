@@ -54,6 +54,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(ROOT, 'blender', 'lib'))
+sys.path.insert(0, HERE)
 import terra as T  # noqa: E402
 
 import bpy  # noqa: E402
@@ -70,6 +71,15 @@ TEINTES = {
     'wagon_sombre': '#3f4b34',
     'citerne': '#d8dde3',
     'teinte': '#ff00ff',
+    'quai': '#c9bca2',
+    'quai_bord': '#e3d9c3',
+    'quai_bande': '#e9b949',
+    'abri': '#3f7f9e',
+    'abri_toit': '#2f5f78',
+    'abri_verre': '#9fd0e8',
+    'banc': '#b5784a',
+    'lampe': '#fff1b8',
+    'gare_metal': '#4b4f56',
 }
 
 
@@ -812,6 +822,61 @@ def wagon_citerne(coll, leger=True):
     lot.finir()
 
 
+def gare(coll, leger=True):
+    """Quai de gare au style doux, posé à droite de la voie : 4,8 × 18 × 0,64 (2,4 × 9 m, 32 cm de haut), centré.
+
+    La voie est du côté -X (bord du quai à x = -2,4) ; le long de la voie (axe Y). Bordure claire et bande jaune côté
+    voie, abri vitré à toit penché (montants, vitres, banc), deux lampadaires, une poubelle. Le panneau au nom de la
+    station reste dessiné par le jeu (`stationView.ts`), à l'emplacement laissé libre au bout du quai (+Y).
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'gare')
+    W, L, H = 4.8, 18.0, 0.64
+    O._rond(lot, 'quai', (0, -L / 2, H / 2), (0, L / 2, H / 2), W / 2, H / 2, n, k=0.06, r=0.08)
+    O._rond(lot, 'quai_bord', (-W / 2 + 0.2, -L / 2 + 0.02, H + 0.005), (-W / 2 + 0.2, L / 2 - 0.02, H + 0.005), 0.22, 0.03, n,
+            k=0.02)
+    O._rond(lot, 'quai_bande', (-W / 2 + 0.62, -L / 2 + 0.1, H + 0.01), (-W / 2 + 0.62, L / 2 - 0.1, H + 0.01), 0.09, 0.02,
+            n, k=0.01)
+    # Dalles du quai : joints discrets.
+    for i in range(1, 9):
+        y = -L / 2 + i * L / 9
+        lot.cube('quai_bord', (W - 1.2, 0.04, 0.02), (0.55, y, H + 0.005), 0.005)
+    # Abri : fond vitré, deux côtés, toit penché vers la voie, montants.
+    y0, y1 = -5.0, 2.0
+    xa = 1.8
+    for y in (y0, y1, (y0 + y1) / 2):
+        O._rond(lot, 'gare_metal', (xa, y, H), (xa, y, H + 4.6), 0.08, 0.08, n, k=0.02)
+        O._rond(lot, 'gare_metal', (xa - 1.6, y, H), (xa - 1.6, y, H + 4.0), 0.07, 0.07, n, k=0.02)
+    O._rond(lot, 'abri_verre', (xa + 0.02, y0, H + 2.3), (xa + 0.02, y1, H + 2.3), 0.03, 2.0, n, k=0.02)
+    for y in (y0, y1):
+        lot.cube('abri_verre', (1.5, 0.05, 3.2), (xa - 0.8, y, H + 2.3), 0.02)
+    roof = Matrix.Rotation(-0.18, 3, 'Y')
+    lot.cube('abri_toit', (2.6, y1 - y0 + 0.6, 0.18), (xa - 0.75, (y0 + y1) / 2, H + 4.45), 0.06, roof)
+    lot.cube('abri', (2.7, y1 - y0 + 0.7, 0.08), (xa - 0.75, (y0 + y1) / 2, H + 4.33), 0.03, roof)
+    # Banc sous l'abri.
+    for y in (y0 + 1.2, y1 - 1.2):
+        O._rond(lot, 'gare_metal', (xa - 0.45, y, H), (xa - 0.45, y, H + 0.9), 0.06, 0.06, n, k=0.02)
+    for k in range(3):
+        O._rond(lot, 'banc', (xa - 0.62 + k * 0.17, y0 + 0.8, H + 0.92), (xa - 0.62 + k * 0.17, y1 - 0.8, H + 0.92), 0.07, 0.04,
+                n, k=0.015)
+    for k in range(2):
+        O._rond(lot, 'banc', (xa - 0.15, y0 + 0.8, H + 1.2 + k * 0.25), (xa - 0.15, y1 - 0.8, H + 1.2 + k * 0.25), 0.03,
+                0.08, n, k=0.015)
+    # Lampadaires.
+    for y in (-7.6, 4.6):
+        O._cyl(lot, 'gare_metal', (1.2, y, H), (1.2, y, H + 6.0), 0.08, n)
+        O._rond(lot, 'gare_metal', (1.2, y, H + 6.0), (0.4, y, H + 6.25), 0.05, 0.05, n, k=0.015)
+        O._rond(lot, 'gare_metal', (0.3, y, H + 6.1), (0.3, y, H + 6.35), 0.22, 0.22, n, k=0.05)
+        O._rond(lot, 'lampe', (0.3, y, H + 5.98), (0.3, y, H + 6.1), 0.16, 0.16, n, k=0.04)
+    # Poubelle.
+    O._cyl(lot, 'abri', (1.9, 3.4, H), (1.9, 3.4, H + 1.4), 0.32, n)
+    O._cyl(lot, 'gare_metal', (1.9, 3.4, H + 1.4), (1.9, 3.4, H + 1.5), 0.34, n)
+    lot.finir()
+    O._brillant()
+    T.adoucir(coll)
+
+
 MODELES = {
     'rail_droit': rail_droit,
     'rail_croisement': rail_croisement,
@@ -831,6 +896,7 @@ MODELES = {
     'locomotive_electrique': locomotive_electrique,
     'wagon_fret': wagon_fret,
     'wagon_citerne': wagon_citerne,
+    'gare': gare,
 }
 
 

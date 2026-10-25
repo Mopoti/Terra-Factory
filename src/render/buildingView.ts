@@ -48,7 +48,12 @@ const GREEN: Rgb = { r: 0.33, g: 0.88, b: 0.48 };
 const RED: Rgb = { r: 1, g: 0.35, b: 0.3 };
 
 /** Nom du matériau dans les fichiers de modèles (`blender/scripts/construction.py`). */
-const MODEL_MATERIAL: Record<string, string> = { wood: 'bois', stone: 'pierre' };
+const MODEL_MATERIAL: Record<string, string> = {
+  wood: 'bois',
+  stone: 'pierre',
+  concrete: 'beton',
+  aluminium: 'aluminium',
+};
 
 /**
  * Pose le modèle `name` (centré sur x, z, le bas à y), tourné de `turns` quarts de tour, étiré de sx, sy, sz ;

@@ -1,10 +1,14 @@
 /**
- * Dessin des stations : un quai bas le long de la voie et un panneau sur mât avec le nom (modèles 3D simples faits
- * par le code en attendant ceux de Blender). Un fantôme montre où la prochaine station se poserait.
+ * Dessin des stations : le quai de gare (`gare`, `blender/scripts/ferroviaire.py` : quai, abri vitré, banc,
+ * lampadaires ; formes simples tant qu'il n'est pas chargé) et un panneau sur mât avec le nom. Un fantôme montre où la
+ * prochaine station se poserait.
  */
 import * as THREE from 'three';
 import type { Station } from '../core/rail/station';
 import type { TrackGraph } from '../core/rail/track';
+import { propsMaterial } from './chunkMesh';
+import { bakedModel } from './models';
+import { vehicleFromModel } from './vehicleModel';
 
 const PLATFORM_LEN = 9;
 const PLATFORM_W = 2.4;
@@ -43,6 +47,13 @@ function labelTexture(name: string): THREE.CanvasTexture {
 /** Un groupe 3D de station, orienté le long de la voie (axe z local = sens de marche). */
 function buildStation(name: string, tint?: THREE.Color): THREE.Group {
   const group = new THREE.Group();
+  const own = bakedModel('gare');
+  if (own) {
+    // Modèle maison : centré sur le quai, la voie du côté -x.
+    const quai = vehicleFromModel(own, propsMaterial, true).group;
+    quai.position.set(SIDE_M, 0, 0);
+    group.add(quai);
+  }
   const platform = new THREE.Mesh(
     new THREE.BoxGeometry(PLATFORM_W, PLATFORM_H, PLATFORM_LEN),
     platformMat,
@@ -61,7 +72,8 @@ function buildStation(name: string, tint?: THREE.Color): THREE.Group {
   board.position.set(SIGN_SIDE_M, 2.5, -PLATFORM_LEN / 2 + 0.8);
   // Le panneau regarde vers la voie (axe x) pour être lu depuis le train.
   board.rotation.y = Math.PI / 2;
-  group.add(platform, stripe, pole, board);
+  group.add(pole, board);
+  if (!own) group.add(platform, stripe);
   if (tint)
     group.traverse((o) => {
       if (o instanceof THREE.Mesh) {
@@ -178,7 +190,14 @@ export class StationView {
         o.geometry.dispose();
         const mat = o.material as THREE.Material & { map?: THREE.Texture | null };
         if (mat.map) mat.map.dispose();
-        if (mat !== platformMat && mat !== stripeMat && mat !== poleMat && mat !== boardMat)
+        // Le matériau partagé du décor (quai maison) ne se jette pas.
+        if (
+          mat !== platformMat &&
+          mat !== stripeMat &&
+          mat !== poleMat &&
+          mat !== boardMat &&
+          mat !== propsMaterial
+        )
           mat.dispose();
       }
     });

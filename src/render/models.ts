@@ -292,6 +292,11 @@ const EXTRA_GROUPS: Record<string, string[]> = {
   quad: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   // Char : cinq galets par côté, chacun sur son axe (ils roulent), et la tourelle.
   tank: [...[1, 2, 3, 4, 5].flatMap((k) => [`roue_g${k}`, `roue_d${k}`]), 'tourelle'],
+  // Camionnette à benne et charrette à bras (poussée) : roues qui roulent.
+  camionnette: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
+  charrette: ['roue_g', 'roue_d'],
+  // Quai de la gare (`ferroviaire.py`), dessiné par `stationView.ts`.
+  gare: [],
   // Voies et trains (voir `docs/trains.md`) : les roues des trains tournent par groupes ; les bras d'attelage
   // automatique pivotent à leur traverse de tête pour rejoindre ceux du véhicule voisin (`trainView.ts`).
   rail_droit: [],
@@ -356,6 +361,33 @@ export const DROP_SHAPES = [
   'conteneur',
   'verre',
   'caisse',
+  // Matériaux (`objets.py`) et eau (icône de la ressource).
+  'caoutchouc',
+  'tige',
+  'moteur',
+  'moteur_renforce',
+  'eau',
+  // Équipement, munitions et armures (`blender/scripts/equipement.py`).
+  'boussole',
+  'sac_a_dos',
+  'capuche',
+  'pantalon',
+  'bottes',
+  'gants',
+  'sac_couchage',
+  'lit',
+  'chargeur_pistolet',
+  'chargeur_fusil',
+  'chargeur_sniper',
+  ...([1, 2, 4] as const).flatMap(
+    (n) =>
+      [
+        `armure${n}_casque`,
+        `armure${n}_plastron`,
+        `armure${n}_jambieres`,
+        `armure${n}_bottes`,
+      ] as const,
+  ),
 ] as const;
 const OBJET_NAMES = DROP_SHAPES.map((f) => `objet_${f}`);
 const MINERAL_NAMES = [
@@ -368,14 +400,18 @@ const MINERAL_NAMES = [
 ];
 
 /** Pièces de construction (`blender/scripts/construction.py`), utilisées par `buildingView.ts`. */
-export const CONSTRUCTION_NAMES = ['bois', 'pierre'].flatMap((m) => [
-  `mur_${m}`,
-  `dalle_${m}`,
-  `porte_${m}`,
-  `porte_${m}_battant`,
-  `escalier_${m}`,
-  ...['bas', 'fut', 'haut', 'seul'].map((p) => `pilier_${m}_${p}`),
-]);
+export const CONSTRUCTION_NAMES = [
+  ...['bois', 'pierre', 'beton', 'aluminium'].flatMap((m) => [
+    `mur_${m}`,
+    `dalle_${m}`,
+    // Pas de porte en béton dans le jeu.
+    ...(m === 'beton' ? [] : [`porte_${m}`, `porte_${m}_battant`]),
+    `escalier_${m}`,
+    ...['bas', 'fut', 'haut', 'seul'].map((p) => `pilier_${m}_${p}`),
+  ]),
+  // Icône de la porte de garage (la vraie est dessinée par segments dans `buildingView.ts`).
+  'porte_garage_aluminium',
+];
 
 const TERRA_NAMES = [
   ...new Set([

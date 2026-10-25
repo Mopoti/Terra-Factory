@@ -25,6 +25,9 @@ import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
+sys.path.insert(0, HERE)
+import outils as O  # noqa: E402  (formes du style doux)
+
 #: Teinte remplacée par la couleur de l'objet dans le jeu (magenta pur : impossible à confondre).
 TEINTE = 'teinte'
 T.PALETTE.setdefault(TEINTE, '#ff00ff')
@@ -324,10 +327,104 @@ def objet_tissu_vivant(coll, leger=True):
     _finir(coll, lot)
 
 
+# --- Matériaux au style doux (caoutchouc, tiges, moteurs) ------------------------------------------------------------
+
+def objet_caoutchouc(coll, leger=True):
+    """Caoutchouc : un rouleau de feuille de la teinte (bout en spirale plus clair) et deux pains arrondis."""
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'caoutchouc')
+    O._cyl(lot, TEINTE, (-0.26, 0.06, 0.13), (0.26, 0.06, 0.13), 0.13, n + 1)
+    for sx in (-1, 1):
+        for k, r in enumerate((0.1, 0.065, 0.03)):
+            O._cyl(lot, 'teinte_sombre', (sx * (0.262 + 0.002 * k), 0.06, 0.13), (sx * (0.266 + 0.002 * k), 0.06, 0.13), r, n)
+    O._rond(lot, TEINTE, (-0.12, -0.13, 0.05), (0.12, -0.13, 0.05), 0.1, 0.05, n, k=0.03)
+    O._rond(lot, TEINTE, (0.0, -0.17, 0.14), (0.2, -0.12, 0.14), 0.08, 0.04, n, k=0.025)
+    _finir(coll, lot)
+    T.adoucir(coll)
+
+
+def objet_tige(coll, leger=True):
+    """Tiges (fer, acier) : fagot de barres rondes de la teinte, serré par deux liens sombres."""
+    n = 2 if leger else 3
+    lot = T.Lot(coll, 'tiges')
+    rows = ((-0.075, 0.035), (0.0, 0.035), (0.075, 0.035), (-0.0375, 0.1), (0.0375, 0.1), (0.0, 0.165))
+    for i, (y, z) in enumerate(rows):
+        dx = 0.02 * ((i * 7) % 3 - 1)
+        O._cyl(lot, TEINTE, (-0.34 + dx, y, z), (0.34 + dx, y, z), 0.034, n)
+    for x in (-0.18, 0.18):
+        O._rond(lot, 'teinte_sombre', (x - 0.02, 0, 0.1), (x + 0.02, 0, 0.1), 0.135, 0.11, n + 1, k=0.006, r=0.08)
+    _finir(coll, lot)
+    T.adoucir(coll)
+
+
+def _moteur(coll, leger, renforce):
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'moteur')
+    r = 0.15 if not renforce else 0.17
+    z = r + 0.05
+    # Carcasse à ailettes (teinte), flasques, arbre, pattes de fixation, boîte à bornes.
+    O._cyl(lot, TEINTE, (-0.2, 0, z), (0.18, 0, z), r, n + 1)
+    m = 12 if leger else 18
+    for k in range(m):
+        a = 2 * math.pi * k / m
+        lot.cube(TEINTE, (0.34, 0.025, 0.03), (-0.01, (r + 0.01) * math.cos(a), z + (r + 0.01) * math.sin(a)), 0.005,
+                 Matrix.Rotation(a + math.pi / 2, 3, 'X'))
+    for x in (-0.22, 0.2):
+        O._cyl(lot, 'teinte_sombre', (x - 0.03, 0, z), (x + 0.03, 0, z), r * 0.95, n + 1)
+    O._cyl(lot, 'gris_clair', (0.23, 0, z), (0.34, 0, z), 0.03, n)
+    lot.cube('teinte_sombre', (0.06, 0.03, 0.025), (0.3, 0, z + 0.035), 0.005)  # clavette
+    for x in (-0.12, 0.1):
+        O._rond(lot, 'teinte_sombre', (x, -r * 0.9, 0.02), (x, r * 0.9, 0.02), 0.04, 0.02, n, k=0.008)
+        O._rond(lot, 'teinte_sombre', (x, 0, 0.02), (x, 0, z - r * 0.6), 0.03, 0.08, n, k=0.008)
+    O._rond(lot, 'teinte_sombre', (-0.05, 0, z + r), (-0.05, 0, z + r + 0.07), 0.06, 0.05, n, k=0.012)
+    if renforce:
+        # Moteur renforcé : flasques épaisses boulonnées, bande orange, ventilateur arrière.
+        for x in (-0.22, 0.2):
+            for k in range(6):
+                a = 2 * math.pi * k / 6
+                O._cyl(lot, 'gris_clair', (x + 0.03, (r * 0.8) * math.cos(a), z + (r * 0.8) * math.sin(a)),
+                       (x + 0.045, (r * 0.8) * math.cos(a), z + (r * 0.8) * math.sin(a)), 0.012, 2)
+        O._cyl(lot, 'orange', (-0.04, 0, z), (0.02, 0, z), r + 0.045, n + 1)
+        O._cyl(lot, 'teinte_sombre', (-0.3, 0, z), (-0.24, 0, z), r * 0.9, n + 1)
+    _finir(coll, lot)
+    O._brillant()
+    T.adoucir(coll)
+
+
+def objet_moteur(coll, leger=True):
+    """Moteur électrique : carcasse à ailettes de la teinte, flasques, arbre, pattes, boîte à bornes."""
+    _moteur(coll, leger, False)
+
+
+def objet_moteur_renforce(coll, leger=True):
+    """Moteur renforcé : plus gros, flasques boulonnées, bande orange, ventilateur à l'arrière."""
+    _moteur(coll, leger, True)
+
+
+def objet_eau(coll, leger=True):
+    """Eau (ressource du monde, icône) : flaque bombée de la teinte, reflets clairs, quelques galets au bord."""
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'eau')
+    O._loft(lot, 'pierre_sombre', [((0, 0, 0.0), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.34, 0.27, 0.25),
+                                   ((0, 0, 0.03), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.33, 0.26, 0.24)], n + 1)
+    O._loft(lot, TEINTE, [((0, 0, 0.02), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.3, 0.23, 0.22),
+                          ((0, 0, 0.05), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.28, 0.21, 0.2),
+                          ((0, 0, 0.06), Vector((1, 0, 0)), Vector((0, 1, 0)), 0.2, 0.14, 0.14)], n + 1)
+    for x, y, r in ((-0.08, 0.04, 0.05), (0.1, -0.06, 0.03)):
+        O._loft(lot, 'verre_clair', [((x, y, 0.061), Vector((1, 0, 0)), Vector((0, 1, 0)), r, r * 0.5, r * 0.5),
+                                     ((x, y, 0.064), Vector((1, 0, 0)), Vector((0, 1, 0)), r * 0.8, r * 0.4, r * 0.4)], 2)
+    rnd = random.Random(41)
+    for k in range(6):
+        a = k * 1.05 + 0.3
+        _galet(lot, 'pierre', (0.32 * math.cos(a), 0.25 * math.sin(a), 0.0), (0.05, 0.045, 0.04), rnd, 8)
+    _finir(coll, lot)
+    T.adoucir(coll)
+
+
 MODELES = {f.__name__: f for f in (
     objet_bois, objet_caillou, objet_minerai, objet_sable, objet_lingot, objet_plaque, objet_engrenage, objet_bobine,
     objet_fibre, objet_tissu, objet_baril, objet_science, objet_puce, objet_bloc, objet_conteneur, objet_verre,
-    objet_caisse, objet_carapace, objet_tissu_vivant)}
+    objet_caisse, objet_carapace, objet_tissu_vivant, objet_caoutchouc, objet_tige, objet_moteur, objet_moteur_renforce, objet_eau)}
 
 
 def construire(noms=None):

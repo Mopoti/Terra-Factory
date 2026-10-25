@@ -5,14 +5,49 @@
  */
 import * as THREE from 'three';
 import { itemById } from '../core/data/items';
-import { CARS, RAIL_ITEM, carKindOfItem } from '../core/data/trains';
+import { CARS, RAIL_ITEM, STATION_ITEM, carKindOfItem } from '../core/data/trains';
 import { VEHICLES, vehicleKindOfItem } from '../core/data/vehicles';
 import { machineForItem, type MachineType } from '../core/data/machines';
 import { MeshBuilder } from './meshBuilder';
-import { DROP_SHAPES, bakedModel, beltModel, modelFor, type BakedModel } from './models';
+import {
+  DROP_SHAPES,
+  ORE_FILE_NAMES,
+  bakedModel,
+  beltModel,
+  modelFor,
+  type BakedModel,
+} from './models';
 
 export type DropShape = (typeof DROP_SHAPES)[number];
 export { DROP_SHAPES };
+
+/** Équipement et munitions (`blender/scripts/equipement.py`) : forme propre. */
+const EQUIPMENT_SHAPES: Record<string, DropShape> = {
+  compass: 'boussole',
+  backpack: 'sac_a_dos',
+  hood: 'capuche',
+  trousers: 'pantalon',
+  boots: 'bottes',
+  gloves: 'gants',
+  sleeping_bag: 'sac_couchage',
+  bed: 'lit',
+  magazine: 'chargeur_pistolet',
+  rifle_magazine: 'chargeur_fusil',
+  sniper_magazine: 'chargeur_sniper',
+};
+/** Pièces des armures 1, 2 et 4 : une forme par palier et par emplacement (détails propres au palier). */
+const ARMOR_SHAPES = Object.fromEntries(
+  ([1, 2, 4] as const).flatMap((n) =>
+    (
+      [
+        ['head', 'casque'],
+        ['torso', 'plastron'],
+        ['legs', 'jambieres'],
+        ['feet', 'bottes'],
+      ] as const
+    ).map(([slot, shape]) => [`${n}_${slot}`, `armure${n}_${shape}` as DropShape]),
+  ),
+) as Record<string, DropShape>;
 
 /** Forme d'un objet du sac posé au sol (les machines ne sont pas ici : voir `dropMachine`). */
 export function dropShape(item: string): DropShape {
@@ -36,13 +71,33 @@ export function dropShape(item: string): DropShape {
   if (item === 'concrete_block') return 'bloc';
   if (item.startsWith('uranium_') || item === 'nuclear_waste') return 'conteneur';
   if (item === 'contaminated_glass') return 'verre';
+  if (item === 'rubber') return 'caoutchouc';
+  if (item === 'iron_rod' || item === 'steel_rod') return 'tige';
+  if (item === 'motor') return 'moteur';
+  if (item === 'motor_heavy') return 'moteur_renforce';
+  if (item === 'res_water') return 'eau';
+  const own = EQUIPMENT_SHAPES[item];
+  if (own) return own;
+  const armor = /^armor(1|2|4)_(head|torso|legs|feet)$/.exec(item);
+  if (armor) return ARMOR_SHAPES[`${armor[1]}_${armor[2]}`];
   return 'caisse';
 }
 
 /** Taille (m) de la plus grande dimension d'une machine posée au sol. */
 export const MINI_MACHINE_M = 0.45;
 
-const MATERIAL_FILE: Record<string, string> = { wood: 'bois', stone: 'pierre' };
+const MATERIAL_FILE: Record<string, string> = {
+  wood: 'bois',
+  stone: 'pierre',
+  concrete: 'beton',
+  aluminium: 'aluminium',
+};
+/** Ressources du monde (objets `res_*` du mode Créatif) : modèle du décor qu'elles posent. */
+const RESOURCE_MODELS: Record<string, string> = {
+  res_tree: 'arbre_prairie_1',
+  res_rock: 'rocher_prairie_1',
+  res_fiber_bush: 'buisson_prairie_1',
+};
 
 /**
  * Modèle maison propre à un objet qui n'est ni une machine ni une forme générique : véhicule, matériel roulant, rail,
@@ -54,9 +109,14 @@ export function iconModelName(item: string): string | null {
   const car = carKindOfItem(item);
   if (car) return CARS[car].model;
   if (item === RAIL_ITEM) return 'rail_droit';
+  if (item === STATION_ITEM) return 'gare';
+  if (item === 'piece_garage_aluminium') return 'porte_garage_aluminium';
+  if (RESOURCE_MODELS[item]) return RESOURCE_MODELS[item];
+  const ore = item.startsWith('res_') ? ORE_FILE_NAMES[item.slice(4)] : undefined;
+  if (ore) return `minerai_${ore}_1`;
   const pipe = /^machine_pipe(?:_(\d))?$/.exec(item);
   if (pipe) return `tuyau_droit_t${pipe[1] ?? '1'}`;
-  const piece = /^piece_(wall|door|stairs|slab|pillar)_(wood|stone)$/.exec(item);
+  const piece = /^piece_(wall|door|stairs|slab|pillar)_(wood|stone|concrete|aluminium)$/.exec(item);
   if (piece) {
     const mat = MATERIAL_FILE[piece[2]];
     return {
@@ -70,34 +130,8 @@ export function iconModelName(item: string): string | null {
   return null;
 }
 
-/** Objets sans modèle 3D pour l'instant (vêtements, munitions, outils de couchage…) : ils gardent la caisse. */
-export const NO_MODEL_ITEMS: readonly string[] = [
-  'train_station',
-  'compass',
-  'backpack',
-  'hood',
-  'trousers',
-  'boots',
-  'gloves',
-  'sleeping_bag',
-  'bed',
-  'magazine',
-  'rifle_magazine',
-  'sniper_magazine',
-  'rubber',
-  'iron_rod',
-  ...['concrete', 'aluminium'].flatMap((m) =>
-    ['wall', 'slab', 'stairs', 'pillar'].map((t) => `piece_${t}_${m}`),
-  ),
-  'piece_door_aluminium',
-  'piece_garage_aluminium',
-  'steel_rod',
-  'motor',
-  'motor_heavy',
-  ...['armor1', 'armor2', 'armor4'].flatMap((a) =>
-    ['head', 'torso', 'legs', 'feet'].map((s) => `${a}_${s}`),
-  ),
-];
+/** Objets sans modèle 3D (ils gardent la caisse) : aucun pour l'instant, chaque objet a sa forme ou son modèle. */
+export const NO_MODEL_ITEMS: readonly string[] = [];
 
 /** Outils et armes tenus : fichier du modèle et façon de le charger. */
 export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string }> = {

@@ -2565,8 +2565,9 @@ export function startGameView(
   }
   /** Plateau de chargement (centre, taille en m) des véhicules à benne : les icônes des ressources y sont posées. */
   const CARGO_BED = {
-    van: { x: 0, y: 0.68, z: -0.55, w: 1.1, d: 1.6 },
-    cart: { x: 0, y: 0.58, z: 0.1, w: 0.8, d: 1.1 },
+    // Plateaux des modèles `camionnette` (benne à l'arrière) et `charrette` (caisse à l'avant, brancards derrière).
+    van: { x: 0, y: 0.72, z: -0.75, w: 1.1, d: 1.6 },
+    cart: { x: 0, y: 0.6, z: 0.47, w: 0.8, d: 1.1 },
   } as const;
   const CARGO_ICON_M = 0.36;
   const CARGO_MAX_ICONS = 12;
