@@ -906,6 +906,7 @@
     "machine_turret_heavy",
     "machine_washer",
     "motor",
+    "piece_garage_aluminium",
     "pistol",
     "rifle",
     "science_pack",
@@ -963,6 +964,7 @@
     "machine_turret_laser",
     "machine_waterwheel",
     "motor",
+    "piece_garage_aluminium",
     "rifle",
     "science_pack",
     "silicon_chip",
@@ -1979,6 +1981,7 @@
    ],
    "usedIn": [
     "machine_centrifuge",
+    "piece_garage_aluminium",
     "train_locomotive",
     "vehicle_tank",
     "vehicle_van"
@@ -2795,9 +2798,7 @@
     "machine_fusion_reactor",
     "uranium_rod"
    ],
-   "issues": [
-    "Ingrédient « Lingot d'aluminium » n'est pas encore disponible : débloqué par « Aluminium »"
-   ]
+   "issues": []
   },
   "uranium_enriched": {
    "name": "Uranium enrichi",
@@ -4482,11 +4483,37 @@
    ],
    "usedIn": [
     "piece_door_aluminium",
+    "piece_garage_aluminium",
     "piece_pillar_aluminium",
     "piece_slab_aluminium",
     "piece_stairs_aluminium",
     "piece_wall_aluminium"
    ],
+   "issues": []
+  },
+  "piece_garage_aluminium": {
+   "name": "Porte de garage en aluminium",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 14,
+      "motor_heavy": 1,
+      "iron_gear": 4,
+      "copper_wire": 6
+     },
+     "out": {
+      "piece_garage_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
    "issues": [
     "Pas de modèle 3D propre"
    ]
@@ -4686,7 +4713,8 @@
     "science_pack_3": 200
    },
    "requires": [
-    "plastic_3"
+    "plastic_3",
+    "aluminium_3"
    ],
    "unlocks": [
     "machine_centrifuge",
@@ -4754,7 +4782,8 @@
     "piece_slab_aluminium",
     "piece_stairs_aluminium",
     "piece_door_aluminium",
-    "piece_pillar_aluminium"
+    "piece_pillar_aluminium",
+    "piece_garage_aluminium"
    ]
   },
   "fusion_5": {
