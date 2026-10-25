@@ -1047,6 +1047,8 @@
   "item.vehicle_tank": "Tank",
   "item.vehicle_buggy": "Buggy",
   "vehicle.mount": "Vehicle: F to get in / out, Shift + F to pack it",
+  "item.vehicle_cart": "Handcart",
+  "vehicle.cartLoad": "Cart: {n} items (F to let go, Shift + F to pick it up)",
   "vehicle.fuel": "Fuel: {v} s",
   "vehicle.noFuel": "Out of fuel (coal or wood in your bag).",
   "vehicle.placed": "Vehicle placed: F to get in.",

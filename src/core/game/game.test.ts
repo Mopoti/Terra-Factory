@@ -1283,3 +1283,19 @@ describe('difficulté : coûts multipliés', () => {
     expect(before.iron_ingot - s.inventory.iron_ingot).toBe(tech.cost.iron_ingot * 2);
   });
 });
+
+describe('charrette à bras', () => {
+  it('la charrette à bras : pose, chargement, rangement avec son contenu', () => {
+    const s = new GameState({ inventory: {} });
+    const recipe = itemById('vehicle_cart').recipe;
+    expect(recipe).toEqual({ wood: 12, fiber: 2 });
+    s.inventory.vehicle_cart = 1;
+    const v = s.placeVehicle(3, 4, 0, 'cart');
+    expect(v?.kind).toBe('cart');
+    expect(s.inventory.vehicle_cart ?? 0).toBe(0);
+    v!.slots.push({ item: 'stone', count: 5 });
+    expect(s.pickUpVehicle(v!.id)).toBe(true);
+    expect(s.inventory.vehicle_cart).toBe(1);
+    expect(s.inventory.stone).toBe(5);
+  });
+});

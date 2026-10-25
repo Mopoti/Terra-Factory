@@ -1,5 +1,5 @@
-/** Les véhicules que le joueur conduit : buggy, quad et char (modèles dans `blender/scripts/vehicules.py`). */
-export const VEHICLE_KINDS = ['buggy', 'quad', 'tank'] as const;
+/** Les véhicules que le joueur conduit : buggy, quad et char (modèles dans `blender/scripts/vehicules.py`), et la charrette à bras qu'il pousse. */
+export const VEHICLE_KINDS = ['buggy', 'quad', 'tank', 'cart'] as const;
 export type VehicleKind = (typeof VEHICLE_KINDS)[number];
 
 export interface VehicleSpec {
@@ -16,6 +16,8 @@ export interface VehicleSpec {
   /** Rayon (m) de la sphère de visée autour du centre du véhicule, à `aimHeight` du sol. */
   aimRadius: number;
   aimHeight: number;
+  /** Véhicule qu'on pousse à pied devant soi (charrette) : sans carburant, sans siège, il suit le joueur. */
+  pushed?: boolean;
 }
 
 export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
@@ -47,6 +49,17 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     runOver: { radius: 2.6, damage: 80 },
     aimRadius: 2.0,
     aimHeight: 1.0,
+  },
+  // Charrette à bras en bois, roues en bois (pas de caoutchouc au début) : plus lente que la marche, sans moteur.
+  cart: {
+    item: 'vehicle_cart',
+    model: 'charrette',
+    speedFactor: 0.8,
+    burnKw: 0,
+    runOver: { radius: 0, damage: 0 },
+    aimRadius: 0.9,
+    aimHeight: 0.5,
+    pushed: true,
   },
 };
 

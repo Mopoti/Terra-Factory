@@ -1047,6 +1047,8 @@
   "item.vehicle_tank": "Char",
   "item.vehicle_buggy": "Buggy",
   "vehicle.mount": "Véhicule : F pour monter / descendre, Maj + F pour le ranger",
+  "item.vehicle_cart": "Charrette à bras",
+  "vehicle.cartLoad": "Charrette : {n} objets (F pour la lâcher, Maj + F pour la ranger)",
   "vehicle.fuel": "Carburant : {v} s",
   "vehicle.noFuel": "Plus de carburant (charbon ou bois dans le sac).",
   "vehicle.placed": "Véhicule posé : F pour monter.",

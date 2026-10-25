@@ -2248,7 +2248,10 @@ export function startGameView(
     const len = Math.hypot(forward, right);
     // Au volant d'un buggy : bien plus vite tant qu'il reste du carburant (on en prend dans le sac), très lent sinon.
     const driving =
-      mounted !== null && (mounted.fuel > 0 || options.state.refuelVehicle(mounted) > 0);
+      mounted !== null &&
+      (VEHICLES[mounted.kind].pushed ||
+        mounted.fuel > 0 ||
+        options.state.refuelVehicle(mounted) > 0);
     // Sans carburant le buggy ne bouge plus (on le quitte avec la touche d'utilisation).
     if (mounted && !driving) {
       if (!buggyWarned) options.onMessage?.(t('vehicle.noFuel'));
@@ -2257,7 +2260,8 @@ export function startGameView(
     }
     buggyWarned = false;
     const base = mounted ? VEHICLES[mounted.kind].speedFactor : 1;
-    if (mounted && driving) mounted.fuel = Math.max(0, mounted.fuel - dt);
+    if (mounted && driving && !VEHICLES[mounted.kind].pushed)
+      mounted.fuel = Math.max(0, mounted.fuel - dt);
     const speed =
       WALK_SPEED_M_S *
       base *
@@ -2361,10 +2365,50 @@ export function startGameView(
     });
     return g;
   }
+  /** Charrette à bras de secours (tant qu'il n'y a pas de modèle maison) : plateau, ridelles, 2 roues pleines, 2 brancards. */
+  const cartWood = new THREE.MeshStandardMaterial({ color: 0x9a6a3a });
+  const cartDark = new THREE.MeshStandardMaterial({ color: 0x6e4a26 });
+  function makeCart(): THREE.Group {
+    const g = new THREE.Group();
+    const add = (m: THREE.Mesh, x: number, y: number, z: number): THREE.Mesh => {
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      g.add(m);
+      return m;
+    };
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 1.2), cartWood), 0, 0.5, 0.1);
+    for (const x of [-0.45, 0.45])
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 1.2), cartWood), x, 0.68, 0.1);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.06), cartWood), 0, 0.68, 0.7);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 0.06), cartWood), 0, 0.63, -0.5);
+    const wheels: THREE.Mesh[] = [];
+    for (const x of [-0.5, 0.5]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.07, 14), cartDark);
+      wheel.rotation.z = Math.PI / 2;
+      wheels.push(add(wheel, x, 0.36, 0.2));
+    }
+    // Les brancards partent vers l'arrière (côté du joueur, qui pousse).
+    for (const x of [-0.35, 0.35]) {
+      const bar = add(
+        new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.1), cartWood),
+        x,
+        0.55,
+        -0.95,
+      );
+      bar.rotation.x = -0.12;
+    }
+    g.userData.wheels = wheels;
+    return g;
+  }
   function vehicleView(kind: VehicleKind): VehicleView {
     const model = bakedModel(VEHICLES[kind].model);
     const own = model ? vehicleFromModel(model, propsMaterial) : null;
-    return { group: own ? own.group : makeBuggy(), own, x: NaN, z: NaN };
+    return {
+      group: own ? own.group : kind === 'cart' ? makeCart() : makeBuggy(),
+      own,
+      x: NaN,
+      z: NaN,
+    };
   }
   const vehicleBox = document.createElement('div');
   vehicleBox.className = 'ammo-box';
@@ -2625,6 +2669,8 @@ export function startGameView(
   const MOUNT_REACH_M = 6;
   const BOARD_SPEED = WALK_SPEED_M_S * 1.15;
   const BOARD_ARRIVE_M = 0.9;
+  /** Distance (m) entre le joueur et le centre de la charrette qu'il pousse. */
+  const CART_AHEAD_M = 1.5;
   /** Véhicule vers lequel le joueur marche pour y monter. */
   let boarding: Vehicle | null = null;
   const vehicleReach = (v: Vehicle): number =>
@@ -2678,10 +2724,16 @@ export function startGameView(
     if (dist <= BOARD_ARRIVE_M) {
       boarding = null;
       mounted = v;
+      facing = v.yaw;
+      if (VEHICLES[v.kind].pushed) {
+        // Charrette : le joueur prend les brancards, derrière elle, et la pousse devant lui.
+        playerX = v.x - Math.sin(v.yaw) * CART_AHEAD_M;
+        playerZ = v.z - Math.cos(v.yaw) * CART_AHEAD_M;
+        return;
+      }
       // Le joueur s'assoit sur le siège ; le véhicule ne bouge pas.
       playerX = v.x;
       playerZ = v.z;
-      facing = v.yaw;
       if (v.fuel <= 0 && options.state.refuelVehicle(v) <= 0)
         options.onMessage?.(t('vehicle.noFuel'));
       return;
@@ -2713,8 +2765,13 @@ export function startGameView(
         vehicleMeshes.set(v.id, view);
       }
       // Les roues tournent de la distance parcourue vers l'avant (en arrière : dans l'autre sens).
-      if (view.own && Number.isFinite(view.x))
-        rollWheels(view.own, (v.x - view.x) * Math.sin(v.yaw) + (v.z - view.z) * Math.cos(v.yaw));
+      if (Number.isFinite(view.x)) {
+        const rolled = (v.x - view.x) * Math.sin(v.yaw) + (v.z - view.z) * Math.cos(v.yaw);
+        if (view.own) rollWheels(view.own, rolled);
+        else
+          for (const w of (view.group.userData.wheels as THREE.Mesh[] | undefined) ?? [])
+            w.rotateOnAxis(new THREE.Vector3(0, 1, 0), rolled / 0.36);
+      }
       view.x = v.x;
       view.z = v.z;
       view.group.position.set(v.x, 0, v.z);
@@ -2825,8 +2882,9 @@ export function startGameView(
     updateResGhost(resId);
     placeWasDown = down;
     if (mounted) {
-      mounted.x = playerX;
-      mounted.z = playerZ;
+      const pushed = VEHICLES[mounted.kind].pushed;
+      mounted.x = playerX + (pushed ? Math.sin(facing) * CART_AHEAD_M : 0);
+      mounted.z = playerZ + (pushed ? Math.cos(facing) * CART_AHEAD_M : 0);
       mounted.yaw = facing;
       // Écraser les ennemis sur la route.
       runOverCooldown = Math.max(0, runOverCooldown - dt);
@@ -2839,7 +2897,9 @@ export function startGameView(
         }
       }
       vehicleBox.hidden = false;
-      vehicleBox.textContent = t('vehicle.fuel', { v: String(Math.round(mounted.fuel)) });
+      vehicleBox.textContent = pushed
+        ? t('vehicle.cartLoad', { n: String(mounted.slots.reduce((n, x) => n + x.count, 0)) })
+        : t('vehicle.fuel', { v: String(Math.round(mounted.fuel)) });
     } else vehicleBox.hidden = true;
   }
 
@@ -3863,7 +3923,7 @@ export function startGameView(
       let kind: EngineKind | null = null;
       let speed = 0;
       let effort = 0;
-      if (mounted && mounted.fuel > 0 && !paused) {
+      if (mounted && mounted.kind !== 'cart' && mounted.fuel > 0 && !paused) {
         kind = mounted.kind;
         speed = Math.min(1, motion.speed / (WALK_SPEED_M_S * VEHICLES[mounted.kind].speedFactor));
         effort = input.isActionActive('forward') || input.isActionActive('backward') ? 1 : 0;

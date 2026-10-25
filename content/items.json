@@ -1382,6 +1382,18 @@
       }
     },
     {
+      "id": "vehicle_cart",
+      "stack": 1,
+      "category": "logistics",
+      "weightKg": 15,
+      "volumeL": 60,
+      "color": "#9a6a3a",
+      "recipe": {
+        "wood": 12,
+        "fiber": 2
+      }
+    },
+    {
       "id": "vehicle_tank",
       "stack": 1,
       "category": "equipment",

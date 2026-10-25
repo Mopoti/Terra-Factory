@@ -369,3 +369,10 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Moteur renforcé** (`motor_heavy`, palier 3) : fait au **Constructeur** (recette `motor_heavy`) : 1 moteur + 2 caoutchoucs + 2 plaques d'acier, 8 s. Débloqué avec `plastic_3`.
 - **Utilisation** (recettes modifiées) : moteur dans la pompe, la pompe à pétrole, la raffinerie, la presse à plastique, le Quad et le Buggy (qui passent sous la technologie Vapeur) ; moteur renforcé dans la centrifugeuse, le Char (+ 4 caoutchoucs) et la locomotive (qui passent sous `plastic_3`). Évite la boucle pétrole → caoutchouc → machine à pétrole : seules les machines d'après le plastique demandent le moteur renforcé.
 - À designer : modèles 3D de `motor`, `motor_heavy` et `rubber` (ils s'affichent en caisse), et l'équilibrage des quantités.
+
+## Charrette à bras (25 octobre)
+
+- Objet `vehicle_cart` (onglet Logistique, dès le départ) : 12 bois + 2 fibres. Roues en bois : pas de caoutchouc, donc aucun pneu.
+- Véhicule `cart` (`VEHICLES.cart`, `pushed: true`) : sans carburant ni siège. Clic gauche sur le terrain pour la poser, F près d'elle pour prendre les brancards : le joueur reste à pied, derrière, et la pousse devant lui (1,5 m) à 0,8 × la marche. Clic gauche dessus : son coffre (capacité d'un coffre en bois). F pour la lâcher, Maj + F pour la ranger (le contenu revient dans le sac).
+- Modèle provisoire en boîtes dans `gameView.ts` (`makeCart`, roues qui tournent) ; modèle Blender `charrette.glb` à faire (il remplacera les boîtes tout seul).
+- Pistes : charrette à bras renforcée (roues en caoutchouc), tractée par le quad, charge qui ralentit.
