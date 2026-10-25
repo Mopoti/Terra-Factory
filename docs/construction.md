@@ -138,3 +138,11 @@ Voir `docs/construction-refonte.md` : une seule visée pour toutes les pièces (
 - **Piliers** : on enlève les piliers de soutènement posés automatiquement. Le pilier devient une pièce posée à la main (recette : 4 bois pour le pilier en bois, 4 pierres pour celui en pierre).
 - **Portée** : sans mur dessous, une dalle ne peut pas s'étendre au-delà de **5 m** d'un appui. Au-delà, le patron devient rouge (rien ne supporte le poids) : le joueur ajoute un mur ou un pilier pour continuer à construire. (Remplace `pillarsFor` / `pillarsForFace` et la valeur `supportSpanM` de `buildings.json`.)
 - **Matériaux** : bois → pierre → **béton** (technologie Construction T2, bloc de béton) → **aluminium** (nouvelle technologie Aluminium T3, après Plastique : lingot et plaque d'aluminium ; le zamak et l'uranium restent en Fission T4). Mêmes tailles de pièces ; coûts proposés : mur 2, dalle 2, escalier 4, porte 8 unités pour le béton ; 1, 1, 2, 3 plaques pour l'aluminium.
+
+## Faits (25 octobre) : appuis à 5 m, piliers à la main, béton, aluminium, portes doubles
+
+- **Appuis** (`isSupported`, `support.ts`) : plus de pilier automatique (sauf sous les tapis surélevés). Une dalle ou un escalier en hauteur doit avoir un mur au sol ou un pilier à moins de **5 m** (`supportSpanM`) ; un mur d'étage doit reposer sur un mur, une dalle soutenue ou toucher un mur soutenu ; un pilier d'étage, sur une dalle soutenue. Sinon `GameState.place` renvoie `unsupported` et le patron est **rouge** (`PlanStatus 'unsupported'`, message « Rien ne soutient cette pièce »).
+- **Piliers** : pièces posées à la main, recette 4 unités (bois, pierre, béton ; 2 plaques d'aluminium).
+- **Béton** (technologie Construction T2) : mur, dalle, escalier, pilier ; **aluminium** (technologie Aluminium T3, après Plastique) : mur, dalle, escalier, battant de porte, pilier ; nouvel onglet « Construction lourde ». Plaque d'aluminium : estampeuse, 2 lingots → 1 (moule de plaque). Fission T4 exige maintenant Aluminium T3. Modèles 3D : formes simples colorées pour l'instant.
+- **Portes** : une porte = 2 battants de 50 cm (1 m de large) posés ensemble, qui s'ouvrent ensemble ; chaque battant coûte un objet « battant de porte ». Les gonds du battant droit sont de l'autre côté.
+- **Touche E** : « Activer » (portes) ; elle n'ouvre plus les fenêtres des machines (clic ou F).

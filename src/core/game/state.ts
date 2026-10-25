@@ -71,7 +71,7 @@ import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from 
 import { recipeById } from '../data/recipes';
 import { resourceById } from '../data/resources';
 import { isFree, pieceKey, type PiecePos } from '../build/pieces';
-import { pillarsFor, pillarsForFace } from '../build/support';
+import { isSupported, pillarsForFace } from '../build/support';
 import { detectRooms, type Room } from '../build/rooms';
 import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import {
@@ -795,20 +795,21 @@ export class GameState {
   }
 
   /** Pose une pièce (consomme 1 objet du sac). Refuse si l'emplacement est pris ou si le sac n'en a pas. */
-  place(kind: PieceKind, pos: PiecePos, rotation = 0): 'ok' | 'occupied' | 'missing' | 'invalid' {
+  place(
+    kind: PieceKind,
+    pos: PiecePos,
+    rotation = 0,
+  ): 'ok' | 'occupied' | 'missing' | 'invalid' | 'unsupported' {
     const def = pieceDef(kind);
     // Une dalle devient un sol ou un plafond selon l'emplacement.
     const placed = resolveKind(kind, pos.slot);
     if (slotOf(pieceDef(placed).type) !== pos.slot) return 'invalid';
     if (!isFree(this.changes.pieces, placed, pos)) return 'occupied';
     if (!this.canAfford(kind)) return 'missing';
+    // Pièce en hauteur sans appui à moins de 5 m : refusée (un mur ou un pilier doit la soutenir).
+    if (!isSupported(this.changes.pieces, placed, pos)) return 'unsupported';
     this.inventory = remove(this.inventory, def.item, 1).inventory;
     this.changes.pieces[pieceKey(pos)] = placed;
-    // Pièce en hauteur à plus de 2,5 m d'un support : des piliers sont posés automatiquement (sans coût).
-    Object.assign(
-      this.changes.pieces,
-      pillarsFor(this.changes.pieces, pos, pieceDef(placed).material),
-    );
     if (rotation % 4 !== 0) this.changes.rotations[pieceKey(pos)] = ((rotation % 4) + 4) % 4;
     this.roomCache = null;
     this.emit({ type: 'build' });

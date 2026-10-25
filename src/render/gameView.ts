@@ -700,7 +700,9 @@ export function startGameView(
         ? `<div>${t('build.wallHeight', { n: String(wallHeight), cm: String(wallHeight * 50) })}</div>`
         : '';
     const ok = lastPlan.filter((i) => i.status === 'ok').length;
-    const lack = lastPlan.filter((i) => i.status === 'lack' || i.status === 'far').length;
+    const lack = lastPlan.filter(
+      (i) => i.status === 'lack' || i.status === 'far' || i.status === 'unsupported',
+    ).length;
     const plan = dragStart
       ? `<div>${t('build.plan', { ok: String(ok), lack: String(lack) })}</div>`
       : '';
@@ -785,7 +787,7 @@ export function startGameView(
     const start = dragStart ?? aim;
     const kind = resolveKind(buildKind(), start.pos.slot);
     const level = start.pos.level;
-    if (start.pos.slot === 'stairs') return [aim.pos];
+    if (start.pos.slot === 'stairs' || start.pos.slot === 'pillar') return [aim.pos];
     if (start.pos.slot !== 'edge') {
       // Dalle : un seul emplacement avant d'appuyer ; en glissant, un rectangle dans le plan de la face de départ.
       if (!dragStart) return [aim.pos];
@@ -875,6 +877,7 @@ export function startGameView(
         .sort((p, q) => (p.seq ?? 0) - (q.seq ?? 0))
         .map((i) => i.pos);
       const lacking = lastPlan.filter((i) => i.status === 'lack').length;
+      const unsupported = lastPlan.filter((i) => i.status === 'unsupported').length;
       const placed = options.state.placeMany(kind, ok, buildRot ?? 0);
       if (placed > 0) {
         const def = pieceDef(kind);
@@ -891,9 +894,11 @@ export function startGameView(
           ? ''
           : lacking > 0
             ? t('build.missing')
-            : lastPlan.length > 0
-              ? t('build.tooFar')
-              : '';
+            : unsupported > 0
+              ? t('build.unsupported')
+              : lastPlan.length > 0
+                ? t('build.tooFar')
+                : '';
       dragStart = null;
       lastPlan = [];
       renderBuildHud();

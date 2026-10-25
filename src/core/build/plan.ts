@@ -7,6 +7,7 @@ import {
   type PieceKind,
 } from '../data/buildings';
 import { isFree, pieceKey, posFor, slabPos, type PiecePos, type Pieces } from './pieces';
+import { isSupported } from './support';
 
 /** Centre d'une position (m), pour mesurer la portée. */
 export function posCenter(pos: PiecePos): { x: number; z: number } {
@@ -96,7 +97,7 @@ export function planLine(
   return out;
 }
 
-export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied';
+export type PlanStatus = 'ok' | 'lack' | 'far' | 'occupied' | 'unsupported';
 export interface PlanItem {
   pos: PiecePos;
   status: PlanStatus;
@@ -119,6 +120,8 @@ export function evaluatePlan(
   let left = stock;
   let seq = 0;
   const taken = new Set<string>();
+  // Les pièces déjà retenues dans ce tracé comptent comme appui pour les suivantes (un mur monte bloc par bloc).
+  const trial: Pieces = Object.create(pieces) as Pieces;
   const items = positions.map((pos): PlanItem => {
     const key = pieceKey(pos);
     if (!isFree(pieces, kind, pos) || taken.has(key))
@@ -127,6 +130,9 @@ export function evaluatePlan(
     if (Math.hypot(c.x - player.x, c.z - player.z) > reachM)
       return { pos, status: 'far' as PlanStatus };
     if (left <= 0) return { pos, status: 'lack' as PlanStatus };
+    const placed = resolveKind(kind, pos.slot);
+    if (!isSupported(trial, placed, pos)) return { pos, status: 'unsupported' as PlanStatus };
+    trial[key] = placed;
     left--;
     taken.add(key);
     return { pos, status: 'ok' as PlanStatus, seq: seq++ };

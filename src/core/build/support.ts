@@ -10,10 +10,10 @@ import {
 import { pieceKey, slabAt, type PiecePos, type Pieces } from './pieces';
 
 /**
- * Supports de construction. Aucune pièce n'est refusée faute d'appui, mais **une pièce en hauteur doit avoir un
- * support à moins de `SUPPORT_SPAN_M` (2,5 m)** ; sinon un **pilier de soutènement** est posé automatiquement
- * sous elle, et il compte à son tour comme support. Un support est une colonne qui descend jusqu'au sol :
- * un mur (blocs empilés, ou posés sur une dalle elle-même soutenue), ou un pilier.
+ * Supports de construction. **Une pièce en hauteur doit avoir un support à moins de `SUPPORT_SPAN_M` (5 m)** :
+ * sinon elle ne peut pas être posée (patron rouge) tant que le joueur n'a pas ajouté un mur ou un pilier à la main.
+ * Un support est une colonne qui descend jusqu'au sol : un mur (blocs empilés, ou posés sur une dalle elle-même
+ * soutenue), ou un pilier. Seuls les tapis surélevés reçoivent encore des piliers automatiques (`pillarsForFace`).
  *
  * Positions en « faces » : la face `f` est à `f` blocs de 50 cm au-dessus du sol (le sol de l'étage `n` est à la face `5 n`).
  */
@@ -166,46 +166,32 @@ export class SupportMap {
 }
 
 /**
- * Piliers à ajouter pour que la pièce qu'on vient de poser soit soutenue : un pilier sous la pièce, et au besoin
- * d'autres en dessous jusqu'au sol ou jusqu'à une dalle soutenue. Renvoie `clé -> matériau`.
+ * La pièce posée à `pos` serait-elle soutenue ? Une dalle ou un escalier en hauteur a besoin d'un appui (mur qui
+ * descend au sol ou pilier) à moins de `SUPPORT_SPAN_M` ; un mur en hauteur, d'un mur dessous, d'une dalle soutenue ou
+ * d'un mur soutenu contre lui ; un pilier, du sol ou d'une dalle soutenue. Sans appui, la pose est refusée : le joueur
+ * ajoute un mur, ou un pilier à la main.
  */
-export function pillarsFor(
-  pieces: Pieces,
-  pos: PiecePos,
-  material: Material,
-): Record<string, PieceKind> {
-  const pillar = kindFor('pillar', material);
-  const out: Record<string, PieceKind> = {};
-  const map = new SupportMap(pieces);
-  const column = (face: number, gx: number, gz: number): void => {
-    let top = face;
-    for (let guard = 0; top > 0 && guard < 12; guard++) {
-      const key = pillarKey(top, gx, gz);
-      if (!pieces[key]) out[key] = pillar;
-      const bottom = (Math.ceil(top / L) - 1) * L;
-      if (bottom === 0 || map.slabHeld(bottom, gx, gz)) return;
-      top = bottom;
-    }
-  };
+export function isSupported(pieces: Pieces, kind: PieceKind, pos: PiecePos): boolean {
+  // La pièce est essayée en place sans copier tout le monde : les autres pièces restent dans le prototype.
+  const trial: Pieces = Object.create(pieces) as Pieces;
+  trial[pieceKey(pos)] = kind;
+  const map = new SupportMap(trial);
   if (pos.slot === 'floor' || pos.slot === 'ceiling') {
     const face = pos.slot === 'floor' ? pos.level * L : pos.level * L + (pos.layer ?? L - 1) + 1;
-    if (face > 0 && !map.supportNear(face, pos.gx, pos.gz)) column(face, pos.gx, pos.gz);
-  } else if (pos.slot === 'stairs') {
-    const face = pos.level * L + (pos.layer ?? 0);
-    if (face > 0 && !map.slabHeld(face, pos.gx, pos.gz) && !map.supportNear(face, pos.gx, pos.gz))
-      column(face, pos.gx, pos.gz);
-  } else if (pos.slot === 'edge') {
-    const b = pos.level * L + (pos.layer ?? 0);
-    const e: Edge = { level: pos.level, gx: pos.gx, gz: pos.gz, axis: pos.axis ?? 'x' };
-    if (b > 0 && !map.wallGrounded(e, b)) {
-      // Mur en l'air : un pilier dans la case voisine (celle sans dalle) le soutient.
-      const [cx, cz] =
-        edgeCells(e).find(([x, z]) => !slabAt(pieces, b, x, z)) ??
-        (edgeCells(e)[0] as [number, number]);
-      column(b, cx, cz);
-    }
+    return face <= 0 || map.supportNear(face, pos.gx, pos.gz);
   }
-  return out;
+  if (pos.slot === 'stairs') {
+    const face = pos.level * L + (pos.layer ?? 0);
+    return face <= 0 || map.slabHeld(face, pos.gx, pos.gz) || map.supportNear(face, pos.gx, pos.gz);
+  }
+  if (pos.slot === 'edge') {
+    const b = pos.level * L + (pos.layer ?? 0);
+    if (b <= 0) return true;
+    return map.wallGrounded({ level: pos.level, gx: pos.gx, gz: pos.gz, axis: pos.axis ?? 'x' }, b);
+  }
+  // Pilier : debout sur le sol, ou sur une dalle soutenue / un pilier soutenu.
+  const top = pos.level * L + (pos.layer ?? L - 1) + 1;
+  return map.pillarGrounded(top, pos.gx, pos.gz);
 }
 
 /**

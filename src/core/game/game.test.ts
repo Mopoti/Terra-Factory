@@ -449,10 +449,13 @@ describe('barre de raccourcis et orientation', () => {
 });
 
 describe('escaliers', () => {
-  it('une marche se pose n’importe où, y compris dans le vide ; une seule par cube', () => {
+  it('une marche se pose au sol ; en hauteur il faut un appui ; une seule par cube', () => {
     const s = new GameState({ inventory: { piece_stairs_wood: 5 } });
     expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 0, undefined, 0, 0))).toBe('ok');
-    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 3, 3, undefined, 1, 0))).toBe('ok');
+    // Dans le vide (sans mur ni pilier à moins de 5 m) : refusée.
+    expect(s.place('stairs_wood', posFor('stairs_wood', 0, 30, 30, undefined, 1, 0))).toBe(
+      'unsupported',
+    );
     expect(s.place('stairs_wood', posFor('stairs_wood', 0, 0, 0, undefined, 0, 2))).toBe(
       'occupied',
     );
@@ -925,7 +928,9 @@ describe('visée libre : une seule règle pour toutes les pièces', () => {
     expect(`${hit?.pos.gx},${hit?.pos.gz}`).not.toBe('5,5,0');
   });
   it('une dalle du sol d’un étage et le plafond du dernier bloc de l’étage du dessous sont la même face', () => {
-    const s = new GameState({ inventory: { piece_slab_stone: 3 } });
+    const s = new GameState({ inventory: { piece_slab_stone: 3, piece_wall_stone: 5 } });
+    // Un mur au sol soutient la dalle de l'étage 1.
+    for (let l = 0; l < 5; l++) s.place('wall_stone', posFor('wall_stone', 0, 0, 0, 'x', l));
     expect(s.place('slab_stone', posFor('floor_stone', 1, 0, 0))).toBe('ok');
     expect(s.place('slab_stone', posFor('ceiling_stone', 0, 0, 0, undefined, 4))).toBe('occupied');
   });
@@ -1324,5 +1329,26 @@ describe('porte à deux battants', () => {
       6,
     );
     expect(items.every((i) => i.status === 'occupied')).toBe(true);
+  });
+});
+
+describe('piliers posés à la main', () => {
+  it('se visent au sol, coûtent 4 unités, soutiennent une dalle en hauteur', () => {
+    expect(itemById('piece_pillar_wood').recipe).toEqual({ wood: 4 });
+    expect(itemById('piece_pillar_stone').recipe).toEqual({ stone: 4 });
+    const aim = aimBuild(
+      { x: 0.25, y: 1.6, z: -2 },
+      { x: 0, y: -0.5, z: 1 },
+      {},
+      'pillar_stone',
+      0,
+      10,
+    );
+    expect(aim?.pos.slot).toBe('pillar');
+    const s = new GameState({ inventory: { piece_pillar_stone: 1, piece_slab_stone: 2 } });
+    const high = posFor('floor_stone', 1, 20, 20);
+    expect(s.place('slab_stone', high)).toBe('unsupported');
+    expect(s.place('pillar_stone', posFor('pillar_stone', 0, 20, 20))).toBe('ok');
+    expect(s.place('slab_stone', high)).toBe('ok');
   });
 });

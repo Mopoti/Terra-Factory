@@ -430,6 +430,7 @@
   "build.piece.ceiling": "Plafond",
   "build.help": "{@rotate} : fixer / pivoter de 90° · {@levelUp} / {@levelDown} : étage · {@layerUp} / {@layerDown} : hauteur du mur (vue du dessus) · {@interact} maintenu : surface ou pan de mur · {@remove} maintenu : démolir · même case : ranger",
   "build.missing": "Objet absent du sac : fabrique-le dans l'inventaire",
+  "build.unsupported": "Rien ne soutient cette pièce (5 m max) : ajoute un mur ou un pilier",
   "build.occupied": "Emplacement occupé",
   "build.tooFar": "Trop loin",
   "build.rooms": "Pièces fermées : {n}",
