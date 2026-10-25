@@ -290,6 +290,20 @@
       "color": "#c97a3a"
     },
     {
+      "id": "iron_rod",
+      "stack": 100,
+      "weightKg": 0.15,
+      "volumeL": 0.15,
+      "color": "#8d939c"
+    },
+    {
+      "id": "steel_rod",
+      "stack": 100,
+      "weightKg": 0.15,
+      "volumeL": 0.15,
+      "color": "#5d6670"
+    },
+    {
       "id": "iron_gear",
       "stack": 100,
       "weightKg": 0.4,
@@ -454,7 +468,8 @@
       "volumeL": 20,
       "color": "#8d96a0",
       "recipe": {
-        "iron_ingot": 16
+        "iron_plate": 7,
+        "iron_rod": 4
       }
     },
     {
@@ -465,7 +480,9 @@
       "volumeL": 20,
       "color": "#5f7a5a",
       "recipe": {
-        "iron_ingot": 12,
+        "iron_plate": 3,
+        "iron_gear": 1,
+        "iron_rod": 8,
         "stone": 12
       }
     },
@@ -514,8 +531,10 @@
       "volumeL": 15,
       "color": "#4a86a8",
       "recipe": {
-        "iron_ingot": 12,
-        "copper_ingot": 8,
+        "iron_plate": 3,
+        "iron_gear": 2,
+        "iron_rod": 4,
+        "copper_wire": 16,
         "stone": 4
       }
     },
@@ -527,7 +546,8 @@
       "volumeL": 22,
       "color": "#d7dde2",
       "recipe": {
-        "steel_ingot": 12,
+        "steel_plate": 6,
+        "steel_rod": 12,
         "iron_gear": 8,
         "copper_wire": 12
       }
@@ -540,7 +560,8 @@
       "volumeL": 4,
       "color": "#5b6f86",
       "recipe": {
-        "iron_ingot": 10
+        "iron_plate": 3,
+        "iron_rod": 8
       }
     },
     {
@@ -551,7 +572,8 @@
       "volumeL": 4,
       "color": "#7a6a8a",
       "recipe": {
-        "iron_ingot": 10
+        "iron_plate": 3,
+        "iron_rod": 8
       }
     },
     {
@@ -562,7 +584,9 @@
       "volumeL": 6,
       "color": "#c0813a",
       "recipe": {
-        "iron_ingot": 12
+        "iron_gear": 2,
+        "iron_plate": 2,
+        "iron_rod": 8
       }
     },
     {
@@ -573,8 +597,10 @@
       "volumeL": 6,
       "color": "#4a7fb5",
       "recipe": {
-        "iron_ingot": 12,
-        "copper_ingot": 6
+        "iron_gear": 2,
+        "iron_plate": 2,
+        "iron_rod": 8,
+        "copper_wire": 12
       }
     },
     {
@@ -611,8 +637,10 @@
       "volumeL": 30,
       "color": "#6d7f95",
       "recipe": {
-        "iron_ingot": 24,
-        "copper_ingot": 12
+        "iron_plate": 6,
+        "iron_gear": 4,
+        "iron_rod": 8,
+        "copper_wire": 24
       }
     },
     {
@@ -851,8 +879,11 @@
       "volumeL": 25,
       "color": "#5d8a8a",
       "recipe": {
-        "iron_ingot": 20,
-        "copper_ingot": 16
+        "iron_plate": 5,
+        "iron_gear": 2,
+        "iron_rod": 12,
+        "copper_plate": 4,
+        "copper_wire": 16
       }
     },
     {
@@ -875,8 +906,9 @@
       "volumeL": 8,
       "color": "#3f7fb5",
       "recipe": {
-        "iron_ingot": 8,
-        "copper_ingot": 2,
+        "iron_plate": 2,
+        "iron_rod": 8,
+        "copper_plate": 1,
         "motor": 1
       }
     },
@@ -901,7 +933,7 @@
       "volumeL": 120,
       "color": "#8a949c",
       "recipe": {
-        "steel_ingot": 2
+        "steel_plate": 2
       }
     },
     {
@@ -946,7 +978,8 @@
       "volumeL": 60,
       "color": "#5a5f66",
       "recipe": {
-        "steel_ingot": 12,
+        "steel_plate": 6,
+        "steel_rod": 12,
         "iron_gear": 8,
         "copper_wire": 12
       }
@@ -1020,7 +1053,8 @@
       "volumeL": 70,
       "color": "#8a5f4a",
       "recipe": {
-        "steel_ingot": 8,
+        "steel_plate": 4,
+        "steel_rod": 8,
         "iron_gear": 6,
         "copper_wire": 12
       }
@@ -1033,7 +1067,8 @@
       "volumeL": 80,
       "color": "#3a3f47",
       "recipe": {
-        "steel_ingot": 10,
+        "steel_plate": 5,
+        "steel_rod": 10,
         "iron_gear": 4,
         "iron_plate": 10,
         "copper_wire": 6,
@@ -1055,7 +1090,8 @@
       "volumeL": 120,
       "color": "#6a7a86",
       "recipe": {
-        "steel_ingot": 16,
+        "steel_plate": 8,
+        "steel_rod": 16,
         "iron_gear": 6,
         "copper_wire": 16,
         "concrete_block": 8,
@@ -1070,7 +1106,8 @@
       "volumeL": 60,
       "color": "#4a5a6a",
       "recipe": {
-        "steel_ingot": 8,
+        "steel_plate": 4,
+        "steel_rod": 8,
         "iron_gear": 2,
         "copper_wire": 10,
         "motor": 1
@@ -1152,7 +1189,8 @@
       "volumeL": 80,
       "color": "#6a7a70",
       "recipe": {
-        "steel_ingot": 14,
+        "steel_plate": 7,
+        "steel_rod": 14,
         "iron_gear": 6,
         "copper_wire": 14,
         "concrete_block": 4,
@@ -1272,7 +1310,8 @@
       "volumeL": 30,
       "color": "#8a5a44",
       "recipe": {
-        "iron_ingot": 20,
+        "iron_plate": 6,
+        "iron_rod": 16,
         "stone": 10
       }
     },
@@ -1284,8 +1323,11 @@
       "volumeL": 25,
       "color": "#a9b4bd",
       "recipe": {
-        "iron_ingot": 24,
-        "copper_ingot": 16
+        "iron_plate": 4,
+        "iron_gear": 4,
+        "iron_rod": 16,
+        "copper_plate": 4,
+        "copper_wire": 16
       }
     },
     {
@@ -1296,7 +1338,9 @@
       "volumeL": 1.2,
       "color": "#4a4f57",
       "recipe": {
-        "iron_ingot": 16
+        "iron_plate": 4,
+        "iron_gear": 2,
+        "iron_rod": 8
       }
     },
     {
@@ -1350,20 +1394,24 @@
       "volumeL": 10,
       "color": "#6b5b45",
       "recipe": {
-        "iron_ingot": 16,
-        "copper_ingot": 6
+        "iron_plate": 4,
+        "iron_gear": 2,
+        "iron_rod": 8,
+        "copper_wire": 12
       }
     },
     {
       "id": "vehicle_buggy",
       "stack": 1,
-      "category": "equipment",
+      "category": "vehicles",
       "weightKg": 30,
       "volumeL": 40,
       "color": "#c9a227",
       "recipe": {
-        "iron_ingot": 16,
-        "copper_ingot": 4,
+        "iron_plate": 4,
+        "iron_gear": 2,
+        "iron_rod": 8,
+        "copper_wire": 8,
         "wood": 6,
         "motor": 1
       }
@@ -1371,12 +1419,13 @@
     {
       "id": "vehicle_quad",
       "stack": 1,
-      "category": "equipment",
+      "category": "vehicles",
       "weightKg": 20,
       "volumeL": 30,
       "color": "#4f8f5a",
       "recipe": {
-        "iron_ingot": 10,
+        "iron_plate": 2,
+        "iron_rod": 12,
         "wood": 3,
         "motor": 1
       }
@@ -1384,7 +1433,7 @@
     {
       "id": "vehicle_cart",
       "stack": 1,
-      "category": "logistics",
+      "category": "vehicles",
       "weightKg": 15,
       "volumeL": 40,
       "color": "#9a6a3a",
@@ -1394,15 +1443,33 @@
       }
     },
     {
+      "id": "vehicle_van",
+      "stack": 1,
+      "category": "vehicles",
+      "weightKg": 40,
+      "volumeL": 50,
+      "color": "#c9ccd2",
+      "recipe": {
+        "steel_plate": 12,
+        "steel_rod": 12,
+        "iron_plate": 8,
+        "iron_gear": 6,
+        "motor_heavy": 2,
+        "rubber": 8
+      }
+    },
+    {
       "id": "vehicle_tank",
       "stack": 1,
-      "category": "equipment",
+      "category": "vehicles",
       "weightKg": 48,
       "volumeL": 55,
       "color": "#6b7a4a",
       "recipe": {
-        "steel_ingot": 24,
-        "iron_ingot": 20,
+        "steel_plate": 16,
+        "steel_rod": 16,
+        "iron_plate": 6,
+        "iron_gear": 4,
         "motor_heavy": 2,
         "rubber": 4
       }
@@ -1428,9 +1495,10 @@
       "volumeL": 55,
       "color": "#c9572e",
       "recipe": {
-        "steel_ingot": 20,
-        "iron_ingot": 24,
-        "iron_gear": 6,
+        "steel_plate": 12,
+        "steel_rod": 16,
+        "iron_plate": 8,
+        "iron_gear": 10,
         "motor_heavy": 2
       }
     },

@@ -129,6 +129,28 @@
       "mould": "mould_plate"
     },
     {
+      "id": "iron_rod",
+      "machine": "stamper",
+      "in": {
+        "iron_ingot": 1
+      },
+      "out": {
+        "iron_rod": 2
+      },
+      "seconds": 2.5
+    },
+    {
+      "id": "steel_rod",
+      "machine": "stamper",
+      "in": {
+        "steel_ingot": 1
+      },
+      "out": {
+        "steel_rod": 2
+      },
+      "seconds": 3
+    },
+    {
       "id": "iron_gear",
       "machine": "stamper",
       "in": {

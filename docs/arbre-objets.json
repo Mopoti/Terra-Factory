@@ -20,6 +20,7 @@
     "train_station",
     "train_wagon_freight",
     "vehicle_buggy",
+    "vehicle_cart",
     "vehicle_quad"
    ],
    "issues": []
@@ -410,26 +411,13 @@
     "compass",
     "iron_gear",
     "iron_plate",
-    "machine_arm",
-    "machine_arm_electric",
-    "machine_assembler",
-    "machine_boiler",
-    "machine_chest_iron",
+    "iron_rod",
     "machine_conveyor",
     "machine_crusher",
     "machine_drill",
-    "machine_drill_electric",
-    "machine_generator",
-    "machine_lab",
-    "machine_merger",
     "machine_pole",
-    "machine_pump",
-    "machine_splitter",
     "machine_stamper",
-    "machine_turbine",
-    "machine_turret",
     "magazine",
-    "pistol",
     "rail",
     "rifle_magazine",
     "sniper_magazine",
@@ -438,13 +426,9 @@
     "tech:metallurgy",
     "tech:research_1",
     "tool_iron",
-    "train_locomotive",
     "train_station",
     "train_wagon_freight",
     "train_wagon_tanker",
-    "vehicle_buggy",
-    "vehicle_quad",
-    "vehicle_tank",
     "waypoint"
    ],
    "issues": []
@@ -481,22 +465,14 @@
     "compass",
     "copper_plate",
     "copper_wire",
-    "machine_arm_electric",
-    "machine_assembler",
     "machine_booster",
-    "machine_drill_electric",
-    "machine_lab",
     "machine_pipe_2",
-    "machine_pump",
-    "machine_turbine",
-    "machine_turret",
     "machine_turret_heavy",
     "rifle_magazine",
     "sniper_magazine",
     "tech:electricity",
     "tech:laboratory",
     "tech:research_1",
-    "vehicle_buggy",
     "zamak_ingot"
    ],
    "issues": []
@@ -620,24 +596,15 @@
     }
    ],
    "usedIn": [
-    "barrel_empty",
     "machine_arm_filter",
     "machine_barreler",
-    "machine_centrifuge",
     "machine_conveyor_2",
     "machine_conveyor_3",
-    "machine_drill_eco",
-    "machine_furnace_electric",
-    "machine_heavy_press",
     "machine_pipe_3",
-    "machine_plastic_press",
-    "machine_pumpjack",
-    "machine_refinery",
     "machine_sorter",
     "steel_plate",
-    "train_locomotive",
-    "train_wagon_tanker",
-    "vehicle_tank"
+    "steel_rod",
+    "train_wagon_tanker"
    ],
    "issues": [
     "Débloqué en pratique par sa machine « Convertisseur Bessemer » (technologie « Métallurgie T2 »), pas par une technologie à son nom"
@@ -720,21 +687,40 @@
     "armor1_head",
     "armor1_legs",
     "armor1_torso",
+    "machine_arm",
+    "machine_arm_electric",
+    "machine_assembler",
     "machine_bessemer",
+    "machine_boiler",
     "machine_booster",
     "machine_builder",
+    "machine_chest_iron",
     "machine_cooling_tower",
     "machine_crank",
+    "machine_drill_electric",
+    "machine_generator",
+    "machine_lab",
+    "machine_merger",
     "machine_mixer",
+    "machine_pump",
     "machine_pumpjack",
+    "machine_splitter",
+    "machine_turbine",
+    "machine_turret",
     "machine_turret_heavy",
     "machine_washer",
     "motor",
+    "pistol",
     "rifle",
     "tech:armor_1a",
     "tech:armor_1b",
     "tech:defense",
-    "tech:weapons_1"
+    "tech:weapons_1",
+    "train_locomotive",
+    "vehicle_buggy",
+    "vehicle_quad",
+    "vehicle_tank",
+    "vehicle_van"
    ],
    "issues": [
     "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
@@ -758,11 +744,88 @@
     }
    ],
    "usedIn": [
+    "machine_lab",
     "machine_pipe",
+    "machine_pump",
+    "machine_turbine",
     "tech:waterwheel"
    ],
    "issues": [
     "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
+   ]
+  },
+  "iron_rod": {
+   "name": "Tige en fer",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "iron_ingot": 1
+     },
+     "out": {
+      "iron_rod": 2
+     },
+     "seconds": 2.5
+    }
+   ],
+   "usedIn": [
+    "machine_arm",
+    "machine_arm_electric",
+    "machine_assembler",
+    "machine_boiler",
+    "machine_chest_iron",
+    "machine_drill_electric",
+    "machine_generator",
+    "machine_lab",
+    "machine_merger",
+    "machine_pump",
+    "machine_splitter",
+    "machine_turbine",
+    "machine_turret",
+    "pistol",
+    "vehicle_buggy",
+    "vehicle_quad"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom",
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "steel_rod": {
+   "name": "Tige en acier",
+   "category": null,
+   "tech": [],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "steel_ingot": 1
+     },
+     "out": {
+      "steel_rod": 2
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "machine_centrifuge",
+    "machine_drill_eco",
+    "machine_furnace_electric",
+    "machine_heavy_press",
+    "machine_plastic_press",
+    "machine_pumpjack",
+    "machine_refinery",
+    "train_locomotive",
+    "vehicle_tank",
+    "vehicle_van"
+   ],
+   "issues": [
+    "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom",
+    "Pas de modèle 3D propre"
    ]
   },
   "iron_gear": {
@@ -783,7 +846,10 @@
     }
    ],
    "usedIn": [
+    "machine_arm",
+    "machine_arm_electric",
     "machine_arm_filter",
+    "machine_assembler",
     "machine_barreler",
     "machine_bessemer",
     "machine_booster",
@@ -794,23 +860,32 @@
     "machine_cooling_tower",
     "machine_crank",
     "machine_drill_eco",
+    "machine_drill_electric",
     "machine_evaporation_tower",
     "machine_furnace_electric",
+    "machine_generator",
     "machine_heavy_press",
+    "machine_lab",
     "machine_mixer",
     "machine_plastic_press",
     "machine_pumpjack",
     "machine_refinery",
     "machine_sorter",
+    "machine_turbine",
+    "machine_turret",
     "machine_turret_heavy",
     "machine_washer",
     "motor",
+    "pistol",
     "rifle",
     "science_pack",
     "sniper",
     "train_locomotive",
     "train_wagon_freight",
-    "train_wagon_tanker"
+    "train_wagon_tanker",
+    "vehicle_buggy",
+    "vehicle_tank",
+    "vehicle_van"
    ],
    "issues": [
     "Débloqué en pratique par sa machine « Estampeuse » (technologie « Métallurgie »), pas par une technologie à son nom"
@@ -835,7 +910,9 @@
    ],
    "usedIn": [
     "cable_insulated",
+    "machine_arm_electric",
     "machine_arm_filter",
+    "machine_assembler",
     "machine_barreler",
     "machine_bessemer",
     "machine_booster",
@@ -843,12 +920,16 @@
     "machine_centrifuge",
     "machine_conveyor_3",
     "machine_drill_eco",
+    "machine_drill_electric",
     "machine_furnace_electric",
     "machine_heavy_press",
+    "machine_lab",
     "machine_plastic_press",
     "machine_pumpjack",
     "machine_refinery",
     "machine_sorter",
+    "machine_turbine",
+    "machine_turret",
     "machine_turret_laser",
     "machine_waterwheel",
     "motor",
@@ -856,6 +937,7 @@
     "science_pack",
     "silicon_chip",
     "sniper",
+    "vehicle_buggy",
     "waypoint"
    ],
    "issues": [
@@ -1169,7 +1251,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 16
+      "iron_plate": 7,
+      "iron_rod": 4
      },
      "out": {
       "machine_chest_iron": 1
@@ -1191,7 +1274,9 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 12,
+      "iron_plate": 3,
+      "iron_gear": 1,
+      "iron_rod": 8,
       "stone": 12
      },
      "out": {
@@ -1284,8 +1369,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 12,
-      "copper_ingot": 8,
+      "iron_plate": 3,
+      "iron_gear": 2,
+      "iron_rod": 4,
+      "copper_wire": 16,
       "stone": 4
      },
      "out": {
@@ -1308,7 +1395,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 12,
+      "steel_plate": 6,
+      "steel_rod": 12,
       "iron_gear": 8,
       "copper_wire": 12
      },
@@ -1332,7 +1420,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 10
+      "iron_plate": 3,
+      "iron_rod": 8
      },
      "out": {
       "machine_splitter": 1
@@ -1354,7 +1443,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 10
+      "iron_plate": 3,
+      "iron_rod": 8
      },
      "out": {
       "machine_merger": 1
@@ -1376,7 +1466,9 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 12
+      "iron_gear": 2,
+      "iron_plate": 2,
+      "iron_rod": 8
      },
      "out": {
       "machine_arm": 1
@@ -1398,8 +1490,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 12,
-      "copper_ingot": 6
+      "iron_gear": 2,
+      "iron_plate": 2,
+      "iron_rod": 8,
+      "copper_wire": 12
      },
      "out": {
       "machine_arm_electric": 1
@@ -1469,8 +1563,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 24,
-      "copper_ingot": 12
+      "iron_plate": 6,
+      "iron_gear": 4,
+      "iron_rod": 8,
+      "copper_wire": 24
      },
      "out": {
       "machine_assembler": 1
@@ -1487,7 +1583,8 @@
    "tech": [],
    "paths": [],
    "usedIn": [
-    "cloth"
+    "cloth",
+    "vehicle_cart"
    ],
    "issues": []
   },
@@ -1785,7 +1882,8 @@
    ],
    "usedIn": [
     "motor_heavy",
-    "vehicle_tank"
+    "vehicle_tank",
+    "vehicle_van"
    ],
    "issues": [
     "Pas de modèle 3D propre"
@@ -1849,7 +1947,8 @@
    "usedIn": [
     "machine_centrifuge",
     "train_locomotive",
-    "vehicle_tank"
+    "vehicle_tank",
+    "vehicle_van"
    ],
    "issues": [
     "Pas de modèle 3D propre"
@@ -1982,11 +2081,19 @@
     "armor4_head",
     "armor4_legs",
     "armor4_torso",
+    "barrel_empty",
     "machine_accumulator",
     "machine_antenna",
+    "machine_centrifuge",
+    "machine_drill_eco",
     "machine_evaporation_tower",
     "machine_fission_reactor",
+    "machine_furnace_electric",
     "machine_fusion_reactor",
+    "machine_heavy_press",
+    "machine_plastic_press",
+    "machine_pumpjack",
+    "machine_refinery",
     "machine_relay",
     "machine_turret_laser",
     "machine_turret_plasma",
@@ -1995,7 +2102,10 @@
     "science_pack_2",
     "science_pack_4",
     "sniper",
-    "uranium_rod"
+    "train_locomotive",
+    "uranium_rod",
+    "vehicle_tank",
+    "vehicle_van"
    ],
    "issues": []
   },
@@ -2044,8 +2154,11 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 20,
-      "copper_ingot": 16
+      "iron_plate": 5,
+      "iron_gear": 2,
+      "iron_rod": 12,
+      "copper_plate": 4,
+      "copper_wire": 16
      },
      "out": {
       "machine_lab": 1
@@ -2089,8 +2202,9 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 8,
-      "copper_ingot": 2,
+      "iron_plate": 2,
+      "iron_rod": 8,
+      "copper_plate": 1,
       "motor": 1
      },
      "out": {
@@ -2137,7 +2251,7 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 2
+      "steel_plate": 2
      },
      "out": {
       "barrel_empty": 1
@@ -2282,7 +2396,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 12,
+      "steel_plate": 6,
+      "steel_rod": 12,
       "iron_gear": 8,
       "copper_wire": 12
      },
@@ -2452,7 +2567,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 8,
+      "steel_plate": 4,
+      "steel_rod": 8,
       "iron_gear": 6,
       "copper_wire": 12
      },
@@ -2476,7 +2592,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 10,
+      "steel_plate": 5,
+      "steel_rod": 10,
       "iron_gear": 4,
       "iron_plate": 10,
       "copper_wire": 6,
@@ -2526,7 +2643,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 16,
+      "steel_plate": 8,
+      "steel_rod": 16,
       "iron_gear": 6,
       "copper_wire": 16,
       "concrete_block": 8,
@@ -2552,7 +2670,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 8,
+      "steel_plate": 4,
+      "steel_rod": 8,
       "iron_gear": 2,
       "copper_wire": 10,
       "motor": 1
@@ -2763,7 +2882,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 14,
+      "steel_plate": 7,
+      "steel_rod": 14,
       "iron_gear": 6,
       "copper_wire": 14,
       "concrete_block": 4,
@@ -2991,7 +3111,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 20,
+      "iron_plate": 6,
+      "iron_rod": 16,
       "stone": 10
      },
      "out": {
@@ -3014,8 +3135,11 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 24,
-      "copper_ingot": 16
+      "iron_plate": 4,
+      "iron_gear": 4,
+      "iron_rod": 16,
+      "copper_plate": 4,
+      "copper_wire": 16
      },
      "out": {
       "machine_turbine": 1
@@ -3037,7 +3161,9 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 16
+      "iron_plate": 4,
+      "iron_gear": 2,
+      "iron_rod": 8
      },
      "out": {
       "pistol": 1
@@ -3127,8 +3253,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 16,
-      "copper_ingot": 6
+      "iron_plate": 4,
+      "iron_gear": 2,
+      "iron_rod": 8,
+      "copper_wire": 12
      },
      "out": {
       "machine_turret": 1
@@ -3141,7 +3269,7 @@
   },
   "vehicle_buggy": {
    "name": "Buggy",
-   "category": "equipment",
+   "category": "vehicles",
    "tech": [
     "steam"
    ],
@@ -3150,8 +3278,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 16,
-      "copper_ingot": 4,
+      "iron_plate": 4,
+      "iron_gear": 2,
+      "iron_rod": 8,
+      "copper_wire": 8,
       "wood": 6,
       "motor": 1
      },
@@ -3166,7 +3296,7 @@
   },
   "vehicle_quad": {
    "name": "Quad",
-   "category": "equipment",
+   "category": "vehicles",
    "tech": [
     "steam"
    ],
@@ -3175,7 +3305,8 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "iron_ingot": 10,
+      "iron_plate": 2,
+      "iron_rod": 12,
       "wood": 3,
       "motor": 1
      },
@@ -3188,9 +3319,32 @@
    "usedIn": [],
    "issues": []
   },
-  "vehicle_tank": {
-   "name": "Char",
-   "category": "equipment",
+  "vehicle_cart": {
+   "name": "Charrette à bras",
+   "category": "vehicles",
+   "tech": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 12,
+      "fiber": 2
+     },
+     "out": {
+      "vehicle_cart": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "vehicle_van": {
+   "name": "Camionnette",
+   "category": "vehicles",
    "tech": [
     "plastic_3"
    ],
@@ -3199,8 +3353,39 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 24,
-      "iron_ingot": 20,
+      "steel_plate": 12,
+      "steel_rod": 12,
+      "iron_plate": 8,
+      "iron_gear": 6,
+      "motor_heavy": 2,
+      "rubber": 8
+     },
+     "out": {
+      "vehicle_van": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "vehicle_tank": {
+   "name": "Char",
+   "category": "vehicles",
+   "tech": [
+    "plastic_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "steel_plate": 16,
+      "steel_rod": 16,
+      "iron_plate": 6,
+      "iron_gear": 4,
       "motor_heavy": 2,
       "rubber": 4
      },
@@ -3247,9 +3432,10 @@
      "kind": "hand",
      "machine": null,
      "in": {
-      "steel_ingot": 20,
-      "iron_ingot": 24,
-      "iron_gear": 6,
+      "steel_plate": 12,
+      "steel_rod": 16,
+      "iron_plate": 8,
+      "iron_gear": 10,
       "motor_heavy": 2
      },
      "out": {
@@ -4202,6 +4388,7 @@
     "rubber",
     "motor_heavy",
     "vehicle_tank",
+    "vehicle_van",
     "train_locomotive"
    ]
   },

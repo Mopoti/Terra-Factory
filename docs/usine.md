@@ -376,3 +376,11 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - Véhicule `cart` (`VEHICLES.cart`, `pushed: true`) : sans carburant ni siège. Clic gauche sur le terrain pour la poser, F près d'elle pour prendre les brancards : le joueur reste à pied, derrière, et la pousse devant lui (1,5 m) à 0,8 × la marche. Clic gauche dessus : son coffre (capacité d'un coffre en bois). F pour la lâcher, Maj + F pour la ranger (le contenu revient dans le sac).
 - Modèle provisoire en boîtes dans `gameView.ts` (`makeCart`, roues qui tournent) ; modèle Blender `charrette.glb` à faire (il remplacera les boîtes tout seul).
 - Pistes : charrette à bras renforcée (roues en caoutchouc), tractée par le quad, charge qui ralentit.
+
+## Camionnette et demi-produits (25 octobre)
+
+- **Camionnette** (`vehicle_van`, onglet Véhicules, technologie Plastique T3 comme le Char) : 12 plaques d'acier + 12 tiges d'acier + 8 plaques de fer + 6 engrenages + 2 moteurs renforcés + 8 caoutchoucs. 2,2 × la marche, 300 kW, coffre de 32 cases (comme un coffre en fer). Modèle provisoire en boîtes, `camionnette.glb` à faire.
+- **Nouvel onglet « Véhicules »** : buggy, quad, char, camionnette, charrette (les onglets Équipements et Logistique étaient pleins).
+- **Tige en fer / tige en acier** (`iron_rod`, `steel_rod`) : à l'estampeuse, 1 lingot → 2 tiges (comme le fil de cuivre). Modèles 3D à faire.
+- **Moins de lingots dans les machines** : les recettes de machines et de véhicules passent par les plaques, engrenages et tiges, à valeur de lingots équivalente (plaque = 2 lingots, engrenage = 2, tige = 0,5). Touchés : coffre en fer, bras (deux), séparateur, groupeur, assembleur, laboratoire, foreuse électrique et écologique, générateur, chaudière, turbine, pompe, tourelle, pistolet, Quad, Buggy, Char, locomotive, presse lourde, four électrique, pompe à pétrole, raffinerie, presse à plastique, centrifugeuse, baril vide. Non touchés : les machines de départ (foreuse, four, estampeuse, concasseur) qui doivent rester faisables avant l'estampeuse, et les wagons, rails et station (en attendant une technologie Rail).
+- Prérequis à régler dans l'arbre : beaucoup de technologies de palier 1 (Automatisation, Manutention, Électricité, Vapeur…) n'ont pas Métallurgie (estampeuse) comme prérequis alors que leurs objets demandent maintenant des plaques.

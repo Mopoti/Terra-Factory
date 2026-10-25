@@ -126,6 +126,7 @@
         "rubber",
         "motor_heavy",
         "vehicle_tank",
+        "vehicle_van",
         "train_locomotive"
       ]
     },

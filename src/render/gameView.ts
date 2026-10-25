@@ -2400,11 +2400,43 @@ export function startGameView(
     g.userData.wheels = wheels;
     return g;
   }
+  /** Camionnette de secours (tant qu'il n'y a pas de modèle maison) : caisse blanche, cabine, 4 roues. */
+  const vanMat = new THREE.MeshStandardMaterial({ color: 0xc9ccd2 });
+  const vanCab = new THREE.MeshStandardMaterial({ color: 0x4a6a8a });
+  function makeVan(): THREE.Group {
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.1, 1.8), vanMat);
+    box.position.set(0, 0.95, -0.35);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.8), vanCab);
+    cab.position.set(0, 0.8, 0.95);
+    g.add(box, cab);
+    for (const [x, z] of [
+      [-0.7, -0.8],
+      [0.7, -0.8],
+      [-0.7, 0.9],
+      [0.7, 0.9],
+    ]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 12), wheelMat);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, 0.3, z);
+      g.add(wheel);
+    }
+    g.traverse((o) => {
+      if (o instanceof THREE.Mesh) o.castShadow = true;
+    });
+    return g;
+  }
   function vehicleView(kind: VehicleKind): VehicleView {
     const model = bakedModel(VEHICLES[kind].model);
     const own = model ? vehicleFromModel(model, propsMaterial) : null;
     return {
-      group: own ? own.group : kind === 'cart' ? makeCart() : makeBuggy(),
+      group: own
+        ? own.group
+        : kind === 'cart'
+          ? makeCart()
+          : kind === 'van'
+            ? makeVan()
+            : makeBuggy(),
       own,
       x: NaN,
       z: NaN,
@@ -2575,7 +2607,8 @@ export function startGameView(
     if (!v) return null;
     let m = vehicleChests.get(v.id);
     if (!m) {
-      m = emptyMachine(id, 'chest_wood', 0, 0, 0);
+      // La camionnette a un grand coffre (32 cases) ; les autres véhicules celui d'un coffre en bois (16).
+      m = emptyMachine(id, v.kind === 'van' ? 'chest_iron' : 'chest_wood', 0, 0, 0);
       vehicleChests.set(v.id, m);
     }
     m.slots = v.slots;
@@ -3924,7 +3957,7 @@ export function startGameView(
       let speed = 0;
       let effort = 0;
       if (mounted && mounted.kind !== 'cart' && mounted.fuel > 0 && !paused) {
-        kind = mounted.kind;
+        kind = mounted.kind === 'van' ? 'buggy' : mounted.kind;
         speed = Math.min(1, motion.speed / (WALK_SPEED_M_S * VEHICLES[mounted.kind].speedFactor));
         effort = input.isActionActive('forward') || input.isActionActive('backward') ? 1 : 0;
       } else {

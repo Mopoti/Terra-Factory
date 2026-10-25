@@ -1,5 +1,5 @@
 /** Les véhicules que le joueur conduit : buggy, quad et char (modèles dans `blender/scripts/vehicules.py`), et la charrette à bras qu'il pousse. */
-export const VEHICLE_KINDS = ['buggy', 'quad', 'tank', 'cart'] as const;
+export const VEHICLE_KINDS = ['buggy', 'quad', 'tank', 'van', 'cart'] as const;
 export type VehicleKind = (typeof VEHICLE_KINDS)[number];
 
 export interface VehicleSpec {
@@ -49,6 +49,16 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     runOver: { radius: 2.6, damage: 80 },
     aimRadius: 2.0,
     aimHeight: 1.0,
+  },
+  // Camionnette : même palier que le char, plus rapide que lui, avec un grand coffre (32 cases).
+  van: {
+    item: 'vehicle_van',
+    model: 'camionnette',
+    speedFactor: 2.2,
+    burnKw: 300,
+    runOver: { radius: 2.0, damage: 35 },
+    aimRadius: 1.6,
+    aimHeight: 0.9,
   },
   // Charrette à bras en bois, roues en bois (pas de caoutchouc au début) : plus lente que la marche, sans moteur.
   cart: {
