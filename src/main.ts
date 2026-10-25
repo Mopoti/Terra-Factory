@@ -35,6 +35,7 @@ import type { WorldChanges } from './core/game/worldChanges';
 import { choiceModal, promptModal } from './ui/modal';
 import { GARAGE_RANGES } from './core/game/worldChanges';
 import { STATION_NAME_MAX } from './core/rail/station';
+import { buildBugReport, downloadBugReport, installBugRecorder, recorder } from './ui/bugReport';
 
 initLocale();
 installKeyHints();
@@ -42,6 +43,7 @@ await initKeyboardLayout();
 loadSettings();
 loadCharacter();
 startApplyingSettings();
+installBugRecorder();
 watchVisibility();
 document.title = t('game.title');
 
@@ -86,6 +88,8 @@ interface Session {
   lastManualName: string | null;
   lastAutosaveAt: number;
   timer: number;
+  /** Position et état du joueur notés toutes les 2 s dans l'enregistreur d'actions. */
+  sampler: number;
   toastTimer: number;
 }
 
@@ -151,6 +155,7 @@ function quitToMenu(): void {
   if (!s) return;
   saveAuto(s);
   window.clearInterval(s.timer);
+  window.clearInterval(s.sampler);
   window.clearTimeout(s.toastTimer);
   s.pause.dispose();
   s.inventory.dispose();
@@ -321,6 +326,7 @@ function startGame(
     lastManualName: slot?.kind === 'manual' ? slot.name : null,
     lastAutosaveAt: Date.now(),
     timer: 0,
+    sampler: 0,
     toastTimer: 0,
   };
   session = s;
@@ -396,6 +402,18 @@ function startGame(
       s.lastManualName = name;
       showToast(t('pause.saved', { name }));
     },
+    report: (note) => {
+      const report = buildBugReport({
+        note,
+        game: { id: game.id, name: game.name, seed: game.world.seed },
+        snapshot: s.state.snapshot(),
+        player: view.getState(),
+        info: view.debugInfo(),
+        settings: getSettings(),
+        screenshot: view.captureFrame(),
+      });
+      return downloadBugReport(report);
+    },
     guest: guest !== null,
     multi:
       game.options.multiplayer.enabled && !guest
@@ -445,6 +463,14 @@ function startGame(
   bagButton.addEventListener('click', () => !s.pause.isOpen() && s.inventory.open());
   label.append(name, bagButton, menuButton);
   hudEl.replaceChildren(label);
+
+  // Rapport de bug : ce qui se passe dans le jeu est noté dans l'enregistreur (60 dernières secondes).
+  recorder.clear();
+  state.onChange((e) => recorder.record('event', e));
+  view.bus.onDispatch = (cmd, result) => recorder.record('command', { cmd, result });
+  s.sampler = window.setInterval(() => {
+    recorder.record('sample', { player: view.getState(), info: view.debugInfo() });
+  }, 2000);
 
   // Sauvegarde automatique périodique (réglage « Jeu » ; 0 = désactivée).
   s.timer = window.setInterval(() => {

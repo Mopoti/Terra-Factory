@@ -53,6 +53,9 @@ export interface CommandContext {
 }
 
 export class CommandBus {
+  /** Écoute de chaque commande appliquée (rapport de bug : ce que le joueur a fait juste avant). */
+  onDispatch: ((cmd: Command, result: unknown) => void) | null = null;
+
   constructor(private readonly ctx: CommandContext) {}
 
   private machine(id: number): Machine | null {
@@ -61,6 +64,12 @@ export class CommandBus {
 
   /** Applique une commande et renvoie son résultat (les identifiants inconnus sont refusés). */
   dispatch<K extends CommandType>(cmd: CommandOf<K>): CommandSpecs[K]['result'] {
+    const result = this.apply(cmd);
+    this.onDispatch?.(cmd as Command, result);
+    return result;
+  }
+
+  private apply<K extends CommandType>(cmd: CommandOf<K>): CommandSpecs[K]['result'] {
     const { state, factory } = this.ctx;
     const c = cmd as Command;
     switch (c.type) {

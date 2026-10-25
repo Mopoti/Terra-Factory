@@ -256,6 +256,10 @@ export interface GameViewHandle {
   otherPlayers(): PlayerInfo[];
   /** Cap du corps du personnage (même convention que la caméra) : la caméra seule ne dit pas où il regarde. */
   bodyYaw(): number;
+  /** Image de la scène en ce moment (JPEG, adresse de données), pour un rapport de bug ; null si impossible. */
+  captureFrame(): string | null;
+  /** Ce que fait le joueur (vue, véhicule ou train conduit, objet visé…), pour un rapport de bug. */
+  debugInfo(): Record<string, unknown>;
 }
 
 /** Vue 3D d'une partie : monde infini généré autour d'un joueur, avec trois caméras. */
@@ -4397,6 +4401,27 @@ export function startGameView(
       hostSession = session;
     },
     bodyYaw: () => (rig.view === 'first' ? rig.yaw : facing + Math.PI),
+    captureFrame: () => {
+      try {
+        renderer.render(scene, camera);
+        return renderer.domElement.toDataURL('image/jpeg', 0.7);
+      } catch {
+        return null;
+      }
+    },
+    debugInfo: () => ({
+      view: rig.view,
+      paused,
+      uiOpen,
+      building,
+      yaw: rig.yaw,
+      mountedVehicle: mounted
+        ? { id: mounted.id, kind: mounted.kind, x: mounted.x, z: mounted.z }
+        : null,
+      mountedTrainCar: trains.isMounted() ? trains.mountedWindowId() : null,
+      aimedStructure: interaction.aimedStructure ?? null,
+      chunks: chunks.size,
+    }),
     otherPlayers: () =>
       guest
         ? guest.client.players.filter((p) => p.id !== guest.client.you.id)

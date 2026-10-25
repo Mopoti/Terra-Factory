@@ -34,6 +34,8 @@ export interface PauseActions {
   };
   /** Partie rejointe chez un autre joueur : l'hôte sauvegarde, pas l'invité. */
   guest?: boolean;
+  /** Rapport de bug (les 60 dernières secondes, la partie, une capture) téléchargé en un fichier ; renvoie son nom. */
+  report(note: string): string;
   /** Quitte vers le menu principal (une sauvegarde automatique est faite avant). */
   quit(): void;
 }
@@ -46,7 +48,7 @@ export interface PauseMenu {
   dispose(): void;
 }
 
-type Screen = 'main' | 'save' | 'settings' | 'multi';
+type Screen = 'main' | 'save' | 'settings' | 'multi' | 'report';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -87,6 +89,7 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
       ...(actions.guest ? [] : [button(t('pause.save'), () => setScreen('save'))]),
       ...(actions.multi ? [button(t('pause.multi'), () => setScreen('multi'))] : []),
       button(t('pause.settings'), () => setScreen('settings')),
+      button(t('pause.report'), () => setScreen('report')),
     );
     const quit = button('', actions.quit);
     quit.append(
@@ -94,6 +97,35 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
       el('small', undefined, t('pause.quit.hint')),
     );
     panel.append(quit);
+    return panel;
+  }
+
+  function reportPanel(): HTMLElement {
+    const panel = el('div', 'panel');
+    panel.append(
+      el('h2', undefined, t('pause.report.title')),
+      el('p', 'note', t('pause.report.help')),
+    );
+    const field = el('label', 'field');
+    field.append(el('span', undefined, t('pause.report.note')));
+    const note = el('textarea');
+    note.rows = 5;
+    note.maxLength = 4000;
+    note.placeholder = t('pause.report.placeholder');
+    field.append(note);
+    const done = el('p', 'note');
+    panel.append(
+      field,
+      button(
+        t('pause.report.download'),
+        () => {
+          done.textContent = t('pause.report.done', { name: actions.report(note.value) });
+        },
+        'menu-btn primary',
+      ),
+      done,
+      button(t('common.back'), () => setScreen('main')),
+    );
     return panel;
   }
 
@@ -194,9 +226,12 @@ export function mountPauseMenu(root: HTMLElement, actions: PauseActions): PauseM
     if (screen === 'main') root.append(mainPanel());
     else if (screen === 'save') root.append(savePanel());
     else if (screen === 'multi') root.append(multiPanel());
+    else if (screen === 'report') root.append(reportPanel());
     else root.append(buildSettingsPanel(() => setScreen('main'), render));
     root
-      .querySelector<HTMLElement>(screen === 'save' ? 'input' : '.panel button')
+      .querySelector<HTMLElement>(
+        screen === 'save' ? 'input' : screen === 'report' ? 'textarea' : '.panel button',
+      )
       ?.focus({ preventScroll: true });
   }
 

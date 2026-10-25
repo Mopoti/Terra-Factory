@@ -5,16 +5,16 @@
 
 ## État courant (à lire en premier)
 
-**Où on en est** : prototype jouable très avancé (monde, usine, électricité, fluides, combat, véhicules, trains, construction jusqu'à l'aluminium). Branche de travail : `claude/sleepy-bell-vvkepj`. 772 tests (`npx vitest run`). Les modèles 3D sont faits par une session parallèle (`blender/`, `export/`, `public/models/terra` : ne pas y toucher depuis cette session).
+**Où on en est** : prototype jouable très avancé (monde, usine, électricité, fluides, combat, véhicules, trains, construction jusqu'à l'aluminium). Branche de travail : `claude/sleepy-bell-vvkepj`. 775 tests (`npx vitest run`). Les modèles 3D sont faits par une session parallèle (`blender/`, `export/`, `public/models/terra` : ne pas y toucher depuis cette session).
 
 **Avant de pousser** : `npx tsc --noEmit`, `npx eslint src`, `npx prettier --write src`, `npx vitest run`. Commit avec les lignes `Co-Authored-By` et `Claude-Session` demandées par la session, puis `git pull --rebase origin <branche>` et `git push -u origin <branche>`. Jamais de PR sans demande. Jamais de `pkill` dans une commande.
 
 **Bugs ouverts / non reproduits** (une ligne par bug : date, symptôme, ce qui a été essayé, ce qui manque) :
-- 25/10 · Rails : depuis un virage violet (large), D ne mène pas sur un virage marron (très large) qui part du même point que la ligne droite ; le PO pense qu'aucun embranchement n'est créé. Non reproduit : en test (virage → ligne + virage tangents au même port, `choiceAhead` + `stepConsist` avec `pick`), l'embranchement existe et D le prend. Manque : la sauvegarde ou l'ordre de pose exact. Piste : le virage marron part peut-être de la ligne vers le côté d'où vient le train (demi-tour impossible).
+- 25/10 · Rails : depuis un virage violet (large), D ne mène pas sur un virage marron (très large) qui part du même point que la ligne droite ; le PO pense qu'aucun embranchement n'est créé. Non reproduit : en test (virage → ligne + virage tangents au même port, `choiceAhead` + `stepConsist` avec `pick`), l'embranchement existe et D le prend. Manque : un rapport de bug (bouton « Signaler un bug » du menu pause) fait juste après, ou l'ordre de pose exact. Piste : le virage marron part peut-être de la ligne vers le côté d'où vient le train (demi-tour impossible).
 
 **Chantiers en attente** : programmation de la locomotive (`docs/trains-programmation.md`), essai « sans virages grand/géant » (sinon l'inverse), courbes à 45°, prérequis des technologies de début de partie, import de l'arbre des compétences (Ludicart), hitbox de la gare à ajuster à l'œil (`SOLIDS`), icônes de la benne sans quantité ni touche de basculement, contrôle visuel des couleurs de virages.
 
-**Ce qu'il faut consigner pour un bug** (à demander au PO, ou à prélever d'un enregistrement) :
+**Ce qu'il faut consigner pour un bug** (le bouton « Signaler un bug » du menu pause en fournit presque tout dans un fichier ; sinon à demander au PO) :
 1. l'action faite, pas à pas, et ce qui était attendu / constaté ;
 2. la sauvegarde (export de la partie) ou, à défaut, l'ordre de pose des pièces ;
 3. la position du joueur, la vue, l'objet en main, le véhicule ou le train conduit ;
@@ -63,6 +63,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Tour 4 : grille à deux niveaux (50 cm logistique + pas de 10 cm pour murs/machines/décor), voir `docs/besoins.md` §7. Raccordement machine→convoyeur tranché (convoyeur sur case complète, 10 cm dans la machine).
 - Plan `docs/architecture.md` : VALIDÉ par le PO. Angles de murs : on accepte le vide, pilier optionnel, pièce fermée dans les deux cas.
 - **Tour 163** : chaîne de modèles 3D maison : `blender/` (`lib/terra.py`, `scripts/extraction.py`, `extraction.blend`), `export/foreuse_t1.glb`, `scripts/sync-modeles.mjs`, `TERRA_MODELS` dans `models.ts` (priorité sur le kit Kenney) ; échelle 1 unité = 1 case, export en mètres ; premier modèle : foreuse à combustible (vérifiée dans le jeu).
+- **Tour 231** : bouton **Signaler un bug** (menu pause, aussi en production) : fichier JSON avec les 60 dernières secondes d'actions (touches, clics, commandes, événements, position toutes les 2 s), la sauvegarde complète, les réglages, les erreurs, la version (commit) et une capture. Voir `docs/parametres.md`. Passation : section « État courant » en tête. Pas de raccourci clavier dédié (il faudrait une action de plus dans les réglages de touches).
 - **Tour 230** : rails : couleur par taille de virage (bleu serré, violet large, marron très large/45°, orange grand, turquoise géant), pièce posée et patron (rouge si non posable). Non vérifié à l'écran.
 - **Tour 229** : gare : hitbox du quai (abri, banc, lampadaires, poubelle, mât) et mât du panneau raccourci sous le panneau. Non vérifié à l'écran : le PO ajuste `SOLIDS` si besoin.
 - **Tour 228** : essai rails : virages grand (11) et géant (15) retirés du tracé automatique (très large 7 × 7 = maximum). Si ça ne convainc pas, on fait l'inverse (garder le grand, retirer le très large) — voir `AUTO` dans `core/rail/plan.ts`.
