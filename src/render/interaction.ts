@@ -78,6 +78,8 @@ export interface Structure {
   distance: number;
   /** Peut s'ouvrir d'un clic gauche (machine, coffre). */
   usable?: boolean;
+  /** Ne s'ouvre qu'avec la touche « Activer » (porte de garage), pas d'un clic. */
+  activateOnly?: boolean;
   /** Se démolit à la hache (construction en bois) plutôt qu'à la pioche. */
   axe?: boolean;
   /** Boîte englobante (m), pour la mise en évidence et la portée. */
@@ -147,6 +149,8 @@ export class Interaction {
   aimed = false;
   /** Ce que vise le joueur demande la hache (true), la pioche (false), ou rien de particulier (null). */
   aimedAxe: boolean | null = null;
+  /** Identifiant de la construction ou machine visée à portée (sinon null) : sert à la touche « Utiliser ». */
+  aimedStructure: string | null = null;
   private holdingTime = 0;
   private unsubscribe: () => void;
 
@@ -457,6 +461,7 @@ export class Interaction {
     this.working = null;
     this.aimed = false;
     this.aimedAxe = null;
+    this.aimedStructure = null;
     if (frame.paused) {
       this.hud.hidden = true;
       this.highlight.visible = false;
@@ -476,6 +481,7 @@ export class Interaction {
             : REACH_M,
       );
     this.aimed = reachable;
+    if (reachable && hit?.type === 'structure') this.aimedStructure = hit.structure.id;
     // L'outil se retourne selon ce qu'on a devant, à portée ou non : hache pour un arbre ou du bois, pioche sinon.
     this.aimedAxe =
       hit === null
@@ -637,9 +643,11 @@ export class Interaction {
     else if (hit.type === 'structure') {
       status = t(
         hit.structure.usable
-          ? hit.structure.id.startsWith('piece:')
-            ? 'harvest.doorUse'
-            : 'harvest.structureUse'
+          ? hit.structure.activateOnly
+            ? 'harvest.garageUse'
+            : hit.structure.id.startsWith('piece:')
+              ? 'harvest.doorUse'
+              : 'harvest.structureUse'
           : 'harvest.demolish',
       );
     } else if (destroying || hit.target.destroyOnly) status = t('creative.destroy');

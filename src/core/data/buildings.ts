@@ -1,9 +1,11 @@
 import raw from '../../../content/buildings.json';
+import { CELL_SIZE_M } from '../constants';
+import { WIDEST_VEHICLE_M } from './vehicles';
 
 export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs' | 'pillar';
 export type Material = 'wood' | 'stone' | 'concrete' | 'aluminium';
 /** Identifiant d'une pièce : type + matériau, par exemple « wall_stone ». */
-export type PieceKind = `${PieceType}_${Material}`;
+export type PieceKind = `${PieceType}_${Material}` | 'door_garage';
 /** Emplacement occupé : un bord de case (mur ou porte), le sol ou le plafond d'une case. */
 export type PieceSlot = 'edge' | 'floor' | 'ceiling' | 'stairs' | 'pillar';
 
@@ -19,6 +21,14 @@ export interface PieceDef {
 export const PIECES: PieceDef[] = raw.pieces as PieceDef[];
 export const PIECE_TYPES: PieceType[] = ['wall', 'door', 'slab', 'stairs'];
 export const MATERIALS: Material[] = ['wood', 'stone', 'concrete', 'aluminium'];
+/** Porte de garage : largeur du plus large des véhicules + 2 cases, en cases de 50 cm (toujours impaire : centrée sur la case visée). */
+export const GARAGE_WIDTH_CELLS = (() => {
+  const n = Math.ceil(WIDEST_VEHICLE_M / CELL_SIZE_M) + 2;
+  return n % 2 === 0 ? n + 1 : n;
+})();
+/** Pièce « porte de garage » : un seul objet pour toute la largeur. */
+export const GARAGE_KIND: PieceKind = 'door_garage';
+
 /** Hauteur d'un étage (m) et d'un bloc de mur (m) : 5 blocs par étage. */
 export const STOREY_HEIGHT_M: number = raw.storeyHeightM;
 export const LAYER_HEIGHT_M: number = raw.layerHeightM;

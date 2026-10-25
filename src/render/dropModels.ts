@@ -90,6 +90,7 @@ export const NO_MODEL_ITEMS: readonly string[] = [
     ['wall', 'slab', 'stairs', 'pillar'].map((t) => `piece_${t}_${m}`),
   ),
   'piece_door_aluminium',
+  'piece_garage_aluminium',
   'steel_rod',
   'motor',
   'motor_heavy',

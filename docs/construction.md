@@ -146,3 +146,9 @@ Voir `docs/construction-refonte.md` : une seule visée pour toutes les pièces (
 - **Béton** (technologie Construction T2) : mur, dalle, escalier, pilier ; **aluminium** (technologie Aluminium T3, après Plastique) : mur, dalle, escalier, battant de porte, pilier ; nouvel onglet « Construction lourde ». Plaque d'aluminium : estampeuse, 2 lingots → 1 (moule de plaque). Fission T4 exige maintenant Aluminium T3. Modèles 3D : formes simples colorées pour l'instant.
 - **Portes** : une porte = 2 battants de 50 cm (1 m de large) posés ensemble, qui s'ouvrent ensemble ; chaque battant coûte un objet « battant de porte ». Les gonds du battant droit sont de l'autre côté.
 - **Touche E** : « Activer » (portes) ; elle n'ouvre plus les fenêtres des machines (clic ou F).
+
+### Porte de garage (25 octobre)
+
+- **Pièce** `door_garage` (objet `piece_garage_aluminium`, technologie Aluminium T3) : aluminium seulement. Recette : 14 plaques d'aluminium + 1 moteur renforcé + 4 engrenages + 6 fils de cuivre. Largeur = largeur du plus large des véhicules (`WIDEST_VEHICLE_M`, le Char : 2,5 m) + 2 cases, soit **7 cases (3,5 m)**, centrée sur la case visée ; hauteur d'un étage. Pose entière ou pas du tout, un seul objet ; démolie en entier (un objet rendu).
+- **Réglage** (touche « Utiliser » F visée) : fenêtre de choix en deux temps, **manuelle** (touche E, « Activer ») ou **automatique** avec distance de détection (2, 3, 4, 6, 8 ou 10 m). Automatique : elle s'ouvre dès qu'un véhicule (Quad, Buggy, Char, Camionnette, charrette) est à cette distance ou moins de la porte, et reste ouverte tant qu'il y en a un (`GameState.senseGarages`, toutes les 0,15 s, côté hôte). En mode automatique, E ne la manœuvre pas.
+- Données : `changes.garages` (clé du premier segment → mode et distance), segments en `door_garage` ouverts via les marqueurs `o:` comme les portes ; `docs/` : `core/build/garage.ts` (groupes de segments, distance).

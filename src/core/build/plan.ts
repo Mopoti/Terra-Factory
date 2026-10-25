@@ -1,5 +1,7 @@
 import { CELL_SIZE_M } from '../constants';
 import {
+  GARAGE_KIND,
+  GARAGE_WIDTH_CELLS,
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
   pieceDef,
@@ -129,11 +131,13 @@ export function evaluatePlan(
     const c = posCenter(pos);
     if (Math.hypot(c.x - player.x, c.z - player.z) > reachM)
       return { pos, status: 'far' as PlanStatus };
-    if (left <= 0) return { pos, status: 'lack' as PlanStatus };
+    // Une porte de garage entière ne coûte qu'un objet : le premier segment le prend, les autres suivent.
+    if (left <= 0 && !(kind === GARAGE_KIND && seq > 0))
+      return { pos, status: 'lack' as PlanStatus };
     const placed = resolveKind(kind, pos.slot);
     if (!isSupported(trial, placed, pos)) return { pos, status: 'unsupported' as PlanStatus };
     trial[key] = placed;
-    left--;
+    if (!(kind === GARAGE_KIND && seq > 0)) left--;
     taken.add(key);
     return { pos, status: 'ok' as PlanStatus, seq: seq++ };
   });
@@ -183,6 +187,15 @@ export function planWall(
   a: WallCoord,
   b: WallCoord,
 ): PiecePos[] {
+  if (kind === GARAGE_KIND) {
+    // Porte de garage : toute la largeur, centrée sur la case visée.
+    const first = a.i - (GARAGE_WIDTH_CELLS - 1) / 2;
+    return Array.from({ length: GARAGE_WIDTH_CELLS }, (_, k) =>
+      axis === 'x'
+        ? posFor(kind, level, first + k, line, 'x')
+        : posFor(kind, level, line, first + k, 'z'),
+    );
+  }
   if (pieceDef(kind).type === 'door') {
     // Une porte fait 1 m de large : deux battants de 50 cm côte à côte.
     return [0, 1].map((k) =>

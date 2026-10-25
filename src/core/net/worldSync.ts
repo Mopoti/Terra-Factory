@@ -25,6 +25,7 @@ export const REMOTE_CALLS = [
   'drop',
   'pickUp',
   'toggleDoor',
+  'setGarage',
   'removeKeys',
   'place',
   'placeMany',

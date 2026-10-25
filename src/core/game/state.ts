@@ -70,10 +70,11 @@ import { buyPrice, sellPrice } from './trade';
 import { perPlayerKeys, splitChanges, type PlayerChanges, type PlayerKey } from './playerData';
 import { recipeById } from '../data/recipes';
 import { resourceById } from '../data/resources';
-import { isFree, pieceKey, type PiecePos } from '../build/pieces';
+import { isFree, pieceKey, type PiecePos, type Pieces } from '../build/pieces';
 import { isSupported, pillarsForFace } from '../build/support';
+import { distanceToGarage, garageGroup, openKeyOf } from '../build/garage';
 import { detectRooms, type Room } from '../build/rooms';
-import { pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
+import { GARAGE_KIND, pieceDef, resolveKind, slotOf, type PieceKind } from '../data/buildings';
 import {
   BAG_LIMITS,
   ITEMS,
@@ -94,6 +95,7 @@ import {
 } from './inventory';
 import {
   MAX_LOG,
+  GARAGE_RANGES,
   MAX_PLACED,
   cellKey,
   emptyChanges,
@@ -676,6 +678,12 @@ export class GameState {
     const kind = this.changes.pieces[key];
     const m = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
     if (!kind?.startsWith('door') || !m) return null;
+    if (kind === GARAGE_KIND) {
+      // Porte de garage : la touche « Activer » ne la manœuvre qu'en mode manuel.
+      const g = this.garageAt(key);
+      if (!g || g.mode === 'auto') return null;
+      return this.setGarageOpen(key, !this.changes.pieces[openKeyOf(g.anchor) as string]);
+    }
     const level = m[1];
     const axis = m[4];
     const at = (gx: number, gz: number): string => `e:${level}:${gx},${gz}:${axis}:0`;
@@ -687,7 +695,8 @@ export class GameState {
       for (let k = 1; k < 8; k++) {
         const gx = axis === 'x' ? Number(m[2]) + dir * k : Number(m[2]);
         const gz = axis === 'z' ? Number(m[3]) + dir * k : Number(m[3]);
-        if (!this.changes.pieces[at(gx, gz)]?.startsWith('door')) break;
+        const next = this.changes.pieces[at(gx, gz)];
+        if (!next?.startsWith('door') || next === GARAGE_KIND) break;
         leaves.push([gx, gz]);
       }
     }
@@ -817,8 +826,75 @@ export class GameState {
     return 'ok';
   }
 
+  /**
+   * Pose une porte de garage : tous ses segments d'un coup pour un seul objet. Refusée si un segment est pris ou sans
+   * appui. Elle démarre en mode manuel (touche « Activer »).
+   */
+  placeGarage(positions: PiecePos[]): number {
+    const def = pieceDef(GARAGE_KIND);
+    if (positions.length === 0 || (this.inventory[def.item] ?? 0) < 1) return 0;
+    const trial: Pieces = Object.create(this.changes.pieces) as Pieces;
+    for (const pos of positions) {
+      if (!isFree(trial, GARAGE_KIND, pos) || !isSupported(trial, GARAGE_KIND, pos)) return 0;
+      trial[pieceKey(pos)] = GARAGE_KIND;
+    }
+    this.inventory = remove(this.inventory, def.item, 1).inventory;
+    for (const pos of positions) this.changes.pieces[pieceKey(pos)] = GARAGE_KIND;
+    const group = garageGroup(this.changes.pieces, pieceKey(positions[0]));
+    if (group) this.changes.garages[group.anchor] = { mode: 'manual', range: GARAGE_RANGES[0] };
+    this.roomCache = null;
+    this.emit({ type: 'build' });
+    this.emit({ type: 'inventory' });
+    return positions.length;
+  }
+
+  /** Réglages de la porte de garage dont fait partie ce segment (mode et distance de détection), ou null. */
+  garageAt(key: string): { anchor: string; mode: 'manual' | 'auto'; range: number } | null {
+    const group = garageGroup(this.changes.pieces, key);
+    if (!group) return null;
+    const g = this.changes.garages[group.anchor] ?? { mode: 'manual', range: GARAGE_RANGES[0] };
+    return { anchor: group.anchor, mode: g.mode, range: g.range };
+  }
+
+  /** Choisit comment s'ouvre la porte de garage : à la touche « Activer » (manuel) ou quand un véhicule approche. */
+  setGarage(key: string, mode: 'manual' | 'auto', range: number): boolean {
+    const group = garageGroup(this.changes.pieces, key);
+    if (!group) return false;
+    const r = GARAGE_RANGES.includes(range) ? range : GARAGE_RANGES[0];
+    this.changes.garages[group.anchor] = { mode: mode === 'auto' ? 'auto' : 'manual', range: r };
+    this.emit({ type: 'build' });
+    return true;
+  }
+
+  /** Ouvre ou ferme tous les segments de la porte de garage (le capteur et la touche passent par là). */
+  setGarageOpen(key: string, open: boolean): boolean | null {
+    const group = garageGroup(this.changes.pieces, key);
+    if (!group) return null;
+    const isOpen = !!this.changes.pieces[openKeyOf(group.anchor) as string];
+    if (isOpen === open) return open;
+    for (const k of group.keys) {
+      const ok = openKeyOf(k) as string;
+      if (open) this.changes.pieces[ok] = GARAGE_KIND;
+      else delete this.changes.pieces[ok];
+    }
+    this.emit({ type: 'build' });
+    return open;
+  }
+
+  /** Portes de garage en mode automatique : ouvertes tant qu'un des points (véhicules) est à portée. */
+  senseGarages(points: { x: number; z: number }[]): void {
+    for (const [anchor, g] of Object.entries(this.changes.garages)) {
+      if (g.mode !== 'auto') continue;
+      const group = garageGroup(this.changes.pieces, anchor);
+      if (!group) continue;
+      const near = points.some((p) => distanceToGarage(group, p.x, p.z) <= g.range);
+      this.setGarageOpen(anchor, near);
+    }
+  }
+
   /** Pose plusieurs pièces d'un coup ; renvoie combien ont pu l'être (selon le stock et les emplacements libres). */
   placeMany(kind: PieceKind, positions: PiecePos[], rotation = 0): number {
+    if (kind === GARAGE_KIND) return this.placeGarage(positions);
     let n = 0;
     for (const pos of positions) if (this.place(kind, pos, rotation) === 'ok') n++;
     return n;
@@ -1131,6 +1207,19 @@ export class GameState {
    */
   removeKeys(keys: string[], drop: { x: number; z: number }): number {
     let n = 0;
+    // Une porte de garage se démolit en entier (un seul objet rendu).
+    const expanded: string[] = [];
+    for (const key of keys) {
+      const group = garageGroup(this.changes.pieces, key);
+      if (group) {
+        expanded.push(...group.keys);
+        delete this.changes.garages[group.anchor];
+      } else expanded.push(key);
+    }
+    let garageRefund = new Set<string>();
+    for (const key of expanded)
+      if (this.changes.pieces[key] === GARAGE_KIND) garageRefund = garageRefund.add(key);
+    keys = expanded;
     for (const key of keys) {
       const kind = this.changes.pieces[key];
       if (!kind) continue;
@@ -1141,7 +1230,13 @@ export class GameState {
       n++;
       // Démolir rend la pièce elle-même (l'objet), pas ses ressources de fabrication. Un pilier
       // automatique ne rend rien.
-      if (pieceDef(kind).type !== 'pillar') this.giveBack(pieceDef(kind).item, 1, drop);
+      // Un pilier automatique ne rend rien ; une porte de garage rend un seul objet pour tous ses segments.
+      if (kind === GARAGE_KIND) {
+        if (garageRefund.size > 0) {
+          garageRefund.clear();
+          this.giveBack(pieceDef(kind).item, 1, drop);
+        }
+      } else if (pieceDef(kind).type !== 'pillar') this.giveBack(pieceDef(kind).item, 1, drop);
     }
     if (n > 0) {
       this.roomCache = null;

@@ -101,6 +101,14 @@ export interface DroppedStack {
  * Ce que le joueur a changé dans le monde d'origine (qui, lui, se recalcule depuis la seed).
  * Seules les différences sont enregistrées : une sauvegarde reste petite.
  */
+/** Distances (m) de détection proposées pour l'ouverture automatique d'une porte de garage. */
+export const GARAGE_RANGES: readonly number[] = [2, 3, 4, 6, 8, 10];
+export interface GarageSettings {
+  /** Manuel : touche « Activer » ; automatique : s'ouvre quand un véhicule est à moins de `range` m. */
+  mode: 'manual' | 'auto';
+  range: number;
+}
+
 export interface WorldChanges {
   /** Quantité déjà prélevée, par case d'ancrage « gx,gz » (arbre, rocher ou case de minerai). */
   taken: Record<string, number>;
@@ -108,6 +116,8 @@ export interface WorldChanges {
   nextDropId: number;
   /** Pièces de construction posées (voir `core/build/pieces.ts`). */
   pieces: Pieces;
+  /** Réglages des portes de garage, par clé du premier segment (voir `GameState.garageGroup`). */
+  garages: Record<string, GarageSettings>;
   /** Orientation des pièces posées, en quarts de tour (1 à 3 ; 0 = non enregistré), pour les futurs habillages. */
   rotations: Record<string, number>;
   /** Barre de raccourcis du joueur (rangée avec le reste de la partie) : objet par case, ou null. */
@@ -208,6 +218,7 @@ export function emptyChanges(): WorldChanges {
     nextDropId: 1,
     pieces: {},
     rotations: {},
+    garages: {},
     hotbar: Array.from({ length: HOTBAR_SLOTS }, () => null),
     tools: Array.from({ length: TOOL_SLOTS }, () => null),
     toolsHeld: true,
@@ -374,6 +385,17 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   if (typeof r.rotations === 'object' && r.rotations !== null) {
     for (const [key, v] of Object.entries(r.rotations as Record<string, unknown>)) {
       if (result.pieces[key] && isNum(v) && v >= 1 && v <= 3) result.rotations[key] = Math.floor(v);
+    }
+  }
+  if (typeof r.garages === 'object' && r.garages !== null) {
+    for (const [key, v] of Object.entries(r.garages as Record<string, unknown>)) {
+      const g = v as Record<string, unknown> | null;
+      if (result.pieces[key] !== 'door_garage' || !g) continue;
+      const range = isNum(g.range) ? g.range : GARAGE_RANGES[0];
+      result.garages[key] = {
+        mode: g.mode === 'auto' ? 'auto' : 'manual',
+        range: GARAGE_RANGES.includes(range) ? range : GARAGE_RANGES[0],
+      };
     }
   }
   if (typeof r.equipment === 'object' && r.equipment !== null) {

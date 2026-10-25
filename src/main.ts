@@ -33,6 +33,7 @@ import { GuestSync } from './core/net/worldSync';
 import { mergeChanges } from './core/game/playerData';
 import type { WorldChanges } from './core/game/worldChanges';
 import { choiceModal, promptModal } from './ui/modal';
+import { GARAGE_RANGES } from './core/game/worldChanges';
 import { STATION_NAME_MAX } from './core/rail/station';
 
 initLocale();
@@ -274,6 +275,32 @@ function startGame(
       });
       syncPaused();
       return id;
+    },
+    onConfigureGarage: async (current) => {
+      view.setUiOpen(true);
+      try {
+        const mode = await choiceModal({
+          title: t('garage.title'),
+          choices: [
+            { value: 0, label: t('garage.manual') },
+            { value: 1, label: t('garage.auto') },
+          ],
+          cancelLabel: t('station.cancel'),
+        });
+        if (mode === null) return null;
+        if (mode === 0) return { mode: 'manual', range: current.range };
+        const range = await choiceModal({
+          title: t('garage.range'),
+          choices: GARAGE_RANGES.map((n) => ({
+            value: n,
+            label: t('garage.rangeChoice', { n: String(n) }),
+          })),
+          cancelLabel: t('station.cancel'),
+        });
+        return range === null ? null : { mode: 'auto', range };
+      } finally {
+        syncPaused();
+      }
     },
     onOpenMachine: (id) => {
       if (!session?.pause.isOpen() && !session?.inventory.isOpen()) session?.machine.open(id);

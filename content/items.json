@@ -2097,6 +2097,20 @@
       "weightKg": 0.8,
       "volumeL": 0.4,
       "color": "#c4ccd6"
+    },
+    {
+      "id": "piece_garage_aluminium",
+      "stack": 10,
+      "category": "industrial",
+      "weightKg": 25,
+      "volumeL": 20,
+      "color": "#aab4c0",
+      "recipe": {
+        "aluminium_plate": 14,
+        "motor_heavy": 1,
+        "iron_gear": 4,
+        "copper_wire": 6
+      }
     }
   ]
 }

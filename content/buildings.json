@@ -194,6 +194,13 @@
       "material": "aluminium",
       "color": "#c4ccd6",
       "item": "piece_pillar_aluminium"
+    },
+    {
+      "id": "door_garage",
+      "type": "door",
+      "material": "aluminium",
+      "color": "#aab4c0",
+      "item": "piece_garage_aluminium"
     }
   ],
   "supportSpanM": 5

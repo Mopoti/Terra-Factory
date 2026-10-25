@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { doorOpenKey, parseKey, pieceKey, type PiecePos, type Pieces } from '../core/build/pieces';
 import {
+  GARAGE_KIND,
   LAYERS_PER_STOREY,
   LAYER_HEIGHT_M,
   RISE_DIR,
@@ -295,6 +296,41 @@ export function addPiece(
       color,
       true,
     );
+    return;
+  }
+  if (kind === GARAGE_KIND) {
+    // Porte de garage : un segment de 50 cm de large ; fermée, des lattes sur 2,3 m ; ouverte, elle est enroulée en haut.
+    const open = !!pieces?.[doorOpenKey(pos)];
+    const H0 = STOREY_HEIGHT_M - EPS;
+    const panelH = 2.3;
+    const thick = 0.06;
+    mb.box(
+      mx,
+      y0 + panelH,
+      mz,
+      alongX ? CELL_SIZE_M : T,
+      H0 - panelH,
+      alongX ? T : CELL_SIZE_M,
+      color,
+      true,
+    );
+    const slats = 4;
+    const slatH = panelH / slats;
+    for (let k = 0; k < slats; k++) {
+      // Ouverte, les lattes s'empilent sous le linteau.
+      const y = open ? y0 + panelH - (slats - k) * 0.05 - 0.05 : y0 + k * slatH;
+      const h = open ? 0.05 : slatH - 0.01;
+      mb.box(
+        mx,
+        y,
+        mz,
+        alongX ? CELL_SIZE_M : thick,
+        h,
+        alongX ? thick : CELL_SIZE_M,
+        shade(color, k % 2 === 0 ? 1.0 : 0.9),
+        true,
+      );
+    }
     return;
   }
   // Porte : cadre avec un passage libre de 50 cm au milieu, sur tout l'étage.

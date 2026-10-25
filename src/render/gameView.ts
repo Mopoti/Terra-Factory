@@ -18,6 +18,7 @@ import {
 import { edgeKeysToRemove, parseKey, slabAt, slabFace, type PiecePos } from '../core/build/pieces';
 import {
   BUILD_REACH_M,
+  GARAGE_KIND,
   PIECES,
   resolveKind,
   LAYERS_PER_STOREY,
@@ -209,6 +210,11 @@ export interface GameViewOptions {
   onMessage?: (text: string) => void;
   /** Le joueur veut ouvrir l'interface de la machine visée (touche « Utiliser »). */
   onOpenMachine?: (id: number) => void;
+  /** Réglage d'une porte de garage (touche « Utiliser » dessus) : renvoie le nouveau réglage, ou null si le joueur annule. */
+  onConfigureGarage?: (current: {
+    mode: 'manual' | 'auto';
+    range: number;
+  }) => Promise<{ mode: 'manual' | 'auto'; range: number } | null>;
   /** Le joueur veut renommer une station (fenêtre de saisie). */
   onRenameStation?: (id: number) => void;
   /** Choisir une station de la liste (destination du pilote automatique) ; null si le joueur annule. */
@@ -536,6 +542,7 @@ export function startGameView(
       else if (id.startsWith('piece:')) {
         const open = options.state.toggleDoor(id.slice(6));
         if (open !== null) playSfx(open ? 'doorOpen' : 'doorClose');
+        else if (options.state.garageAt(id.slice(6))) options.onMessage?.(t('garage.autoOn'));
       }
     },
   });
@@ -1048,6 +1055,7 @@ export function startGameView(
       name: t(`item.${def.item}` as TranslationKey),
       seconds: def.type === 'door' ? 1 : PIECE_BREAK_S[def.material],
       usable: def.type === 'door',
+      activateOnly: kind === GARAGE_KIND,
       axe: def.material === 'wood',
       distance: piece!.t,
       box: pieceBox(piece!.key),
@@ -2332,6 +2340,28 @@ export function startGameView(
     skyNow = sky.getHex();
     (scene.background as THREE.Color).copy(sky);
     if (scene.fog) scene.fog.color.copy(sky);
+  }
+
+  // --- Portes de garage : réglage de l'ouverture et capteur ------------------------------------
+  let garageDialog = false;
+  async function configureGarage(key: string): Promise<void> {
+    const g = options.state.garageAt(key);
+    if (!g || garageDialog || !options.onConfigureGarage) return;
+    garageDialog = true;
+    try {
+      const next = await options.onConfigureGarage({ mode: g.mode, range: g.range });
+      if (next) options.state.setGarage(key, next.mode, next.range);
+    } finally {
+      garageDialog = false;
+    }
+  }
+  let garageSense = 0;
+  /** Les portes de garage automatiques s'ouvrent quand un véhicule est à portée, et restent ouvertes tant qu'il y est. */
+  function senseGarages(dt: number): void {
+    garageSense -= dt;
+    if (garageSense > 0 || guest) return;
+    garageSense = 0.15;
+    options.state.senseGarages(options.state.changes.vehicles);
   }
 
   // --- Véhicules : buggy ------------------------------------------------------------------------
@@ -3908,7 +3938,13 @@ export function startGameView(
       updateSeason();
       const useKey = pressed('use');
       // Une seule touche, un seul véhicule : le plus proche (quad, buggy ou locomotive) la reçoit, jamais deux à la fois.
-      const claim = useKey && vehicleClaimsUse();
+      // Une porte de garage visée garde la touche : on règle son ouverture (même avec un véhicule à côté).
+      const garageKey = interaction.aimedStructure?.startsWith('piece:')
+        ? interaction.aimedStructure.slice(6)
+        : null;
+      if (useKey && garageKey && !mounted) void configureGarage(garageKey);
+      const claim =
+        useKey && !(garageKey && options.state.garageAt(garageKey)) && vehicleClaimsUse();
       trainUse = useKey && !claim;
       trainCouple = pressed('couple');
       trainRoute = pressed('route');
@@ -3918,6 +3954,7 @@ export function startGameView(
         trainLevelDown = pressed('levelDown');
       }
       vehicleTick(dt, claim);
+      senseGarages(dt);
       bodyTick(useKey);
       motion = trains.isMounted() ? { speed: 0, strafe: 0 } : step(dt);
       stepBody(dt);
