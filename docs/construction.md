@@ -132,3 +132,9 @@ Les portes ont un **battant** : fermé il remplit le passage et **bloque** le jo
 ### Tour 76 — refonte : visée libre et pièces sans appui
 
 Voir `docs/construction-refonte.md` : une seule visée pour toutes les pièces (emplacement libre le plus proche de la surface touchée), plus de règle d'appui, une seule dalle (sol = plafond), porte en pierre ajoutée, bois et pierre entièrement compatibles. Les règles de fixation des Tours 17 à 29 (soutien des murs, plafonds à 3 cases d'un mur, volées d'escalier) sont abandonnées.
+
+## Décisions à coder : piliers et matériaux (25 octobre)
+
+- **Piliers** : on enlève les piliers de soutènement posés automatiquement. Le pilier devient une pièce posée à la main (recette : 4 bois pour le pilier en bois, 4 pierres pour celui en pierre).
+- **Portée** : sans mur dessous, une dalle ne peut pas s'étendre au-delà de **5 m** d'un appui. Au-delà, le patron devient rouge (rien ne supporte le poids) : le joueur ajoute un mur ou un pilier pour continuer à construire. (Remplace `pillarsFor` / `pillarsForFace` et la valeur `supportSpanM` de `buildings.json`.)
+- **Matériaux** : bois → pierre → **béton** (technologie Construction T2, bloc de béton) → **aluminium** (nouvelle technologie Aluminium T3, après Plastique : lingot et plaque d'aluminium ; le zamak et l'uranium restent en Fission T4). Mêmes tailles de pièces ; coûts proposés : mur 2, dalle 2, escalier 4, porte 8 unités pour le béton ; 1, 1, 2, 3 plaques pour l'aluminium.

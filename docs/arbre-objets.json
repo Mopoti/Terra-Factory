@@ -361,8 +361,9 @@
    "paths": [],
    "usedIn": [],
    "issues": [
-    "Aucune recette : impossible à obtenir",
-    "Ne sert d'ingrédient à rien"
+    "Aucune recette actuellement",
+    "Ne sert d'ingrédient à rien",
+    "Décidé : recette 4 bois ; le pilier ne sera plus posé automatiquement mais à la main, et la construction sera bloquée au-delà de 5 m sans mur ni pilier sous la dalle (patron rouge). À coder."
    ]
   },
   "piece_pillar_stone": {
@@ -372,8 +373,9 @@
    "paths": [],
    "usedIn": [],
    "issues": [
-    "Aucune recette : impossible à obtenir",
-    "Ne sert d'ingrédient à rien"
+    "Aucune recette actuellement",
+    "Ne sert d'ingrédient à rien",
+    "Décidé : recette 4 pierres ; pilier posé à la main (voir pilier en bois). À coder."
    ]
   },
   "iron_ingot": {
@@ -961,10 +963,12 @@
      "seconds": 8
     }
    ],
-   "usedIn": [],
-   "issues": [
-    "Ne sert d'ingrédient à rien"
-   ]
+   "usedIn": [
+    "copper_plate",
+    "iron_plate",
+    "steel_plate"
+   ],
+   "issues": []
   },
   "mould_gear": {
    "name": "Moule d'engrenage (fonte)",
@@ -983,10 +987,10 @@
      "seconds": 8
     }
    ],
-   "usedIn": [],
-   "issues": [
-    "Ne sert d'ingrédient à rien"
-   ]
+   "usedIn": [
+    "iron_gear"
+   ],
+   "issues": []
   },
   "mould_wire": {
    "name": "Moule de fil (fonte)",
@@ -1005,10 +1009,10 @@
      "seconds": 8
     }
    ],
-   "usedIn": [],
-   "issues": [
-    "Ne sert d'ingrédient à rien"
-   ]
+   "usedIn": [
+    "copper_wire"
+   ],
+   "issues": []
   },
   "machine_drill": {
    "name": "Foreuse",

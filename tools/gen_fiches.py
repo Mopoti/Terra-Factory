@@ -45,6 +45,15 @@ for i,ps in paths.items():
         for k in p['in']: used.setdefault(k,set()).add(i)
 for t in techs:
     for k in t.get('cost',{}): used.setdefault(k,set()).add('tech:'+t['id'])
+mould_for={}
+for r in rec:
+    if r.get('mould'):
+        used.setdefault(r['mould'],set()).update(r['out'])
+        mould_for.setdefault(r['mould'],[]).append(r)
+PLANNED={
+ 'piece_pillar_wood':"Décidé : recette 4 bois ; le pilier ne sera plus posé automatiquement mais à la main, et la construction sera bloquée au-delà de 5 m sans mur ni pilier sous la dalle (patron rouge). À coder.",
+ 'piece_pillar_stone':"Décidé : recette 4 pierres ; pilier posé à la main (voir pilier en bois). À coder.",
+}
 SPECIAL={'carapace':'Butin des créatures','living_tissue':'Butin des créatures','nuclear_waste':'Produit par les réacteurs'}
 # issues
 issues={}; pathok={}
@@ -74,13 +83,14 @@ for it in items:
                 t2=unl.get(k)
                 msgs.append(('warn',f"{'Machine' if k==p['machine'] else 'Ingrédient'} « {name(k)} » n'est pas encore disponible : débloqué par « {tname(t2[0])} »" + ('' if tid else " (cet objet n'a pas de technologie : il est disponible dès le départ)") if t2 else f"« {name(k)} » indisponible"))
     if not paths[i] and not it.get('creative') and i not in SPECIAL:
-        msgs.append(('bad','Aucune recette : impossible à obtenir'))
+        msgs.append(('info' if i in PLANNED else 'bad','Aucune recette actuellement' if i in PLANNED else 'Aucune recette : impossible à obtenir'))
     if tid is None and paths[i] and i not in base_items: pass
     if tid is None and (paths[i]) and (it.get('category') in ('rail','equipment','armor') or i.startswith(('machine_','piece_'))) :
         msgs.append(('info',"Disponible dès le départ (aucune technologie)"))
     uses=used.get(i,set())
     if not uses and not it.get('category') and i not in ('nuclear_waste',) and not it.get('creative'):
         msgs.append(('info',"Ne sert d'ingrédient à rien"))
+    if i in PLANNED: msgs.append(('info',PLANNED[i]))
     m=img[i]['model']
     if m.startswith('aucun') and not i.startswith('res_'): msgs.append(('info','Pas de modèle 3D propre'))
     issues[i]=msgs
@@ -119,7 +129,10 @@ for it in items:
     u=sorted(x for x in used.get(i,[]) )
     uh=''.join((f'<a class="u" href="#{e(x)}">{e(name(x))}</a>' if not x.startswith('tech:') else f'<span class="u t">Techno : {e(tname(x[5:]))}</span>') for x in u[:14])
     if len(u)>14: uh+=f'<span class="u more">+{len(u)-14}</span>'
-    msgs=issues[i]
+    msgs=list(issues[i])
+    if i in mould_for:
+        msgs.insert(0,('info','Sert de moule (outil) : '+', '.join(name(o) for r in mould_for[i] for o in r['out'])+f" ; il s'use après 8 cycles"))
+    msgs=[m for m in msgs if not (m[1]=="Ne sert d'ingrédient à rien" and i in mould_for)]
     for s,_ in msgs: stats[s]+=1
     mh=''.join(f'<li class="{s}">{e(m)}</li>' for s,m in msgs)
     sev='bad' if any(s=='bad' for s,_ in msgs) else 'warn' if any(s=='warn' for s,_ in msgs) else 'info' if msgs else 'ok'
