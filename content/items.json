@@ -1386,7 +1386,7 @@
       "stack": 1,
       "category": "logistics",
       "weightKg": 15,
-      "volumeL": 60,
+      "volumeL": 40,
       "color": "#9a6a3a",
       "recipe": {
         "wood": 12,

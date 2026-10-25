@@ -1293,9 +1293,9 @@ describe('charrette à bras', () => {
     const v = s.placeVehicle(3, 4, 0, 'cart');
     expect(v?.kind).toBe('cart');
     expect(s.inventory.vehicle_cart ?? 0).toBe(0);
-    v!.slots.push({ item: 'stone', count: 5 });
+    v!.slots.push({ item: 'copper_wire', count: 5 });
     expect(s.pickUpVehicle(v!.id)).toBe(true);
     expect(s.inventory.vehicle_cart).toBe(1);
-    expect(s.inventory.stone).toBe(5);
+    expect(s.inventory.copper_wire).toBe(5);
   });
 });
