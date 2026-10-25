@@ -17,6 +17,21 @@ const PLATFORM_H = 0.32;
 const SIDE_M = 2.3;
 const SIGN_SIDE_M = 3.2;
 
+/**
+ * Boîtes de collision d'un quai, dans son repère (x : travers, voie du côté -x ; z : le long de la voie ; y : au-dessus du
+ * sol) : parois de l'abri, banc, lampadaires, poubelle et mât du panneau. Le quai lui-même se monte à pied.
+ */
+const SOLIDS: readonly { x0: number; x1: number; z0: number; z1: number; top: number }[] = [
+  { x0: 3.1, x1: 3.3, z0: -2.5, z1: 1.0, top: 2.6 },
+  { x0: 2.4, x1: 3.2, z0: -2.55, z1: -2.45, top: 2.6 },
+  { x0: 2.4, x1: 3.2, z0: 0.95, z1: 1.05, top: 2.6 },
+  { x0: 2.85, x1: 3.15, z0: -2.1, z1: 0.6, top: 1.0 },
+  { x0: 2.78, x1: 3.02, z0: -3.92, z1: -3.68, top: 3.2 },
+  { x0: 2.78, x1: 3.02, z0: 2.18, z1: 2.42, top: 3.2 },
+  { x0: 3.07, x1: 3.43, z0: 1.52, z1: 1.88, top: 0.8 },
+  { x0: 3.1, x1: 3.3, z0: -3.8, z1: -3.6, top: 2.2 },
+];
+
 const platformMat = new THREE.MeshStandardMaterial({ color: 0xb9ad96, roughness: 0.9 });
 const stripeMat = new THREE.MeshStandardMaterial({ color: 0xe0b84a, roughness: 0.8 });
 const poleMat = new THREE.MeshStandardMaterial({ color: 0x4d4a46, roughness: 0.7 });
@@ -61,8 +76,8 @@ function buildStation(name: string, tint?: THREE.Color): THREE.Group {
   platform.position.set(SIDE_M, PLATFORM_H / 2, 0);
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, PLATFORM_LEN), stripeMat);
   stripe.position.set(SIDE_M - PLATFORM_W / 2 + 0.2, PLATFORM_H + 0.011, 0);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 8), poleMat);
-  pole.position.set(SIGN_SIDE_M, 1.3, -PLATFORM_LEN / 2 + 0.8);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), poleMat);
+  pole.position.set(SIGN_SIDE_M, 1.1, -PLATFORM_LEN / 2 + 0.8);
   const board = new THREE.Mesh(
     new THREE.PlaneGeometry(2.4, 0.6),
     name
@@ -125,6 +140,24 @@ export class StationView {
         this.drop(m.group);
         this.meshes.delete(id);
       }
+  }
+
+  /** Le point (x, z) du joueur (entre les hauteurs y0 et y1) est-il dans une partie pleine d'un quai ? */
+  solidAt(x: number, z: number, y0: number, y1: number): boolean {
+    for (const { group } of this.meshes.values()) {
+      const dx = x - group.position.x;
+      const dz = z - group.position.z;
+      const sin = Math.sin(group.rotation.y);
+      const cos = Math.cos(group.rotation.y);
+      const lx = dx * cos - dz * sin;
+      const lz = dx * sin + dz * cos;
+      for (const b of SOLIDS) {
+        if (lx < b.x0 || lx > b.x1 || lz < b.z0 || lz > b.z1) continue;
+        if (y1 <= group.position.y || y0 >= group.position.y + b.top) continue;
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Fantôme de la station qu'on s'apprête à poser (null : plus de fantôme). */

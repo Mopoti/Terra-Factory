@@ -307,7 +307,7 @@ export class TrainView {
       if (Math.abs(dx * b.uz - dz * b.ux) > b.hw) continue;
       return true;
     }
-    return false;
+    return this.stations.solidAt(x, z, y0, y1);
   }
 
   isMounted(): boolean {

@@ -89,3 +89,8 @@ Clic gauche maintenu depuis le point choisi, patron vert (possible) puis rouge �
 
 - Le départ s'accroche à un bout de voie seulement si le curseur est sur sa tuile ou la suivante (≈ 1,9 m, `SNAP_M`). Sur un terrain sans voie, un clic loin devant un bout de voie le prolonge toujours (portée 30 m) ; au milieu de la voie (curseur à moins de 2,2 m d'un rail), le départ est la tuile visée.
 - Après une pose, ou après un clic droit au repos, le patron sous le curseur disparaît jusqu'à ce qu'on change de tuile (`TrainView.hideHover`).
+
+
+### Quai de gare : collisions et panneau (25 octobre)
+
+Le quai a des boîtes de collision (`SOLIDS` dans `stationView.ts`, repère du quai) : parois de l'abri, banc, lampadaires, poubelle et mât du panneau ; le quai lui-même se monte à pied. Le mât du panneau s'arrête sous le panneau (2,2 m), qui n'est plus coupé. Les boîtes sont estimées d'après `ferroviaire.py` (échelle ½) : à ajuster à l'œil en jeu.
