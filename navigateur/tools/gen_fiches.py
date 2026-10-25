@@ -1,5 +1,6 @@
 import json, html
-R='/home/user/Terra-Factory/'
+R='/home/user/Terra-Factory/navigateur/'
+D='/home/user/Terra-Factory/docs/'  # les docs sont communes à toutes les versions, à la racine
 S='/tmp/claude-0/-home-user-Terra-Factory/321d8bf2-7c57-5c8c-af02-ddbd7a8bba29/scratchpad/'
 items=json.load(open(R+'content/items.json'))['items']
 fr=json.load(open(R+'src/i18n/fr.json'))
@@ -142,7 +143,7 @@ for it in items:
 # json graph
 graph={'items':{i['id']:{'name':name(i['id']),'category':i.get('category'),'tech':unl.get(i['id'],[]),'paths':[{k:v for k,v in p.items() if k in('kind','machine','in','out','seconds')} for p in paths[i['id']]],'usedIn':sorted(used.get(i['id'],[])),'issues':[m for _,m in issues[i['id']]]} for i in items},
  'techs':{t['id']:{'name':tname(t['id']),'tier':t['tier'],'cost':t.get('cost',{}),'requires':t.get('requires',[]),'unlocks':t.get('unlocks',[])} for t in techs}}
-json.dump(graph,open(R+'docs/arbre-objets.json','w'),ensure_ascii=False,indent=1)
+json.dump(graph,open(D+'arbre-objets.json','w'),ensure_ascii=False,indent=1)
 nbad=sum(1 for i in items if any(s=='bad' for s,_ in issues[i['id']])); nwarn=sum(1 for i in items if any(s=='warn' for s,_ in issues[i['id']]) and not any(s=='bad' for s,_ in issues[i['id']]))
 css=open(S+'fiches.css').read()
 js='''
@@ -164,7 +165,7 @@ body=f'''<title>Fiches objets</title>
 <script>{js}</script>
 '''
 open(S+'fiches.html','w').write(body)
-open(R+'docs/fiches-objets.html','w').write('<!doctype html>\n<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>\n'+body+'</body></html>')
+open(D+'fiches-objets.html','w').write('<!doctype html>\n<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>\n'+body+'</body></html>')
 print(len(body)/1e6,'Mo',nbad,nwarn,stats)
 for i in items:
     for s,m in issues[i['id']]:

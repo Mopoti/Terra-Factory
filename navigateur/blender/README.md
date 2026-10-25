@@ -32,7 +32,7 @@ Pour le PC avec Blender (testé avec les scripts sous bpy 4.2 ; prévus pour 5.x
 
 Avec Blender installé : `blender --background --python blender/scripts/extraction.py` (depuis la racine du dépôt), puis `node scripts/sync-modeles.mjs`.
 
-**Pour que le jeu en ligne change**, il faut aussi pousser les copies du jeu : `git add blender/ export/ public/models/terra/` (le site Vercel ne lit que `public/`, pas `export/`). Le site se redéploie tout seul à chaque `git push` sur la branche de travail.
+**Pour que le jeu en ligne change**, il faut aussi pousser les copies du jeu : `git add navigateur/blender/ navigateur/export/ navigateur/public/models/terra/` (le site Vercel ne lit que `public/`, pas `export/`). Le site se redéploie tout seul à chaque `git push` sur la branche de travail.
 
 ## Brancher un modèle dans le jeu
 

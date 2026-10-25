@@ -213,7 +213,7 @@ ${lanes}${edges}${nodes}</svg></div>
 </script>
 </body></html>
 `;
-writeFileSync('docs/arbre-technologies.html', html);
+writeFileSync('../docs/arbre-technologies.html', html);
 console.log(
   `${techs.length} technologies, ${cols.length} colonnes -> docs/arbre-technologies.html`,
 );
