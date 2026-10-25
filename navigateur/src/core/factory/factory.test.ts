@@ -1871,11 +1871,11 @@ describe('câble isolé, puce et paquet T3 (7d)', () => {
     expect(f.status(lab)).toBe('wrongPack');
   });
 
-  it('les recettes : 4 fils + 1 isolant → 4 câbles isolés ; puce ; paquet T3', () => {
+  it('les recettes : 4 fils + 1 isolant → 4 câbles isolés ; puce ; paquet T4', () => {
     expect(itemById('cable_insulated').recipe).toEqual({ copper_wire: 4, plastic_insulator: 1 });
     expect(itemById('cable_insulated').yield).toBe(4);
     expect(itemById('silicon_chip').recipe).toEqual({ silicon_raw: 1, copper_wire: 2 });
-    expect(itemById('science_pack_3').recipe).toEqual({ silicon_chip: 1, cable_insulated: 1 });
+    expect(itemById('science_pack_4').recipe).toEqual({ silicon_chip: 1, cable_insulated: 1 });
   });
 });
 
@@ -1905,8 +1905,8 @@ describe('laboratoire à plusieurs emplacements', () => {
   });
 });
 
-describe('plaque d’acier et paquet T2', () => {
-  it('l’estampeuse fait une plaque d’acier avec le moule de plaque ; le paquet T2 = plaque + tuyau de laiton', () => {
+describe('plaque d’acier et paquet T3', () => {
+  it('l’estampeuse fait une plaque d’acier avec le moule de plaque ; le paquet T3 = plaque + tuyau de laiton', () => {
     const st = emptyMachine(1, 'stamper', 8, 0, 0);
     st.recipe = 'steel_plate';
     st.slots.push({ item: 'steel_ingot', count: 1 });
@@ -1917,7 +1917,7 @@ describe('plaque d’acier et paquet T2', () => {
     st.fuel = { item: 'coal', count: 5 };
     run(f, 4);
     expect(st.stock).toEqual({ item: 'steel_plate', count: 1 });
-    expect(itemById('science_pack_2').recipe).toEqual({ steel_plate: 1, machine_pipe_2: 1 });
+    expect(itemById('science_pack_3').recipe).toEqual({ steel_plate: 1, machine_pipe_2: 1 });
   });
 });
 

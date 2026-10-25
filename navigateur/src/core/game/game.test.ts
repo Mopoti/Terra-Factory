@@ -702,7 +702,7 @@ describe('technologies', () => {
     s.changes.unlocked.push('logistics');
     expect(s.research('electricity')).toBe('ok');
     expect(s.study('automation')).toBe('ok');
-    s.addStudy({ science_pack: 30 });
+    s.addStudy({ science_pack: 30, science_pack_2: 30 });
     expect(s.research('textile')).toBe('lab');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
@@ -715,30 +715,31 @@ describe('technologies', () => {
     expect(s.studyRemaining()).toBe(0);
     expect(s.study('metallurgy')).toBe('notLab');
     expect(s.study('automation')).toBe('ok');
-    expect(s.studyRemaining()).toBe(30);
+    // Un objet T2 coûte des paquets T2 ET T1.
+    expect(s.studyRemaining()).toBe(60);
     s.addStudy({ science_pack: 8 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.researching).toBe('automation');
-    expect(copy.studyRemaining()).toBe(22);
-    copy.addStudy({ science_pack: 30 });
+    expect(copy.studyRemaining()).toBe(52);
+    copy.addStudy({ science_pack: 30, science_pack_2: 30 });
     expect(copy.isUnlocked('machine_assembler')).toBe(true);
     expect(copy.changes.researching).toBeNull();
   });
 
-  it('une technologie T3 réclame des paquets T2 : les autres paquets ne comptent pas', () => {
+  it('une technologie T3 réclame des paquets T3 et T2 : les autres paquets ne comptent pas', () => {
     const s = new GameState({ inventory: {} });
     for (const id of ['logistics', 'electricity', 'metallurgy', 'metallurgy_2', 'manufacturing_2'])
       s.changes.unlocked.push(id);
     s.changes.unlocked.push('construction_2');
     expect(s.study('heavy_press_3')).toBe('ok');
-    expect(s.studyNeeds()).toEqual({ science_pack_2: 100 });
+    expect(s.studyNeeds()).toEqual({ science_pack_3: 100, science_pack_2: 100 });
     s.addStudy({ science_pack: 50 });
-    expect(s.studyRemaining()).toBe(100);
-    s.addStudy({ science_pack_2: 60 });
-    expect(s.studyNeeds()).toEqual({ science_pack_2: 40 });
+    expect(s.studyRemaining()).toBe(200);
+    s.addStudy({ science_pack_3: 60, science_pack_2: 100 });
+    expect(s.studyNeeds()).toEqual({ science_pack_3: 40 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
-    expect(copy.studyNeeds()).toEqual({ science_pack_2: 40 });
-    copy.addStudy({ science_pack_2: 99 });
+    expect(copy.studyNeeds()).toEqual({ science_pack_3: 40 });
+    copy.addStudy({ science_pack_3: 99 });
     expect(copy.isUnlocked('machine_heavy_press')).toBe(true);
   });
 
@@ -1109,7 +1110,7 @@ describe('versions du découpage des technologies et journal', () => {
     s.research('electricity');
     s.changes.unlocked.push('logistics');
     s.study('automation');
-    s.addStudy({ science_pack: 30 });
+    s.addStudy({ science_pack: 30, science_pack_2: 30 });
     expect(s.changes.log.map((e) => [e.kind, e.id])).toEqual([
       ['research', 'electricity'],
       ['study', 'automation'],
@@ -1186,15 +1187,15 @@ describe('mode Créatif', () => {
 });
 
 describe('technologies à plusieurs types de paquets', () => {
-  it('Fusion réclame des paquets T4 ET T3 : l’étude n’est finie que quand les deux sont complets', () => {
+  it('Fusion réclame des paquets T5 ET T4 : l’étude n’est finie que quand les deux sont complets', () => {
     const s = new GameState({ inventory: {} });
     s.changes.unlocked.push('waste_4', 'storage_3');
     expect(s.study('fusion_5')).toBe('ok');
-    expect(s.studyNeeds()).toEqual({ science_pack_4: 200, science_pack_3: 100 });
-    s.addStudy({ science_pack_4: 200, science_pack_2: 50 }); // un paquet T2 ne sert à rien ici
-    expect(s.studyNeeds()).toEqual({ science_pack_3: 100 });
+    expect(s.studyNeeds()).toEqual({ science_pack_5: 200, science_pack_4: 100 });
+    s.addStudy({ science_pack_5: 200, science_pack_2: 50 }); // un paquet T2 ne sert à rien ici
+    expect(s.studyNeeds()).toEqual({ science_pack_4: 100 });
     expect(s.isUnlocked('machine_fusion_reactor')).toBe(false);
-    s.addStudy({ science_pack_3: 100 });
+    s.addStudy({ science_pack_4: 100 });
     expect(s.isUnlocked('machine_fusion_reactor')).toBe(true);
   });
 });
@@ -1363,5 +1364,30 @@ describe('sac : clic gauche sur une pile', () => {
     expect(s.takeToHand('iron_ingot', 20, index)).toBe(20);
     expect(s.hand).toEqual({ item: 'iron_ingot', count: 20 });
     expect(s.inventory.iron_ingot).toBe(50);
+  });
+});
+
+describe('paquets de science par palier', () => {
+  it('chaque paquet Tn se fabrique avec des éléments du palier précédent', () => {
+    expect(itemById('science_pack').recipe).toEqual({ fiber: 2, stone: 1, wood: 1 });
+    expect(itemById('science_pack_2').recipe).toEqual({ iron_gear: 1, copper_wire: 1 });
+    expect(itemById('science_pack_5').recipe).toBeTruthy();
+  });
+
+  it('une ancienne sauvegarde voit ses paquets décalés renommés ; une récente reste telle quelle', () => {
+    const old = new GameState({
+      inventory: { science_pack: 5, science_pack_2: 3, science_pack_4: 1 },
+      changes: { researching: 'automation', packProgress: { automation: { science_pack: 7 } } },
+    });
+    expect(old.inventory).toMatchObject({
+      science_pack_2: 5,
+      science_pack_3: 3,
+      science_pack_5: 1,
+    });
+    expect(old.inventory.science_pack).toBeUndefined();
+    expect(old.changes.packProgress.automation).toEqual({ science_pack_2: 7 });
+    const fresh = new GameState(JSON.parse(JSON.stringify(old.snapshot())));
+    expect(fresh.inventory).toMatchObject({ science_pack_2: 5, science_pack_3: 3 });
+    expect(fresh.changes.packVersion).toBe(2);
   });
 });

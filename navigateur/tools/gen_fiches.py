@@ -44,8 +44,6 @@ used={}
 for i,ps in paths.items():
     for p in ps:
         for k in p['in']: used.setdefault(k,set()).add(i)
-for t in techs:
-    for k in t.get('cost',{}): used.setdefault(k,set()).add('tech:'+t['id'])
 mould_for={}
 for r in rec:
     if r.get('mould'):
@@ -56,38 +54,21 @@ PLANNED={
  'piece_pillar_stone':"Décidé : recette 4 pierres ; pilier posé à la main (voir pilier en bois). À coder.",
 }
 SPECIAL={'carapace':'Butin des créatures','living_tissue':'Butin des créatures','nuclear_waste':'Produit par les réacteurs'}
+# Palier d'un objet (provisoire, d'après l'ancien arbre des technologies : en attendant l'arbre des découvertes) :
+# 0 = disponible dès le départ. Un objet de palier n coûte des paquets de science Tn ET T(n-1) (palier 1 : T1 seuls).
+def tier_of(i):
+    ts=[tby[t]['tier'] for t in unl.get(i,[])]
+    return min(ts) if ts else 0
+def packs_for(n):
+    return [] if n<=0 else ['science_pack'] if n==1 else [PACK[n],PACK[n-1]]
+PACK={1:'science_pack',2:'science_pack_2',3:'science_pack_3',4:'science_pack_4',5:'science_pack_5'}
 # issues
-issues={}; pathok={}
+issues={}
 for it in items:
-    i=it['id']; ts=unl.get(i,[])
-    # un objet peut être débloqué par plusieurs techs : la moins exigeante compte
-    best=None
-    for tid in (ts or [None]):
-        cl=closure(tid) if tid else set()
-        av=avail_after(cl)
-        bad=[]; implicit=[]
-        for p in paths[i]:
-            miss=[k for k in p['in'] if k not in av]
-            if p['machine'] and p['machine'] not in av and tid is not None: miss.append(p['machine'])
-            elif p['machine'] and p['machine'] not in av: implicit.append(p['machine'])
-            bad.append(miss)
-        if best is None or sum(1 for b in bad if not b)>sum(1 for b in best[1] if not b): best=(tid,bad); impl_best=list(implicit)
-    tid,bad=best
-    pathok[i]=bad
+    i=it['id']
     msgs=[]
-    for mk in dict.fromkeys(impl_best):
-        msgs.append(('info',f"Débloqué en pratique par sa machine « {name(mk)} » (technologie « {tname(unl[mk][0])} »), pas par une technologie à son nom"))
-    if paths[i] and all(bad):
-        # aucune voie complète
-        for p,miss in zip(paths[i],bad):
-            for k in miss:
-                t2=unl.get(k)
-                msgs.append(('warn',f"{'Machine' if k==p['machine'] else 'Ingrédient'} « {name(k)} » n'est pas encore disponible : débloqué par « {tname(t2[0])} »" + ('' if tid else " (cet objet n'a pas de technologie : il est disponible dès le départ)") if t2 else f"« {name(k)} » indisponible"))
     if not paths[i] and not it.get('creative') and i not in SPECIAL:
         msgs.append(('info' if i in PLANNED else 'bad','Aucune recette actuellement' if i in PLANNED else 'Aucune recette : impossible à obtenir'))
-    if tid is None and paths[i] and i not in base_items: pass
-    if tid is None and (paths[i]) and (it.get('category') in ('rail','equipment','armor') or i.startswith(('machine_','piece_'))) :
-        msgs.append(('info',"Disponible dès le départ (aucune technologie)"))
     uses=used.get(i,set())
     if not uses and not it.get('category') and i not in ('nuclear_waste',) and not it.get('creative'):
         msgs.append(('info',"Ne sert d'ingrédient à rien"))
@@ -101,21 +82,20 @@ def node(i,qty=None,cls='',tag=''):
     q=f'<em>{qty}×</em>' if qty else ''
     t=f'<small>{e(tag)}</small>' if tag else ''
     return f'<a class="n {cls}" href="#{e(i)}">{im}<span>{q}{e(name(i))}{t}</span></a>'
-def tnode(tid):
-    t=tby[tid]; req=[tname(r) for r in t.get('requires',[])]
-    cost=' · '.join(f"{v}× {name(k)}" for k,v in t.get('cost',{}).items())
-    after=f"après {', '.join(req)}" if req else 'sans prérequis'
-    return f'<div class="n tech"><span class="tg">T{t["tier"]}</span><span><b>{e(tname(tid))}</b><small>{e(after)} · coûte {e(cost)}</small></span></div>'
+def tnode(i):
+    n=tier_of(i)
+    if n==0: return '<div class="n tech"><span class="tg">T0</span><span><b>Dès le départ</b><small>aucun paquet de science</small></span></div>'
+    pk=' + '.join(name(x) for x in packs_for(n))
+    return f'<div class="n tech"><span class="tg">T{n}</span><span><b>Palier {n}</b><small>paquets : {e(pk)}</small></span></div>'
 def tree(i,p,idx):
     parts=[]
     for k,v in p['in'].items(): parts.append(node(k,v))
     if p['machine']: parts.append(node(p['machine'],None,'mach','machine'))
-    for tid in unl.get(i,[]): parts.append(tnode(tid))
+    if tier_of(i)>0: parts.append(tnode(i))
     if not parts: parts=['<div class="n raw"><span>rien</span></div>']
     lab=('À la main' if p['kind']=='hand' else f"{name(p['machine'])}"+(f" · {p['seconds']} s" if p['seconds'] else ''))
     if p.get('fluid'): lab+=f" · fluide {p['fluid']['kind']} {p['fluid']['amount']:+d} L"
-    bad=pathok[i][idx]
-    flag='<span class="pill warn">incomplet</span>' if bad else ''
+    flag=''
     outs=' '.join(f"{v}× {name(k)}" for k,v in p['out'].items() if k!=i or v!=1)
     prod=node(i,p['out'].get(i) if p['out'].get(i,1)!=1 else None,'prod')
     return f'<div class="path"><div class="lab">{e(lab)} {flag}</div><div class="tree"><div class="inputs">{"".join(f"<div class=in>{x}</div>" for x in parts)}</div><div class="stem"></div>{prod}</div></div>'
@@ -124,11 +104,11 @@ for it in items:
     i=it['id']; ps=paths[i]
     body=''.join(tree(i,p,k) for k,p in enumerate(ps))
     if not ps:
-        t=''.join(f'<div class="in">{tnode(t)}</div>' for t in unl.get(i,[]))
+        t=f'<div class="in">{tnode(i)}</div>' if tier_of(i)>0 else ''
         why=SPECIAL.get(i,'Ressource du monde / mode Créatif' if it.get('creative') else '')
         body=f'<div class="path"><div class="lab">{e(why) or "Aucune recette"}</div><div class="tree"><div class="inputs">{t}</div>{"<div class=stem></div>" if t else ""}{node(i,None,"prod")}</div></div>'
     u=sorted(x for x in used.get(i,[]) )
-    uh=''.join((f'<a class="u" href="#{e(x)}">{e(name(x))}</a>' if not x.startswith('tech:') else f'<span class="u t">Techno : {e(tname(x[5:]))}</span>') for x in u[:14])
+    uh=''.join(f'<a class="u" href="#{e(x)}">{e(name(x))}</a>' for x in u[:14])
     if len(u)>14: uh+=f'<span class="u more">+{len(u)-14}</span>'
     msgs=list(issues[i])
     if i in mould_for:
@@ -141,8 +121,8 @@ for it in items:
     ic=img[i]['icon']
     cards.append(f'<article class="card {sev}" id="{e(i)}" data-q="{e((name(i)+" "+i+" "+cat).lower())}" data-sev="{sev}" data-cat="{e(it.get("category") or "")}"><header><img src="{ic}" alt="" width="40" height="40"><div><h3>{e(name(i))}</h3><code>{e(i)}</code></div><span class="cat">{e(cat)}</span></header>{body}{f"<div class=usedin><span class=lab>Utilisé dans</span>{uh}</div>" if uh else "<div class=usedin><span class=lab>Utilisé dans</span><span class=muted>rien</span></div>"}{f"<ul class=iss>{mh}</ul>" if mh else ""}</article>')
 # json graph
-graph={'items':{i['id']:{'name':name(i['id']),'category':i.get('category'),'tech':unl.get(i['id'],[]),'paths':[{k:v for k,v in p.items() if k in('kind','machine','in','out','seconds')} for p in paths[i['id']]],'usedIn':sorted(used.get(i['id'],[])),'issues':[m for _,m in issues[i['id']]]} for i in items},
- 'techs':{t['id']:{'name':tname(t['id']),'tier':t['tier'],'cost':t.get('cost',{}),'requires':t.get('requires',[]),'unlocks':t.get('unlocks',[])} for t in techs}}
+graph={'items':{i['id']:{'name':name(i['id']),'category':i.get('category'),'tier':tier_of(i['id']),'packs':packs_for(tier_of(i['id'])),'paths':[{k:v for k,v in p.items() if k in('kind','machine','in','out','seconds')} for p in paths[i['id']]],'usedIn':sorted(used.get(i['id'],[])),'issues':[m for _,m in issues[i['id']]]} for i in items},
+ 'packs':{PACK[n]:{'tier':n,'recipe':byid[PACK[n]].get('recipe')} for n in PACK}}
 json.dump(graph,open(D+'arbre-objets.json','w'),ensure_ascii=False,indent=1)
 nbad=sum(1 for i in items if any(s=='bad' for s,_ in issues[i['id']])); nwarn=sum(1 for i in items if any(s=='warn' for s,_ in issues[i['id']]) and not any(s=='bad' for s,_ in issues[i['id']]))
 css=open(S+'fiches.css').read()
@@ -158,8 +138,8 @@ body=f'''<title>Fiches objets</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>{css}</style>
 <h1>Fiches objets</h1>
-<p class="sub">Une mini-arbre par objet : ce qu'il faut pour le fabriquer (ingrédients, machine) et la technologie à connaître. Les fiches se recoupent : cliquer un nom ouvre sa fiche, « Utilisé dans » montre ce que touche un changement. Données : <code>docs/arbre-objets.json</code>. Légende : trait plein = objet, <span class="lg mach">machine</span>, <span class="lg tech">technologie</span>.</p>
-<div class="sum"><span><b>{len(items)}</b> objets</span><span class="bad"><b>{nbad}</b> sans moyen d'obtention</span><span class="warn"><b>{nwarn}</b> avec contrainte techno incohérente</span><span class="muted">{stats['info']} remarques</span></div>
+<p class="sub">Une mini-arbre par objet : ce qu'il faut pour le fabriquer (ingrédients, machine) et son palier : un objet de palier n demande des paquets de science Tn et T(n-1). Les fiches se recoupent : cliquer un nom ouvre sa fiche, « Utilisé dans » montre ce que touche un changement. Données : <code>docs/arbre-objets.json</code>. Légende : trait plein = objet, <span class="lg mach">machine</span>, <span class="lg tech">palier</span> (provisoire, d'après l'ancien arbre ; l'arbre des découvertes le remplacera).</p>
+<div class="sum"><span><b>{len(items)}</b> objets</span><span class="bad"><b>{nbad}</b> sans moyen d'obtention</span><span class="warn"><b>{nwarn}</b> avec contrainte incohérente</span><span class="muted">{stats['info']} remarques</span></div>
 <div class="tools"><input id="q" type="search" placeholder="Rechercher un objet" aria-label="Rechercher"><select id="fs" aria-label="État"><option value="">Toutes les fiches</option><option value="pb">À corriger</option><option value="bad">Impossible à obtenir</option><option value="warn">Contrainte techno</option><option value="info">Remarques</option><option value="ok">Conformes</option></select><select id="fc" aria-label="Onglet"><option value="">Tous les onglets</option>{cats}</select><span id="n" class="muted"></span></div>
 <main class="grid">{''.join(cards)}</main>
 <script>{js}</script>

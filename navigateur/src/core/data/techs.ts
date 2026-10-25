@@ -36,12 +36,16 @@ export function isTechVisible(
 }
 
 export const SCIENCE_PACK = 'science_pack';
-/** Paquets de science : T1, T2, T3 (un par palier ; le T4 viendra avec la fission). */
+/**
+ * Paquets de science : un par palier, T1 à T5. Le paquet Tn se fabrique avec des éléments du palier précédent ; un objet
+ * ou une technologie de palier n coûte des paquets Tn et T(n-1) (palier 1 : paquets T1 seuls).
+ */
 export const SCIENCE_PACKS = [
   'science_pack',
   'science_pack_2',
   'science_pack_3',
   'science_pack_4',
+  'science_pack_5',
   /** Paquet de combat : à part des paliers, fabriqué avec les dépouilles des ennemis (carapaces, tissu vivant). */
   'combat_pack',
 ] as const;
@@ -85,7 +89,13 @@ export function expandLegacyTechs(ids: readonly unknown[]): string[] {
 /** Durée de base (en secondes) pour qu'un laboratoire consomme un paquet. */
 export const LAB_PACK_SECONDS = 5;
 /** Paquets accélérés par les technologies « Recherche » : le niveau n retire 1 s aux paquets des paliers 1 à n. */
-const LAB_TIERED_PACKS = ['science_pack', 'science_pack_2', 'science_pack_3', 'science_pack_4'];
+const LAB_TIERED_PACKS = [
+  'science_pack',
+  'science_pack_2',
+  'science_pack_3',
+  'science_pack_4',
+  'science_pack_5',
+];
 
 /** Niveau de recherche atteint (0 à 4) d'après les technologies déjà recherchées. */
 export function labResearchLevel(researched: readonly string[]): number {

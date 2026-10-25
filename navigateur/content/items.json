@@ -790,10 +790,11 @@
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
-      "color": "#4fc3a1",
+      "color": "#c9b458",
       "recipe": {
-        "iron_gear": 1,
-        "copper_wire": 1
+        "fiber": 2,
+        "stone": 1,
+        "wood": 1
       }
     },
     {
@@ -854,10 +855,10 @@
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
-      "color": "#7a5cd6",
+      "color": "#4f8fd6",
       "recipe": {
-        "silicon_chip": 1,
-        "cable_insulated": 1
+        "steel_plate": 1,
+        "machine_pipe_2": 1
       }
     },
     {
@@ -873,10 +874,10 @@
       "category": "science",
       "weightKg": 0.1,
       "volumeL": 0.2,
-      "color": "#4f8fd6",
+      "color": "#4fc3a1",
       "recipe": {
-        "steel_plate": 1,
-        "machine_pipe_2": 1
+        "iron_gear": 1,
+        "copper_wire": 1
       }
     },
     {
@@ -1178,6 +1179,18 @@
     },
     {
       "id": "science_pack_4",
+      "stack": 100,
+      "category": "science",
+      "weightKg": 0.1,
+      "volumeL": 0.2,
+      "color": "#7a5cd6",
+      "recipe": {
+        "silicon_chip": 1,
+        "cable_insulated": 1
+      }
+    },
+    {
+      "id": "science_pack_5",
       "stack": 100,
       "category": "science",
       "weightKg": 0.1,

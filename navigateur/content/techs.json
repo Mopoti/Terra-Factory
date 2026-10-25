@@ -1,5 +1,5 @@
 {
-  "_comment": "Technologies : coût (objets du sac consommés), prérequis, objets débloqués à la fabrication. Un objet qui n'est dans aucune technologie est disponible dès le départ. « tier » : palier (1 à 5). Les technologies de palier 2 et plus sont cachées tant que « reveal » (à défaut : leurs prérequis) n'est pas recherché ; en mode Créatif tout est visible. Les premières technologies (Métallurgie, Électricité, Laboratoire) se paient en objets ; les autres de palier 1 en paquets de science T1.",
+  "_comment": "Technologies : coût (objets du sac consommés), prérequis, objets débloqués à la fabrication. Un objet qui n'est dans aucune technologie est disponible dès le départ. « tier » : palier (1 à 5). Les technologies de palier 2 et plus sont cachées tant que « reveal » (à défaut : leurs prérequis) n'est pas recherché ; en mode Créatif tout est visible. Les premières technologies (Métallurgie, Électricité, Laboratoire) se paient en objets ; les autres en paquets de science : un objet de palier N coûte des paquets TN et T(N-1) (palier 1 : paquets T1 seuls).",
   "techs": [
     {
       "id": "logistics",
@@ -33,6 +33,7 @@
       "id": "metallurgy_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["metallurgy", "laboratory"],
@@ -43,6 +44,7 @@
       "id": "construction_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["metallurgy_2"],
@@ -60,6 +62,7 @@
       "id": "manufacturing_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 40,
         "science_pack": 40
       },
       "requires": ["metallurgy_2"],
@@ -70,6 +73,7 @@
       "id": "fluids_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 40,
         "science_pack": 40
       },
       "requires": ["manufacturing_2"],
@@ -80,6 +84,7 @@
       "id": "washing_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 40,
         "science_pack": 40
       },
       "requires": ["manufacturing_2"],
@@ -90,6 +95,7 @@
       "id": "heavy_press_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 100,
         "science_pack_2": 100
       },
       "requires": ["manufacturing_2", "construction_2"],
@@ -100,6 +106,7 @@
       "id": "silicon_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 120,
         "science_pack_2": 120
       },
       "requires": ["heavy_press_3"],
@@ -110,6 +117,7 @@
       "id": "oil_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 140,
         "science_pack_2": 140
       },
       "requires": ["barrels_3", "heavy_press_3"],
@@ -120,6 +128,7 @@
       "id": "plastic_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 160,
         "science_pack_2": 160
       },
       "requires": ["oil_3", "silicon_3"],
@@ -141,6 +150,7 @@
       "id": "fission_4",
       "tier": 4,
       "cost": {
+        "science_pack_4": 200,
         "science_pack_3": 200
       },
       "requires": ["plastic_3", "aluminium_3"],
@@ -157,6 +167,7 @@
       "id": "reactor_4",
       "tier": 4,
       "cost": {
+        "science_pack_4": 300,
         "science_pack_3": 300
       },
       "requires": ["fission_4"],
@@ -167,6 +178,7 @@
       "id": "waste_4",
       "tier": 4,
       "cost": {
+        "science_pack_4": 250,
         "science_pack_3": 250
       },
       "requires": ["reactor_4"],
@@ -177,6 +189,7 @@
       "id": "storage_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 120,
         "science_pack_2": 120
       },
       "requires": ["plastic_3"],
@@ -187,6 +200,7 @@
       "id": "aluminium_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 140,
         "science_pack_2": 140
       },
       "requires": ["plastic_3"],
@@ -206,8 +220,8 @@
       "id": "fusion_5",
       "tier": 5,
       "cost": {
-        "science_pack_4": 200,
-        "science_pack_3": 100
+        "science_pack_5": 200,
+        "science_pack_4": 100
       },
       "requires": ["waste_4", "storage_3"],
       "reveal": ["fission_4"],
@@ -217,8 +231,8 @@
       "id": "beacon_5",
       "tier": 5,
       "cost": {
-        "science_pack_4": 300,
-        "science_pack_3": 150
+        "science_pack_5": 300,
+        "science_pack_4": 150
       },
       "requires": ["fusion_5"],
       "reveal": ["reactor_4"],
@@ -228,6 +242,7 @@
       "id": "logistics_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 40,
         "science_pack": 40
       },
       "requires": ["logistics", "metallurgy_2"],
@@ -238,6 +253,7 @@
       "id": "logistics_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 100,
         "science_pack_2": 100
       },
       "requires": ["logistics_2"],
@@ -248,6 +264,7 @@
       "id": "sorting_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 120,
         "science_pack_2": 120
       },
       "requires": ["logistics_3"],
@@ -258,6 +275,7 @@
       "id": "extraction_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 60,
         "science_pack_2": 60
       },
       "requires": ["metallurgy_2", "power_generation"],
@@ -333,6 +351,7 @@
       "id": "automation",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["electricity", "logistics"],
@@ -361,6 +380,7 @@
       "id": "barrels_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 80,
         "science_pack_2": 80
       },
       "requires": ["steam", "logistics_3"],
@@ -515,6 +535,7 @@
       "id": "electricity_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["electricity"],
@@ -525,6 +546,7 @@
       "id": "power_generation_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["power_generation"],
@@ -554,6 +576,7 @@
       "id": "research_2",
       "tier": 2,
       "cost": {
+        "science_pack_2": 30,
         "science_pack": 30
       },
       "requires": ["research_1"],
@@ -564,6 +587,7 @@
       "id": "research_3",
       "tier": 3,
       "cost": {
+        "science_pack_3": 80,
         "science_pack_2": 80
       },
       "requires": ["research_2"],
@@ -574,6 +598,7 @@
       "id": "research_4",
       "tier": 4,
       "cost": {
+        "science_pack_4": 150,
         "science_pack_3": 150
       },
       "requires": ["research_3"],

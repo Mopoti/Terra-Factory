@@ -21,6 +21,36 @@ import type { ChunkData, PlacedObject } from '../world/worldgen';
 export const TECH_VERSION = 3;
 export const MAX_LOG = 300;
 
+/**
+ * Version des paquets de science : avant la 2, il y avait quatre paquets décalés d'un cran (le paquet « science_pack »
+ * était fabriqué avec des engrenages et du fil, soit le palier 2 d'aujourd'hui). Depuis, `science_pack` est le T1 et il
+ * y a un T5 : une ancienne sauvegarde voit ses paquets renommés (voir `renamePacks`).
+ */
+export const PACK_VERSION = 2;
+const PACK_RENAMES: Readonly<Record<string, string>> = {
+  science_pack: 'science_pack_2',
+  science_pack_2: 'science_pack_3',
+  science_pack_3: 'science_pack_4',
+  science_pack_4: 'science_pack_5',
+};
+
+/** Copie de `value` où chaque identifiant de paquet de science (clé ou texte) prend son nom actuel. */
+export function renamePacks(value: unknown): unknown {
+  if (typeof value === 'string') return PACK_RENAMES[value] ?? value;
+  if (Array.isArray(value)) return value.map(renamePacks);
+  if (typeof value === 'object' && value !== null)
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [PACK_RENAMES[k] ?? k, renamePacks(v)]),
+    );
+  return value;
+}
+
+/** Une vraie ancienne sauvegarde (des changements sans numéro de version des paquets) a besoin d'être renommée. */
+export const hasOldPacks = (changes: unknown): boolean =>
+  typeof changes === 'object' &&
+  changes !== null &&
+  (changes as { packVersion?: unknown }).packVersion !== PACK_VERSION;
+
 /** Une ligne du journal : quand, quoi (`kind`, texte `log.<kind>`), et la technologie ou l'objet concerné. */
 export interface LogEntry {
   t: number;
@@ -151,6 +181,8 @@ export interface WorldChanges {
   discovered: string[];
   /** Version du découpage des technologies : une sauvegarde plus ancienne reçoit ce que ses anciennes technologies débloquaient. */
   techVersion: number;
+  /** Version des paquets de science (voir `PACK_VERSION`). */
+  packVersion: number;
   /** Journal de la partie (recherches, découvertes…), les plus anciennes entrées d'abord. */
   log: LogEntry[];
   /** Corps laissés là où le joueur est tombé, avec ses affaires (affichés dans le monde et sur la carte). */
@@ -236,6 +268,7 @@ export function emptyChanges(): WorldChanges {
     produced: {},
     discovered: [],
     techVersion: TECH_VERSION,
+    packVersion: PACK_VERSION,
     log: [],
     corpses: [],
     nextCorpseId: 1,
@@ -492,6 +525,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       if (!had.has(id)) result.log.push({ t: Date.now(), kind: 'legacy', id });
   }
   result.techVersion = TECH_VERSION;
+  result.packVersion = PACK_VERSION;
   if (typeof r.progress === 'object' && r.progress !== null) {
     for (const t of TECHS) {
       const v = (r.progress as Record<string, unknown>)[t.id];

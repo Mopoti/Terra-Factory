@@ -100,6 +100,8 @@ import {
   cellKey,
   emptyChanges,
   normalizeChanges,
+  hasOldPacks,
+  renamePacks,
   type Corpse,
   type LogEntry,
   type DroppedStack,
@@ -194,8 +196,12 @@ export class GameState {
     saved?: { inventory?: unknown; changes?: unknown },
     private readonly baseLimits: BagLimits = BAG_LIMITS,
   ) {
-    this.inventory = normalizeInventory(saved?.inventory);
-    this.changes = saved ? normalizeChanges(saved.changes) : emptyChanges();
+    // Une ancienne sauvegarde a ses paquets de science décalés d'un cran (voir `PACK_VERSION`).
+    const old = saved !== undefined && hasOldPacks(saved.changes);
+    this.inventory = normalizeInventory(old ? renamePacks(saved?.inventory) : saved?.inventory);
+    this.changes = saved
+      ? normalizeChanges(old ? renamePacks(saved.changes) : saved.changes)
+      : emptyChanges();
     this.migrateToolSlot();
   }
 
