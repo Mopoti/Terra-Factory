@@ -1,5 +1,0 @@
-{
-  "installCommand": "npm ci --prefix navigateur",
-  "buildCommand": "npm run build --prefix navigateur",
-  "outputDirectory": "navigateur/dist"
-}

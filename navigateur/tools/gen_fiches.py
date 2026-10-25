@@ -1,6 +1,6 @@
 import json, html
 R='/home/user/Terra-Factory/navigateur/'
-D='/home/user/Terra-Factory/docs/'  # les docs sont communes à toutes les versions, à la racine
+D=R+'docs/'
 S='/tmp/claude-0/-home-user-Terra-Factory/321d8bf2-7c57-5c8c-af02-ddbd7a8bba29/scratchpad/'
 items=json.load(open(R+'content/items.json'))['items']
 fr=json.load(open(R+'src/i18n/fr.json'))

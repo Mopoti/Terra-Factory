@@ -11,7 +11,7 @@ casque à lampe).
 - **Style** : low poly détaillé, dans l'esprit des machines (facettes visibles, couleurs unies de la palette, pas de
   texture). Fait dans Blender, nouvelle famille `blender/scripts/personnage.py` (`personnage.blend`), exporté en
   `export/personnage_homme.glb` et `export/personnage_femme.glb`.
-- **Taille** : environ 1,8 m au réglage moyen (le personnage du jeu fait aujourd'hui 1,70 m, voir `docs/gdd.md` §4).
+- **Taille** : environ 1,8 m au réglage moyen (le personnage du jeu fait aujourd'hui 1,70 m, voir `GDD.md` (racine) §4).
 - **Deux silhouettes**, homme et femme, qui partagent le **même squelette** : toutes les animations (marche, course,
   saut, frappe, pose d'objets…) servent aux deux.
 - **Pas de casque** sur le modèle de base. Les pièces d'équipement (tête, tronc, mains, jambes, pieds) s'ajoutent
