@@ -14,7 +14,7 @@ import { defaultSettings, type SectionName, type Settings } from './schema';
 
 const STORAGE_KEY = 'terra.settings';
 /** Version du format enregistré. À incrémenter quand la structure change (voir `migrate`). */
-export const SETTINGS_VERSION = 3;
+export const SETTINGS_VERSION = 4;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -65,6 +65,7 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
  * Met à niveau des réglages enregistrés par une ancienne version (sans modifier l'original).
  * - v2 : la rotation de la vue du dessus passe par défaut de « par pas de 90° » à « libre » ;
  *   l'ancienne valeur par défaut enregistrée est abandonnée (le joueur peut la re-choisir).
+ * - v4 : la touche E n'est plus un second « Interagir » (clic) : elle devient « Activer » (portes, leviers) ; l'ancien second emplacement E est abandonné.
  * - v3 : s'accroupir passe de Ctrl gauche à C (la touche d'atteler, inutile à pied) ; l'ancienne valeur par défaut est abandonnée.
  */
 export function migrate(data: Record<string, unknown>, version: number): Record<string, unknown> {
@@ -73,6 +74,12 @@ export function migrate(data: Record<string, unknown>, version: number): Record<
     const views = out.views;
     const top = isRecord(views) ? views.top : undefined;
     if (isRecord(top) && top.rotation === 'step') delete top.rotation;
+  }
+  if (version < 4) {
+    const controls = out.controls;
+    const interact = isRecord(controls) ? controls.interact : undefined;
+    if (isRecord(controls) && Array.isArray(interact) && interact[1] === 'KeyE')
+      controls.interact = [interact[0], null];
   }
   if (version < 3) {
     const controls = out.controls;

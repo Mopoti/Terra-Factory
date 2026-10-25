@@ -4172,6 +4172,7 @@ export function startGameView(
         options.state.selectedItem() !== 'pistol' &&
         !creativeResourceOf(options.state.selectedItem()) &&
         input.isActionActive('interact'),
+      activate: !paused && !uiOpen && !building && input.isActionActive('activate'),
       demolishing:
         !paused &&
         !uiOpen &&

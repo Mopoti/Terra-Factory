@@ -105,6 +105,8 @@ export interface InteractionFrame {
   player: { x: number; z: number };
   /** Vrai si la touche « Interagir / récolter » (clic gauche) est maintenue. */
   active: boolean;
+  /** Vrai si la touche « Activer » (E) est maintenue : portes, leviers (n'ouvre pas les fenêtres des machines). */
+  activate?: boolean;
   /** Vrai si le clic droit est maintenu sans bouger : démolir ce qui est visé. */
   demolishing: boolean;
   paused: boolean;
@@ -137,6 +139,7 @@ export class Interaction {
   private feedTotals = new Map<string, number>();
   private feedTimer = 0;
   private wasActive = false;
+  private wasActivate = false;
   private holdingId: string | null = null;
   /** En train de récolter une ressource : avec l'outil, à mains nues, ou rien. */
   working: 'tool' | 'hands' | null = null;
@@ -442,6 +445,8 @@ export class Interaction {
   update(frame: InteractionFrame): void {
     const leftPressed = frame.active && !this.wasActive;
     this.wasActive = frame.active;
+    const activatePressed = !!frame.activate && !this.wasActivate;
+    this.wasActivate = !!frame.activate;
     if (this.feedTimer > 0) {
       this.feedTimer -= frame.dt;
       if (this.feedTimer <= 0) {
@@ -519,7 +524,13 @@ export class Interaction {
     let bagFull = false;
 
     // Clic gauche sur une machine ou un coffre : on ouvre son interface.
-    if (reachable && leftPressed && hit.type === 'structure' && hit.structure.usable) {
+    if (
+      reachable &&
+      (leftPressed ||
+        (activatePressed && hit.type === 'structure' && hit.structure.id.startsWith('piece:'))) &&
+      hit.type === 'structure' &&
+      hit.structure.usable
+    ) {
       this.options.openStructure?.(hit.structure.id);
       return;
     }
