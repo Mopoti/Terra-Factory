@@ -77,7 +77,7 @@ export function planLine(
   const isDoor = pieceDef(kind).type === 'door';
   const heights = isDoor ? [0] : (layers ?? Array.from({ length: LAYERS_PER_STOREY }, (_, i) => i));
   for (let i = i0; i !== i1 + step; i += step) {
-    // Une porte ne se pose qu'à l'endroit visé, pas en ligne.
+    // Une porte ne se pose qu'à l'endroit visé (deux battants côte à côte), pas en ligne.
     if (isDoor && i !== i0) break;
     for (const layer of heights) {
       out.push(
@@ -86,6 +86,12 @@ export function planLine(
           : posFor(kind, level, line, i, 'z', layer),
       );
     }
+    if (isDoor)
+      out.push(
+        axis === 'x'
+          ? posFor(kind, level, i + step, line, 'x', 0)
+          : posFor(kind, level, line, i + step, 'z', 0),
+      );
   }
   return out;
 }
@@ -113,7 +119,7 @@ export function evaluatePlan(
   let left = stock;
   let seq = 0;
   const taken = new Set<string>();
-  return positions.map((pos) => {
+  const items = positions.map((pos): PlanItem => {
     const key = pieceKey(pos);
     if (!isFree(pieces, kind, pos) || taken.has(key))
       return { pos, status: 'occupied' as PlanStatus };
@@ -125,6 +131,12 @@ export function evaluatePlan(
     taken.add(key);
     return { pos, status: 'ok' as PlanStatus, seq: seq++ };
   });
+  // Une porte (deux battants) se pose entière ou pas du tout.
+  if (pieceDef(kind).type === 'door' && items.some((i) => i.status !== 'ok')) {
+    const bad = items.find((i) => i.status !== 'ok')?.status ?? 'occupied';
+    return items.map((i) => ({ pos: i.pos, status: bad }));
+  }
+  return items;
 }
 
 export interface WallCoord {
@@ -166,9 +178,12 @@ export function planWall(
   b: WallCoord,
 ): PiecePos[] {
   if (pieceDef(kind).type === 'door') {
-    return [
-      axis === 'x' ? posFor(kind, level, a.i, line, 'x') : posFor(kind, level, line, a.i, 'z'),
-    ];
+    // Une porte fait 1 m de large : deux battants de 50 cm côte à côte.
+    return [0, 1].map((k) =>
+      axis === 'x'
+        ? posFor(kind, level, a.i + k, line, 'x')
+        : posFor(kind, level, line, a.i + k, 'z'),
+    );
   }
   const out: (PiecePos & { d: number })[] = [];
   for (let i = Math.min(a.i, b.i); i <= Math.max(a.i, b.i); i++) {

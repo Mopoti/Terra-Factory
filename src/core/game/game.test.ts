@@ -310,7 +310,7 @@ describe('pose par glisser', () => {
   it('un mur en ligne : 5 blocs par colonne, ou un seul niveau pour faire fenêtres et trous', () => {
     expect(planLine('wall_stone', 0, 'x', 3, 2, 5, null)).toHaveLength(20);
     expect(planLine('wall_stone', 0, 'x', 3, 5, 2, [2])).toHaveLength(4);
-    expect(planLine('door_wood', 0, 'x', 3, 2, 5, null)).toHaveLength(1);
+    expect(planLine('door_wood', 0, 'x', 3, 2, 5, null)).toHaveLength(2);
   });
   it("placeMany s'arrête faute de stock", () => {
     const s = new GameState({ inventory: { piece_floor_wood: 3 } });
@@ -357,8 +357,9 @@ describe('murs en plan vertical', () => {
     const plan = planWall('wall_stone', 0, 'x', 3, { i: 2, layer: 0 }, { i: 4, layer: 1 });
     expect(plan).toHaveLength(6);
     expect(plan[0]).toMatchObject({ gx: 2, gz: 3, layer: 0 }); // on part du bloc de départ
+    // Une porte : deux battants côte à côte, quelle que soit la sélection.
     expect(planWall('door_wood', 0, 'x', 3, { i: 2, layer: 0 }, { i: 5, layer: 4 })).toHaveLength(
-      1,
+      2,
     );
   });
   it('trouve le bloc visé dans le plan du mur', () => {
@@ -1297,5 +1298,31 @@ describe('charrette à bras', () => {
     expect(s.pickUpVehicle(v!.id)).toBe(true);
     expect(s.inventory.vehicle_cart).toBe(1);
     expect(s.inventory.copper_wire).toBe(5);
+  });
+});
+
+describe('porte à deux battants', () => {
+  it("se pose entière (2 battants), s'ouvre et se ferme d'un coup, refuse si un battant est pris", () => {
+    const s = new GameState({ inventory: { piece_door_wood: 4 } });
+    const plan = planWall('door_wood', 0, 'x', 3, { i: 2, layer: 0 }, { i: 2, layer: 0 });
+    expect(plan.map((p) => p.gx)).toEqual([2, 3]);
+    expect(s.placeMany('door_wood', plan)).toBe(2);
+    expect(s.inventory.piece_door_wood).toBe(2);
+    const first = 'e:0:2,3:x:0';
+    expect(s.toggleDoor(first)).toBe(true);
+    expect(s.changes.pieces['o:0:2,3:x']).toBeDefined();
+    expect(s.changes.pieces['o:0:3,3:x']).toBeDefined();
+    expect(s.toggleDoor('e:0:3,3:x:0')).toBe(false);
+    expect(s.changes.pieces['o:0:2,3:x']).toBeUndefined();
+    // Un battant déjà pris : toute la porte est refusée.
+    const items = evaluatePlan(
+      'door_wood',
+      planWall('door_wood', 0, 'x', 3, { i: 3, layer: 0 }, { i: 3, layer: 0 }),
+      s.changes.pieces,
+      4,
+      { x: 1, z: 1 },
+      6,
+    );
+    expect(items.every((i) => i.status === 'occupied')).toBe(true);
   });
 });

@@ -668,15 +668,33 @@ export class GameState {
     return { gained, left: stack.count, bagFull: stack.count > 0 };
   }
 
-  /** Ouvre ou ferme une porte (clé du bloc 0 de la porte). Renvoie vrai si elle est ouverte ensuite. */
+  /**
+   * Ouvre ou ferme une porte (clé du bloc 0 d'un battant) : tous les battants côte à côte s'ouvrent ensemble
+   * (une porte = deux battants de 50 cm). Renvoie vrai si elle est ouverte ensuite.
+   */
   toggleDoor(key: string): boolean | null {
     const kind = this.changes.pieces[key];
     const m = /^e:(-?\d+):(-?\d+),(-?\d+):([xz]):0$/.exec(key);
     if (!kind?.startsWith('door') || !m) return null;
-    const open = `o:${m[1]}:${m[2]},${m[3]}:${m[4]}`;
-    const nowOpen = !this.changes.pieces[open];
-    if (nowOpen) this.changes.pieces[open] = kind;
-    else delete this.changes.pieces[open];
+    const level = m[1];
+    const axis = m[4];
+    const at = (gx: number, gz: number): string => `e:${level}:${gx},${gz}:${axis}:0`;
+    const openOf = (gx: number, gz: number): string => `o:${level}:${gx},${gz}:${axis}`;
+    const nowOpen = !this.changes.pieces[openOf(Number(m[2]), Number(m[3]))];
+    // Les battants contigus le long du mur, de part et d'autre.
+    const leaves: [number, number][] = [[Number(m[2]), Number(m[3])]];
+    for (const dir of [-1, 1]) {
+      for (let k = 1; k < 8; k++) {
+        const gx = axis === 'x' ? Number(m[2]) + dir * k : Number(m[2]);
+        const gz = axis === 'z' ? Number(m[3]) + dir * k : Number(m[3]);
+        if (!this.changes.pieces[at(gx, gz)]?.startsWith('door')) break;
+        leaves.push([gx, gz]);
+      }
+    }
+    for (const [gx, gz] of leaves) {
+      if (nowOpen) this.changes.pieces[openOf(gx, gz)] = this.changes.pieces[at(gx, gz)];
+      else delete this.changes.pieces[openOf(gx, gz)];
+    }
     this.emit({ type: 'build' });
     return nowOpen;
   }

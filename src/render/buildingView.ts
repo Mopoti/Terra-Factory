@@ -19,6 +19,26 @@ import { bakedModel, type BakedModel } from './models';
 
 const DOOR_WIDTH_M = 0.5;
 const DOOR_HEIGHT_M = 2.0;
+
+/**
+ * Une porte fait deux battants de 50 cm côte à côte : le battant dont le voisin de gauche (le long du mur) est un
+ * battant, et pas celui de droite, est le battant droit. Ouvert, il a ses gonds à l'autre bout.
+ */
+function isRightLeaf(pieces: Pieces | undefined, pos: PiecePos): boolean {
+  if (!pieces) return false;
+  const at = (d: number): boolean =>
+    !!pieces[
+      pieceKey({
+        slot: 'edge',
+        level: pos.level,
+        gx: pos.axis === 'z' ? pos.gx : pos.gx + d,
+        gz: pos.axis === 'z' ? pos.gz + d : pos.gz,
+        axis: pos.axis ?? 'x',
+        layer: 0,
+      })
+    ]?.startsWith('door');
+  return at(-1) && !at(1);
+}
 /** Léger retrait pour éviter que le haut des murs se superpose au plafond (scintillement). */
 const EPS = 0.01;
 /** Débord de la dalle au-delà de la face du mur (2 mm), pour éviter que deux faces se confondent. */
@@ -195,8 +215,11 @@ function addPieceModel(mb: MeshBuilder, kind: PieceKind, pos: PiecePos, pieces?:
   const leaf = `porte_${mat}_battant`;
   if (!open) putModel(mb, leaf, mx, y0, mz, alongX ? 0 : 3);
   // Ouvert : décollé de 3 mm du montant, pour que leurs faces ne se confondent pas.
-  else if (alongX) putModel(mb, leaf, mx - W / 2 + th / 2 + 0.003, y0, mz + W / 2, 3);
-  else putModel(mb, leaf, mx + W / 2, y0, mz - W / 2 + th / 2 + 0.003, 0);
+  else {
+    const hinge = isRightLeaf(pieces, pos) ? 1 : -1;
+    if (alongX) putModel(mb, leaf, mx + hinge * (W / 2 - th / 2 - 0.003), y0, mz + W / 2, 3);
+    else putModel(mb, leaf, mx + W / 2, y0, mz + hinge * (W / 2 - th / 2 - 0.003), 0);
+  }
   return true;
 }
 
@@ -317,7 +340,7 @@ export function addPiece(
       true,
     );
   } else {
-    const hinge = -DOOR_WIDTH_M / 2 + th / 2;
+    const hinge = (isRightLeaf(pieces, pos) ? 1 : -1) * (DOOR_WIDTH_M / 2 - th / 2);
     const across = DOOR_WIDTH_M / 2;
     mb.box(
       alongX ? mx + hinge : mx + across,
