@@ -384,3 +384,8 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 - **Tige en fer / tige en acier** (`iron_rod`, `steel_rod`) : à l'estampeuse, 1 lingot → 2 tiges (comme le fil de cuivre). Modèles 3D à faire.
 - **Moins de lingots dans les machines** : les recettes de machines et de véhicules passent par les plaques, engrenages et tiges, à valeur de lingots équivalente (plaque = 2 lingots, engrenage = 2, tige = 0,5). Touchés : coffre en fer, bras (deux), séparateur, groupeur, assembleur, laboratoire, foreuse électrique et écologique, générateur, chaudière, turbine, pompe, tourelle, pistolet, Quad, Buggy, Char, locomotive, presse lourde, four électrique, pompe à pétrole, raffinerie, presse à plastique, centrifugeuse, baril vide. Non touchés : les machines de départ (foreuse, four, estampeuse, concasseur) qui doivent rester faisables avant l'estampeuse, et les wagons, rails et station (en attendant une technologie Rail).
 - Prérequis à régler dans l'arbre : beaucoup de technologies de palier 1 (Automatisation, Manutention, Électricité, Vapeur…) n'ont pas Métallurgie (estampeuse) comme prérequis alors que leurs objets demandent maintenant des plaques.
+
+
+### Chargement visible des véhicules (25 octobre)
+
+La benne de la camionnette et la charrette montrent une icône par sorte de ressource du coffre (12 au plus), posées sur le plateau (`CARGO_BED` dans `gameView.ts`, à ajuster au vrai modèle). La camionnette de secours est une benne ouverte.

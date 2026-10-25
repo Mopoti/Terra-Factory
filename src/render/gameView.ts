@@ -1,5 +1,6 @@
 import { TrainView } from './trainView';
 import { carPoses } from '../core/rail/train';
+import { itemIconUrl } from '../ui/itemIcon';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
 import { CARS, isCargoWindow, isLocoWindow } from '../core/data/trains';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
@@ -2445,6 +2446,9 @@ export function startGameView(
     own: VehicleMesh | null;
     x: number;
     z: number;
+    /** Icônes des ressources chargées (benne et charrette) et ce qu'elles représentent. */
+    cargo: THREE.Group | null;
+    cargoKey: string;
   }
   const vehicleMeshes = new Map<number, VehicleView>();
   const wheelMat = new THREE.MeshStandardMaterial({ color: 0x2b2d33 });
@@ -2512,11 +2516,19 @@ export function startGameView(
   const vanCab = new THREE.MeshStandardMaterial({ color: 0x4a6a8a });
   function makeVan(): THREE.Group {
     const g = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.1, 1.8), vanMat);
-    box.position.set(0, 0.95, -0.35);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.8), vanCab);
-    cab.position.set(0, 0.8, 0.95);
-    g.add(box, cab);
+    // Benne ouverte (plancher et ridelles basses) : on voit ce qu'elle transporte.
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.9, 0.8), vanCab);
+    cab.position.set(0, 1.0, 0.95);
+    g.add(cab);
+    const part = (w: number, h: number, d: number, x: number, y: number, z: number): void => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), vanMat);
+      m.position.set(x, y, z);
+      g.add(m);
+    };
+    part(1.3, 0.1, 1.8, 0, 0.6, -0.55);
+    for (const x of [-0.6, 0.6]) part(0.1, 0.4, 1.8, x, 0.8, -0.55);
+    part(1.3, 0.4, 0.1, 0, 0.8, -1.4);
+    part(1.3, 0.4, 0.1, 0, 0.8, 0.3);
     for (const [x, z] of [
       [-0.7, -0.8],
       [0.7, -0.8],
@@ -2547,7 +2559,62 @@ export function startGameView(
       own,
       x: NaN,
       z: NaN,
+      cargo: null,
+      cargoKey: '',
     };
+  }
+  /** Plateau de chargement (centre, taille en m) des véhicules à benne : les icônes des ressources y sont posées. */
+  const CARGO_BED = {
+    van: { x: 0, y: 0.68, z: -0.55, w: 1.1, d: 1.6 },
+    cart: { x: 0, y: 0.58, z: 0.1, w: 0.8, d: 1.1 },
+  } as const;
+  const CARGO_ICON_M = 0.36;
+  const CARGO_MAX_ICONS = 12;
+  const cargoTextures = new Map<string, THREE.Texture>();
+  function cargoTexture(item: string): THREE.Texture | null {
+    const known = cargoTextures.get(item);
+    if (known) return known;
+    const url = itemIconUrl(item);
+    if (!url) return null;
+    const tex = new THREE.TextureLoader().load(url);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    cargoTextures.set(item, tex);
+    return tex;
+  }
+  /** Une icône par sorte de ressource dans le coffre, rangées en grille sur le plateau ; refaites quand le contenu change. */
+  function syncCargo(view: VehicleView, v: Vehicle): void {
+    const bed = v.kind === 'van' || v.kind === 'cart' ? CARGO_BED[v.kind] : null;
+    if (!bed) return;
+    const totals = new Map<string, number>();
+    for (const slot of v.slots) totals.set(slot.item, (totals.get(slot.item) ?? 0) + slot.count);
+    const items = [...totals.keys()].slice(0, CARGO_MAX_ICONS);
+    const key = items.map((i) => `${i}:${itemIconUrl(i) ? 1 : 0}`).join(',');
+    if (key === view.cargoKey) return;
+    view.cargoKey = key;
+    if (view.cargo) {
+      view.group.remove(view.cargo);
+      view.cargo.traverse((o) => {
+        if (o instanceof THREE.Sprite) o.material.dispose();
+      });
+    }
+    const group = new THREE.Group();
+    const cols = Math.max(1, Math.floor(bed.w / CARGO_ICON_M));
+    items.forEach((item, i) => {
+      const tex = cargoTexture(item);
+      if (!tex) return;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      sprite.scale.setScalar(CARGO_ICON_M * 1.15);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      sprite.position.set(
+        bed.x + (col - (Math.min(items.length, cols) - 1) / 2) * CARGO_ICON_M,
+        bed.y + CARGO_ICON_M * 0.5,
+        bed.z - bed.d / 2 + CARGO_ICON_M * (0.6 + row),
+      );
+      group.add(sprite);
+    });
+    view.cargo = group;
+    view.group.add(group);
   }
   const vehicleBox = document.createElement('div');
   vehicleBox.className = 'ammo-box';
@@ -2912,6 +2979,7 @@ export function startGameView(
           for (const w of (view.group.userData.wheels as THREE.Mesh[] | undefined) ?? [])
             w.rotateOnAxis(new THREE.Vector3(0, 1, 0), rolled / 0.36);
       }
+      syncCargo(view, v);
       view.x = v.x;
       view.z = v.z;
       view.group.position.set(v.x, 0, v.z);
