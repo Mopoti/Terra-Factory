@@ -1,4 +1,5 @@
 import { TrainView } from './trainView';
+import { carPoses } from '../core/rail/train';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
 import { CARS, isCargoWindow, isLocoWindow } from '../core/data/trains';
 import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
@@ -1849,8 +1850,14 @@ export function startGameView(
   let wanted: { cx: number; cz: number }[] = [];
   let wantedKey = '';
 
-  const LOD_NEAR = 4;
-  const LOD_FAR = 6;
+  /** Distances (en chunks) de bascule vers les modèles simplifiés, selon la qualité : « haute » garde tout en pleine finesse. */
+  const LOD_BY_QUALITY = {
+    low: { near: 2, far: 4 },
+    medium: { near: 4, far: 6 },
+    high: { near: Infinity, far: Infinity },
+  } as const;
+  let lodNear: number = LOD_BY_QUALITY[initial.quality].near;
+  let lodFar: number = LOD_BY_QUALITY[initial.quality].far;
 
   function updateWanted(pcx: number, pcz: number, radius: number): void {
     const key = `${pcx},${pcz},${radius}`;
@@ -1887,8 +1894,8 @@ export function startGameView(
     );
     const margin = (level: 0 | 1 | 2, edge: number): number =>
       current === undefined ? edge : current > level ? edge - 0.8 : edge + 0.8;
-    if (d <= margin(0, LOD_NEAR)) return 0;
-    if (d <= margin(1, LOD_FAR)) return 1;
+    if (d <= margin(0, lodNear)) return 0;
+    if (d <= margin(1, lodFar)) return 1;
     return 2;
   }
 
@@ -2412,7 +2419,21 @@ export function startGameView(
     garageSense -= dt;
     if (garageSense > 0 || guest) return;
     garageSense = 0.15;
-    options.state.senseGarages(options.state.changes.vehicles);
+    const points: { x: number; z: number }[] = [...options.state.changes.vehicles];
+    const graph = options.state.railGraph();
+    for (const consist of options.state.changes.trains) {
+      for (const pose of carPoses(graph, consist)) {
+        const half = CARS[pose.car.kind].lengthM / 2;
+        const sx = Math.sin(pose.yaw);
+        const cz = Math.cos(pose.yaw);
+        points.push(
+          { x: pose.x, z: pose.z },
+          { x: pose.x + sx * half, z: pose.z + cz * half },
+          { x: pose.x - sx * half, z: pose.z - cz * half },
+        );
+      }
+    }
+    options.state.senseGarages(points);
   }
 
   // --- Véhicules : buggy ------------------------------------------------------------------------
@@ -3717,6 +3738,8 @@ export function startGameView(
 
   function applySettings(s: Settings): void {
     const d = s.display;
+    lodNear = LOD_BY_QUALITY[d.quality].near;
+    lodFar = LOD_BY_QUALITY[d.quality].far;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, PIXEL_RATIO_CAP[d.quality]));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = d.shadows !== 'off';
