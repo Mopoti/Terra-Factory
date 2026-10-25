@@ -47,7 +47,14 @@
       },
       "requires": ["metallurgy_2"],
       "reveal": ["handling"],
-      "unlocks": ["machine_mixer", "concrete_block"]
+      "unlocks": [
+        "machine_mixer",
+        "concrete_block",
+        "piece_wall_concrete",
+        "piece_slab_concrete",
+        "piece_stairs_concrete",
+        "piece_pillar_concrete"
+      ]
     },
     {
       "id": "manufacturing_2",
@@ -140,7 +147,6 @@
       "reveal": ["heavy_press_3"],
       "unlocks": [
         "machine_centrifuge",
-        "aluminium_ingot",
         "zamak_ingot",
         "uranium_enriched",
         "uranium_depleted",
@@ -176,6 +182,24 @@
       "requires": ["plastic_3"],
       "reveal": ["construction_2"],
       "unlocks": ["machine_accumulator"]
+    },
+    {
+      "id": "aluminium_3",
+      "tier": 3,
+      "cost": {
+        "science_pack_2": 140
+      },
+      "requires": ["plastic_3"],
+      "reveal": ["plastic_3"],
+      "unlocks": [
+        "aluminium_ingot",
+        "aluminium_plate",
+        "piece_wall_aluminium",
+        "piece_slab_aluminium",
+        "piece_stairs_aluminium",
+        "piece_door_aluminium",
+        "piece_pillar_aluminium"
+      ]
     },
     {
       "id": "fusion_5",

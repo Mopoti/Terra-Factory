@@ -210,14 +210,22 @@
       "stack": 50,
       "weightKg": 2,
       "volumeL": 2,
-      "color": "#8a5f36"
+      "color": "#8a5f36",
+      "recipe": {
+        "wood": 4
+      },
+      "category": "buildings"
     },
     {
       "id": "piece_pillar_stone",
       "stack": 50,
       "weightKg": 3,
       "volumeL": 2,
-      "color": "#6f747a"
+      "color": "#6f747a",
+      "recipe": {
+        "stone": 4
+      },
+      "category": "buildings"
     },
     {
       "id": "iron_ingot",
@@ -1983,6 +1991,112 @@
       "volumeL": 0,
       "color": "#2f6fb0",
       "recipe": {}
+    },
+    {
+      "id": "piece_wall_concrete",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 2.5,
+      "volumeL": 1,
+      "color": "#9b9b96",
+      "recipe": {
+        "concrete_block": 2
+      }
+    },
+    {
+      "id": "piece_slab_concrete",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 2.5,
+      "volumeL": 1,
+      "color": "#9b9b96",
+      "recipe": {
+        "concrete_block": 2
+      }
+    },
+    {
+      "id": "piece_stairs_concrete",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 4,
+      "volumeL": 1.5,
+      "color": "#9b9b96",
+      "recipe": {
+        "concrete_block": 4
+      }
+    },
+    {
+      "id": "piece_pillar_concrete",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 5,
+      "volumeL": 2,
+      "color": "#9b9b96",
+      "recipe": {
+        "concrete_block": 4
+      }
+    },
+    {
+      "id": "piece_wall_aluminium",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 0.8,
+      "volumeL": 1,
+      "color": "#c4ccd6",
+      "recipe": {
+        "aluminium_plate": 1
+      }
+    },
+    {
+      "id": "piece_slab_aluminium",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 0.8,
+      "volumeL": 1,
+      "color": "#c4ccd6",
+      "recipe": {
+        "aluminium_plate": 1
+      }
+    },
+    {
+      "id": "piece_stairs_aluminium",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 1.4,
+      "volumeL": 1.5,
+      "color": "#c4ccd6",
+      "recipe": {
+        "aluminium_plate": 2
+      }
+    },
+    {
+      "id": "piece_door_aluminium",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 2.5,
+      "volumeL": 3,
+      "color": "#c4ccd6",
+      "recipe": {
+        "aluminium_plate": 2
+      }
+    },
+    {
+      "id": "piece_pillar_aluminium",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 1.5,
+      "volumeL": 2,
+      "color": "#c4ccd6",
+      "recipe": {
+        "aluminium_plate": 2
+      }
+    },
+    {
+      "id": "aluminium_plate",
+      "stack": 100,
+      "weightKg": 0.8,
+      "volumeL": 0.4,
+      "color": "#c4ccd6"
     }
   ]
 }

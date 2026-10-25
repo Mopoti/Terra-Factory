@@ -103,6 +103,97 @@
       "material": "stone",
       "color": "#6f747a",
       "item": "piece_pillar_stone"
+    },
+    {
+      "id": "wall_concrete",
+      "type": "wall",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_wall_concrete"
+    },
+    {
+      "id": "slab_concrete",
+      "type": "slab",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_slab_concrete"
+    },
+    {
+      "id": "floor_concrete",
+      "type": "floor",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_slab_concrete"
+    },
+    {
+      "id": "ceiling_concrete",
+      "type": "ceiling",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_slab_concrete"
+    },
+    {
+      "id": "stairs_concrete",
+      "type": "stairs",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_stairs_concrete"
+    },
+    {
+      "id": "pillar_concrete",
+      "type": "pillar",
+      "material": "concrete",
+      "color": "#9b9b96",
+      "item": "piece_pillar_concrete"
+    },
+    {
+      "id": "wall_aluminium",
+      "type": "wall",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_wall_aluminium"
+    },
+    {
+      "id": "door_aluminium",
+      "type": "door",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_door_aluminium"
+    },
+    {
+      "id": "slab_aluminium",
+      "type": "slab",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_slab_aluminium"
+    },
+    {
+      "id": "floor_aluminium",
+      "type": "floor",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_slab_aluminium"
+    },
+    {
+      "id": "ceiling_aluminium",
+      "type": "ceiling",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_slab_aluminium"
+    },
+    {
+      "id": "stairs_aluminium",
+      "type": "stairs",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_stairs_aluminium"
+    },
+    {
+      "id": "pillar_aluminium",
+      "type": "pillar",
+      "material": "aluminium",
+      "color": "#c4ccd6",
+      "item": "piece_pillar_aluminium"
     }
   ],
   "supportSpanM": 2.5

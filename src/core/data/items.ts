@@ -104,6 +104,7 @@ export const ITEM_CATEGORIES = [
   'energy',
   'science',
   'buildings',
+  'industrial',
   'equipment',
   'armor',
   'tools',

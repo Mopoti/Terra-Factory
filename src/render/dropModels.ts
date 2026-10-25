@@ -86,6 +86,10 @@ export const NO_MODEL_ITEMS: readonly string[] = [
   'sniper_magazine',
   'rubber',
   'iron_rod',
+  ...['concrete', 'aluminium'].flatMap((m) =>
+    ['wall', 'slab', 'stairs', 'pillar'].map((t) => `piece_${t}_${m}`),
+  ),
+  'piece_door_aluminium',
   'steel_rod',
   'motor',
   'motor_heavy',

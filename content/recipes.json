@@ -490,6 +490,18 @@
         "concrete_block": 2
       },
       "seconds": 3
+    },
+    {
+      "id": "aluminium_plate",
+      "machine": "stamper",
+      "mould": "mould_plate",
+      "in": {
+        "aluminium_ingot": 2
+      },
+      "out": {
+        "aluminium_plate": 1
+      },
+      "seconds": 3
     }
   ]
 }

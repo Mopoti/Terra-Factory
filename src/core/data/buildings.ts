@@ -1,7 +1,7 @@
 import raw from '../../../content/buildings.json';
 
 export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs' | 'pillar';
-export type Material = 'wood' | 'stone';
+export type Material = 'wood' | 'stone' | 'concrete' | 'aluminium';
 /** Identifiant d'une pièce : type + matériau, par exemple « wall_stone ». */
 export type PieceKind = `${PieceType}_${Material}`;
 /** Emplacement occupé : un bord de case (mur ou porte), le sol ou le plafond d'une case. */
@@ -18,7 +18,7 @@ export interface PieceDef {
 
 export const PIECES: PieceDef[] = raw.pieces as PieceDef[];
 export const PIECE_TYPES: PieceType[] = ['wall', 'door', 'slab', 'stairs'];
-export const MATERIALS: Material[] = ['wood', 'stone'];
+export const MATERIALS: Material[] = ['wood', 'stone', 'concrete', 'aluminium'];
 /** Hauteur d'un étage (m) et d'un bloc de mur (m) : 5 blocs par étage. */
 export const STOREY_HEIGHT_M: number = raw.storeyHeightM;
 export const LAYER_HEIGHT_M: number = raw.layerHeightM;
@@ -62,7 +62,7 @@ export const RISE_DIR: readonly [number, number][] = [
   [-1, 0],
 ];
 
-/** La pièce de ce type dans ce matériau, ou à défaut dans un autre (une porte n'existe qu'en bois). */
+/** La pièce de ce type dans ce matériau, ou à défaut dans un autre (pas de porte en béton : on prend la première trouvée). */
 export function kindFor(type: PieceType, material: Material): PieceKind {
   const found =
     PIECES.find((p) => p.type === type && p.material === material) ??

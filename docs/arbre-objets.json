@@ -11,6 +11,7 @@
     "machine_pole",
     "machine_waterwheel",
     "piece_door_wood",
+    "piece_pillar_wood",
     "piece_slab_wood",
     "piece_stairs_wood",
     "piece_wall_wood",
@@ -45,6 +46,7 @@
     "machine_washer",
     "machine_waterwheel",
     "piece_door_stone",
+    "piece_pillar_stone",
     "piece_slab_stone",
     "piece_stairs_stone",
     "piece_wall_stone",
@@ -201,7 +203,7 @@
    ]
   },
   "piece_door_wood": {
-   "name": "Porte en bois",
+   "name": "Battant de porte en bois (2 par porte)",
    "category": "buildings",
    "tech": [],
    "paths": [
@@ -223,7 +225,7 @@
    ]
   },
   "piece_door_stone": {
-   "name": "Porte en pierre",
+   "name": "Battant de porte en pierre (2 par porte)",
    "category": "buildings",
    "tech": [],
    "paths": [
@@ -356,25 +358,47 @@
   },
   "piece_pillar_wood": {
    "name": "Pilier en bois",
-   "category": null,
+   "category": "buildings",
    "tech": [],
-   "paths": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "wood": 4
+     },
+     "out": {
+      "piece_pillar_wood": 1
+     },
+     "seconds": null
+    }
+   ],
    "usedIn": [],
    "issues": [
-    "Aucune recette actuellement",
-    "Ne sert d'ingrédient à rien",
+    "Disponible dès le départ (aucune technologie)",
     "Décidé : recette 4 bois ; le pilier ne sera plus posé automatiquement mais à la main, et la construction sera bloquée au-delà de 5 m sans mur ni pilier sous la dalle (patron rouge). À coder."
    ]
   },
   "piece_pillar_stone": {
    "name": "Pilier en pierre",
-   "category": null,
+   "category": "buildings",
    "tech": [],
-   "paths": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "stone": 4
+     },
+     "out": {
+      "piece_pillar_stone": 1
+     },
+     "seconds": null
+    }
+   ],
    "usedIn": [],
    "issues": [
-    "Aucune recette actuellement",
-    "Ne sert d'ingrédient à rien",
+    "Disponible dès le départ (aucune technologie)",
     "Décidé : recette 4 pierres ; pilier posé à la main (voir pilier en bois). À coder."
    ]
   },
@@ -663,7 +687,11 @@
     "machine_fission_reactor",
     "machine_fusion_reactor",
     "machine_refinery",
-    "machine_vitrifier"
+    "machine_vitrifier",
+    "piece_pillar_concrete",
+    "piece_slab_concrete",
+    "piece_stairs_concrete",
+    "piece_wall_concrete"
    ],
    "issues": []
   },
@@ -964,6 +992,7 @@
     }
    ],
    "usedIn": [
+    "aluminium_plate",
     "copper_plate",
     "iron_plate",
     "steel_plate"
@@ -2134,6 +2163,7 @@
     }
    ],
    "usedIn": [
+    "tech:aluminium_3",
     "tech:barrels_3",
     "tech:extraction_3",
     "tech:heavy_press_3",
@@ -2716,7 +2746,7 @@
    "name": "Lingot d'aluminium",
    "category": null,
    "tech": [
-    "fission_4"
+    "aluminium_3"
    ],
    "paths": [
     {
@@ -2732,6 +2762,7 @@
     }
    ],
    "usedIn": [
+    "aluminium_plate",
     "zamak_ingot"
    ],
    "issues": []
@@ -2764,7 +2795,9 @@
     "machine_fusion_reactor",
     "uranium_rod"
    ],
-   "issues": []
+   "issues": [
+    "Ingrédient « Lingot d'aluminium » n'est pas encore disponible : débloqué par « Aluminium »"
+   ]
   },
   "uranium_enriched": {
    "name": "Uranium enrichi",
@@ -4211,6 +4244,252 @@
    "paths": [],
    "usedIn": [],
    "issues": []
+  },
+  "piece_wall_concrete": {
+   "name": "Mur en béton",
+   "category": "industrial",
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "concrete_block": 2
+     },
+     "out": {
+      "piece_wall_concrete": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_slab_concrete": {
+   "name": "Dalle en béton",
+   "category": "industrial",
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "concrete_block": 2
+     },
+     "out": {
+      "piece_slab_concrete": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_stairs_concrete": {
+   "name": "Escalier en béton",
+   "category": "industrial",
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "concrete_block": 4
+     },
+     "out": {
+      "piece_stairs_concrete": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_pillar_concrete": {
+   "name": "Pilier en béton",
+   "category": "industrial",
+   "tech": [
+    "construction_2"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "concrete_block": 4
+     },
+     "out": {
+      "piece_pillar_concrete": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_wall_aluminium": {
+   "name": "Mur en aluminium",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 1
+     },
+     "out": {
+      "piece_wall_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_slab_aluminium": {
+   "name": "Dalle en aluminium",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 1
+     },
+     "out": {
+      "piece_slab_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_stairs_aluminium": {
+   "name": "Escalier en aluminium",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 2
+     },
+     "out": {
+      "piece_stairs_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_door_aluminium": {
+   "name": "Battant de porte en aluminium (2 par porte)",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 2
+     },
+     "out": {
+      "piece_door_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "piece_pillar_aluminium": {
+   "name": "Pilier en aluminium",
+   "category": "industrial",
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "aluminium_plate": 2
+     },
+     "out": {
+      "piece_pillar_aluminium": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "aluminium_plate": {
+   "name": "Plaque d'aluminium",
+   "category": null,
+   "tech": [
+    "aluminium_3"
+   ],
+   "paths": [
+    {
+     "kind": "machine",
+     "machine": "machine_stamper",
+     "in": {
+      "aluminium_ingot": 2
+     },
+     "out": {
+      "aluminium_plate": 1
+     },
+     "seconds": 3
+    }
+   ],
+   "usedIn": [
+    "piece_door_aluminium",
+    "piece_pillar_aluminium",
+    "piece_slab_aluminium",
+    "piece_stairs_aluminium",
+    "piece_wall_aluminium"
+   ],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
   }
  },
  "techs": {
@@ -4280,7 +4559,11 @@
    ],
    "unlocks": [
     "machine_mixer",
-    "concrete_block"
+    "concrete_block",
+    "piece_wall_concrete",
+    "piece_slab_concrete",
+    "piece_stairs_concrete",
+    "piece_pillar_concrete"
    ]
   },
   "manufacturing_2": {
@@ -4407,7 +4690,6 @@
    ],
    "unlocks": [
     "machine_centrifuge",
-    "aluminium_ingot",
     "zamak_ingot",
     "uranium_enriched",
     "uranium_depleted",
@@ -4454,6 +4736,25 @@
    ],
    "unlocks": [
     "machine_accumulator"
+   ]
+  },
+  "aluminium_3": {
+   "name": "Aluminium",
+   "tier": 3,
+   "cost": {
+    "science_pack_2": 140
+   },
+   "requires": [
+    "plastic_3"
+   ],
+   "unlocks": [
+    "aluminium_ingot",
+    "aluminium_plate",
+    "piece_wall_aluminium",
+    "piece_slab_aluminium",
+    "piece_stairs_aluminium",
+    "piece_door_aluminium",
+    "piece_pillar_aluminium"
    ]
   },
   "fusion_5": {
