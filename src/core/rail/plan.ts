@@ -116,8 +116,8 @@ export function planRails(tilesIn: readonly Tile[], opts: PlanOptions): PlannedP
   const AUTO: { kind: CurveKind; half: number }[] = [
     { kind: 'curve_wide', half: 2 },
     { kind: 'curve_large', half: 3 },
-    { kind: 'curve_big', half: 5 },
-    { kind: 'curve_huge', half: 7 },
+    // Essai : les grands virages (11 et 15 tuiles) sont désactivés pour comparer avec le très large (7 × 7) seul.
+    // Pour les rétablir : { kind: 'curve_big', half: 5 } et { kind: 'curve_huge', half: 7 }.
   ];
   const cornerAt: number[] = [];
   for (let i = lead; i < dirs.length; i++) if (corner(i)) cornerAt.push(i);

@@ -221,9 +221,10 @@ describe('virages larges', () => {
     expect(kindFor(2, 2)).toEqual(['curve_wide']);
     expect(kindFor(3, 3)).toEqual(['curve_large']);
     expect(kindFor(4, 4)).toEqual(['curve_large']);
-    expect(kindFor(5, 5)).toEqual(['curve_big']);
-    expect(kindFor(7, 7)).toEqual(['curve_huge']);
-    expect(kindFor(12, 12)).toEqual(['curve_huge']);
+    // Les grands virages (11 et 15 tuiles) sont désactivés pour l'essai : le très large est le plus grand.
+    expect(kindFor(5, 5)).toEqual(['curve_large']);
+    expect(kindFor(7, 7)).toEqual(['curve_large']);
+    expect(kindFor(12, 12)).toEqual(['curve_large']);
     // La branche la plus courte décide.
     expect(kindFor(12, 2)).toEqual(['curve_wide']);
     // Le tracé reste continu.
