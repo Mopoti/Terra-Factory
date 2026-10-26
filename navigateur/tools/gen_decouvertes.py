@@ -11,87 +11,145 @@ rec=json.load(open('content/recipes.json'))['recipes']
 n=lambda i: fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
 S1,S2,S3,S4,S5,C='science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'
+def P(t,n,c=0):
+    """Coût en paquets d'un palier t (T1 : paquets T1 seuls ; au-delà : Tt et T(t-1)), plus c paquets de combat."""
+    pk={1:S1,2:S2,3:S3,4:S4,5:S5}
+    out={pk[t]:n}
+    if t>=2: out[pk[t-1]]=n
+    if c: out[C]=c
+    return out
+# Chaque recette (ou petit groupe de recettes proche) est une découverte : le moule et son produit, la machine et ses variantes…
 D={
  # --- Palier 0 : payé en ressources du début de partie
- 'metallurgy':('Métallurgie',0,['machine_stamper','machine_crusher','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod'],[],{'iron_ingot':20,'stone':10}),
- 'electricity':('Électricité',0,['machine_pole','machine_crank'],['metallurgy'],{'iron_ingot':15,'copper_ingot':10}),
- 'laboratory':('Laboratoire',0,['machine_lab',S1],['electricity'],{'iron_ingot':10,'copper_ingot':10}),
+ 'cast_iron':('Fonte',0,['cast_iron_ingot'],[],{'iron_ingot':10}),
+ 'stamper':('Estampeuse',0,['machine_stamper'],[],{'iron_ingot':10,'stone':10}),
+ 'mould_plate':('Moule de plaque',0,['mould_plate'],['cast_iron'],{'cast_iron_ingot':4}),
+ 'plates':('Plaques de fer et de cuivre',0,['iron_plate','copper_plate'],['stamper','mould_plate'],{'iron_ingot':10,'copper_ingot':10}),
+ 'mould_gear':('Moule d\'engrenage',0,['mould_gear'],['cast_iron'],{'cast_iron_ingot':6}),
+ 'gears':('Engrenage',0,['iron_gear'],['stamper','mould_gear'],{'iron_ingot':10}),
+ 'mould_wire':('Moule de fil',0,['mould_wire'],['cast_iron'],{'cast_iron_ingot':4}),
+ 'wires':('Fil de cuivre',0,['copper_wire'],['stamper','mould_wire'],{'copper_ingot':10}),
+ 'rods':('Tige de fer',0,['iron_rod'],['stamper'],{'iron_ingot':10}),
+ 'crusher':('Concasseur',0,['machine_crusher','crushed_stone'],[],{'iron_ingot':10,'stone':10}),
+ 'electricity':('Électricité',0,['machine_pole'],[],{'iron_ingot':15,'copper_ingot':10}),
+ 'crank':('Manivelle de réamorçage',0,['machine_crank'],['electricity'],{'iron_ingot':10}),
+ 'laboratory':('Laboratoire',0,['machine_lab'],['electricity'],{'iron_ingot':10,'copper_ingot':10}),
+ 'pack_1':('Paquet de science T1',0,[S1],['laboratory'],{'stone':5,'fiber':5}),
  'iron_tool':('Outil en fer',0,['tool_iron'],[],{'iron_ingot':10}),
- 'waterwheel':('Roue à aubes',0,['machine_waterwheel'],['metallurgy'],{'copper_plate':10}),
- 'pistol':('Pistolet',0,['pistol','magazine'],['metallurgy'],{'iron_plate':10}),
+ 'waterwheel':('Roue à aubes',0,['machine_waterwheel'],['wires'],{'copper_plate':10}),
+ 'pistol':('Pistolet',0,['pistol'],['plates','gears','rods'],{'iron_plate':10}),
+ 'magazine':('Chargeur de pistolet',0,['magazine'],['pistol'],{'iron_ingot':10}),
  'research_1':('Recherche I (paquets plus vite)',0,[],['laboratory'],{'iron_ingot':20,'copper_ingot':20}),
  # --- Palier 1 : paquets T1
- 'conveyor':('Convoyeur',1,['machine_conveyor','machine_arm'],['laboratory'],{S1:100}),
- 'routing':('Aiguillage',1,['machine_splitter','machine_merger'],['conveyor'],{S1:100}),
- 'handling':('Manutention',1,['machine_chest_iron','waypoint'],['conveyor'],{S1:100}),
- 'textile':('Textile',1,['cloth'],['laboratory'],{S1:100}),
- 'clothing':('Vêtements',1,['trousers','boots','gloves','hood','jacket'],['textile'],{S1:100}),
- 'backpack':('Sac à dos',1,['backpack'],['textile'],{S1:100}),
- 'bedding_1':('Couchage de survie',1,['sleeping_bag'],['textile'],{S1:100}),
- 'navigation':('Navigation',1,['compass'],['laboratory'],{S1:100}),
- 'water':('Eau',1,['machine_pipe','machine_pump'],['laboratory'],{S1:150}),
- 'motor':('Moteur simple',1,['motor'],['laboratory'],{S1:150}),
- 'light_vehicles':('Véhicules légers',1,['vehicle_buggy','vehicle_quad'],['motor'],{S1:150}),
- 'steam_power':('Chaudière et turbine',1,['machine_boiler','machine_turbine'],['water'],{S1:150}),
- 'pack_2':('Paquet de science T2',1,[S2],['metallurgy'],{S1:100}),
- 'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],{S1:100,C:10}),
- 'turret':('Tourelle',1,['machine_turret'],['conveyor','pistol'],{S1:100,C:10}),
+ 'conveyor':('Tapis roulant',1,['machine_conveyor'],['pack_1'],P(1,50)),
+ 'arm':('Bras robotique',1,['machine_arm'],['conveyor'],P(1,100)),
+ 'splitter':('Séparateur',1,['machine_splitter'],['conveyor'],P(1,100)),
+ 'merger':('Groupeur',1,['machine_merger'],['conveyor'],P(1,100)),
+ 'chest_iron':('Coffre en fer',1,['machine_chest_iron'],['pack_1'],P(1,50)),
+ 'waypoint':('Balise',1,['waypoint'],['pack_1'],P(1,100)),
+ 'textile':('Textile',1,['cloth'],['pack_1'],P(1,100)),
+ 'clothing':('Vêtements',1,['trousers','boots','gloves','hood','jacket'],['textile'],P(1,100)),
+ 'backpack':('Sac à dos',1,['backpack'],['textile'],P(1,100)),
+ 'bedding_1':('Couchage de survie',1,['sleeping_bag'],['textile'],P(1,100)),
+ 'navigation':('Navigation',1,['compass'],['pack_1'],P(1,100)),
+ 'pipe':('Tuyau',1,['machine_pipe'],['pack_1'],P(1,50)),
+ 'motor':('Moteur simple',1,['motor'],['pack_1'],P(1,150)),
+ 'pump':('Pompe à eau',1,['machine_pump'],['pipe','motor'],P(1,100)),
+ 'buggy':('Buggy',1,['vehicle_buggy'],['motor'],P(1,100)),
+ 'quad':('Quad',1,['vehicle_quad'],['motor'],P(1,100)),
+ 'boiler':('Chaudière',1,['machine_boiler'],['pipe'],P(1,100)),
+ 'turbine':('Turbine à vapeur',1,['machine_turbine'],['boiler'],P(1,100)),
+ 'pack_2':('Paquet de science T2',1,[S2],['pack_1','gears','wires'],P(1,100)),
+ 'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],P(1,100,10)),
+ 'turret':('Tourelle',1,['machine_turret'],['conveyor','magazine'],P(1,100,10)),
  # --- Palier 2 : paquets T2 et T1
- 'steel':('Acier',2,['machine_bessemer','steel_plate'],['pack_2'],{S2:100,S1:100}),
- 'concrete':('Béton',2,['machine_mixer','concrete_block','piece_wall_concrete','piece_slab_concrete','piece_stairs_concrete','piece_pillar_concrete'],['steel'],{S2:150,S1:150}),
- 'washing':('Lavage',2,['machine_washer','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot'],['steel'],{S2:150,S1:150}),
- 'fabrication':('Fabrication',2,['machine_builder','machine_pipe_2'],['steel'],{S2:150,S1:150}),
- 'fluids':('Fluides',2,['machine_booster','machine_cooling_tower'],['fabrication'],{S2:150,S1:150}),
- 'conveyor_2':('Convoyeur rapide',2,['machine_conveyor_2'],['conveyor','steel'],{S2:100,S1:100}),
- 'automation':('Automatisation',2,['machine_arm_electric','machine_assembler'],['conveyor','steel'],{S2:200,S1:200}),
- 'generator':('Générateur à combustible',2,['machine_generator'],['electricity','steam_power'],{S2:100,S1:100}),
- 'drill_electric':('Foreuse électrique',2,['machine_drill_electric'],['generator'],{S2:150,S1:150}),
- 'bedding_2':('Couchage de confort',2,['bed'],['bedding_1'],{S2:100,S1:100}),
- 'research_2':('Recherche II',2,[],['research_1'],{S2:100,S1:100}),
- 'rifle':('Fusil',2,['rifle','rifle_magazine'],['pistol','steel'],{S2:100,S1:100,C:20}),
- 'armor_2':('Armure 2',2,['armor2_head','armor2_torso','armor2_legs','armor2_feet'],['armor_1','steel'],{S2:150,S1:150,C:20}),
- 'turret_heavy':('Tourelle lourde',2,['machine_turret_heavy'],['turret','steel'],{S2:150,S1:150,C:20}),
-
- 'pack_3':('Paquet de science T3',2,[S3],['steel','fabrication'],{S2:100,S1:100}),
+ 'bessemer':('Convertisseur Bessemer',2,['machine_bessemer','steel_ingot','slag'],['pack_2'],P(2,100)),
+ 'steel_plate':('Plaque d\'acier',2,['steel_plate'],['bessemer'],P(2,100)),
+ 'steel_rod':('Tige d\'acier',2,['steel_rod'],['bessemer'],P(2,100)),
+ 'mixer':('Bétonnière',2,['machine_mixer','concrete_block'],['steel_plate'],P(2,100)),
+ 'concrete':('Constructions en béton',2,['piece_wall_concrete','piece_slab_concrete','piece_stairs_concrete','piece_pillar_concrete'],['mixer'],P(2,100)),
+ 'washer':('Station de lavage',2,['machine_washer'],['steel_plate'],P(2,100)),
+ 'washed_ores':('Minerais lavés',2,['iron_ore_washed','copper_ore_washed','zinc_ore_washed'],['washer'],P(2,100)),
+ 'zinc':('Lingot de zinc',2,['zinc_ingot'],['washed_ores'],P(2,100)),
+ 'builder':('Constructeur',2,['machine_builder'],['steel_plate'],P(2,150)),
+ 'pipe_2':('Tuyau de laiton',2,['machine_pipe_2'],['zinc'],P(2,100)),
+ 'booster':('Surpresseur',2,['machine_booster'],['pipe_2'],P(2,100)),
+ 'cooling':('Tour de refroidissement',2,['machine_cooling_tower'],['pipe_2'],P(2,100)),
+ 'conveyor_2':('Tapis rapide',2,['machine_conveyor_2'],['conveyor','bessemer'],P(2,100)),
+ 'arm_electric':('Bras robotique électrique',2,['machine_arm_electric'],['arm','steel_plate'],P(2,100)),
+ 'assembler':('Assembleur',2,['machine_assembler'],['arm_electric'],P(2,150)),
+ 'generator':('Générateur à combustible',2,['machine_generator'],['electricity','turbine'],P(2,100)),
+ 'drill_electric':('Foreuse électrique',2,['machine_drill_electric'],['generator'],P(2,150)),
+ 'bedding_2':('Couchage de confort',2,['bed'],['bedding_1'],P(2,100)),
+ 'research_2':('Recherche II',2,[],['research_1'],P(2,100)),
+ 'rifle':('Fusil',2,['rifle'],['pistol','steel_plate'],P(2,100,20)),
+ 'rifle_magazine':('Chargeur de fusil',2,['rifle_magazine'],['rifle'],P(2,100,10)),
+ 'armor_2':('Armure 2',2,['armor2_head','armor2_torso','armor2_legs','armor2_feet'],['armor_1','steel_plate'],P(2,150,20)),
+ 'turret_heavy':('Tourelle lourde',2,['machine_turret_heavy'],['turret','steel_plate'],P(2,150,20)),
+ 'pack_3':('Paquet de science T3',2,[S3],['steel_plate','pipe_2'],P(2,100)),
  # --- Palier 3 : paquets T3 et T2
- 'heavy_press':('Presse lourde',3,['machine_heavy_press','machine_pipe_3'],['fabrication','concrete'],{S3:150,S2:150}),
- 'silicon':('Silicium',3,['machine_furnace_electric','silicon_raw','silicon_chip'],['heavy_press'],{S3:150,S2:150}),
- 'barrels':('Barils',3,['machine_barreler','barrel_empty'],['steam_power','fluids'],{S3:150,S2:150}),
- 'oil':('Pétrole',3,['machine_pumpjack','barrel_oil'],['barrels','heavy_press'],{S3:150,S2:150}),
- 'plastics':('Plastique et caoutchouc',3,['machine_refinery','machine_plastic_press','plastic_insulator','cable_insulated','rubber'],['oil','silicon'],{S3:200,S2:200}),
- 'engine_heavy':('Moteur renforcé',3,['motor_heavy'],['motor','fabrication','plastics'],{S3:150,S2:150}),
- 'heavy_vehicles':('Véhicules lourds',3,['vehicle_tank','vehicle_van'],['engine_heavy','steel'],{S3:200,S2:200}),
- 'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['steam_power','steel','engine_heavy'],{S3:200,S2:200}),
- 'aluminium':('Aluminium',3,['aluminium_ingot','aluminium_plate','piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['plastics'],{S3:200,S2:200}),
- 'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],{S3:150,S2:150}),
- 'conveyor_3':('Convoyeur T3',3,['machine_conveyor_3','machine_arm_filter'],['conveyor_2'],{S3:150,S2:150}),
- 'sorting':('Trieur',3,['machine_sorter'],['conveyor_3'],{S3:100,S2:100}),
- 'drill_eco':('Foreuse économe',3,['machine_drill_eco'],['drill_electric','steel'],{S3:150,S2:150}),
- 'pack_4':('Paquet de science T4',3,['science_pack_4'],['silicon','plastics'],{S3:100,S2:100}),
- 'research_3':('Recherche III',3,[],['research_2'],{S3:100,S2:100}),
- 'sniper':('Sniper',3,['sniper','sniper_magazine'],['rifle','steel'],{S3:150,S2:150,C:30}),
- 'turret_laser':('Tourelle laser',3,['machine_turret_laser'],['turret_heavy','motor','silicon'],{S3:150,S2:150,C:30}),
+ 'heavy_press':('Presse lourde',3,['machine_heavy_press'],['builder','concrete'],P(3,150)),
+ 'pipe_3':('Tuyau T3',3,['machine_pipe_3'],['heavy_press'],P(3,100)),
+ 'electric_furnace':('Four électrique',3,['machine_furnace_electric'],['heavy_press'],P(3,100)),
+ 'silicon_raw':('Silicium brut',3,['silicon_raw'],['electric_furnace'],P(3,100)),
+ 'silicon_chip':('Puce de silicium',3,['silicon_chip'],['silicon_raw'],P(3,100)),
+ 'barreler':('Remplisseuse de barils',3,['machine_barreler','barrel_empty','barrel_water'],['pipe_2','booster'],P(3,100)),
+ 'pumpjack':('Chevalet de pompage',3,['machine_pumpjack'],['heavy_press','barreler'],P(3,150)),
+ 'barrel_oil':('Baril de pétrole',3,['barrel_oil'],['pumpjack'],P(3,100)),
+ 'refinery':('Raffinerie',3,['machine_refinery'],['pumpjack','concrete'],P(3,150)),
+ 'plastic_press':('Presse à plastique',3,['machine_plastic_press'],['refinery'],P(3,150)),
+ 'plastic':('Isolant plastique',3,['plastic_insulator'],['plastic_press'],P(3,100)),
+ 'insulated_cable':('Câble isolé',3,['cable_insulated'],['plastic'],P(3,100)),
+ 'rubber':('Caoutchouc',3,['rubber'],['plastic_press'],P(3,100)),
+ 'engine_heavy':('Moteur renforcé',3,['motor_heavy'],['motor','builder','rubber'],P(3,150)),
+ 'tank':('Char',3,['vehicle_tank'],['engine_heavy','steel_plate'],P(3,150)),
+ 'van':('Camion benne',3,['vehicle_van'],['engine_heavy','steel_plate'],P(3,150)),
+ 'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['turbine','steel_plate','engine_heavy'],P(3,200)),
+ 'aluminium_ingot':('Lingot d\'aluminium',3,['aluminium_ingot'],['plastic_press'],P(3,150)),
+ 'aluminium_plate':('Plaque d\'aluminium',3,['aluminium_plate'],['aluminium_ingot'],P(3,100)),
+ 'aluminium':('Constructions en aluminium',3,['piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['aluminium_plate'],P(3,150)),
+ 'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],P(3,150)),
+ 'conveyor_3':('Tapis T3',3,['machine_conveyor_3'],['conveyor_2'],P(3,150)),
+ 'arm_filter':('Bras filtrant',3,['machine_arm_filter'],['conveyor_3'],P(3,100)),
+ 'sorting':('Trieur',3,['machine_sorter'],['arm_filter'],P(3,100)),
+ 'drill_eco':('Foreuse économe',3,['machine_drill_eco'],['drill_electric','steel_plate'],P(3,150)),
+ 'pack_4':('Paquet de science T4',3,[S4],['silicon_chip','insulated_cable'],P(3,100)),
+ 'research_3':('Recherche III',3,[],['research_2'],P(3,100)),
+ 'sniper':('Sniper',3,['sniper'],['rifle','steel_plate'],P(3,150,30)),
+ 'sniper_magazine':('Chargeur de sniper',3,['sniper_magazine'],['sniper'],P(3,100,15)),
+ 'turret_laser':('Tourelle laser',3,['machine_turret_laser'],['turret_heavy','motor','silicon_chip'],P(3,150,30)),
  # --- Palier 4 : paquets T4 et T3
- 'fission':('Fission',4,['machine_centrifuge','zamak_ingot','uranium_enriched','uranium_depleted','uranium_rod'],['plastics','aluminium'],{S4:200,S3:200}),
- 'reactor':('Réacteur à fission',4,['machine_fission_reactor'],['fission'],{S4:250,S3:250}),
- 'pack_5':('Paquet de science T5',4,[S5],['fission'],{S4:100,S3:100}),
- 'waste':('Déchets nucléaires',4,['machine_evaporation_tower','machine_vitrifier','contaminated_glass'],['reactor'],{S4:200,S3:200}),
- 'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_2','silicon'],{S4:150,S3:150,C:40}),
- 'turret_plasma':('Tourelle plasma',4,['machine_turret_plasma'],['turret_laser','engine_heavy'],{S4:150,S3:150,C:40}),
- 'storage':('Accumulateur',4,['machine_accumulator'],['fission'],{S4:150,S3:150}),
- 'research_4':('Recherche IV',4,[],['research_3'],{S4:100,S3:100}),
+ 'centrifuge':('Centrifugeuse',4,['machine_centrifuge'],['aluminium','insulated_cable'],P(4,200)),
+ 'zamak':('Zamak',4,['zamak_ingot'],['aluminium_ingot','zinc'],P(4,150)),
+ 'uranium_enriched':('Uranium enrichi',4,['uranium_enriched'],['centrifuge'],P(4,200)),
+ 'uranium_depleted':('Uranium appauvri',4,['uranium_depleted'],['centrifuge'],P(4,100)),
+ 'uranium_rod':('Barre d\'uranium',4,['uranium_rod'],['uranium_enriched'],P(4,150)),
+ 'reactor':('Réacteur à fission',4,['machine_fission_reactor'],['uranium_rod'],P(4,250)),
+ 'pack_5':('Paquet de science T5',4,[S5],['uranium_depleted'],P(4,100)),
+ 'evaporation':('Tour d\'évaporation',4,['machine_evaporation_tower'],['reactor'],P(4,150)),
+ 'vitrifier':('Vitrificateur',4,['machine_vitrifier','contaminated_glass'],['reactor'],P(4,200)),
+ 'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_2','silicon_chip'],P(4,150,40)),
+ 'turret_plasma':('Tourelle plasma',4,['machine_turret_plasma'],['turret_laser','engine_heavy'],P(4,150,40)),
+ 'storage':('Accumulateur',4,['machine_accumulator'],['zamak'],P(4,150)),
+ 'research_4':('Recherche IV',4,[],['research_3'],P(4,100)),
  # --- Palier 5 : paquets T5 et T4
- 'fusion':('Fusion',5,['machine_fusion_reactor'],['waste','storage'],{S5:300,S4:300}),
- 'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],{S5:300,S4:300}),
+ 'fusion':('Fusion',5,['machine_fusion_reactor'],['vitrifier','storage'],P(5,300)),
+ 'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],P(5,300)),
 }
 owner={u:k for k,v in D.items() for u in v[2]}
 def needs(item):
-    out=set(items[item].get('recipe') or {})
+    """Ce qu'il faut connaître pour fabriquer `item` par la voie la plus simple (recette à la main, sinon la première recette de machine)."""
+    r=items[item].get('recipe')
+    if r: return set(r)
     for x in rec:
         if item in x['out'] and not (x['machine']=='barreler' and item=='barrel_empty'):  # le vidage d'un baril n'est pas sa fabrication
-            out|=set(x.get('in',{})); out.add('machine_'+x['machine'])
+            out=set(x.get('in',{})); out.add('machine_'+x['machine'])
             if x.get('mould'): out.add(x['mould'])
-    return out
+            return out
+    return set()
+START={'wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','silica_sand','crude_oil','uraninite','iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','carapace','living_tissue','combat_pack','nuclear_waste','piece_wall_wood','piece_door_wood','piece_door_stone','piece_wall_stone','piece_stairs_wood','piece_stairs_stone','piece_slab_wood','piece_slab_stone','piece_pillar_wood','piece_pillar_stone'}
+uncovered=[i for i in items if i not in owner and i not in START and not i.startswith('res_')]
+if uncovered: print('sans découverte :',uncovered)
 derived={}
 for k,(nm,t,un,pre,cost) in D.items():
     derived[k]={owner[need] for u in un for need in needs(u) if need in owner and owner[need]!=k}
@@ -110,8 +168,8 @@ cost=lambda c: ' + '.join(f'{v} × {n(k)}' for k,v in c.items())
 order=list(D)
 pre=lambda k: sorted(deps(k), key=lambda x:(D[x][1],order.index(x)))
 L=["# Découvertes T0 à T5 — proposition","","Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.","",
-"Règles :","- Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2. Palier 4 : T4 **et** T3. Palier 5 : T5 **et** T4.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
-"Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fourneau T1, foreuse T1, coffre en bois, outil en pierre, charrette, pièces de construction en bois et en pierre, moules, lingots, fonte.",""]
+"Règles :","- Une découverte débloque **la recette** d'un objet ou d'un petit groupe d'objets proches. Le moule et son produit sont deux découvertes, comme la machine et ses variantes.","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2. Palier 4 : T4 **et** T3. Palier 5 : T5 **et** T4.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
+"Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon, lingots de fer et de cuivre, fourneau T1, foreuse T1, coffre en bois, outil en pierre, charrette, pièces de construction en bois et en pierre, butin des créatures.",""]
 for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1'),(2,'Palier 2 : paquets T2 + T1'),(3,'Palier 3 : paquets T3 + T2'),(4,'Palier 4 : paquets T4 + T3'),(5,'Palier 5 : paquets T5 + T4')):
     L+=[f"## {title}","","| Découverte | Débloque | Prérequis | Coût |","| --- | --- | --- | --- |"]
     for k,(nm,tt,un,_,c) in D.items():
