@@ -26,8 +26,8 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Concasseur** | Concasseur, Pierre écrasée | — | 10 × Lingot de fer + 10 × Pierre |
 | **Électricité** | Poteau électrique | — | 15 × Lingot de fer + 10 × Lingot de cuivre |
 | **Manivelle de réamorçage** | Manivelle de réamorçage | Plaques de fer et de cuivre, Engrenage, Électricité | 10 × Lingot de fer |
-| **Laboratoire** | Laboratoire | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Électricité | 10 × Lingot de fer + 10 × Lingot de cuivre |
-| **Paquet de science T1** | Paquet de science T1 | Laboratoire | 5 × Pierre + 5 × Fibre |
+| **Laboratoire** | Laboratoire | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Électricité, Paquet de science T1 | 10 × Lingot de fer + 10 × Lingot de cuivre |
+| **Paquet de science T1** | Paquet de science T1 | — | 5 × Pierre + 5 × Fibre |
 | **Outil en fer** | Outil en fer | — | 10 × Lingot de fer |
 | **Roue à aubes** | Roue à aubes | Fil de cuivre | 10 × Plaque de cuivre |
 | **Pistolet** | Pistolet | Plaques de fer et de cuivre, Engrenage, Tige de fer | 10 × Plaque de fer |
@@ -38,25 +38,25 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Tapis roulant** | Tapis roulant | Paquet de science T1 | 50 × Paquet de science T1 |
+| **Tapis roulant** | Tapis roulant | Laboratoire | 50 × Paquet de science T1 |
 | **Bras robotique** | Bras robotique | Plaques de fer et de cuivre, Engrenage, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
 | **Séparateur** | Séparateur | Plaques de fer et de cuivre, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
 | **Groupeur** | Groupeur | Plaques de fer et de cuivre, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
-| **Coffre en fer** | Coffre en fer | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1 | 50 × Paquet de science T1 |
-| **Balise** | Balise | Fil de cuivre, Paquet de science T1 | 100 × Paquet de science T1 |
-| **Textile** | Tissu | Paquet de science T1 | 100 × Paquet de science T1 |
+| **Coffre en fer** | Coffre en fer | Plaques de fer et de cuivre, Tige de fer, Laboratoire | 50 × Paquet de science T1 |
+| **Balise** | Balise | Fil de cuivre, Laboratoire | 100 × Paquet de science T1 |
+| **Textile** | Tissu | Laboratoire | 100 × Paquet de science T1 |
 | **Vêtements** | Pantalon, Bottes, Gants, Capuche, Veste | Textile | 100 × Paquet de science T1 |
 | **Sac à dos** | Sac à dos | Textile | 100 × Paquet de science T1 |
 | **Couchage de survie** | Duvet d'exploration | Textile | 100 × Paquet de science T1 |
-| **Navigation** | Boussole | Paquet de science T1 | 100 × Paquet de science T1 |
-| **Tuyau** | Tuyau en cuivre | Plaques de fer et de cuivre, Paquet de science T1 | 50 × Paquet de science T1 |
-| **Moteur simple** | Moteur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1 | 150 × Paquet de science T1 |
+| **Navigation** | Boussole | Laboratoire | 100 × Paquet de science T1 |
+| **Tuyau** | Tuyau en cuivre | Plaques de fer et de cuivre, Laboratoire | 50 × Paquet de science T1 |
+| **Moteur simple** | Moteur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire | 150 × Paquet de science T1 |
 | **Pompe à eau** | Pompe à eau électrique | Plaques de fer et de cuivre, Tige de fer, Tuyau, Moteur simple | 100 × Paquet de science T1 |
 | **Buggy** | Buggy | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Moteur simple | 100 × Paquet de science T1 |
 | **Quad** | Quad | Plaques de fer et de cuivre, Tige de fer, Moteur simple | 100 × Paquet de science T1 |
 | **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Tuyau | 100 × Paquet de science T1 |
 | **Turbine à vapeur** | Turbine à vapeur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Chaudière | 100 × Paquet de science T1 |
-| **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire | 100 × Paquet de science T1 |
 | **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
 | **Tourelle** | Tourelle légère | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
 
