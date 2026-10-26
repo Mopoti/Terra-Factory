@@ -89,6 +89,33 @@ for k in ids:
     g.append(f'<text class="ct" x="{x[k]+CW/2:.0f}" y="{y[k]+CH-6}" text-anchor="middle">{html.escape(costline(k))}</text></g>')
     svg.append(''.join(g))
 svg.append('</svg>')
+items_all={i['id']:i for i in json.load(open('content/items.json'))['items']}
+recs=json.load(open('content/recipes.json'))['recipes']
+def paths_of(item):
+    out=[]
+    it=items_all[item]
+    if it.get('recipe'):
+        out.append({'m':'','s':0,'i':[[k,v] for k,v in it['recipe'].items()],'o':it.get('yield',1)})
+    for r in recs:
+        if item in r['out'] and not (r['machine']=='barreler' and item=='barrel_empty'):
+            f=r.get('fluid')
+            out.append({'m':n('machine_'+r['machine']),'s':r.get('seconds',0),'i':[[k,v] for k,v in r.get('in',{}).items()],'o':r['out'][item],
+                        'mo':n(r['mould']) if r.get('mould') else '', 'f':(f"{f['kind']} {f['amount']:+d} L" if f else '')})
+    return out
+need_icons=set()
+dd={}
+for k in ids:
+    its=[]
+    for u in D[k][2]:
+        ps=paths_of(u)
+        for pth in ps:
+            for a,_ in pth['i']: need_icons.add(a)
+        need_icons.add(u); its.append({'id':u,'n':n(u),'p':ps})
+    cost=[[kk,v] for kk,v in D[k][4].items()]
+    for kk,_ in cost: need_icons.add(kk)
+    dd[k]={'n':D[k][0],'t':tier(k),'c':cost,'it':its,'pre':[D[d][0] for d in direct[k]]}
+icn={u:ICONS[u]['icon'] for u in need_icons if ICONS.get(u,{}).get('icon')}
+names={u:n(u) for u in need_icons}
 up={k:sorted(anc(k)) for k in ids}
 down={k:sorted(j for j in ids if k in anc(j)) for k in ids}
 info={k:{'n':D[k][0],'u':[n(u) for u in D[k][2]],'c':costline_plain(k).replace('×',' × ')} for k in ids}
@@ -103,11 +130,20 @@ page='''<title>Arbre des découvertes</title>
 :root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 main{display:flex;flex-direction:column;gap:14px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.panel{order:-1;position:static!important}}
 .top{max-width:760px;display:flex;flex-direction:column;gap:12px}
 h1{font-size:1.5rem;margin:0;font-weight:600}
 p{margin:0;color:var(--mut);line-height:1.5}
 .leg{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 12px var(--mono);color:var(--mut)} .leg i{display:inline-block;width:12px;height:12px;border:2px solid;border-radius:3px;margin-right:6px;vertical-align:-2px}
-#det{min-height:3.3em;line-height:1.5;font-size:.95rem} #det b{color:var(--fg)}
+#det{display:none}
+.panel{position:sticky;top:12px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 24px);overflow:auto}
+.panel h2{margin:0;font-size:1.1rem;font-weight:600} .panel h3{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.chip{display:inline-block;font:600 11px var(--mono);padding:1px 7px;border-radius:10px;border:1.5px solid var(--t0);margin-left:6px;vertical-align:2px}
+.row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.ing{display:inline-flex;align-items:center;gap:4px;font-size:.85rem} .ing img{width:26px;height:26px}
+.rc{border-top:1px solid var(--rule);padding-top:8px;display:flex;flex-direction:column;gap:5px} .rc .it{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.95rem} .rc .it img{width:34px;height:34px}
+.rc .how{font:400 11.5px var(--mono);color:var(--mut)} .pre{font-size:.85rem;color:var(--mut);line-height:1.5}
 .bar{display:flex;gap:8px;align-items:center;font:400 12px var(--mono);color:var(--mut)}
 .bar button{font:600 14px var(--sans);width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:var(--panel);color:var(--fg);cursor:pointer}
 .scroll{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:80vh}
@@ -125,24 +161,38 @@ p{margin:0;color:var(--mut);line-height:1.5}
 <h1>Arbre des découvertes</h1>
 <p>Paliers 0 à 5 : @N@ découvertes, du haut (les premières) vers le bas. Chaque case débloque un groupe de recettes ; on la découvre quand ses parents sont connus. Une case a un trait plein vers son parent principal et des traits pointillés vers ses autres parents. Touchez une case pour mettre en évidence tout ce qu'il faut avant et tout ce qu'elle ouvre.</p>
 <div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : T3 + T2</span><span><i style="border-color:var(--t4)"></i>palier 4 : T4 + T3</span><span><i style="border-color:var(--t5)"></i>palier 5 : T5 + T4</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
-<p id="det">Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant.</p>
 <div class="bar"><button id="zo" aria-label="Dézoomer">−</button><button id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span></div>
 </div>
-<div class="scroll"><div id="zoom">@SVG@</div></div>
+<div class="layout"><div class="scroll"><div id="zoom">@SVG@</div></div><aside class="panel" id="panel"><p>Touchez une case de l'arbre : son coût de découverte et le coût de fabrication de ses recettes s'affichent ici.</p></aside></div>
 </main>
 <script>
-const UP=@UP@,DOWN=@DOWN@,INFO=@INFO@;
-const svg=document.getElementById('arbre'),det=document.getElementById('det'),zoom=document.getElementById('zoom');
+const UP=@UP@,DOWN=@DOWN@,INFO=@INFO@,DD=@DD@,ICN=@ICN@,NM=@NM@;
+const svg=document.getElementById('arbre'),det=document.getElementById('panel'),zoom=document.getElementById('zoom');
 const nodes=[...svg.querySelectorAll('.n')],edges=[...svg.querySelectorAll('.e')];
-const IDLE="Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant.";
-function clear(){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));det.textContent=IDLE}
+const IDLE="<p>Touchez une case de l'arbre : son coût de découverte et le coût de fabrication de ses recettes s'affichent ici.</p>";
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ing=(id,q)=>'<span class="ing">'+(ICN[id]?'<img alt="" src="'+ICN[id]+'">':'')+'<span>'+q+' × '+esc(NM[id]||id)+'</span></span>';
+function panel(id){
+ const d=DD[id];let h='<h2>'+esc(d.n)+'<span class="chip" style="border-color:var(--t'+d.t+')">palier '+d.t+'</span></h2>';
+ h+='<div><h3>Coût de la découverte</h3><div class="row">'+d.c.map(c=>ing(c[0],c[1])).join('')+'</div></div>';
+ if(d.pre.length)h+='<div><h3>Découvertes requises</h3><div class="pre">'+d.pre.map(esc).join(', ')+'</div></div>';
+ h+='<div><h3>Débloque et coût de fabrication</h3>';
+ if(!d.it.length)h+='<div class="pre">Effet : les paquets de science sont consommés plus vite.</div>';
+ d.it.forEach(it=>{
+  h+='<div class="rc"><div class="it">'+(ICN[it.id]?'<img alt="" src="'+ICN[it.id]+'">':'')+'<span>'+esc(it.n)+'</span></div>';
+  if(!it.p.length)h+='<div class="how">Pas de recette (butin ou ressource).</div>';
+  it.p.forEach(p=>{h+='<div class="how">'+(p.m?esc(p.m)+(p.s?' · '+p.s+' s':''):'À la main')+(p.mo?' · moule : '+esc(p.mo):'')+(p.o>1?' · donne '+p.o:'')+(p.f?' · '+esc(p.f):'')+'</div><div class="row">'+p.i.map(a=>ing(a[0],a[1])).join('')+'</div>'});
+  h+='</div>'});
+ return h+'</div>';
+}
+function clear(){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));det.innerHTML=IDLE}
 function pick(id){
  const all=new Set([id,...UP[id],...DOWN[id]]);
  svg.classList.add('dim');
  nodes.forEach(n=>{const k=n.dataset.id;n.classList.toggle('on',all.has(k));n.classList.toggle('sel',k===id)});
  edges.forEach(e=>e.classList.toggle('on',all.has(e.dataset.from)&&all.has(e.dataset.to)));
  const i=INFO[id],names=UP[id].map(k=>INFO[k].n);
- det.innerHTML='<b>'+i.n+'</b> ('+i.c+') débloque : '+(i.u.join(', ')||'paquets plus rapides')+'.<br>À découvrir avant : '+(names.length?names.join(', '):'rien')+'.';
+ det.innerHTML=panel(id)+(names.length?'<div><h3>Tout l\\'amont ('+names.length+')</h3><div class="pre">'+names.map(esc).join(', ')+'</div></div>':'');
 }
 let cur=null;
 nodes.forEach(n=>{n.addEventListener('click',ev=>{ev.stopPropagation();const id=n.dataset.id;if(cur===id){cur=null;clear()}else{cur=id;pick(id)}});
@@ -154,6 +204,6 @@ document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('z
 setZ(window.innerWidth<700?.6:.9);
 </script>
 '''
-page=page.replace('@N@',str(len(ids))).replace('@SVG@','\n'.join(svg)).replace('@UP@',json.dumps(up)).replace('@DOWN@',json.dumps(down)).replace('@INFO@',json.dumps(info,ensure_ascii=False))
+page=page.replace('@N@',str(len(ids))).replace('@SVG@','\n'.join(svg)).replace('@UP@',json.dumps(up)).replace('@DOWN@',json.dumps(down)).replace('@INFO@',json.dumps(info,ensure_ascii=False)).replace('@DD@',json.dumps(dd,ensure_ascii=False)).replace('@ICN@',json.dumps(icn)).replace('@NM@',json.dumps(names,ensure_ascii=False))
 open('docs/arbre-decouvertes-t0-t5.html','w').write(page)
 print(len(page)//1024,'Ko',round(VW),round(VH),'rangées',len(rows),'plus large',max(len(r) for r in rows))
