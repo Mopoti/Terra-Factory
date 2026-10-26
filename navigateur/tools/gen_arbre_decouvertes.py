@@ -1,116 +1,144 @@
-"""Génère docs/arbre-decouvertes-t0-t3.html : schéma de l'arbre des découvertes (données de tools/gen_decouvertes.py).
-Lancer depuis `navigateur/` : python3 tools/gen_arbre_decouvertes.py
+"""Génère docs/arbre-decouvertes-t0-t3.html : arbre vertical des découvertes (données de tools/gen_decouvertes.py).
+
+Les icônes viennent de l'audit des objets (variable d'environnement ICONES : fichier JSON {objet: {icon: adresse de données}}).
+Lancer depuis `navigateur/` : ICONES=<chemin> python3 tools/gen_arbre_decouvertes.py
 """
-import sys, json, html
+import sys, os, json, html
 sys.path.insert(0,'tools')
-import gen_decouvertes as G   # recalcule aussi docs/decouvertes-t0-t2.md
+import gen_decouvertes as G   # recalcule aussi docs/decouvertes-t0-t3.md
 D,deps,n=G.D,G.deps,G.n
+ICONS=json.load(open(os.environ.get('ICONES','/tmp/claude-0/-home-user-Terra-Factory/321d8bf2-7c57-5c8c-af02-ddbd7a8bba29/scratchpad/audit_out.json')))
 ids=list(D)
-# réduction transitive : on ne dessine que les prérequis directs utiles
+tier=lambda k:D[k][1]
 def anc(k,seen=None):
     seen=set() if seen is None else seen
     for d in deps(k):
         if d not in seen: seen.add(d); anc(d,seen)
     return seen
-direct={k:{d for d in deps(k) if not any(d in anc(o) for o in deps(k) if o!=d)} for k in ids}
-tier=lambda k:D[k][1]
-cols=[[k for k in ids if tier(k)==t] for t in (0,1,2,3)]
-# ordre dans chaque colonne : barycentre des prérequis (2 passes)
-pos={}
-for c in cols:
-    for i,k in enumerate(c): pos[k]=i
-for _ in range(4):
-    for ci in (1,2,3):
-        def bary(k):
-            ps=[pos[d] for d in direct[k] if tier(d)<=ci]
-            return sum(ps)/len(ps) if ps else pos[k]
-        cols[ci].sort(key=bary)
-        for i,k in enumerate(cols[ci]): pos[k]=i
-W,H,GAPX,GAPY,PADX,PADY=206,40,120,12,52,64
-x={k:PADX+tier(k)*(W+GAPX) for k in ids}
-y={k:PADY+i*(H+GAPY) for c in cols for i,k in enumerate(c)}
-rows=max(len(c) for c in cols)
-VW=PADX+16+4*W+3*GAPX; VH=PADY+rows*(H+GAPY)
+depth={}
+def dep(k):
+    if k not in depth: depth[k]=1+max((dep(d) for d in deps(k)),default=-1)
+    return depth[k]
+for k in ids: dep(k)
+# prérequis directs (réduction transitive) et parent principal : le plus profond (celui qui tient la branche)
+direct={k:sorted({d for d in deps(k) if not any(d in anc(o) for o in deps(k) if o!=d)},key=lambda z:(-depth[z],ids.index(z))) for k in ids}
+parent={k:(direct[k][0] if direct[k] else None) for k in ids}
+rows=[[k for k in ids if depth[k]==r] for r in range(max(depth.values())+1)]
+CW,CH,GX,GY,PAD=112,92,14,46,20
+# ordre dans chaque rangée : sous le parent principal, enfants regroupés (barycentre)
+x={}
+for ri,row in enumerate(rows):
+    if ri==0:
+        row.sort(key=lambda k:ids.index(k))
+    else:
+        row.sort(key=lambda k:(x.get(parent[k],0) if parent[k] else 0, ids.index(k)))
+    # positions provisoires : centrées sous le parent, sans chevauchement
+    pos=[]
+    last=-1e9
+    for k in row:
+        want=x[parent[k]] if parent[k] in x else last+CW+GX
+        px=max(want,last+CW+GX); pos.append(px); last=px; x[k]=px
+    # recentrage de la rangée sur ses souhaits (évite la dérive vers la droite)
+    for _ in range(3):
+        for i,k in enumerate(row):
+            if parent[k] in x and ri>0:
+                x[k]=max(x[parent[k]]-(0 if i==0 else 0),(x[row[i-1]]+CW+GX) if i else -1e9)
+W=max(x.values())+CW+PAD*2
+shift=PAD-min(x.values())
+for k in x: x[k]+=shift
+VW=max(x.values())+CW+PAD
+y={k:PAD+36+depth[k]*(CH+GY) for k in ids}
+VH=max(y.values())+CH+PAD
+def wrap(s,w=15):
+    out=[];cur=''
+    for word in s.split(' '):
+        if cur and len(cur)+1+len(word)>w: out.append(cur); cur=word
+        else: cur=(cur+' '+word).strip()
+    out.append(cur); return out[:3]
 label=lambda k:D[k][0].split(' (')[0]
 def costline(k):
     c=D[k][4]; t=tier(k)
     if t==0: return 'ressources'
-    s='T1' if t==1 else f'T{t} + T{t-1}'
+    s='T1' if t==1 else f'T{t}+T{t-1}'
     cb=c.get('combat_pack')
     num=max(v for kk,v in c.items() if kk!='combat_pack')
-    return f"{num} × {s}"+(f" · {cb} combat" if cb else '')
-combat=lambda k:'combat_pack' in D[k][4]
-svg=[f'<svg id="arbre" viewBox="0 0 {VW} {VH}" role="img" aria-label="Arbre des découvertes des paliers 0 à 3 : {len(ids)} découvertes, les flèches vont du prérequis vers la découverte qu\'il débloque." xmlns="http://www.w3.org/2000/svg">',
- '<defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L9 5 L0 9 z" fill="currentColor"/></marker></defs>']
-heads={0:('Palier 0','payé en ressources'),1:('Palier 1','paquets T1'),2:('Palier 2','paquets T2 + T1'),3:('Palier 3','paquets T3 + T2')}
-for t,(a,b) in heads.items():
-    svg.append(f'<text class="head" x="{PADX+t*(W+GAPX)}" y="24">{a}</text><text class="sub" x="{PADX+t*(W+GAPX)}" y="42">{b}</text>')
+    return f"{num}×{s}"+(f" +{cb}⚔" if cb else '')
+costline_plain=lambda k:costline(k).replace('⚔',' combat')
+svg=[f'<svg id="arbre" viewBox="0 0 {VW:.0f} {VH:.0f}" width="{VW:.0f}" height="{VH:.0f}" role="img" aria-label="Arbre vertical des découvertes des paliers 0 à 3 : {len(ids)} découvertes, du haut (premières découvertes) vers le bas." xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">']
+used_icons=sorted({u for k in ids for u in D[k][2][:3] if ICONS.get(u,{}).get('icon')})
+svg.append('<defs>'+''.join(f'<image id="i_{u}" width="30" height="30" href="{ICONS[u]["icon"]}"/>' for u in used_icons)+'</defs>')
 edges=[]
 for k in ids:
-    for d in sorted(direct[k],key=lambda z:ids.index(z)):
-        x1,y1=x[d]+W,y[d]+H/2; x2,y2=x[k],y[k]+H/2
-        if tier(d)==tier(k):   # même colonne : arc par la gauche
-            x1,x2=x[d],x[k]
-            c=34+8*abs(pos[d]-pos[k])
-            path=f'M{x1} {y1} C{x1-c} {y1} {x2-c} {y2} {x2-4} {y2}'
-        else:
-            mx=(x1+x2)/2
-            path=f'M{x1} {y1} C{mx} {y1} {mx} {y2} {x2-4} {y2}'
-        edges.append(f'<path class="e" data-from="{d}" data-to="{k}" d="{path}" marker-end="url(#fl)"/>')
+    for d in direct[k]:
+        x1,y1=x[d]+CW/2,y[d]+CH; x2,y2=x[k]+CW/2,y[k]
+        main= d==parent[k]
+        bus=y1+8+(ids.index(d)%5)*7   # chaque parent a sa hauteur de barre : deux familles ne se confondent pas
+        edges.append(f'<path class="e{" main" if main else ""}" data-from="{d}" data-to="{k}" d="M{x1:.0f} {y1} V{bus:.0f} H{x2:.0f} V{y2-2}"/>')
 svg+=edges
 for k in ids:
-    cls=f'n t{tier(k)}'+(' cb' if combat(k) else '')
-    svg.append(f'<g class="{cls}" data-id="{k}" tabindex="0"><title>{html.escape(D[k][0])} — débloque : {html.escape(", ".join(n(u) for u in D[k][2]) or "paquets plus rapides")}</title>'
-      f'<rect x="{x[k]}" y="{y[k]}" width="{W}" height="{H}" rx="4"/>'
-      f'<text class="nm" x="{x[k]+10}" y="{y[k]+17}">{html.escape(label(k))}</text>'
-      f'<text class="ct" x="{x[k]+10}" y="{y[k]+32}">{html.escape(costline(k))}</text></g>')
+    t=tier(k); cls=f'n t{t}'+(' cb' if 'combat_pack' in D[k][4] else '')
+    ic=[u for u in D[k][2] if ICONS.get(u,{}).get('icon')][:3]
+    g=[f'<g class="{cls}" data-id="{k}" tabindex="0"><title>{html.escape(D[k][0])} : {html.escape(", ".join(n(u) for u in D[k][2]) or "paquets plus rapides")}</title>',
+       f'<rect x="{x[k]:.0f}" y="{y[k]}" width="{CW}" height="{CH}" rx="6"/>']
+    if not D[k][2]:
+        g.append(f'<text class="gl" x="{x[k]+CW/2:.0f}" y="{y[k]+27}" text-anchor="middle">I{"I" if "2" in k else ""}{"I" if "3" in k else ""}</text>')
+    tot=len(ic)*32; sx=x[k]+(CW-tot)/2+1
+    for i,u in enumerate(ic): g.append(f'<use href="#i_{u}" x="{sx+i*32:.0f}" y="{y[k]+6}"/>')
+    more=len(D[k][2])-len(ic)
+    if more>0: g.append(f'<text class="mo" x="{x[k]+CW-8}" y="{y[k]+16}" text-anchor="end">+{more}</text>')
+    for i,line in enumerate(wrap(label(k))): g.append(f'<text class="nm" x="{x[k]+CW/2:.0f}" y="{y[k]+50+i*12}" text-anchor="middle">{html.escape(line)}</text>')
+    g.append(f'<text class="ct" x="{x[k]+CW/2:.0f}" y="{y[k]+CH-6}" text-anchor="middle">{html.escape(costline(k))}</text></g>')
+    svg.append(''.join(g))
 svg.append('</svg>')
 up={k:sorted(anc(k)) for k in ids}
 down={k:sorted(j for j in ids if k in anc(j)) for k in ids}
-info={k:{'n':D[k][0],'u':[n(u) for u in D[k][2]],'c':costline(k)} for k in ids}
+info={k:{'n':D[k][0],'u':[n(u) for u in D[k][2]],'c':costline_plain(k).replace('×',' × ')} for k in ids}
 page='''<title>Arbre des découvertes</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
-/* Lecture de gauche à droite : le palier monte, les flèches vont du prérequis vers la découverte. Couleurs = couleur des paquets du jeu. */
-:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#8f8a80;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--cb:#d4572a;--hl:#1f5fbf;--fade:.16;
+/* Arbre vertical : on lit de haut en bas, une découverte débloque un groupe de recettes quand ses parents sont connus. Bordures = couleur des paquets du jeu. */
+:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--cb:#d4572a;--hl:#c0392b;--fade:.18;
 --sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#1f201c;--fg:#ebe8e0;--mut:#a29d92;--line:#7c776d;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#6aa3ff;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#171815;--panel:#1f201c;--fg:#ebe8e0;--mut:#a29d92;--line:#7c776d;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#6aa3ff;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-main{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-.wide{max-width:none}
-h1{font-size:1.5rem;margin:0;text-wrap:balance;font-weight:600}
-p{margin:0;color:var(--mut);line-height:1.5;max-width:70ch}
-.box{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:12px}
-.scroll{overflow-x:auto}
-svg{display:block;min-width:1100px;width:100%;height:auto;color:var(--line)}
-.head{font:600 15px var(--sans);fill:var(--fg)} .sub{font:400 11.5px var(--mono);fill:var(--mut)}
-.n rect{fill:var(--panel);stroke:var(--t0);stroke-width:1.5}
-.n.t1 rect{stroke:var(--t1)} .n.t2 rect{stroke:var(--t2)} .n.t3 rect{stroke:var(--t3)}
-.n.cb rect{stroke-dasharray:none;fill:color-mix(in srgb,var(--cb) 10%,var(--panel))}
-.n .nm{font:600 13px var(--sans);fill:var(--fg)} .n .ct{font:400 11px var(--mono);fill:var(--mut)}
-.n{cursor:pointer;outline:none} .n:focus-visible rect{stroke:var(--hl);stroke-width:3}
-.e{fill:none;stroke:currentColor;stroke-width:1.3;opacity:.7}
-.dim .n,.dim .e{opacity:var(--fade)} .dim .n.on,.dim .e.on{opacity:1} .dim .n.sel rect{stroke:var(--hl);stroke-width:3}
-.dim .e.on{stroke:var(--hl);color:var(--hl)}
+main{display:flex;flex-direction:column;gap:14px}
+.top{max-width:760px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:1.5rem;margin:0;font-weight:600}
+p{margin:0;color:var(--mut);line-height:1.5}
 .leg{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 12px var(--mono);color:var(--mut)} .leg i{display:inline-block;width:12px;height:12px;border:2px solid;border-radius:3px;margin-right:6px;vertical-align:-2px}
-#det{min-height:3.2em;font-size:.95rem;line-height:1.5;max-width:none} #det b{color:var(--fg)}
+#det{min-height:3.3em;line-height:1.5;font-size:.95rem} #det b{color:var(--fg)}
+.bar{display:flex;gap:8px;align-items:center;font:400 12px var(--mono);color:var(--mut)}
+.bar button{font:600 14px var(--sans);width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:var(--panel);color:var(--fg);cursor:pointer}
+.scroll{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:80vh}
+#zoom{transform-origin:0 0;display:block}
+.n rect{fill:var(--bg);stroke:var(--t0);stroke-width:2}
+.n.t1 rect{stroke:var(--t1)} .n.t2 rect{stroke:var(--t2)} .n.t3 rect{stroke:var(--t3)}
+.n.cb rect{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
+.nm{font:600 10.5px var(--sans);fill:var(--fg)} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
+.n{cursor:pointer;outline:none} .n:focus-visible rect{stroke:var(--hl);stroke-width:3}
+.e{fill:none;stroke:var(--line);stroke-width:1.6;opacity:0} .e.main{opacity:.9}
+.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:0} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel rect{stroke:var(--hl);stroke-width:3.5}
 </style>
 <main>
+<div class="top">
 <h1>Arbre des découvertes</h1>
-<p>Paliers 0 à 3, proposition : @N@ découvertes. Une flèche va d'un prérequis vers la découverte qu'il débloque (seuls les prérequis directs sont tracés). Touchez une découverte : son amont (tout ce qu'il faut avoir découvert avant) et son aval restent en couleur.</p>
-<div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : paquets T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : paquets T3 + T2</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>demande aussi des paquets de combat</span></div>
+<p>Paliers 0 à 3 : @N@ découvertes, du haut (les premières) vers le bas. Chaque case débloque un groupe de recettes ; on la découvre quand ses parents sont connus. Les lignes sont celles du parent principal ; touchez une case pour voir toutes ses dépendances, en amont (tout ce qu'il faut avant) et en aval.</p>
+<div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : T3 + T2</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <p id="det">Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant.</p>
-<figure class="box scroll" style="margin:0">@SVG@<figcaption style="color:var(--mut);font-size:.85rem;margin-top:8px">Chaque case indique le coût d'une découverte : « 150 × T2 + T1 » = 150 paquets T2 et 150 paquets T1.</figcaption></figure>
+<div class="bar"><button id="zo" aria-label="Dézoomer">−</button><button id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span></div>
+</div>
+<div class="scroll"><div id="zoom">@SVG@</div></div>
 </main>
 <script>
 const UP=@UP@,DOWN=@DOWN@,INFO=@INFO@;
-const svg=document.getElementById('arbre'),det=document.getElementById('det');
+const svg=document.getElementById('arbre'),det=document.getElementById('det'),zoom=document.getElementById('zoom');
 const nodes=[...svg.querySelectorAll('.n')],edges=[...svg.querySelectorAll('.e')];
-function clear(){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));det.innerHTML="Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant."}
+const IDLE="Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant.";
+function clear(){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));det.textContent=IDLE}
 function pick(id){
- const up=new Set(UP[id]),down=new Set(DOWN[id]),all=new Set([id,...up,...down]);
+ const all=new Set([id,...UP[id],...DOWN[id]]);
  svg.classList.add('dim');
  nodes.forEach(n=>{const k=n.dataset.id;n.classList.toggle('on',all.has(k));n.classList.toggle('sel',k===id)});
  edges.forEach(e=>e.classList.toggle('on',all.has(e.dataset.from)&&all.has(e.dataset.to)));
@@ -120,9 +148,13 @@ function pick(id){
 let cur=null;
 nodes.forEach(n=>{n.addEventListener('click',ev=>{ev.stopPropagation();const id=n.dataset.id;if(cur===id){cur=null;clear()}else{cur=id;pick(id)}});
  n.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();n.dispatchEvent(new Event('click',{bubbles:true}))}})});
-document.addEventListener('click',()=>{cur=null;clear()});
+document.addEventListener('click',e=>{if(!e.target.closest('.bar')){cur=null;clear()}});
+let z=1;const zl=document.getElementById('zl');
+function setZ(v){z=Math.max(.4,Math.min(1.6,v));svg.style.transformOrigin='0 0';svg.style.transform='scale('+z+')';zoom.style.width=(svg.viewBox.baseVal.width*z)+'px';zoom.style.height=(svg.viewBox.baseVal.height*z)+'px';zl.textContent=Math.round(z*100)+' %'}
+document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('zo').onclick=()=>setZ(z-.15);
+setZ(window.innerWidth<700?.6:.9);
 </script>
-''' 
+'''
 page=page.replace('@N@',str(len(ids))).replace('@SVG@','\n'.join(svg)).replace('@UP@',json.dumps(up)).replace('@DOWN@',json.dumps(down)).replace('@INFO@',json.dumps(info,ensure_ascii=False))
 open('docs/arbre-decouvertes-t0-t3.html','w').write(page)
-print(len(page)//1024,'Ko',VW,VH)
+print(len(page)//1024,'Ko',round(VW),round(VH),'rangées',len(rows),'plus large',max(len(r) for r in rows))
