@@ -131,7 +131,7 @@ export function iconModelName(item: string): string | null {
 }
 
 /** Objets sans modèle 3D (ils gardent la caisse) : aucun pour l'instant, chaque objet a sa forme ou son modèle. */
-export const NO_MODEL_ITEMS: readonly string[] = [];
+export const NO_MODEL_ITEMS: readonly string[] = ['jacket'];
 
 /** Outils et armes tenus : fichier du modèle et façon de le charger. */
 export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string }> = {

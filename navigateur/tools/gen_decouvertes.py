@@ -25,7 +25,8 @@ D={
  'routing':('Aiguillage',1,['machine_splitter','machine_merger'],['conveyor'],{S1:100}),
  'handling':('Manutention',1,['machine_chest_iron','waypoint'],['conveyor'],{S1:100}),
  'textile':('Textile',1,['cloth'],['laboratory'],{S1:100}),
- 'clothing':('Vêtements',1,['trousers','boots','gloves','hood','backpack'],['textile'],{S1:100}),
+ 'clothing':('Vêtements',1,['trousers','boots','gloves','hood','jacket'],['textile'],{S1:100}),
+ 'backpack':('Sac à dos',1,['backpack'],['textile'],{S1:100}),
  'bedding_1':('Couchage de survie',1,['sleeping_bag'],['textile'],{S1:100}),
  'navigation':('Navigation',1,['compass'],['laboratory'],{S1:100}),
  'water':('Eau',1,['machine_pipe','machine_pump'],['laboratory'],{S1:150}),
@@ -85,11 +86,11 @@ for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1')
         if tt==t: L.append(f"| **{nm}** | {', '.join(n(u) for u in un) or '(effet : paquets plus rapides)'} | {', '.join(D[p][0] for p in pre(k)) or '—'} | {cost(c)} |")
     L.append("")
 L+=["## Annoncé pour le palier 3 (à voir ensuite)","",
-"- **Moteur renforcé** : il se fabrique avec du caoutchouc (presse à plastique, palier 3) ; la **locomotive** en a besoin. Le **chemin de fer** (rail, locomotive, wagons, gare) passe donc au palier 3, et non 2.",
-"- **Tourelle laser** : demandera le moteur simple ; **tourelle plasma** : le moteur renforcé (recettes à modifier : elles n'en demandent pas aujourd'hui).","",
+"- **Moteur renforcé** : il se fabrique avec du caoutchouc (presse à plastique, palier 3) ; la **locomotive** en a besoin. Le **chemin de fer** reste une seule découverte (rail, locomotive, wagons, gare) et passe donc au palier 3, et non 2.",
+"- **Tourelle laser** : sa recette demande maintenant 1 moteur simple ; **tourelle plasma** : 1 moteur renforcé (fait au tour 236). Leurs découvertes dépendront donc des moteurs.","",
 "## Points à confirmer","",
 "1. **Moteur simple** laissé au palier 1 (il sert à la pompe, au buggy, au quad ; sinon la vapeur passerait au palier 2). Dites-moi si vous préférez le palier 2.",
-"2. **Vêtements** = pantalon, bottes, gants, capuche et sac à dos (je lis « torse » comme le sac à dos : il n'y a pas de vêtement de torse) ; **Textile** = le tissu seul.",
+"2. **Vêtements** = pantalon, bottes, gants, capuche et **veste** (nouvel objet : tissu, emplacement tronc, cosmétique, en attendant son modèle 3D) ; **Sac à dos** est une découverte à part (emplacement dos) ; **Textile** = le tissu seul.",
 "3. **Paquets de combat** : 10 au palier 1, 20 au palier 2 (valeurs de départ ; ils viennent des dépouilles des ennemis).",
 "4. **Coûts** (100 à 200 paquets) : pas de réponse au point 5, je les garde tels quels."]
 open('docs/decouvertes-t0-t2.md','w').write('\n'.join(L)+'\n')

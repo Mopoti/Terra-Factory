@@ -719,6 +719,20 @@
       }
     },
     {
+      "id": "jacket",
+      "stack": 1,
+      "category": "equipment",
+      "weightKg": 0.5,
+      "volumeL": 2,
+      "color": "#8a7d5c",
+      "recipe": {
+        "cloth": 10
+      },
+      "equip": {
+        "slot": "torso"
+      }
+    },
+    {
       "id": "trousers",
       "stack": 1,
       "category": "equipment",
@@ -1661,7 +1675,8 @@
       "recipe": {
         "steel_plate": 10,
         "copper_wire": 16,
-        "silicon_chip": 4
+        "silicon_chip": 4,
+        "motor": 1
       }
     },
     {
@@ -1674,7 +1689,8 @@
       "recipe": {
         "steel_plate": 20,
         "silicon_chip": 10,
-        "carapace": 10
+        "carapace": 10,
+        "motor_heavy": 1
       }
     },
     {

@@ -30,7 +30,8 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fournea
 | **Aiguillage** | Séparateur, Groupeur | Métallurgie, Convoyeur | 100 × Paquet de science T1 |
 | **Manutention** | Coffre en fer, Balise | Métallurgie, Convoyeur | 100 × Paquet de science T1 |
 | **Textile** | Tissu | Laboratoire | 100 × Paquet de science T1 |
-| **Vêtements** | Pantalon, Bottes, Gants, Capuche, Sac à dos | Textile | 100 × Paquet de science T1 |
+| **Vêtements** | Pantalon, Bottes, Gants, Capuche, Veste | Textile | 100 × Paquet de science T1 |
+| **Sac à dos** | Sac à dos | Textile | 100 × Paquet de science T1 |
 | **Couchage de survie** | Duvet d'exploration | Textile | 100 × Paquet de science T1 |
 | **Navigation** | Boussole | Laboratoire | 100 × Paquet de science T1 |
 | **Eau** | Tuyau en cuivre, Pompe à eau électrique | Métallurgie, Laboratoire, Moteur simple | 150 × Paquet de science T1 |
@@ -62,12 +63,12 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fournea
 
 ## Annoncé pour le palier 3 (à voir ensuite)
 
-- **Moteur renforcé** : il se fabrique avec du caoutchouc (presse à plastique, palier 3) ; la **locomotive** en a besoin. Le **chemin de fer** (rail, locomotive, wagons, gare) passe donc au palier 3, et non 2.
-- **Tourelle laser** : demandera le moteur simple ; **tourelle plasma** : le moteur renforcé (recettes à modifier : elles n'en demandent pas aujourd'hui).
+- **Moteur renforcé** : il se fabrique avec du caoutchouc (presse à plastique, palier 3) ; la **locomotive** en a besoin. Le **chemin de fer** reste une seule découverte (rail, locomotive, wagons, gare) et passe donc au palier 3, et non 2.
+- **Tourelle laser** : sa recette demande maintenant 1 moteur simple ; **tourelle plasma** : 1 moteur renforcé (fait au tour 236). Leurs découvertes dépendront donc des moteurs.
 
 ## Points à confirmer
 
 1. **Moteur simple** laissé au palier 1 (il sert à la pompe, au buggy, au quad ; sinon la vapeur passerait au palier 2). Dites-moi si vous préférez le palier 2.
-2. **Vêtements** = pantalon, bottes, gants, capuche et sac à dos (je lis « torse » comme le sac à dos : il n'y a pas de vêtement de torse) ; **Textile** = le tissu seul.
+2. **Vêtements** = pantalon, bottes, gants, capuche et **veste** (nouvel objet : tissu, emplacement tronc, cosmétique, en attendant son modèle 3D) ; **Sac à dos** est une découverte à part (emplacement dos) ; **Textile** = le tissu seul.
 3. **Paquets de combat** : 10 au palier 1, 20 au palier 2 (valeurs de départ ; ils viennent des dépouilles des ennemis).
 4. **Coûts** (100 à 200 paquets) : pas de réponse au point 5, je les garde tels quels.

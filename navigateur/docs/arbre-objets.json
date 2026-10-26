@@ -1703,6 +1703,7 @@
     "boots",
     "gloves",
     "hood",
+    "jacket",
     "sleeping_bag",
     "trousers"
    ],
@@ -1749,6 +1750,29 @@
      },
      "out": {
       "hood": 1
+     },
+     "seconds": null
+    }
+   ],
+   "usedIn": [],
+   "issues": [
+    "Pas de modèle 3D propre"
+   ]
+  },
+  "jacket": {
+   "name": "Veste",
+   "category": "equipment",
+   "tier": 0,
+   "packs": [],
+   "paths": [
+    {
+     "kind": "hand",
+     "machine": null,
+     "in": {
+      "cloth": 10
+     },
+     "out": {
+      "jacket": 1
      },
      "seconds": null
     }
@@ -1967,6 +1991,7 @@
     "machine_pump",
     "machine_pumpjack",
     "machine_refinery",
+    "machine_turret_laser",
     "motor_heavy",
     "vehicle_buggy",
     "vehicle_quad"
@@ -2000,6 +2025,7 @@
    ],
    "usedIn": [
     "machine_centrifuge",
+    "machine_turret_plasma",
     "piece_garage_aluminium",
     "train_locomotive",
     "vehicle_tank",
@@ -3871,7 +3897,8 @@
      "in": {
       "steel_plate": 10,
       "copper_wire": 16,
-      "silicon_chip": 4
+      "silicon_chip": 4,
+      "motor": 1
      },
      "out": {
       "machine_turret_laser": 1
@@ -3897,7 +3924,8 @@
      "in": {
       "steel_plate": 20,
       "silicon_chip": 10,
-      "carapace": 10
+      "carapace": 10,
+      "motor_heavy": 1
      },
      "out": {
       "machine_turret_plasma": 1
