@@ -1,4 +1,4 @@
-"""Génère docs/decouvertes-t0-t2.md : la proposition d'arbre de découvertes (palier 0 à 2) à partir de `D` ci-dessous.
+"""Génère docs/decouvertes-t0-t3.md : la proposition d'arbre de découvertes (palier 0 à 2) à partir de `D` ci-dessous.
 
 Les prérequis affichés = ceux choisis dans `D` + ceux déduits des recettes (ingrédients et machine de chaque objet
 débloqué, s'ils sont débloqués par une autre découverte). Contrôle : aucun prérequis de palier supérieur, pas de boucle.
@@ -10,7 +10,7 @@ items={i['id']:i for i in json.load(open('content/items.json'))['items']}
 rec=json.load(open('content/recipes.json'))['recipes']
 n=lambda i: fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
-S1,S2,C='science_pack','science_pack_2','combat_pack'
+S1,S2,S3,C='science_pack','science_pack_2','science_pack_3','combat_pack'
 D={
  # --- Palier 0 : payé en ressources du début de partie
  'metallurgy':('Métallurgie',0,['machine_stamper','machine_crusher','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod'],[],{'iron_ingot':20,'stone':10}),
@@ -51,12 +51,33 @@ D={
  'rifle':('Fusil',2,['rifle','rifle_magazine'],['pistol','steel'],{S2:100,S1:100,C:20}),
  'armor_2':('Armure 2',2,['armor2_head','armor2_torso','armor2_legs','armor2_feet'],['armor_1','steel'],{S2:150,S1:150,C:20}),
  'turret_heavy':('Tourelle lourde',2,['machine_turret_heavy'],['turret','steel'],{S2:150,S1:150,C:20}),
+
+ 'pack_3':('Paquet de science T3',2,[S3],['steel','fabrication'],{S2:100,S1:100}),
+ # --- Palier 3 : paquets T3 et T2
+ 'heavy_press':('Presse lourde',3,['machine_heavy_press','machine_pipe_3'],['fabrication','concrete'],{S3:150,S2:150}),
+ 'silicon':('Silicium',3,['machine_furnace_electric','silicon_raw','silicon_chip'],['heavy_press'],{S3:150,S2:150}),
+ 'barrels':('Barils',3,['machine_barreler','barrel_empty'],['steam_power','fluids'],{S3:150,S2:150}),
+ 'oil':('Pétrole',3,['machine_pumpjack','barrel_oil'],['barrels','heavy_press'],{S3:150,S2:150}),
+ 'plastics':('Plastique et caoutchouc',3,['machine_refinery','machine_plastic_press','plastic_insulator','cable_insulated','rubber'],['oil','silicon'],{S3:200,S2:200}),
+ 'engine_heavy':('Moteur renforcé',3,['motor_heavy'],['motor','fabrication','plastics'],{S3:150,S2:150}),
+ 'heavy_vehicles':('Véhicules lourds',3,['vehicle_tank','vehicle_van'],['engine_heavy','steel'],{S3:200,S2:200}),
+ 'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['steam_power','steel','engine_heavy'],{S3:200,S2:200}),
+ 'aluminium':('Aluminium',3,['aluminium_ingot','aluminium_plate','piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['plastics'],{S3:200,S2:200}),
+ 'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],{S3:150,S2:150}),
+ 'storage':('Accumulateur',3,['machine_accumulator'],['plastics'],{S3:150,S2:150}),
+ 'conveyor_3':('Convoyeur T3',3,['machine_conveyor_3','machine_arm_filter'],['conveyor_2'],{S3:150,S2:150}),
+ 'sorting':('Trieur',3,['machine_sorter'],['conveyor_3'],{S3:100,S2:100}),
+ 'drill_eco':('Foreuse économe',3,['machine_drill_eco'],['drill_electric','steel'],{S3:150,S2:150}),
+ 'pack_4':('Paquet de science T4',3,['science_pack_4'],['silicon','plastics'],{S3:100,S2:100}),
+ 'research_3':('Recherche III',3,[],['research_2'],{S3:100,S2:100}),
+ 'sniper':('Sniper',3,['sniper','sniper_magazine'],['rifle','steel'],{S3:150,S2:150,C:30}),
+ 'turret_laser':('Tourelle laser',3,['machine_turret_laser'],['turret_heavy','motor','silicon'],{S3:150,S2:150,C:30}),
 }
 owner={u:k for k,v in D.items() for u in v[2]}
 def needs(item):
     out=set(items[item].get('recipe') or {})
     for x in rec:
-        if item in x['out']:
+        if item in x['out'] and not (x['machine']=='barreler' and item=='barrel_empty'):  # le vidage d'un baril n'est pas sa fabrication
             out|=set(x.get('in',{})); out.add('machine_'+x['machine'])
             if x.get('mould'): out.add(x['mould'])
     return out
@@ -77,21 +98,24 @@ if errors or cyc(): sys.exit(f'erreur : palier supérieur {errors}, boucle {cyc(
 cost=lambda c: ' + '.join(f'{v} × {n(k)}' for k,v in c.items())
 order=list(D)
 pre=lambda k: sorted(deps(k), key=lambda x:(D[x][1],order.index(x)))
-L=["# Découvertes T0, T1 et T2 — proposition","","Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.","",
-"Règles :","- Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
+L=["# Découvertes T0 à T3 — proposition","","Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.","",
+"Règles :","- Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
 "Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fourneau T1, foreuse T1, coffre en bois, outil en pierre, charrette, pièces de construction en bois et en pierre, moules, lingots, fonte.",""]
-for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1'),(2,'Palier 2 : paquets T2 + T1')):
+for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1'),(2,'Palier 2 : paquets T2 + T1'),(3,'Palier 3 : paquets T3 + T2')):
     L+=[f"## {title}","","| Découverte | Débloque | Prérequis | Coût |","| --- | --- | --- | --- |"]
     for k,(nm,tt,un,_,c) in D.items():
         if tt==t: L.append(f"| **{nm}** | {', '.join(n(u) for u in un) or '(effet : paquets plus rapides)'} | {', '.join(D[p][0] for p in pre(k)) or '—'} | {cost(c)} |")
     L.append("")
-L+=["## Annoncé pour le palier 3 (à voir ensuite)","",
-"- **Moteur renforcé** : il se fabrique avec du caoutchouc (presse à plastique, palier 3) ; la **locomotive** en a besoin. Le **chemin de fer** reste une seule découverte (rail, locomotive, wagons, gare) et passe donc au palier 3, et non 2.",
-"- **Tourelle laser** : sa recette demande maintenant 1 moteur simple ; **tourelle plasma** : 1 moteur renforcé (fait au tour 236). Leurs découvertes dépendront donc des moteurs.","",
+L+=["## Notes du palier 3","",
+"- **Paquet de science T3** : sa recette (plaque d'acier + tuyau de laiton) se découvre au palier 2 ; celle du **T4** (puce + câble isolé) au palier 3. Même logique à chaque palier.",
+"- **Chemin de fer** (rail, locomotive, wagons fret et citerne, gare) : une seule découverte, au palier 3, car la locomotive demande un **moteur renforcé**, lui-même fait avec du caoutchouc (presse à plastique).",
+"- **Véhicules lourds** : char et camion benne, qui demandent aussi le moteur renforcé (à confirmer : le camion benne a-t-il vraiment besoin d'un moteur renforcé ?).",
+"- **Porte de garage** séparée de l'**Aluminium** : elle demande le moteur renforcé, pas les autres pièces en aluminium.",
+"- **Tourelle laser** demande le moteur simple (recette modifiée), **Sniper** vient après le Fusil ; ces deux-là demandent aussi 30 paquets de combat.",
+"- Le **four électrique** s'obtient avec le Silicium (c'est lui qui fond le silicium).","",
 "## Points à confirmer","",
-"1. **Moteur simple** laissé au palier 1 (il sert à la pompe, au buggy, au quad ; sinon la vapeur passerait au palier 2). Dites-moi si vous préférez le palier 2.",
-"2. **Vêtements** = pantalon, bottes, gants, capuche et **veste** (nouvel objet : tissu, emplacement tronc, cosmétique, en attendant son modèle 3D) ; **Sac à dos** est une découverte à part (emplacement dos) ; **Textile** = le tissu seul.",
-"3. **Paquets de combat** : 10 au palier 1, 20 au palier 2 (valeurs de départ ; ils viennent des dépouilles des ennemis).",
-"4. **Coûts** (100 à 200 paquets) : pas de réponse au point 5, je les garde tels quels."]
-open('docs/decouvertes-t0-t2.md','w').write('\n'.join(L)+'\n')
+"1. **Découvertes du palier 3** : regroupements et coûts (100 à 200 paquets T3 et autant de T2).",
+"2. **Camion benne** : moteur renforcé ou moteur simple ?",
+"3. Les points précédents (moteur simple au palier 1, veste, combat) sont conservés tels que validés."]
+open('docs/decouvertes-t0-t3.md','w').write('\n'.join(L)+'\n')
 print(len(D),'découvertes')
