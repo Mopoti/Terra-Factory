@@ -24,25 +24,24 @@ for k in ids: dep(k)
 direct={k:sorted({d for d in deps(k) if not any(d in anc(o) for o in deps(k) if o!=d)},key=lambda z:(-depth[z],ids.index(z))) for k in ids}
 parent={k:(direct[k][0] if direct[k] else None) for k in ids}
 rows=[[k for k in ids if depth[k]==r] for r in range(max(depth.values())+1)]
-CW,CH,GX,GY,PAD=112,92,14,46,20
-# ordre dans chaque rangée : sous le parent principal, enfants regroupés (barycentre)
+CW,CH,GX,GY,PAD=112,92,10,40,20
+# Mise en page compacte : chaque rangée est tassée sans trous et centrée ; l'ordre dans la rangée suit la position moyenne
+# des parents (descente) puis des enfants (remontée), plusieurs fois, pour limiter les croisements.
+children={k:[j for j in ids if k in direct[j]] for k in ids}
+STEP=CW+GX
 x={}
+def sweep(order_rows,neigh):
+    for row in order_rows:
+        def bar(k):
+            ps=[x[d] for d in neigh(k) if d in x]
+            return sum(ps)/len(ps) if ps else x[k]
+        row.sort(key=lambda k:(bar(k),ids.index(k)))
+        for i,k in enumerate(row): x[k]=(i-(len(row)-1)/2)*STEP
 for ri,row in enumerate(rows):
-    if ri==0:
-        row.sort(key=lambda k:ids.index(k))
-    else:
-        row.sort(key=lambda k:(x.get(parent[k],0) if parent[k] else 0, ids.index(k)))
-    # positions provisoires : centrées sous le parent, sans chevauchement
-    pos=[]
-    last=-1e9
-    for k in row:
-        want=x[parent[k]] if parent[k] in x else last+CW+GX
-        px=max(want,last+CW+GX); pos.append(px); last=px; x[k]=px
-    # recentrage de la rangée sur ses souhaits (évite la dérive vers la droite)
-    for _ in range(3):
-        for i,k in enumerate(row):
-            if parent[k] in x and ri>0:
-                x[k]=max(x[parent[k]]-(0 if i==0 else 0),(x[row[i-1]]+CW+GX) if i else -1e9)
+    for i,k in enumerate(row): x[k]=(i-(len(row)-1)/2)*STEP
+for _ in range(10):
+    sweep(rows[1:],lambda k:direct[k])
+    sweep(rows[-2::-1],lambda k:children[k])
 W=max(x.values())+CW+PAD*2
 shift=PAD-min(x.values())
 for k in x: x[k]+=shift
