@@ -1,4 +1,4 @@
-"""Génère docs/decouvertes-t0-t3.md : la proposition d'arbre de découvertes (palier 0 à 2) à partir de `D` ci-dessous.
+"""Génère docs/decouvertes-t0-t5.md : la proposition d'arbre de découvertes (palier 0 à 2) à partir de `D` ci-dessous.
 
 Les prérequis affichés = ceux choisis dans `D` + ceux déduits des recettes (ingrédients et machine de chaque objet
 débloqué, s'ils sont débloqués par une autre découverte). Contrôle : aucun prérequis de palier supérieur, pas de boucle.
@@ -10,7 +10,7 @@ items={i['id']:i for i in json.load(open('content/items.json'))['items']}
 rec=json.load(open('content/recipes.json'))['recipes']
 n=lambda i: fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
-S1,S2,S3,C='science_pack','science_pack_2','science_pack_3','combat_pack'
+S1,S2,S3,S4,S5,C='science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'
 D={
  # --- Palier 0 : payé en ressources du début de partie
  'metallurgy':('Métallurgie',0,['machine_stamper','machine_crusher','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod'],[],{'iron_ingot':20,'stone':10}),
@@ -64,7 +64,6 @@ D={
  'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['steam_power','steel','engine_heavy'],{S3:200,S2:200}),
  'aluminium':('Aluminium',3,['aluminium_ingot','aluminium_plate','piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['plastics'],{S3:200,S2:200}),
  'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],{S3:150,S2:150}),
- 'storage':('Accumulateur',3,['machine_accumulator'],['plastics'],{S3:150,S2:150}),
  'conveyor_3':('Convoyeur T3',3,['machine_conveyor_3','machine_arm_filter'],['conveyor_2'],{S3:150,S2:150}),
  'sorting':('Trieur',3,['machine_sorter'],['conveyor_3'],{S3:100,S2:100}),
  'drill_eco':('Foreuse économe',3,['machine_drill_eco'],['drill_electric','steel'],{S3:150,S2:150}),
@@ -72,6 +71,18 @@ D={
  'research_3':('Recherche III',3,[],['research_2'],{S3:100,S2:100}),
  'sniper':('Sniper',3,['sniper','sniper_magazine'],['rifle','steel'],{S3:150,S2:150,C:30}),
  'turret_laser':('Tourelle laser',3,['machine_turret_laser'],['turret_heavy','motor','silicon'],{S3:150,S2:150,C:30}),
+ # --- Palier 4 : paquets T4 et T3
+ 'fission':('Fission',4,['machine_centrifuge','zamak_ingot','uranium_enriched','uranium_depleted','uranium_rod'],['plastics','aluminium'],{S4:200,S3:200}),
+ 'reactor':('Réacteur à fission',4,['machine_fission_reactor'],['fission'],{S4:250,S3:250}),
+ 'pack_5':('Paquet de science T5',4,[S5],['fission'],{S4:100,S3:100}),
+ 'waste':('Déchets nucléaires',4,['machine_evaporation_tower','machine_vitrifier','contaminated_glass'],['reactor'],{S4:200,S3:200}),
+ 'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_2','silicon'],{S4:150,S3:150,C:40}),
+ 'turret_plasma':('Tourelle plasma',4,['machine_turret_plasma'],['turret_laser','engine_heavy'],{S4:150,S3:150,C:40}),
+ 'storage':('Accumulateur',4,['machine_accumulator'],['fission'],{S4:150,S3:150}),
+ 'research_4':('Recherche IV',4,[],['research_3'],{S4:100,S3:100}),
+ # --- Palier 5 : paquets T5 et T4
+ 'fusion':('Fusion',5,['machine_fusion_reactor'],['waste','storage'],{S5:300,S4:300}),
+ 'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],{S5:300,S4:300}),
 }
 owner={u:k for k,v in D.items() for u in v[2]}
 def needs(item):
@@ -98,24 +109,25 @@ if errors or cyc(): sys.exit(f'erreur : palier supérieur {errors}, boucle {cyc(
 cost=lambda c: ' + '.join(f'{v} × {n(k)}' for k,v in c.items())
 order=list(D)
 pre=lambda k: sorted(deps(k), key=lambda x:(D[x][1],order.index(x)))
-L=["# Découvertes T0 à T3 — proposition","","Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.","",
-"Règles :","- Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
+L=["# Découvertes T0 à T5 — proposition","","Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.","",
+"Règles :","- Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).","- Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.","- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2. Palier 4 : T4 **et** T3. Palier 5 : T5 **et** T4.","- **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.","",
 "Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fourneau T1, foreuse T1, coffre en bois, outil en pierre, charrette, pièces de construction en bois et en pierre, moules, lingots, fonte.",""]
-for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1'),(2,'Palier 2 : paquets T2 + T1'),(3,'Palier 3 : paquets T3 + T2')):
+for t,title in ((0,'Palier 0 : payé en ressources'),(1,'Palier 1 : paquets T1'),(2,'Palier 2 : paquets T2 + T1'),(3,'Palier 3 : paquets T3 + T2'),(4,'Palier 4 : paquets T4 + T3'),(5,'Palier 5 : paquets T5 + T4')):
     L+=[f"## {title}","","| Découverte | Débloque | Prérequis | Coût |","| --- | --- | --- | --- |"]
     for k,(nm,tt,un,_,c) in D.items():
         if tt==t: L.append(f"| **{nm}** | {', '.join(n(u) for u in un) or '(effet : paquets plus rapides)'} | {', '.join(D[p][0] for p in pre(k)) or '—'} | {cost(c)} |")
     L.append("")
-L+=["## Notes du palier 3","",
-"- **Paquet de science T3** : sa recette (plaque d'acier + tuyau de laiton) se découvre au palier 2 ; celle du **T4** (puce + câble isolé) au palier 3. Même logique à chaque palier.",
-"- **Chemin de fer** (rail, locomotive, wagons fret et citerne, gare) : une seule découverte, au palier 3, car la locomotive demande un **moteur renforcé**, lui-même fait avec du caoutchouc (presse à plastique).",
-"- **Véhicules lourds** : char et camion benne, qui demandent aussi le moteur renforcé (à confirmer : le camion benne a-t-il vraiment besoin d'un moteur renforcé ?).",
-"- **Porte de garage** séparée de l'**Aluminium** : elle demande le moteur renforcé, pas les autres pièces en aluminium.",
-"- **Tourelle laser** demande le moteur simple (recette modifiée), **Sniper** vient après le Fusil ; ces deux-là demandent aussi 30 paquets de combat.",
-"- Le **four électrique** s'obtient avec le Silicium (c'est lui qui fond le silicium).","",
+L+=["## Notes des paliers 3 à 5","",
+"- **Paquet de science Tn** : sa recette se découvre au palier précédent (T2 au palier 1, T3 au 2, T4 au 3, T5 au 4).",
+"- **Chemin de fer** (rail, locomotive, wagons fret et citerne, gare) : une seule découverte, au palier 3 (la locomotive demande un moteur renforcé).",
+"- **Camion benne** : moteur renforcé (validé). **Porte de garage** : séparée de l'Aluminium, elle demande le moteur renforcé.",
+"- **Tourelle laser** : moteur simple (recette modifiée) ; **tourelle plasma** : moteur renforcé (recette modifiée).",
+"- **Combat** : Sniper, Tourelle laser (30 paquets de combat), Armure 4 et Tourelle plasma (40).",
+"- **Palier 4** : l'ancien arbre découpait l'armure 4 en deux (haut / bas) et le réacteur en trois (fission, réacteur, déchets) ; l'armure 4 est ici une seule découverte.",
+"- **Accumulateur** passe au palier 4 : sa recette demande du zamak, qui vient de la Fission (dans l'ancien arbre il était au palier 3, sans pouvoir être fabriqué).",
+"- **Palier 5** : Fusion et Balise quantique sont les seules découvertes (demandent Déchets nucléaires et Accumulateur).","",
 "## Points à confirmer","",
-"1. **Découvertes du palier 3** : regroupements et coûts (100 à 200 paquets T3 et autant de T2).",
-"2. **Camion benne** : moteur renforcé ou moteur simple ?",
-"3. Les points précédents (moteur simple au palier 1, veste, combat) sont conservés tels que validés."]
-open('docs/decouvertes-t0-t3.md','w').write('\n'.join(L)+'\n')
+"1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).",
+"2. Y a-t-il des objets ou machines sans découverte qu'on a oublié (la liste est contrôlée par le script : tout objet débloqué par l'ancien arbre a une case) ?"]
+open('docs/decouvertes-t0-t5.md','w').write('\n'.join(L)+'\n')
 print(len(D),'découvertes')

@@ -1,11 +1,11 @@
-"""Génère docs/arbre-decouvertes-t0-t3.html : arbre vertical des découvertes (données de tools/gen_decouvertes.py).
+"""Génère docs/arbre-decouvertes-t0-t5.html : arbre vertical des découvertes (données de tools/gen_decouvertes.py).
 
 Les icônes viennent de l'audit des objets (variable d'environnement ICONES : fichier JSON {objet: {icon: adresse de données}}).
 Lancer depuis `navigateur/` : ICONES=<chemin> python3 tools/gen_arbre_decouvertes.py
 """
 import sys, os, json, html
 sys.path.insert(0,'tools')
-import gen_decouvertes as G   # recalcule aussi docs/decouvertes-t0-t3.md
+import gen_decouvertes as G   # recalcule aussi docs/decouvertes-t0-t5.md
 D,deps,n=G.D,G.deps,G.n
 ICONS=json.load(open(os.environ.get('ICONES','/tmp/claude-0/-home-user-Terra-Factory/321d8bf2-7c57-5c8c-af02-ddbd7a8bba29/scratchpad/audit_out.json')))
 ids=list(D)
@@ -64,7 +64,7 @@ def costline(k):
     num=max(v for kk,v in c.items() if kk!='combat_pack')
     return f"{num}×{s}"+(f" +{cb}⚔" if cb else '')
 costline_plain=lambda k:costline(k).replace('⚔',' combat')
-svg=[f'<svg id="arbre" viewBox="0 0 {VW:.0f} {VH:.0f}" width="{VW:.0f}" height="{VH:.0f}" role="img" aria-label="Arbre vertical des découvertes des paliers 0 à 3 : {len(ids)} découvertes, du haut (premières découvertes) vers le bas." xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">']
+svg=[f'<svg id="arbre" viewBox="0 0 {VW:.0f} {VH:.0f}" width="{VW:.0f}" height="{VH:.0f}" role="img" aria-label="Arbre vertical des découvertes des paliers 0 à 5 : {len(ids)} découvertes, du haut (premières découvertes) vers le bas." xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">']
 used_icons=sorted({u for k in ids for u in D[k][2][:3] if ICONS.get(u,{}).get('icon')})
 svg.append('<defs>'+''.join(f'<image id="i_{u}" width="30" height="30" href="{ICONS[u]["icon"]}"/>' for u in used_icons)+'</defs>')
 edges=[]
@@ -98,10 +98,10 @@ page='''<title>Arbre des découvertes</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
 /* Arbre vertical : on lit de haut en bas, une découverte débloque un groupe de recettes quand ses parents sont connus. Bordures = couleur des paquets du jeu. */
-:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--cb:#d4572a;--hl:#c0392b;--fade:.18;
+:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--t4:#8a5cc4;--t5:#c4527a;--cb:#d4572a;--hl:#c0392b;--fade:.18;
 --sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 main{display:flex;flex-direction:column;gap:14px}
 .top{max-width:760px;display:flex;flex-direction:column;gap:12px}
@@ -114,18 +114,18 @@ p{margin:0;color:var(--mut);line-height:1.5}
 .scroll{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:80vh}
 #zoom{transform-origin:0 0;display:block}
 .n rect{fill:var(--bg);stroke:var(--t0);stroke-width:2}
-.n.t1 rect{stroke:var(--t1)} .n.t2 rect{stroke:var(--t2)} .n.t3 rect{stroke:var(--t3)}
+.n.t1 rect{stroke:var(--t1)} .n.t2 rect{stroke:var(--t2)} .n.t3 rect{stroke:var(--t3)} .n.t4 rect{stroke:var(--t4)} .n.t5 rect{stroke:var(--t5)}
 .n.cb rect{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
 .nm{font:600 10.5px var(--sans);fill:var(--fg)} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
 .n{cursor:pointer;outline:none} .n:focus-visible rect{stroke:var(--hl);stroke-width:3}
-.e{fill:none;stroke:var(--line);stroke-width:1.6;opacity:0} .e.main{opacity:.9}
-.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:0} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel rect{stroke:var(--hl);stroke-width:3.5}
+.e{fill:none;stroke:var(--line);stroke-width:1.4;opacity:.75;stroke-dasharray:5 4} .e.main{stroke-dasharray:none;opacity:.95;stroke-width:1.7}
+.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:.08} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel rect{stroke:var(--hl);stroke-width:3.5}
 </style>
 <main>
 <div class="top">
 <h1>Arbre des découvertes</h1>
-<p>Paliers 0 à 3 : @N@ découvertes, du haut (les premières) vers le bas. Chaque case débloque un groupe de recettes ; on la découvre quand ses parents sont connus. Les lignes sont celles du parent principal ; touchez une case pour voir toutes ses dépendances, en amont (tout ce qu'il faut avant) et en aval.</p>
-<div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : T3 + T2</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
+<p>Paliers 0 à 5 : @N@ découvertes, du haut (les premières) vers le bas. Chaque case débloque un groupe de recettes ; on la découvre quand ses parents sont connus. Une case a un trait plein vers son parent principal et des traits pointillés vers ses autres parents. Touchez une case pour mettre en évidence tout ce qu'il faut avant et tout ce qu'elle ouvre.</p>
+<div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : T3 + T2</span><span><i style="border-color:var(--t4)"></i>palier 4 : T4 + T3</span><span><i style="border-color:var(--t5)"></i>palier 5 : T5 + T4</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <p id="det">Touchez une découverte pour voir ce qu'elle débloque et ce qu'il faut découvrir avant.</p>
 <div class="bar"><button id="zo" aria-label="Dézoomer">−</button><button id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span></div>
 </div>
@@ -156,5 +156,5 @@ setZ(window.innerWidth<700?.6:.9);
 </script>
 '''
 page=page.replace('@N@',str(len(ids))).replace('@SVG@','\n'.join(svg)).replace('@UP@',json.dumps(up)).replace('@DOWN@',json.dumps(down)).replace('@INFO@',json.dumps(info,ensure_ascii=False))
-open('docs/arbre-decouvertes-t0-t3.html','w').write(page)
+open('docs/arbre-decouvertes-t0-t5.html','w').write(page)
 print(len(page)//1024,'Ko',round(VW),round(VH),'rangées',len(rows),'plus large',max(len(r) for r in rows))

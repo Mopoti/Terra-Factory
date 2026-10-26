@@ -1,11 +1,11 @@
-# Découvertes T0 à T3 — proposition
+# Découvertes T0 à T5 — proposition
 
 Statut : **proposition à corriger avec le PO** (tour 235, généré par `tools/gen_decouvertes.py`). Rien n'est codé : l'arbre actuel des technologies reste en jeu.
 
 Règles :
 - Une découverte débloque **les recettes** d'un ou plusieurs objets (une seule est possible).
 - Ses **prérequis** : les découvertes qui débloquent les ingrédients et la machine de ses recettes (déduits des recettes actuelles) plus ceux ajoutés pour la logique de progression. Aucun prérequis n'est d'un palier supérieur, aucune boucle.
-- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2.
+- Palier 0 : payé en ressources du début de partie. Palier 1 : paquets T1. Palier 2 : paquets T2 **et** T1. Palier 3 : paquets T3 **et** T2. Palier 4 : T4 **et** T3. Palier 5 : T5 **et** T4.
 - **Armes, armures et tourelles** sont dans l'arbre : elles se paient aussi en **paquets de combat** en plus des paquets de leur palier.
 
 Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fourneau T1, foreuse T1, coffre en bois, outil en pierre, charrette, pièces de construction en bois et en pierre, moules, lingots, fonte.
@@ -76,7 +76,6 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fournea
 | **Chemin de fer** | Rail (tuile de 2,5 m), Locomotive à vapeur, Wagon de fret, Wagon-citerne, Station | Métallurgie, Chaudière et turbine, Acier, Moteur renforcé | 200 × Paquet de science T3 + 200 × Paquet de science T2 |
 | **Aluminium** | Lingot d'aluminium, Plaque d'aluminium, Mur en aluminium, Dalle en aluminium, Escalier en aluminium, Battant de porte en aluminium (2 par porte), Pilier en aluminium | Métallurgie, Silicium, Plastique et caoutchouc | 200 × Paquet de science T3 + 200 × Paquet de science T2 |
 | **Porte de garage** | Porte de garage en aluminium | Métallurgie, Moteur renforcé, Aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Accumulateur** | Accumulateur (T3) | Acier, Silicium, Plastique et caoutchouc | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Convoyeur T3** | Tapis express (T3), Bras filtrant (T3) | Métallurgie, Convoyeur rapide | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Trieur** | Trieur (T3) | Métallurgie, Convoyeur T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Foreuse économe** | Foreuse économe (T3) | Métallurgie, Acier, Foreuse électrique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
@@ -85,17 +84,38 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, fournea
 | **Sniper** | Fusil de précision (sniper), Chargeur de sniper (5 balles) | Métallurgie, Acier, Fusil | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
 | **Tourelle laser** | Tourelle laser | Métallurgie, Moteur simple, Acier, Tourelle lourde, Silicium | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
 
-## Notes du palier 3
+## Palier 4 : paquets T4 + T3
 
-- **Paquet de science T3** : sa recette (plaque d'acier + tuyau de laiton) se découvre au palier 2 ; celle du **T4** (puce + câble isolé) au palier 3. Même logique à chaque palier.
-- **Chemin de fer** (rail, locomotive, wagons fret et citerne, gare) : une seule découverte, au palier 3, car la locomotive demande un **moteur renforcé**, lui-même fait avec du caoutchouc (presse à plastique).
-- **Véhicules lourds** : char et camion benne, qui demandent aussi le moteur renforcé (à confirmer : le camion benne a-t-il vraiment besoin d'un moteur renforcé ?).
-- **Porte de garage** séparée de l'**Aluminium** : elle demande le moteur renforcé, pas les autres pièces en aluminium.
-- **Tourelle laser** demande le moteur simple (recette modifiée), **Sniper** vient après le Fusil ; ces deux-là demandent aussi 30 paquets de combat.
-- Le **four électrique** s'obtient avec le Silicium (c'est lui qui fond le silicium).
+| Découverte | Débloque | Prérequis | Coût |
+| --- | --- | --- | --- |
+| **Fission** | Centrifugeuse (T4), Lingot de zamak, Uranium enrichi, Uranium appauvri (déchet), Barre d'uranium | Métallurgie, Acier, Béton, Lavage, Silicium, Plastique et caoutchouc, Moteur renforcé, Aluminium | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Réacteur à fission** | Réacteur à fission (T4) | Acier, Béton, Silicium, Plastique et caoutchouc, Fission | 250 × Paquet de science T4 + 250 × Paquet de science T3 |
+| **Paquet de science T5** | Paquet de science T5 | Acier, Silicium, Fission | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Déchets nucléaires** | Tour d'évaporation (T4), Station de vitrification (T4), Cylindre de verre contaminé | Métallurgie, Acier, Béton, Silicium, Plastique et caoutchouc, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Acier, Armure 2, Silicium | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
+| **Tourelle plasma** | Tourelle à plasma | Acier, Silicium, Moteur renforcé, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
+| **Accumulateur** | Accumulateur (T3) | Acier, Silicium, Plastique et caoutchouc, Fission | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Recherche IV** | (effet : paquets plus rapides) | Recherche III | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+
+## Palier 5 : paquets T5 + T4
+
+| Découverte | Débloque | Prérequis | Coût |
+| --- | --- | --- | --- |
+| **Fusion** | Réacteur à fusion magnétique | Acier, Béton, Silicium, Plastique et caoutchouc, Fission, Déchets nucléaires, Accumulateur | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Balise quantique** | Relais émetteur hyperfréquence, Antenne d'alignement quantique | Acier, Silicium, Plastique et caoutchouc, Fission, Fusion | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+
+## Notes des paliers 3 à 5
+
+- **Paquet de science Tn** : sa recette se découvre au palier précédent (T2 au palier 1, T3 au 2, T4 au 3, T5 au 4).
+- **Chemin de fer** (rail, locomotive, wagons fret et citerne, gare) : une seule découverte, au palier 3 (la locomotive demande un moteur renforcé).
+- **Camion benne** : moteur renforcé (validé). **Porte de garage** : séparée de l'Aluminium, elle demande le moteur renforcé.
+- **Tourelle laser** : moteur simple (recette modifiée) ; **tourelle plasma** : moteur renforcé (recette modifiée).
+- **Combat** : Sniper, Tourelle laser (30 paquets de combat), Armure 4 et Tourelle plasma (40).
+- **Palier 4** : l'ancien arbre découpait l'armure 4 en deux (haut / bas) et le réacteur en trois (fission, réacteur, déchets) ; l'armure 4 est ici une seule découverte.
+- **Accumulateur** passe au palier 4 : sa recette demande du zamak, qui vient de la Fission (dans l'ancien arbre il était au palier 3, sans pouvoir être fabriqué).
+- **Palier 5** : Fusion et Balise quantique sont les seules découvertes (demandent Déchets nucléaires et Accumulateur).
 
 ## Points à confirmer
 
-1. **Découvertes du palier 3** : regroupements et coûts (100 à 200 paquets T3 et autant de T2).
-2. **Camion benne** : moteur renforcé ou moteur simple ?
-3. Les points précédents (moteur simple au palier 1, veste, combat) sont conservés tels que validés.
+1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).
+2. Y a-t-il des objets ou machines sans découverte qu'on a oublié (la liste est contrôlée par le script : tout objet débloqué par l'ancien arbre a une case) ?
