@@ -58,7 +58,7 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 <main>
 <div class="top">
 <h1>Arbre des découvertes</h1>
-<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> change ingrédients, machine et durée (avertissement au-delà de 3 types d'ingrédients, 4 au palier 3 et plus) ; <b>« Modifier le coût »</b> change le prix et le type des paquets d'une découverte. <b>Ctrl + clic droit</b> sur une case ou une recette ouvre une fenêtre avec l'arbre de ses prérequis (filtre proches / éloignés). <b>Traits rouges</b> d'une sélection : plein = lien avec le parent principal, pointillé = autre prérequis.</p>
+<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> change ingrédients, machine et durée (avertissement au-delà de 3 types d'ingrédients, 4 au palier 3 et plus) ; <b>« Modifier le coût »</b> change le prix et le type des paquets d'une découverte. <b>Ctrl + clic</b> sur une case ou une recette ouvre une fenêtre avec l'arbre de ses prérequis (filtre proches / éloignés). <b>Traits rouges</b> d'une sélection : plein = lien avec le parent principal, pointillé = autre prérequis.</p>
 <div class="leg"><span><i style="border-color:var(--c-base)"></i>recette de base</span><span><i style="border-color:var(--c-inter)"></i>intermédiaire</span><span><i style="border-color:var(--c-machine)"></i>machine</span><span><i style="border-color:var(--c-autre)"></i>équipement, véhicule, construction, paquet</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <div class="bar"><button class="sq" id="zo" aria-label="Dézoomer">−</button><button class="sq" id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span>
 <button id="rp">Réinitialiser la disposition</button><button id="cp">Copier mes modifications</button><button id="rr">Annuler mes recettes et coûts</button><span id="info"></span></div>
@@ -260,7 +260,7 @@ document.getElementById('mx').addEventListener('click',closeMod);
 modEl.addEventListener('click',e=>{if(e.target===modEl)closeMod()});
 modEl.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&modId)openMod(modId,b.dataset.m)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMod()});
-/* Ctrl + clic droit (ou Ctrl + clic) sur une case de l'arbre ou sur une recette du panneau */
+/* Ctrl + clic (ou Ctrl + clic droit) sur une case de l'arbre ou sur une recette du panneau */
 document.addEventListener('contextmenu',e=>{if(!e.ctrlKey)return;const t=e.target.closest?e.target:e.target.parentNode,g=t.closest('.n'),r=t.closest('.rc');const id=g?g.dataset.id:r&&sel;if(!id)return;e.preventDefault();e.stopPropagation();openMod(id)},true);
-svg.addEventListener('click',e=>{if(!e.ctrlKey)return;const g=e.target.closest('.n');if(g){e.stopPropagation();suppress=true;setTimeout(()=>suppress=false,50);openMod(g.dataset.id)}},true);
+document.addEventListener('click',e=>{if(!e.ctrlKey)return;const g=e.target.closest('.n'),r=e.target.closest('.rc'),id=g?g.dataset.id:r&&sel;if(!id)return;e.preventDefault();e.stopPropagation();suppress=true;setTimeout(()=>suppress=false,50);openMod(id)},true);
 </script>
