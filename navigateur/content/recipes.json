@@ -502,6 +502,95 @@
         "aluminium_plate": 1
       },
       "seconds": 3
+    },
+    {
+      "id": "glass",
+      "machine": "furnace",
+      "in": {
+        "silica_sand": 1
+      },
+      "out": {
+        "glass": 1
+      },
+      "seconds": 2
+    },
+    {
+      "id": "aluminium_rod",
+      "machine": "stamper",
+      "in": {
+        "aluminium_ingot": 1
+      },
+      "out": {
+        "aluminium_rod": 2
+      },
+      "seconds": 3
+    },
+    {
+      "id": "graphite",
+      "machine": "furnace_electric",
+      "in": {
+        "coal": 2
+      },
+      "out": {
+        "graphite": 2
+      },
+      "seconds": 4
+    },
+    {
+      "id": "lithium_salt",
+      "machine": "centrifuge",
+      "in": {
+        "crushed_stone": 6
+      },
+      "out": {
+        "lithium_salt": 1
+      },
+      "seconds": 8
+    },
+    {
+      "id": "carbon_fiber",
+      "machine": "furnace_electric",
+      "in": {
+        "graphite": 2
+      },
+      "out": {
+        "carbon_fiber": 1
+      },
+      "seconds": 6
+    },
+    {
+      "id": "deuterium",
+      "machine": "centrifuge",
+      "in": {
+        "barrel_water": 2
+      },
+      "out": {
+        "deuterium": 1,
+        "barrel_empty": 2
+      },
+      "seconds": 20
+    },
+    {
+      "id": "tritium",
+      "machine": "centrifuge",
+      "in": {
+        "lithium_salt": 2
+      },
+      "out": {
+        "tritium": 1
+      },
+      "seconds": 30
+    },
+    {
+      "id": "liquid_nitrogen",
+      "machine": "centrifuge",
+      "in": {
+        "barrel_empty": 1
+      },
+      "out": {
+        "liquid_nitrogen": 1
+      },
+      "seconds": 8
     }
   ]
 }

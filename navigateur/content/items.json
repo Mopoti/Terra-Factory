@@ -902,11 +902,9 @@
       "volumeL": 25,
       "color": "#5d8a8a",
       "recipe": {
-        "iron_plate": 5,
-        "iron_gear": 2,
-        "iron_rod": 12,
-        "copper_plate": 4,
-        "copper_wire": 16
+        "kit_circuit": 3,
+        "chassis_simple": 3,
+        "glass": 4
       }
     },
     {
@@ -1289,10 +1287,9 @@
       "volumeL": 60,
       "color": "#4a6a8a",
       "recipe": {
-        "steel_plate": 8,
-        "cable_insulated": 6,
-        "zamak_ingot": 4,
-        "silicon_chip": 2
+        "chassis_steel": 2,
+        "battery_lithium": 4,
+        "microcontroller": 1
       }
     },
     {
@@ -2139,6 +2136,419 @@
         "motor_heavy": 1,
         "iron_gear": 4,
         "copper_wire": 6
+      }
+    },
+    {
+      "id": "aluminium_rod",
+      "stack": 100,
+      "weightKg": 0.1,
+      "volumeL": 0.1,
+      "color": "#b9c1c9"
+    },
+    {
+      "id": "glass",
+      "stack": 50,
+      "weightKg": 0.5,
+      "volumeL": 0.3,
+      "color": "#9fd4e0"
+    },
+    {
+      "id": "graphite",
+      "stack": 50,
+      "weightKg": 0.3,
+      "volumeL": 0.3,
+      "color": "#2d2d33"
+    },
+    {
+      "id": "lithium_salt",
+      "stack": 50,
+      "weightKg": 0.4,
+      "volumeL": 0.3,
+      "color": "#e6e2d3"
+    },
+    {
+      "id": "carbon_fiber",
+      "stack": 50,
+      "weightKg": 0.2,
+      "volumeL": 0.3,
+      "color": "#1e1e22"
+    },
+    {
+      "id": "kit_circuit",
+      "stack": 100,
+      "category": "science",
+      "weightKg": 0.1,
+      "volumeL": 0.15,
+      "color": "#3c8a5a",
+      "recipe": {
+        "copper_plate": 1,
+        "copper_wire": 4
+      }
+    },
+    {
+      "id": "chassis_simple",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 2,
+      "volumeL": 2,
+      "color": "#7d8288",
+      "recipe": {
+        "iron_plate": 2,
+        "iron_rod": 1
+      }
+    },
+    {
+      "id": "chassis_steel",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 4,
+      "volumeL": 3,
+      "color": "#5d6670",
+      "recipe": {
+        "steel_plate": 2,
+        "steel_rod": 1
+      }
+    },
+    {
+      "id": "chassis_alu",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 2,
+      "volumeL": 3,
+      "color": "#aeb7c0",
+      "recipe": {
+        "aluminium_plate": 2,
+        "aluminium_rod": 1
+      }
+    },
+    {
+      "id": "chassis_composite",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 2.5,
+      "volumeL": 3,
+      "color": "#2a2b30",
+      "recipe": {
+        "carbon_fiber": 2,
+        "aluminium_rod": 1
+      }
+    },
+    {
+      "id": "circuit_advanced",
+      "stack": 100,
+      "category": "science",
+      "weightKg": 0.05,
+      "volumeL": 0.1,
+      "color": "#2f7f6a",
+      "recipe": {
+        "kit_circuit": 1,
+        "silicon_chip": 1
+      }
+    },
+    {
+      "id": "microcontroller",
+      "stack": 100,
+      "category": "science",
+      "weightKg": 0.05,
+      "volumeL": 0.1,
+      "color": "#2a5f8a",
+      "recipe": {
+        "plastic_insulator": 1,
+        "silicon_chip": 1,
+        "kit_circuit": 1
+      }
+    },
+    {
+      "id": "solar_cell",
+      "stack": 50,
+      "category": "energy",
+      "weightKg": 0.3,
+      "volumeL": 0.2,
+      "color": "#27407a",
+      "recipe": {
+        "silicon_raw": 1,
+        "glass": 1,
+        "copper_wire": 2
+      }
+    },
+    {
+      "id": "battery_lithium",
+      "stack": 20,
+      "category": "energy",
+      "weightKg": 1.5,
+      "volumeL": 1,
+      "color": "#7a5ab0",
+      "recipe": {
+        "lithium_salt": 1,
+        "graphite": 1,
+        "plastic_insulator": 1
+      }
+    },
+    {
+      "id": "graphite_filter",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 1,
+      "volumeL": 1,
+      "color": "#3a3a40",
+      "recipe": {
+        "graphite": 3,
+        "plastic_insulator": 1
+      }
+    },
+    {
+      "id": "armored_glass",
+      "stack": 20,
+      "category": "industrial",
+      "weightKg": 3,
+      "volumeL": 1.5,
+      "color": "#7fb0c0",
+      "recipe": {
+        "glass": 2,
+        "plastic_insulator": 1
+      }
+    },
+    {
+      "id": "fusion_capsule",
+      "stack": 10,
+      "category": "science",
+      "weightKg": 2,
+      "volumeL": 1.5,
+      "color": "#d46a8a",
+      "recipe": {
+        "deuterium": 1,
+        "tritium": 1,
+        "chassis_composite": 1
+      }
+    },
+    {
+      "id": "supra_magnet",
+      "stack": 20,
+      "category": "science",
+      "weightKg": 2,
+      "volumeL": 1,
+      "color": "#4a62c4",
+      "recipe": {
+        "copper_wire": 8,
+        "liquid_nitrogen": 1,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "quantum_crystal",
+      "stack": 20,
+      "category": "science",
+      "weightKg": 0.5,
+      "volumeL": 0.4,
+      "color": "#b48be8",
+      "recipe": {
+        "silicon_chip": 2,
+        "glass": 2,
+        "supra_magnet": 1
+      }
+    },
+    {
+      "id": "deuterium",
+      "stack": 20,
+      "category": "resources",
+      "weightKg": 2,
+      "volumeL": 1,
+      "color": "#6fa0ea"
+    },
+    {
+      "id": "tritium",
+      "stack": 20,
+      "category": "resources",
+      "weightKg": 2,
+      "volumeL": 1,
+      "color": "#8fd0c0"
+    },
+    {
+      "id": "liquid_nitrogen",
+      "stack": 20,
+      "category": "resources",
+      "weightKg": 4,
+      "volumeL": 5,
+      "color": "#a8d8f0"
+    },
+    {
+      "id": "armor3_head",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 1.8,
+      "volumeL": 5.4,
+      "color": "#8ea3b3",
+      "recipe": {
+        "aluminium_plate": 2,
+        "cloth": 3,
+        "plastic_insulator": 1
+      },
+      "equip": {
+        "slot": "head",
+        "armor": 10
+      }
+    },
+    {
+      "id": "armor3_torso",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 5,
+      "volumeL": 15,
+      "color": "#8ea3b3",
+      "recipe": {
+        "aluminium_plate": 5,
+        "cloth": 6,
+        "plastic_insulator": 2
+      },
+      "equip": {
+        "slot": "torso",
+        "armor": 20
+      }
+    },
+    {
+      "id": "armor3_legs",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 3.3,
+      "volumeL": 9.899999999999999,
+      "color": "#8ea3b3",
+      "recipe": {
+        "aluminium_plate": 4,
+        "cloth": 5,
+        "plastic_insulator": 2
+      },
+      "equip": {
+        "slot": "legs",
+        "armor": 15
+      }
+    },
+    {
+      "id": "armor3_feet",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 2.2,
+      "volumeL": 6.6000000000000005,
+      "color": "#8ea3b3",
+      "recipe": {
+        "aluminium_plate": 2,
+        "cloth": 3,
+        "plastic_insulator": 1
+      },
+      "equip": {
+        "slot": "feet",
+        "armor": 11
+      }
+    },
+    {
+      "id": "armor5_head",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 2.5,
+      "volumeL": 7.5,
+      "color": "#2d3a52",
+      "recipe": {
+        "carbon_fiber": 3,
+        "aluminium_plate": 2,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "head",
+        "armor": 16
+      }
+    },
+    {
+      "id": "armor5_torso",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 7,
+      "volumeL": 21,
+      "color": "#2d3a52",
+      "recipe": {
+        "carbon_fiber": 6,
+        "aluminium_plate": 4,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "torso",
+        "armor": 32
+      }
+    },
+    {
+      "id": "armor5_legs",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 4.8,
+      "volumeL": 14.399999999999999,
+      "color": "#2d3a52",
+      "recipe": {
+        "carbon_fiber": 5,
+        "aluminium_plate": 3,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "legs",
+        "armor": 23
+      }
+    },
+    {
+      "id": "armor5_feet",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 3.2,
+      "volumeL": 9.600000000000001,
+      "color": "#2d3a52",
+      "recipe": {
+        "carbon_fiber": 3,
+        "aluminium_plate": 2,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "feet",
+        "armor": 17
+      }
+    },
+    {
+      "id": "exoskeleton",
+      "stack": 1,
+      "category": "equipment",
+      "weightKg": 8,
+      "volumeL": 20,
+      "color": "#7a8794",
+      "recipe": {
+        "chassis_alu": 2,
+        "motor": 2,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "legs",
+        "bag": {
+          "weightKg": 40
+        }
+      }
+    },
+    {
+      "id": "piece_wall_armored",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 4,
+      "volumeL": 3,
+      "color": "#46505c",
+      "recipe": {
+        "steel_plate": 4,
+        "concrete_block": 4
+      }
+    },
+    {
+      "id": "piece_door_armored",
+      "stack": 50,
+      "category": "industrial",
+      "weightKg": 9,
+      "volumeL": 5,
+      "color": "#46505c",
+      "recipe": {
+        "steel_plate": 8,
+        "motor": 1,
+        "armored_glass": 2
       }
     }
   ]

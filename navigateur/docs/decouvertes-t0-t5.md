@@ -162,7 +162,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Vitrificateur** | Station de vitrification (T4), Cylindre de verre contaminé | Plaque d'acier, Bétonnière, Paquet de science T3, Puce de silicium, Isolant plastique, Câble isolé, Paquet de science T4, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
 | **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Paquet de science T3, Puce de silicium, Armure 3, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
 | **Tourelle plasma** | Tourelle à plasma | Plaque d'acier, Paquet de science T3, Puce de silicium, Moteur renforcé, Paquet de science T4, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
-| **Sel de lithium** | Sel de lithium | Paquet de science T3, Paquet de science T4, Tour d'évaporation | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Sel de lithium** | Sel de lithium | Concasseur, Paquet de science T3, Paquet de science T4, Centrifugeuse, Tour d'évaporation | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Batterie lithium** | Batterie lithium | Paquet de science T3, Isolant plastique, Graphite, Paquet de science T4, Sel de lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Borne de recharge** | Borne de recharge | Châssis renforcé, Paquet de science T3, Isolant plastique, Microcontrôleur, Paquet de science T4, Batterie lithium | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 | **Quad électrique** | Quad électrique | Moteur simple, Quad, Paquet de science T3, Châssis léger, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
@@ -187,9 +187,9 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Deutérium** | Deutérium | Paquet de science T4, Centrifugeuse, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
-| **Tritium** | Tritium | Paquet de science T4, Réacteur à fission, Paquet de science T5, Sel de lithium | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
-| **Compresseur d'air** | Compresseur d'air, Azote liquide | Châssis renforcé, Microcontrôleur, Moteur renforcé, Paquet de science T4, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Deutérium** | Deutérium | Remplisseuse de barils, Paquet de science T4, Centrifugeuse, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Tritium** | Tritium | Paquet de science T4, Centrifugeuse, Réacteur à fission, Paquet de science T5, Sel de lithium | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Compresseur d'air** | Compresseur d'air, Azote liquide | Châssis renforcé, Remplisseuse de barils, Microcontrôleur, Moteur renforcé, Paquet de science T4, Centrifugeuse, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
 | **Aimant supraconducteur** | Aimant supraconducteur | Fil de cuivre, Microcontrôleur, Paquet de science T4, Paquet de science T5, Compresseur d'air | 250 × Paquet de science T5 + 250 × Paquet de science T4 |
 | **Capsule de fusion** | Capsule de fusion | Paquet de science T4, Paquet de science T5, Châssis composite, Deutérium, Tritium | 250 × Paquet de science T5 + 250 × Paquet de science T4 |
 | **Cristal quantique** | Cristal quantique | Vitre, Puce de silicium, Paquet de science T4, Paquet de science T5, Aimant supraconducteur | 250 × Paquet de science T5 + 250 × Paquet de science T4 |

@@ -88,6 +88,34 @@ export function expandLegacyIds(ids: readonly unknown[]): Set<unknown> {
   return have;
 }
 
+/** Objets ajoutés après les anciennes technologies : une ancienne sauvegarde ne les sait pas fabriquer. */
+const ADDED_AFTER_LEGACY = new Set([
+  'aluminium_rod',
+  'glass',
+  'graphite',
+  'lithium_salt',
+  'carbon_fiber',
+  'kit_circuit',
+  'chassis_simple',
+  'chassis_steel',
+  'chassis_alu',
+  'chassis_composite',
+  'circuit_advanced',
+  'microcontroller',
+  'solar_cell',
+  'battery_lithium',
+  'graphite_filter',
+  'armored_glass',
+  'fusion_capsule',
+  'supra_magnet',
+  'quantum_crystal',
+  'deuterium',
+  'tritium',
+  'liquid_nitrogen',
+  'exoskeleton',
+  ...['3', '5'].flatMap((n) => ['head', 'torso', 'legs', 'feet'].map((s) => `armor${n}_${s}`)),
+]);
+
 /**
  * Découvertes d'une partie qui avait des technologies : une découverte est acquise si tous les objets qu'elle débloque
  * étaient déjà fabricables (aucune technologie, ou technologie recherchée). Les prérequis suivent toujours.
@@ -95,7 +123,9 @@ export function expandLegacyIds(ids: readonly unknown[]): Set<unknown> {
 export function discoveriesFromLegacy(oldIds: readonly unknown[]): string[] {
   const researched = expandLegacyIds(oldIds);
   const gated = new Set(legacyRaw.techs.flatMap((t) => t.unlocks));
-  const available = new Set(ITEMS.map((i) => i.id).filter((id) => !gated.has(id)));
+  const available = new Set(
+    ITEMS.map((i) => i.id).filter((id) => !gated.has(id) && !ADDED_AFTER_LEGACY.has(id)),
+  );
   for (const t of legacyRaw.techs)
     if (researched.has(t.id)) for (const u of t.unlocks) available.add(u);
   const got = new Set(

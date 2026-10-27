@@ -51,11 +51,14 @@ PROPOSED_MACHINE+=[{'id':'carbon_fiber','machine':'furnace_electric','in':{'grap
  {'id':'deuterium','machine':'centrifuge','in':{},'out':{'deuterium':1},'seconds':20,'fluid':{'kind':'eau','amount':-1000}},
  {'id':'tritium','machine':'fission_reactor','in':{'lithium_salt':2},'out':{'tritium':1},'seconds':30},
  {'id':'liquid_nitrogen','machine':'air_compressor','in':{},'out':{'liquid_nitrogen':1},'seconds':8,'fluid':{'kind':'air','amount':-200}}]
+NEW_HAND={k:r for k,r in PROPOSED_HAND.items() if k not in items}   # ce qui est déjà dans content/ n'est plus une proposition
+NEW_MACHINE=[r for r in PROPOSED_MACHINE if next(iter(r['out'])) not in items]
+NEW_CHANGES={k:r for k,r in PROPOSED_RECIPE_CHANGES.items() if items[k].get('recipe')!=r}
 if not JEU:
-    for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
-    for r in PROPOSED_MACHINE: items[next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
-    for k,r in PROPOSED_RECIPE_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
-PROPOSED=set() if JEU else set(PROPOSED_HAND)|{next(iter(r['out'])) for r in PROPOSED_MACHINE}|set(PROPOSED_RECIPE_CHANGES)
+    for k,r in NEW_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
+    for r in NEW_MACHINE: items[next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
+    for k,r in NEW_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
+PROPOSED=set() if JEU else set(NEW_HAND)|{next(iter(r['out'])) for r in NEW_MACHINE}|set(NEW_CHANGES)
 n=lambda i: PROPOSED_NAMES.get(i) or fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
 S1,S2,S3,S4,S5,C='science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'
@@ -322,6 +325,8 @@ print(len(D),'découvertes')
 # ---------------------------------------------------------------------------------------------------------------------
 # Mode jeu : écrit content/techs.json (les découvertes, au format des technologies) et les textes fr/en.
 EN={'cast_iron':'Cast iron','stamper':'Stamper','mould_plate':'Plate mould','plates':'Iron and copper plates','mould_gear':'Gear mould','gears':'Gear','mould_wire':'Wire mould','wires':'Copper wire','rods':'Iron rod','crusher':'Crusher','electricity':'Electricity','crank':'Priming crank','laboratory':'Laboratory','pack_1':'Science pack T1','iron_tool':'Iron tool','waterwheel':'Water wheel','pistol':'Pistol','magazine':'Pistol magazine','research_1':'Research I (faster packs)','conveyor':'Conveyor belt','arm':'Robotic arm','splitter':'Splitter','merger':'Merger','chest_iron':'Iron chest','waypoint':'Waypoint','textile':'Textile','clothing':'Clothing','backpack':'Backpack','bedding_1':'Survival bedding','navigation':'Navigation','pipe':'Pipe','motor':'Simple motor','pump':'Water pump','buggy':'Buggy','quad':'Quad','boiler':'Boiler','turbine':'Steam turbine','pack_2':'Science pack T2','armor_1':'Armor 1','turret':'Turret','bessemer':'Bessemer converter','steel_plate':'Steel plate','steel_rod':'Steel rod','mixer':'Concrete mixer','concrete':'Concrete buildings','washer':'Washing station','washed_ores':'Washed ores','zinc':'Zinc ingot','builder':'Builder','pipe_2':'Brass pipe','booster':'Booster pump','cooling':'Cooling tower','conveyor_2':'Fast conveyor','arm_electric':'Electric robotic arm','assembler':'Assembler','generator':'Fuel generator','drill_electric':'Electric drill','bedding_2':'Comfort bedding','research_2':'Research II','rifle':'Rifle','rifle_magazine':'Rifle magazine','armor_2':'Armor 2','turret_heavy':'Heavy turret','pack_3':'Science pack T3','heavy_press':'Heavy press','pipe_3':'T3 pipe','electric_furnace':'Electric furnace','silicon_raw':'Raw silicon','silicon_chip':'Silicon chip','barreler':'Barrel filler','pumpjack':'Pumpjack','barrel_oil':'Oil barrel','refinery':'Refinery','plastic_press':'Plastic press','plastic':'Plastic insulator','insulated_cable':'Insulated cable','rubber':'Rubber','engine_heavy':'Reinforced motor','tank':'Tank','van':'Dump truck','railway':'Railway','aluminium_ingot':'Aluminium ingot','aluminium_plate':'Aluminium plate','aluminium':'Aluminium buildings','garage':'Garage door','conveyor_3':'T3 conveyor','arm_filter':'Filter arm','sorting':'Sorter','drill_eco':'Eco drill','pack_4':'Science pack T4','research_3':'Research III','sniper':'Sniper','sniper_magazine':'Sniper magazine','turret_laser':'Laser turret','centrifuge':'Centrifuge','zamak':'Zamak','uranium_enriched':'Enriched uranium','uranium_depleted':'Depleted uranium','uranium_rod':'Uranium rod','reactor':'Fission reactor','pack_5':'Science pack T5','evaporation':'Evaporation tower','vitrifier':'Vitrifier','armor_4':'Armor 4','turret_plasma':'Plasma turret','storage':'Accumulator','research_4':'Research IV','fusion':'Fusion','beacon':'Quantum beacon'}
+EN.update({'glass':'Glass pane','kit_circuit':'Circuit kit','chassis_simple':'Simple frame','chassis_steel':'Reinforced frame','circuit_advanced':'Advanced circuit','microcontroller':'Microcontroller','aluminium_rod':'Aluminium rod','chassis_alu':'Light frame','solar_cell':'Solar cell','graphite':'Graphite','lithium_salt':'Lithium salt','battery':'Lithium battery','carbon_fiber':'Carbon fibre','chassis_composite':'Composite frame','graphite_filter':'Graphite filter','armored_glass':'Armoured glass','deuterium':'Deuterium','tritium':'Tritium','air_compressor':'Air compressor','supra_magnet':'Superconducting magnet','fusion_capsule':'Fusion capsule','quantum_crystal':'Quantum crystal'})
+EN.update({'armored_buildings':'Armoured buildings','armor_3':'Armor 3','armor_5':'Armor 5','exoskeleton':'Exoskeleton'})
 if JEU:
     import re
     def direct_of(k):
@@ -339,7 +344,7 @@ if JEU:
     for lang in ('fr','en'):
         path=f'src/i18n/{lang}.json'
         txt=open(path).read()
-        for oid in old_ids: txt=re.sub(rf'^  "tech\.{re.escape(oid)}": "[^"]*",\n','',txt,flags=re.M)
+        for oid in set(old_ids)|set(D): txt=re.sub(rf'^  "tech\.{re.escape(oid)}": "[^"]*",\n','',txt,flags=re.M)
         lines=''.join(f'  "tech.{k}": {json.dumps(D[k][0] if lang=="fr" else EN[k],ensure_ascii=False)},\n' for k in D)
         txt=re.sub(r'^(  "tech\.title": )"[^"]*",\n',lambda m: m.group(1)+('"Découvertes"' if lang=='fr' else '"Discoveries"')+',\n'+lines,txt,count=1,flags=re.M)
         open(path,'w').write(txt)

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, ITEM_CATEGORIES, categoryOf, itemById } from './items';
+import { RECIPES } from './recipes';
 import {
   discoveriesFromLegacy,
   isTechVisible,
@@ -7,6 +8,7 @@ import {
   labResearchLevel,
   scienceCost,
   techById,
+  techFor,
   TECHS,
 } from './techs';
 
@@ -67,8 +69,10 @@ describe('onglets de fabrication', () => {
     }
     for (const c of ITEM_CATEGORIES) {
       expect(counts.get(c) ?? 0, c).toBeGreaterThan(0);
-      // L'onglet « Ressources » du mode Créatif tient les cases de ressources du monde (13) et les objets bruts (11).
-      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(c === 'resources' ? 26 : 12);
+      // L'onglet « Ressources » du mode Créatif tient les cases de ressources du monde (13) et les objets bruts (11) ; 16 par onglet au plus.
+      expect(counts.get(c) ?? 0, c).toBeLessThanOrEqual(
+        c === 'resources' ? 30 : c === 'armor' ? 24 : c === 'industrial' ? 20 : 16,
+      );
     }
   });
 });
@@ -81,7 +85,7 @@ describe('visibilité des technologies', () => {
     expect(vis('cast_iron', [])).toBe(true);
     expect(vis('conveyor', [])).toBe(true);
     expect(vis('bessemer', [])).toBe(false);
-    expect(vis('bessemer', ['pack_2'])).toBe(true);
+    expect(vis('bessemer', ['gears', 'pack_2'])).toBe(true);
     expect(vis('fusion', [])).toBe(false);
   });
 
@@ -117,5 +121,46 @@ describe('technologies Recherche', () => {
     expect(labResearchLevel([])).toBe(0);
     expect(labResearchLevel(['research_1', 'research_2'])).toBe(2);
     expect(labResearchLevel(['research_2'])).toBe(0);
+  });
+});
+
+describe('objets intermédiaires des paliers 3 à 5', () => {
+  const NEW = [
+    'aluminium_rod',
+    'glass',
+    'graphite',
+    'lithium_salt',
+    'carbon_fiber',
+    'kit_circuit',
+    'chassis_simple',
+    'chassis_steel',
+    'chassis_alu',
+    'chassis_composite',
+    'circuit_advanced',
+    'microcontroller',
+    'solar_cell',
+    'battery_lithium',
+    'graphite_filter',
+    'armored_glass',
+    'fusion_capsule',
+    'supra_magnet',
+    'quantum_crystal',
+    'deuterium',
+    'tritium',
+    'liquid_nitrogen',
+  ];
+  it('ont une recette (à la main ou en machine) et une découverte', () => {
+    for (const id of NEW) {
+      const hand = ITEMS.find((i) => i.id === id)?.recipe;
+      const machine = RECIPES.some((r) => r.out[id] !== undefined);
+      expect(!!hand || machine, `${id} sans recette`).toBe(true);
+      expect(techFor(id), `${id} sans découverte`).not.toBeNull();
+    }
+  });
+  it('respectent la règle des 4 types d’ingrédients au plus', () => {
+    for (const id of NEW) {
+      const hand = ITEMS.find((i) => i.id === id)?.recipe;
+      if (hand) expect(Object.keys(hand).length, id).toBeLessThanOrEqual(4);
+    }
   });
 });

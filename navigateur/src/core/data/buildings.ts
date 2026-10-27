@@ -3,7 +3,7 @@ import { CELL_SIZE_M } from '../constants';
 import { WIDEST_VEHICLE_M } from './vehicles';
 
 export type PieceType = 'wall' | 'door' | 'floor' | 'ceiling' | 'slab' | 'stairs' | 'pillar';
-export type Material = 'wood' | 'stone' | 'concrete' | 'aluminium';
+export type Material = 'wood' | 'stone' | 'concrete' | 'aluminium' | 'armored';
 /** Identifiant d'une pièce : type + matériau, par exemple « wall_stone ». */
 export type PieceKind = `${PieceType}_${Material}` | 'door_garage';
 /** Emplacement occupé : un bord de case (mur ou porte), le sol ou le plafond d'une case. */
@@ -20,7 +20,7 @@ export interface PieceDef {
 
 export const PIECES: PieceDef[] = raw.pieces as PieceDef[];
 export const PIECE_TYPES: PieceType[] = ['wall', 'door', 'slab', 'stairs'];
-export const MATERIALS: Material[] = ['wood', 'stone', 'concrete', 'aluminium'];
+export const MATERIALS: Material[] = ['wood', 'stone', 'concrete', 'aluminium', 'armored'];
 /** Porte de garage : largeur du plus large des véhicules + 2 cases, en cases de 50 cm (toujours impaire : centrée sur la case visée). */
 export const GARAGE_WIDTH_CELLS = (() => {
   const n = Math.ceil(WIDEST_VEHICLE_M / CELL_SIZE_M) + 2;

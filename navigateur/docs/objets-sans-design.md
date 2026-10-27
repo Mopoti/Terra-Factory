@@ -28,6 +28,10 @@ Tous les objets en jeu ont une icône et un modèle, sauf deux écarts. Les mach
 | conteneur | uranium enrichi, appauvri, barre d'uranium, déchets nucléaires | à distinguer (barre, déchets) |
 | caillou | pierre concassée, scories | suffisant |
 
+## Ajoutés au jeu avec une forme provisoire (tour 259)
+
+Ces 33 objets sont maintenant dans le jeu (recette, découverte, icône) mais **sans modèle propre** : 22 intermédiaires (formes partagées : tige, verre, caillou, sable, bobine, puce, plaque, bloc, conteneur, baril ; les quatre châssis prennent la forme du moteur), 8 pièces d'armures 3 et 5 (formes des armures 2 et 4), l'exosquelette (forme du pantalon), le mur et la porte blindés (modèles de l'aluminium).
+
 ## Objets prévus mais pas encore dans le jeu (59)
 
 Ils sortent des propositions (intermédiaires, paliers 3 à 5, énergie). Aucun n'a de design.

@@ -35,9 +35,11 @@ const EQUIPMENT_SHAPES: Record<string, DropShape> = {
   rifle_magazine: 'chargeur_fusil',
   sniper_magazine: 'chargeur_sniper',
 };
-/** Pièces des armures 1, 2 et 4 : une forme par palier et par emplacement (détails propres au palier). */
+/** Armures 3 et 5 : en attendant leurs modèles, la forme de l'armure 2 et de l'armure 4. */
+const PROVISIONAL_ARMOR: Record<number, number> = { 3: 2, 5: 4 };
+/** Pièces des armures 1 à 5 : une forme par palier et par emplacement (détails propres au palier). */
 const ARMOR_SHAPES = Object.fromEntries(
-  ([1, 2, 4] as const).flatMap((n) =>
+  ([1, 2, 3, 4, 5] as const).flatMap((n) =>
     (
       [
         ['head', 'casque'],
@@ -45,9 +47,38 @@ const ARMOR_SHAPES = Object.fromEntries(
         ['legs', 'jambieres'],
         ['feet', 'bottes'],
       ] as const
-    ).map(([slot, shape]) => [`${n}_${slot}`, `armure${n}_${shape}` as DropShape]),
+    ).map(([slot, shape]) => [
+      `${n}_${slot}`,
+      `armure${PROVISIONAL_ARMOR[n] ?? n}_${shape}` as DropShape,
+    ]),
   ),
 ) as Record<string, DropShape>;
+
+/** Objets intermédiaires des paliers 3 à 5 : forme provisoire d'un objet voisin en attendant leur modèle propre. */
+const PROVISIONAL_SHAPES: Record<string, DropShape> = {
+  aluminium_rod: 'tige',
+  chassis_simple: 'moteur',
+  chassis_steel: 'moteur',
+  chassis_alu: 'moteur',
+  chassis_composite: 'moteur',
+  glass: 'verre',
+  armored_glass: 'verre',
+  graphite: 'caillou',
+  lithium_salt: 'sable',
+  carbon_fiber: 'bobine',
+  kit_circuit: 'puce',
+  circuit_advanced: 'puce',
+  microcontroller: 'puce',
+  solar_cell: 'plaque',
+  graphite_filter: 'bloc',
+  battery_lithium: 'conteneur',
+  fusion_capsule: 'conteneur',
+  supra_magnet: 'conteneur',
+  quantum_crystal: 'conteneur',
+  deuterium: 'baril',
+  tritium: 'baril',
+  liquid_nitrogen: 'baril',
+};
 
 /** Forme d'un objet du sac posé au sol (les machines ne sont pas ici : voir `dropMachine`). */
 export function dropShape(item: string): DropShape {
@@ -76,9 +107,11 @@ export function dropShape(item: string): DropShape {
   if (item === 'motor') return 'moteur';
   if (item === 'motor_heavy') return 'moteur_renforce';
   if (item === 'res_water') return 'eau';
+  if (PROVISIONAL_SHAPES[item]) return PROVISIONAL_SHAPES[item];
+  if (item === 'exoskeleton') return 'pantalon';
   const own = EQUIPMENT_SHAPES[item];
   if (own) return own;
-  const armor = /^armor(1|2|4)_(head|torso|legs|feet)$/.exec(item);
+  const armor = /^armor(1|2|3|4|5)_(head|torso|legs|feet)$/.exec(item);
   if (armor) return ARMOR_SHAPES[`${armor[1]}_${armor[2]}`];
   return 'caisse';
 }
@@ -91,6 +124,7 @@ const MATERIAL_FILE: Record<string, string> = {
   stone: 'pierre',
   concrete: 'beton',
   aluminium: 'aluminium',
+  armored: 'aluminium',
 };
 /** Ressources du monde (objets `res_*` du mode Créatif) : modèle du décor qu'elles posent. */
 const RESOURCE_MODELS: Record<string, string> = {
@@ -116,7 +150,8 @@ export function iconModelName(item: string): string | null {
   if (ore) return `minerai_${ore}_1`;
   const pipe = /^machine_pipe(?:_(\d))?$/.exec(item);
   if (pipe) return `tuyau_droit_t${pipe[1] ?? '1'}`;
-  const piece = /^piece_(wall|door|stairs|slab|pillar)_(wood|stone|concrete|aluminium)$/.exec(item);
+  const piece =
+    /^piece_(wall|door|stairs|slab|pillar)_(wood|stone|concrete|aluminium|armored)$/.exec(item);
   if (piece) {
     const mat = MATERIAL_FILE[piece[2]];
     return {

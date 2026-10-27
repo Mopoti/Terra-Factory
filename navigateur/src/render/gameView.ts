@@ -945,7 +945,13 @@ export function startGameView(
   }
 
   // --- Viser une construction ou une machine ---------------------------------------------------
-  const PIECE_BREAK_S = { wood: 0.5, stone: 0.8, concrete: 1.2, aluminium: 1 } as const;
+  const PIECE_BREAK_S = {
+    wood: 0.5,
+    stone: 0.8,
+    concrete: 1.2,
+    aluminium: 1,
+    armored: 1.6,
+  } as const;
 
   /** Boîte englobante d'une pièce de construction (pour la mise en évidence). */
   function pieceBox(key: string): Structure['box'] {

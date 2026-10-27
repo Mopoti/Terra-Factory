@@ -201,6 +201,20 @@
       "material": "aluminium",
       "color": "#aab4c0",
       "item": "piece_garage_aluminium"
+    },
+    {
+      "id": "wall_armored",
+      "type": "wall",
+      "material": "armored",
+      "color": "#46505c",
+      "item": "piece_wall_armored"
+    },
+    {
+      "id": "door_armored",
+      "type": "door",
+      "material": "armored",
+      "color": "#46505c",
+      "item": "piece_door_armored"
     }
   ],
   "supportSpanM": 5
