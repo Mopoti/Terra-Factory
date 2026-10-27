@@ -46,11 +46,19 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 .pe select.ii{flex:1 1 130px} .pe input{width:62px}
 .warn{color:var(--warn);font:600 11px var(--mono)}
 #out{width:100%;min-height:90px;font:400 11px var(--mono)}
+
+#mod{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:50} #mod.on{display:flex}
+#mod .box{background:var(--panel);border:1px solid var(--rule);border-radius:8px;max-width:min(1100px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;width:100%}
+#mod .hd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--rule)} #mod .hd h2{margin:0;font-size:1rem;font-weight:600;flex:1 1 200px}
+#mod .seg button{font:600 12px var(--sans);padding:5px 10px;border:1px solid var(--rule);background:var(--bg);color:var(--fg);cursor:pointer} #mod .seg button.on{background:var(--fg);color:var(--bg)}
+#mod .bd{overflow:auto;padding:10px} #mod svg{display:block;margin:auto}
+#mod .mn rect{fill:var(--bg);stroke:var(--line);stroke-width:1.5} #mod .mn.cur rect{stroke:var(--hl);stroke-width:3} #mod .mn{cursor:pointer} #mod .mn text{fill:var(--fg);font:400 10.5px var(--sans)} #mod .mn .tt{font:600 9px var(--mono);fill:var(--mut)}
+#mod .me{fill:none;stroke:var(--line);stroke-width:1.3} #mod .me.d{stroke:var(--hl)}
 </style>
 <main>
 <div class="top">
 <h1>Arbre des découvertes</h1>
-<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> change ingrédients, machine et durée (avertissement au-delà de 3 types d'ingrédients, 4 au palier 3 et plus) ; <b>« Modifier le coût »</b> change le prix et le type des paquets d'une découverte. <b>Traits rouges</b> d'une sélection : plein = lien avec le parent principal, pointillé = autre prérequis.</p>
+<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> change ingrédients, machine et durée (avertissement au-delà de 3 types d'ingrédients, 4 au palier 3 et plus) ; <b>« Modifier le coût »</b> change le prix et le type des paquets d'une découverte. <b>Ctrl + clic droit</b> sur une case ouvre une fenêtre avec l'arbre de ses prérequis (filtre proches / éloignés). <b>Traits rouges</b> d'une sélection : plein = lien avec le parent principal, pointillé = autre prérequis.</p>
 <div class="leg"><span><i style="border-color:var(--c-base)"></i>recette de base</span><span><i style="border-color:var(--c-inter)"></i>intermédiaire</span><span><i style="border-color:var(--c-machine)"></i>machine</span><span><i style="border-color:var(--c-autre)"></i>équipement, véhicule, construction, paquet</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <div class="bar"><button class="sq" id="zo" aria-label="Dézoomer">−</button><button class="sq" id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span>
 <button id="rp">Réinitialiser la disposition</button><button id="cp">Copier mes modifications</button><button id="rr">Annuler mes recettes et coûts</button><span id="info"></span></div>
@@ -59,6 +67,7 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 <div class="layout"><div class="scroll"><div id="zoom"><svg id="arbre" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre vertical des découvertes, divisé en bandes P0 à P5"></svg></div></div>
 <aside class="panel" id="panel"></aside></div>
 </main>
+<div id="mod" role="dialog" aria-modal="true" aria-label="Prérequis d'une découverte"><div class="box"><div class="hd"><h2 id="mt"></h2><span class="seg"><button data-m="near">Prérequis proches</button><button data-m="far">Prérequis éloignés</button></span><button id="mx">Fermer</button></div><div class="bd" id="mb"></div></div></div>
 <script>
 const DATA=@DATA@;
 const {N,E,B,W,H,LM,CW,CH,DD,ICN,ALL,MN,ORDER,RES,RN,S0}=DATA;
@@ -221,4 +230,35 @@ document.getElementById('cp').onclick=async()=>{
 function setZ(v){z=Math.max(.4,Math.min(1.6,v));svg.setAttribute('width',W*z);svg.setAttribute('height',H*z);document.getElementById('zl').textContent=Math.round(z*100)+' %'}
 document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('zo').onclick=()=>setZ(z-.15);
 build();Object.keys(store.cost).forEach(refreshCost);setZ(window.innerWidth<700?.6:.9);showPanel();
+
+/* ---------- fenêtre des prérequis (Ctrl + clic droit sur une case) ---------- */
+const modEl=document.getElementById('mod'),modB=document.getElementById('mb');let modId=null,modMode='near';
+const PARENTS={};ORDER.forEach(k=>PARENTS[k]=[]);E.forEach(([d,k])=>PARENTS[k].push(d));
+function openMod(id,mode){modId=id;if(mode)modMode=mode;
+ const near=modMode==='near',set=new Set([id]);
+ if(near)PARENTS[id].forEach(d=>set.add(d));else UP[id].forEach(d=>set.add(d));
+ const lvl={},depth=k=>lvl[k]!==undefined?lvl[k]:(lvl[k]=Math.max(-1,...PARENTS[k].filter(d=>set.has(d)).map(depth))+1);
+ [...set].forEach(depth);
+ const rows=[];[...set].forEach(k=>(rows[lvl[k]]=rows[lvl[k]]||[]).push(k));
+ const BW=140,BH=58,GX=16,GY=44,mx=Math.max(...rows.map(r=>r.length));const Wd=mx*(BW+GX)+GX,Hd=rows.length*(BH+GY)+GY-8,pp={};
+ const g=el('g');
+ rows.forEach((r,i)=>{r.sort((a,b)=>N[a].p-N[b].p||pos(a)[0]-pos(b)[0]);const off=(Wd-r.length*(BW+GX)+GX)/2;r.forEach((k,j)=>pp[k]=[off+j*(BW+GX),GX/2+i*(BH+GY)])});
+ const ge=el('g'),gn=el('g');
+ [...set].forEach(k=>PARENTS[k].filter(d=>set.has(d)).forEach(d=>{const [x1,y1]=pp[d],[x2,y2]=pp[k],a=x1+BW/2,b=y1+BH,c=x2+BW/2,e=y2,m=(b+e)/2;
+  ge.append(el('path',{class:'me'+(PARENTS[id].includes(d)&&k===id?' d':''),d:`M${a} ${b} C${a} ${m} ${c} ${m} ${c} ${e}`}))}));
+ [...set].forEach(k=>{const [x,y]=pp[k],n=el('g',{class:'mn'+(k===id?' cur':''),transform:`translate(${x} ${y})`,tabindex:0,'data-id':k});
+  n.append(el('title',{},DD[k].n+' — cliquer pour recentrer'),el('rect',{width:BW,height:BH,rx:6}),el('text',{class:'tt',x:6,y:12},'T'+N[k].p+'  '+N[k].ct));
+  N[k].ic.slice(0,3).forEach((u,i)=>{if(ICN[u])n.append(el('image',{href:ICN[u],x:BW-30-i*24+24-24+0,y:2,width:22,height:22}))});
+  wrap(DD[k].n,22).forEach((l,i)=>n.append(el('text',{x:6,y:32+i*11},l)));
+  n.addEventListener('click',()=>openMod(k));n.addEventListener('keydown',e=>{if(e.key==='Enter')openMod(k)});gn.append(n)});
+ g.append(ge,gn);const sv=el('svg',{viewBox:`0 0 ${Wd} ${Hd}`,width:Wd,height:Hd,role:'img','aria-label':'Prérequis de '+DD[id].n});sv.append(g);
+ modB.replaceChildren(sv);
+ document.getElementById('mt').textContent=`${DD[id].n} — ${near?'prérequis proches':'tous les prérequis'} (${set.size-1})`;
+ modEl.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===modMode));modEl.classList.add('on')}
+const closeMod=()=>modEl.classList.remove('on');
+document.getElementById('mx').addEventListener('click',closeMod);
+modEl.addEventListener('click',e=>{if(e.target===modEl)closeMod()});
+modEl.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&modId)openMod(modId,b.dataset.m)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMod()});
+svg.addEventListener('contextmenu',e=>{if(!e.ctrlKey)return;const g=e.target.closest('.n');if(!g)return;e.preventDefault();openMod(g.dataset.id)});
 </script>
