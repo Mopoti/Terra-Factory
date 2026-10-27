@@ -1,0 +1,169 @@
+<title>Arbre des découvertes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Arbre vertical : on lit de haut en bas ; bandes P0 à P5 = paliers ; bordure = type de recette ; onglet = palier de la case. */
+:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--t4:#8a5cc4;--t5:#c4527a;--cb:#d4572a;--hl:#c0392b;--warn:#c25a00;--fade:.18;--c-base:#7a8d3a;--c-inter:#d98a1f;--c-machine:#3b6fb6;--c-autre:#8c8478;
+--sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;--warn:#ffa24d;--c-base:#a6c25a;--c-inter:#f0a840;--c-machine:#6fa0ea;--c-autre:#a39d92;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;--warn:#ffa24d;--c-base:#a6c25a;--c-inter:#f0a840;--c-machine:#6fa0ea;--c-autre:#a39d92;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{display:flex;flex-direction:column;gap:14px}
+.top{max-width:820px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:1.5rem;margin:0;font-weight:600}
+p{margin:0;color:var(--mut);line-height:1.5}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.panel{order:-1;position:static!important}}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 12px var(--mono);color:var(--mut)} .leg i{display:inline-block;width:12px;height:12px;border:2px solid;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.sw{display:inline-block;color:#fff;font:700 10px var(--mono);padding:1px 5px;border-radius:3px;margin-right:6px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font:400 12px var(--mono);color:var(--mut)}
+button{font:600 12px var(--sans);border-radius:6px;border:1px solid var(--rule);background:var(--panel);color:var(--fg);cursor:pointer;padding:6px 10px}
+button.sq{width:32px;height:32px;padding:0;font-size:15px} button:hover{border-color:var(--line)}
+.scroll{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:82vh}
+#zoom{transform-origin:0 0;display:block}
+svg{display:block;user-select:none;-webkit-user-select:none}
+.band{stroke:var(--line);stroke-width:1.5;stroke-dasharray:2 7;stroke-linecap:round} .bl{font:700 22px var(--mono);fill:var(--fg)} .bs{font:400 10px var(--mono);fill:var(--mut)}
+.n .box{fill:var(--bg);stroke:var(--c-autre);stroke-width:3}
+.n.c-base .box{stroke:var(--c-base)} .n.c-inter .box{stroke:var(--c-inter)} .n.c-machine .box{stroke:var(--c-machine)} .n.c-autre .box{stroke:var(--c-autre)}
+.n.cb .box{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
+.tab{fill:var(--t0)} .t1 .tab{fill:var(--t1)} .t2 .tab{fill:var(--t2)} .t3 .tab{fill:var(--t3)} .t4 .tab{fill:var(--t4)} .t5 .tab{fill:var(--t5)}
+.tt{font:700 8.5px var(--mono);fill:#fff;pointer-events:none} .ph{fill:var(--rule)} .phl{font:700 14px var(--sans);fill:var(--mut)}
+.nm{font:600 10.5px var(--sans);fill:var(--fg)} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
+.n{cursor:grab;outline:none;touch-action:none} .n.drag{cursor:grabbing} .n:focus-visible .box{stroke:var(--hl)}
+.e{fill:none;stroke:var(--line);stroke-width:1.4;opacity:.75;stroke-dasharray:5 4} .e.main{stroke-dasharray:none;opacity:.95;stroke-width:1.7}
+.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:.08} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel .box{stroke:var(--hl);stroke-width:4}
+.panel{position:sticky;top:12px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 24px);overflow:auto}
+.panel h2{margin:0;font-size:1.1rem;font-weight:600} .panel h3{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.chip{display:inline-block;font:600 11px var(--mono);padding:1px 7px;border-radius:10px;border:1.5px solid var(--t0);margin-left:6px;vertical-align:2px}
+.row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.ing{display:inline-flex;align-items:center;gap:4px;font-size:.85rem} .ing img{width:26px;height:26px}
+.rc{border-top:1px solid var(--rule);padding-top:8px;display:flex;flex-direction:column;gap:6px} .rc .it{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.95rem} .rc .it img{width:34px;height:34px} .rc .it button{margin-left:auto}
+.rc .how{font:400 11.5px var(--mono);color:var(--mut)} .pre{font-size:.85rem;color:var(--mut);line-height:1.5}
+.mod{font:600 10px var(--mono);color:var(--warn);margin-left:6px}
+.pe{display:flex;flex-direction:column;gap:6px;background:color-mix(in srgb,var(--c-inter) 8%,var(--panel));border:1px solid var(--rule);border-radius:6px;padding:8px}
+.pe .ir,.pe .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .pe label{font:400 11px var(--mono);color:var(--mut)}
+select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);border:1px solid var(--rule);border-radius:4px;padding:4px;min-width:0}
+.pe select.ii{flex:1 1 130px} .pe input{width:62px}
+.warn{color:var(--warn);font:600 11px var(--mono)}
+#out{width:100%;min-height:90px;font:400 11px var(--mono)}
+</style>
+<main>
+<div class="top">
+<h1>Arbre des découvertes</h1>
+<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> permet de changer ingrédients, machine et durée (un avertissement apparaît au-delà de 3 types d'ingrédients, 4 au palier 3 et plus).</p>
+<div class="leg"><span><i style="border-color:var(--c-base)"></i>recette de base</span><span><i style="border-color:var(--c-inter)"></i>intermédiaire</span><span><i style="border-color:var(--c-machine)"></i>machine</span><span><i style="border-color:var(--c-autre)"></i>équipement, véhicule, construction, paquet</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
+<div class="bar"><button class="sq" id="zo" aria-label="Dézoomer">−</button><button class="sq" id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span>
+<button id="rp">Réinitialiser la disposition</button><button id="cp">Copier la disposition et mes recettes</button><button id="rr">Annuler toutes mes recettes</button><span id="info"></span></div>
+<textarea id="out" hidden readonly aria-label="Texte à copier"></textarea>
+</div>
+<div class="layout"><div class="scroll"><div id="zoom"><svg id="arbre" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre vertical des découvertes, divisé en bandes P0 à P5"></svg></div></div>
+<aside class="panel" id="panel"></aside></div>
+</main>
+<script>
+const DATA=@DATA@;
+const {N,E,B,W,H,CW,CH,DD,ICN,ALL,MN,ORDER}=DATA;
+const NS='http://www.w3.org/2000/svg',KEY='terra-arbre-v2';
+const svg=document.getElementById('arbre'),panelEl=document.getElementById('panel'),zoomEl=document.getElementById('zoom');
+let store={pos:{},rec:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')store={pos:s.pos||{},rec:s.rec||{}}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}};
+const NM=Object.fromEntries(ALL);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const el=(tag,attrs={},text)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;return e};
+const pos=k=>store.pos[k]||[N[k].x,N[k].y];
+const UP=Object.fromEntries(ORDER.map(k=>[k,new Set(DD[k].up)]));
+const DOWN=Object.fromEntries(ORDER.map(k=>[k,new Set(ORDER.filter(j=>UP[j].has(k)))]));
+const BANDNAME=['ressources','paquets T1','T2 + T1','T3 + T2','T4 + T3','T5 + T4'];
+function wrap(s,w=15){const out=[];let cur='';for(const word of s.split(' ')){if(cur&&cur.length+1+word.length>w){out.push(cur);cur=word}else cur=(cur+' '+word).trim()}out.push(cur);return out.slice(0,3)}
+let sel=null,z=.9,drag=null,suppress=false;
+const gEdges=el('g'),gNodes=el('g');
+/* ---------- dessin ---------- */
+function drawBands(){B.forEach(b=>{svg.append(el('line',{class:'band',x1:0,x2:W,y1:b.y,y2:b.y}),el('text',{class:'bl',x:10,y:b.y+26},'P'+b.p),el('text',{class:'bs',x:10,y:b.y+40},BANDNAME[b.p]))})}
+function edgePath(d,k,i){const [dx,dy]=pos(d),[kx,ky]=pos(k);const x1=dx+CW/2,y1=dy+CH,x2=kx+CW/2,y2=ky;const bus=y1+8+(ORDER.indexOf(d)%5)*7;return`M${x1} ${y1} V${bus} H${x2} V${y2-2}`}
+function drawEdges(){[...gEdges.children].forEach((p,i)=>p.setAttribute('d',edgePath(E[i][0],E[i][1])))}
+function nodeEl(k){
+ const n=N[k],[x,y]=pos(k);
+ const g=el('g',{class:`n t${n.p} c-${n.c}${n.cb?' cb':''}`,'data-id':k,tabindex:0,transform:`translate(${x} ${y})`});
+ g.append(el('title',{},DD[k].n),el('rect',{class:'box',x:0,y:0,width:CW,height:CH,rx:6}),el('path',{class:'tab',d:'M1 22 V7 Q1 1 7 1 H26 Z'}),el('text',{class:'tt',x:5,y:11},'T'+n.p));
+ if(n.g)g.append(el('text',{class:'gl',x:CW/2,y:27,'text-anchor':'middle'},n.g));
+ const tot=n.ic.length*32,sx=(CW-tot)/2+1;
+ n.ic.forEach((u,i)=>{if(ICN[u])g.append(el('image',{href:ICN[u],x:sx+i*32,y:6,width:30,height:30}));else g.append(el('rect',{class:'ph',x:sx+i*32+2,y:8,width:26,height:26,rx:5}),el('text',{class:'phl',x:sx+i*32+15,y:26,'text-anchor':'middle'},(NM[u]||u)[0]))});
+ if(n.more>0)g.append(el('text',{class:'mo',x:CW-8,y:16,'text-anchor':'end'},'+'+n.more));
+ wrap(n.n).forEach((l,i)=>g.append(el('text',{class:'nm',x:CW/2,y:50+i*12,'text-anchor':'middle'},l)));
+ g.append(el('text',{class:'ct',x:CW/2,y:CH-6,'text-anchor':'middle'},n.ct));
+ g.addEventListener('pointerdown',e=>{if(e.button!==0)return;const p=pos(k);drag={id:k,sx:e.clientX,sy:e.clientY,ox:p[0],oy:p[1],moved:false,g};g.setPointerCapture(e.pointerId)});
+ g.addEventListener('pointermove',e=>{if(!drag||drag.id!==k)return;const dx=(e.clientX-drag.sx)/z,dy=(e.clientY-drag.sy)/z;if(!drag.moved){if(Math.hypot(dx,dy)*z<5)return;drag.moved=true;g.classList.add('drag')}
+  const nx=Math.max(0,Math.min(W-CW,drag.ox+dx)),ny=Math.max(0,Math.min(H-CH,drag.oy+dy));store.pos[k]=[Math.round(nx),Math.round(ny)];g.setAttribute('transform',`translate(${store.pos[k][0]} ${store.pos[k][1]})`);drawEdges()});
+ const end=()=>{if(drag&&drag.id===k){if(drag.moved){save();suppress=true;setTimeout(()=>suppress=false,50);g.classList.remove('drag')}drag=null}};
+ g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
+ g.addEventListener('click',e=>{e.stopPropagation();if(suppress)return;pick(k===sel?null:k)});
+ g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(k===sel?null:k)}});
+ return g}
+function build(){svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${W} ${H}`);gEdges.replaceChildren();gNodes.replaceChildren();drawBands();
+ E.forEach(([d,k,m])=>gEdges.append(el('path',{class:'e'+(m?' main':''),'data-from':d,'data-to':k,d:edgePath(d,k)})));
+ ORDER.forEach(k=>gNodes.append(nodeEl(k)));svg.append(gEdges,gNodes);applySel()}
+function applySel(){
+ const nodes=[...gNodes.children],edges=[...gEdges.children];
+ if(!sel){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));return}
+ const all=new Set([sel,...UP[sel],...DOWN[sel]]);svg.classList.add('dim');
+ nodes.forEach(n=>{const k=n.dataset.id;n.classList.toggle('on',all.has(k));n.classList.toggle('sel',k===sel)});
+ edges.forEach(e=>e.classList.toggle('on',all.has(e.dataset.from)&&all.has(e.dataset.to)))}
+/* ---------- recettes ---------- */
+const orig={};ORDER.forEach(k=>DD[k].it.forEach(it=>orig[it.id]={p:it.p,new:it.new,disc:k}));
+const recOf=item=>store.rec[item]||(orig[item]?orig[item].p:[]);
+const isMod=item=>!!store.rec[item];
+const ing=(id,q)=>`<span class="ing">${ICN[id]?`<img alt="" src="${ICN[id]}">`:''}<span>${q} × ${esc(NM[id]||id)}</span></span>`;
+const allOpts=ALL.map(([i,n])=>`<option value="${i}">${esc(n)}</option>`).join('');
+const machOpts=cur=>['',...Object.keys(MN)].map(m=>`<option value="${m}"${m===cur?' selected':''}>${m?esc(MN[m]):'À la main'}</option>`).join('');
+const limitOf=item=>DD[orig[item].disc].t<=2?3:4;
+function pathView(item,p){return`<div class="how">${p.m?esc(MN[p.m]||p.m)+(p.s?' · '+p.s+' s':''):'À la main'}${p.mo?' · moule : '+esc(NM[p.mo]||p.mo):''}${p.o>1?' · donne '+p.o:''}${p.f?' · '+esc(p.f):''}</div><div class="row">${p.i.map(a=>ing(a[0],a[1])).join('')}</div>`}
+function pathEdit(item,j,p){const types=new Set(p.i.map(a=>a[0])).size,lim=limitOf(item);
+ return`<div class="pe" data-item="${item}" data-j="${j}"><div class="hd"><select class="m" aria-label="Machine">${machOpts(p.m)}</select><label>durée (s) <input class="s" type="number" min="0" step="0.5" value="${p.s||0}"></label><label>donne <input class="o" type="number" min="1" value="${p.o||1}"></label></div>
+ ${p.i.map((a,r)=>`<div class="ir" data-r="${r}"><select class="ii" aria-label="Ingrédient">${allOpts.replace(`value="${a[0]}"`,`value="${a[0]}" selected`)}</select><input class="iq" type="number" min="1" value="${a[1]}"><button class="rm" aria-label="Retirer">×</button></div>`).join('')}
+ <div class="ir"><button class="addi">+ ingrédient</button>${types>lim?`<span class="warn">⚠ ${types} types d'ingrédients (max ${lim})</span>`:`<span class="pre">${types} type${types>1?'s':''} d'ingrédients</span>`}</div></div>`}
+const editing=new Set();
+function panel(id){
+ const d=DD[id];let h=`<h2>${esc(d.n)}<span class="chip" style="border-color:var(--t${d.t})">palier ${d.t}</span></h2>`;
+ h+=`<div><h3>Coût de la découverte</h3><div class="row">${d.c.map(c=>ing(c[0],c[1])).join('')}</div></div>`;
+ if(d.pre.length)h+=`<div><h3>Découvertes requises</h3><div class="pre">${d.pre.map(esc).join(', ')}</div></div>`;
+ h+='<div><h3>Débloque et coût de fabrication</h3>';
+ if(!d.it.length)h+='<div class="pre">Effet : les paquets de science sont consommés plus vite.</div>';
+ d.it.forEach(it=>{const ps=recOf(it.id),ed=editing.has(it.id);
+  h+=`<div class="rc" data-item="${it.id}"><div class="it">${ICN[it.id]?`<img alt="" src="${ICN[it.id]}">`:''}<span>${esc(NM[it.id]||it.id)}</span>${isMod(it.id)?'<span class="mod">✎ modifiée</span>':''}${it.new?'<span class="mod">proposée</span>':''}<button class="ed">${ed?'Terminer':'Modifier la recette'}</button></div>`;
+  if(!ps.length&&!ed)h+='<div class="how">Pas de recette (butin ou ressource).</div>';
+  if(ed){ps.forEach((p,j)=>h+=pathEdit(it.id,j,p));h+=`<div class="row"><button class="addp">+ voie de fabrication</button>${isMod(it.id)?'<button class="undo">Rétablir la recette d\'origine</button>':''}</div>`}
+  else ps.forEach(p=>h+=pathView(it.id,p));
+  h+='</div>'});
+ h+='</div>';
+ const up=[...UP[id]];if(up.length)h+=`<div><h3>Tout l'amont (${up.length})</h3><div class="pre">${up.map(k=>esc(DD[k].n)).join(', ')}</div></div>`;
+ return h}
+function showPanel(){panelEl.innerHTML=sel?panel(sel):'<p>Touchez une case de l\'arbre : son coût de découverte et les recettes de ses objets s\'affichent ici, et se modifient.</p>';updInfo()}
+function pick(k){sel=k;applySel();showPanel()}
+function pathsFor(item){if(!store.rec[item])store.rec[item]=JSON.parse(JSON.stringify(orig[item]?orig[item].p:[]));return store.rec[item]}
+panelEl.addEventListener('click',e=>e.stopPropagation());
+panelEl.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b)return;const rc=b.closest('.rc');if(!rc)return;const item=rc.dataset.item,pe=b.closest('.pe');
+ if(b.classList.contains('ed')){editing.has(item)?editing.delete(item):editing.add(item)}
+ else if(b.classList.contains('undo')){delete store.rec[item];save()}
+ else if(b.classList.contains('addp')){pathsFor(item).push({m:'',s:0,i:[['iron_plate',1]],o:1});save()}
+ else if(pe){const ps=pathsFor(item),p=ps[+pe.dataset.j];if(b.classList.contains('addi'))p.i.push(['iron_plate',1]);else if(b.classList.contains('rm')){p.i.splice(+b.closest('.ir').dataset.r,1);if(!p.i.length)ps.splice(+pe.dataset.j,1)}save()}
+ showPanel()});
+panelEl.addEventListener('change',e=>{
+ const pe=e.target.closest('.pe');if(!pe)return;const item=pe.dataset.item,ps=pathsFor(item),p=ps[+pe.dataset.j],t=e.target;
+ if(t.classList.contains('m'))p.m=t.value;else if(t.classList.contains('s'))p.s=Math.max(0,+t.value||0);else if(t.classList.contains('o'))p.o=Math.max(1,Math.round(+t.value)||1);
+ else{const r=+t.closest('.ir').dataset.r;if(t.classList.contains('ii'))p.i[r][0]=t.value;else if(t.classList.contains('iq'))p.i[r][1]=Math.max(1,Math.round(+t.value)||1)}
+ save();showPanel()});
+document.addEventListener('click',e=>{if(!e.target.closest('.bar')&&!e.target.closest('.panel')&&!suppress)pick(null)});
+/* ---------- barre d'outils ---------- */
+const info=document.getElementById('info'),out=document.getElementById('out');
+function updInfo(){const m=Object.keys(store.rec).length,p=Object.keys(store.pos).length;info.textContent=`${p} case${p>1?'s':''} déplacée${p>1?'s':''} · ${m} recette${m>1?'s':''} modifiée${m>1?'s':''}`}
+document.getElementById('rp').onclick=()=>{store.pos={};save();build();updInfo()};
+document.getElementById('rr').onclick=()=>{store.rec={};editing.clear();save();showPanel()};
+document.getElementById('cp').onclick=async()=>{
+ const rec={};for(const item in store.rec)rec[item]={avant:orig[item]?orig[item].p:[],apres:store.rec[item]};
+ const txt=JSON.stringify({positions:store.pos,recettes:rec},null,1);
+ try{await navigator.clipboard.writeText(txt);info.textContent='Copié : collez-le dans la discussion.'}catch(e){out.hidden=false;out.value=txt;out.select();info.textContent='Sélectionnez le texte et copiez-le.'}};
+function setZ(v){z=Math.max(.4,Math.min(1.6,v));svg.setAttribute('width',W*z);svg.setAttribute('height',H*z);document.getElementById('zl').textContent=Math.round(z*100)+' %'}
+document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('zo').onclick=()=>setZ(z-.15);
+build();setZ(window.innerWidth<700?.6:.9);showPanel();
+</script>
