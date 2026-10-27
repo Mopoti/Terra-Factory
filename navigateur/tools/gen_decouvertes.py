@@ -26,6 +26,31 @@ PROPOSED_MACHINE=[{'id':'glass','machine':'furnace','in':{'silica_sand':1},'out'
  {'id':'graphite','machine':'furnace_electric','in':{'coal':2},'out':{'graphite':2},'seconds':4,'fluid':{'kind':'polymère','amount':-10}},
  {'id':'lithium_salt','machine':'evaporation_tower','in':{},'out':{'lithium_salt':1},'seconds':10,'fluid':{'kind':'eau','amount':-500}}]
 PROPOSED_RECIPE_CHANGES={'machine_lab':{'kit_circuit':3,'chassis_simple':3,'glass':4},'machine_accumulator':{'chassis_steel':2,'battery_lithium':4,'microcontroller':1}}   # le laboratoire : 2 ingrédients + des vitres
+# --- Réponses du PO (page réponse paliers 4 et 5) : propositions retenues
+PROPOSED_NAMES.update({'train_locomotive_electric':'Locomotive électrique','carbon_fiber':'Fibre de carbone','chassis_composite':'Châssis composite','machine_electrolyzer':'Électrolyseur','machine_fuel_cell':'Pile à combustible',
+ 'graphite_filter':'Filtre en graphite','machine_air_purifier':'Purificateur d\'air','machine_drill_plasma':'Foreuse à plasma','machine_arm_industrial':'Bras industriel',
+ 'armor3_head':'Casque composite','armor3_torso':'Plastron composite','armor3_legs':'Jambières composites','armor3_feet':'Bottes composites','machine_hologram_projector':'Projecteur de mur holographique',
+ 'piece_fence_wood':'Clôture en bois','piece_barrier_concrete':'Barrière en béton','piece_barrier_reinforced':'Barrière en béton armé','exoskeleton':'Exosquelette','jetpack':'Propulseur dorsal',
+ 'armored_glass':'Vitre blindée','piece_wall_armored':'Mur blindé','piece_door_armored':'Porte blindée','train_wagon_flat':'Wagon plateforme',
+ 'deuterium':'Deutérium','tritium':'Tritium','fusion_capsule':'Capsule de fusion','liquid_nitrogen':'Azote liquide','machine_air_compressor':'Compresseur d\'air','supra_magnet':'Aimant supraconducteur',
+ 'quantum_crystal':'Cristal quantique','machine_quantum_chest':'Coffre quantique','machine_fabricator':'Fabricateur universel','armor5_head':'Casque nano','armor5_torso':'Plastron nano','armor5_legs':'Jambières nano','armor5_feet':'Bottes nano','machine_turret_rail':'Tourelle à rail'})
+PROPOSED_HAND.update({'train_locomotive_electric':{'motor_heavy':2,'battery_lithium':4,'microcontroller':1},'chassis_composite':{'carbon_fiber':2,'aluminium_rod':1},
+ 'machine_electrolyzer':{'chassis_steel':2,'microcontroller':1,'graphite':4},'machine_fuel_cell':{'chassis_composite':1,'graphite':4,'microcontroller':1},
+ 'graphite_filter':{'graphite':3,'plastic_insulator':1},'machine_air_purifier':{'graphite_filter':2,'chassis_steel':1,'microcontroller':1},
+ 'machine_drill_plasma':{'motor_heavy':2,'chassis_composite':1,'microcontroller':1},'machine_arm_industrial':{'chassis_composite':1,'motor_heavy':1,'circuit_advanced':1},
+ 'armor3_head':{'aluminium_plate':2,'cloth':3,'plastic_insulator':1},'armor3_torso':{'aluminium_plate':5,'cloth':6,'plastic_insulator':2},'armor3_legs':{'aluminium_plate':4,'cloth':5,'plastic_insulator':2},'armor3_feet':{'aluminium_plate':2,'cloth':3,'plastic_insulator':1},
+ 'machine_hologram_projector':{'microcontroller':1,'glass':4,'battery_lithium':1},'piece_fence_wood':{'wood':3,'fiber':1},'piece_barrier_concrete':{'concrete_block':4,'iron_rod':2},'piece_barrier_reinforced':{'concrete_block':4,'steel_rod':4},
+ 'exoskeleton':{'chassis_alu':2,'motor':2,'microcontroller':1},'jetpack':{'chassis_composite':1,'motor':1,'battery_lithium':1},
+ 'armored_glass':{'glass':2,'plastic_insulator':1},'piece_wall_armored':{'steel_plate':4,'concrete_block':4},'piece_door_armored':{'steel_plate':8,'motor':1,'armored_glass':2},
+ 'train_wagon_flat':{'chassis_steel':2,'steel_plate':6,'iron_gear':4},'fusion_capsule':{'deuterium':1,'tritium':1,'chassis_composite':1},
+ 'machine_air_compressor':{'chassis_steel':2,'motor_heavy':1,'microcontroller':1},'supra_magnet':{'copper_wire':8,'liquid_nitrogen':1,'microcontroller':1},
+ 'quantum_crystal':{'silicon_chip':2,'glass':2,'supra_magnet':1},'machine_quantum_chest':{'quantum_crystal':1,'microcontroller':1,'chassis_composite':1},
+ 'machine_fabricator':{'microcontroller':4,'supra_magnet':1,'chassis_composite':1},'armor5_head':{'carbon_fiber':3,'aluminium_plate':2,'microcontroller':1},'armor5_torso':{'carbon_fiber':6,'aluminium_plate':4,'microcontroller':1},
+ 'armor5_legs':{'carbon_fiber':5,'aluminium_plate':3,'microcontroller':1},'armor5_feet':{'carbon_fiber':3,'aluminium_plate':2,'microcontroller':1},'machine_turret_rail':{'supra_magnet':1,'chassis_composite':1,'battery_lithium':1}})
+PROPOSED_MACHINE+=[{'id':'carbon_fiber','machine':'furnace_electric','in':{'graphite':2},'out':{'carbon_fiber':1},'seconds':6,'fluid':{'kind':'polymère','amount':-20}},
+ {'id':'deuterium','machine':'centrifuge','in':{},'out':{'deuterium':1},'seconds':20,'fluid':{'kind':'eau','amount':-1000}},
+ {'id':'tritium','machine':'fission_reactor','in':{'lithium_salt':2},'out':{'tritium':1},'seconds':30},
+ {'id':'liquid_nitrogen','machine':'air_compressor','in':{},'out':{'liquid_nitrogen':1},'seconds':8,'fluid':{'kind':'air','amount':-200}}]
 if not JEU:
     for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
     for r in PROPOSED_MACHINE: items[next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
@@ -86,6 +111,7 @@ D={
  'boiler':('Chaudière',1,['machine_boiler'],['pipe'],P(1,100)),
  'turbine':('Turbine à vapeur',1,['machine_turbine'],['boiler'],P(1,100)),
  'lamp':('Lampadaire électrique',1,['machine_lamp'],['laboratory','electricity'],P(1,100)),
+ 'fence':('Clôture en bois',1,['piece_fence_wood'],['laboratory'],P(1,50)),
  'pack_2':('Paquet de science T2',1,[S2],['laboratory','gears','wires'],P(1,100)),
  'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],P(1,100,10)),
  'turret':('Tourelle',1,['machine_turret'],['conveyor','magazine'],P(1,100,10)),
@@ -111,6 +137,7 @@ D={
  'pole_hv':('Poteau haute tension',2,['machine_pole_hv'],['chassis_steel'],P(2,100)),
  'breaker':('Disjoncteur',2,['machine_breaker'],['pole_hv'],P(2,100)),
  'wind':('Éolienne',2,['machine_wind_turbine'],['motor','chassis_steel','kit_circuit'],P(2,150)),
+ 'barrier_concrete':('Barrière en béton',2,['piece_barrier_concrete'],['concrete','rods','fence'],P(2,100)),
  'bedding_2':('Couchage de confort',2,['bed'],['bedding_1'],P(2,100)),
  'research_2':('Recherche II',2,[],['research_1'],P(2,100)),
  'rifle':('Fusil',2,['rifle'],['pistol','steel_plate'],P(2,100,20)),
@@ -149,6 +176,9 @@ D={
  'solar_cell':('Cellule photovoltaïque',3,['solar_cell'],['silicon_raw'],P(3,100)),
  'solar_panel':('Panneau solaire',3,['machine_solar_panel'],['solar_cell','chassis_alu'],P(3,150)),
  'graphite':('Graphite',3,['graphite'],['refinery','electric_furnace'],P(3,100)),
+ 'barrier_reinforced':('Barrière en béton armé',3,['piece_barrier_reinforced'],['barrier_concrete','steel_rod'],P(3,100)),
+ 'armor_3':('Armure 3',3,['armor3_head','armor3_torso','armor3_legs','armor3_feet'],['armor_2','aluminium_plate','plastic'],P(3,150,30)),
+ 'exoskeleton':('Exosquelette',3,['exoskeleton'],['chassis_alu','motor','microcontroller'],P(3,150)),
  'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],P(3,150)),
  'conveyor_3':('Tapis T3',3,['machine_conveyor_3'],['conveyor_2'],P(3,150)),
  'arm_filter':('Bras filtrant',3,['machine_arm_filter'],['conveyor_3'],P(3,100)),
@@ -176,8 +206,32 @@ D={
  'charger':('Borne de recharge',4,['machine_charger'],['battery'],P(4,100)),
  'quad_electric':('Quad électrique',4,['vehicle_quad_electric'],['quad','battery','chassis_alu'],P(4,150)),
  'storage':('Accumulateur lithium',4,['machine_accumulator'],['battery','accumulator_basic'],P(4,150)),
+ 'loco_elec':('Locomotive électrique',4,['train_locomotive_electric'],['railway','battery','engine_heavy','microcontroller','charger'],P(4,200)),
+ 'carbon_fiber':('Fibre de carbone',4,['carbon_fiber'],['graphite','electric_furnace'],P(4,150)),
+ 'chassis_composite':('Châssis composite',4,['chassis_composite'],['carbon_fiber','aluminium_rod'],P(4,150)),
+ 'electrolyzer':('Électrolyseur',4,['machine_electrolyzer'],['graphite','chassis_steel','microcontroller'],P(4,200)),
+ 'fuel_cell':('Pile à combustible',4,['machine_fuel_cell'],['electrolyzer','chassis_composite'],P(4,200)),
+ 'graphite_filter':('Filtre en graphite',4,['graphite_filter'],['graphite','plastic'],P(4,100)),
+ 'air_purifier':('Purificateur d\'air',4,['machine_air_purifier'],['graphite_filter','chassis_steel','microcontroller'],P(4,150)),
+ 'drill_plasma':('Foreuse à plasma',4,['machine_drill_plasma'],['chassis_composite','engine_heavy','drill_eco'],P(4,200)),
+ 'arm_industrial':('Bras industriel',4,['machine_arm_industrial'],['chassis_composite','engine_heavy','circuit_advanced','arm_electric'],P(4,150)),
+ 'hologram':('Projecteur de mur holographique',4,['machine_hologram_projector'],['battery','microcontroller','glass'],P(4,150)),
+ 'jetpack':('Propulseur dorsal',4,['jetpack'],['chassis_composite','battery','motor'],P(4,150)),
+ 'armored_glass':('Vitre blindée',4,['armored_glass'],['glass','plastic'],P(4,100)),
+ 'armored_buildings':('Constructions blindées',4,['piece_wall_armored','piece_door_armored'],['armored_glass','steel_plate','concrete','engine_heavy'],P(4,150)),
+ 'flatcar':('Wagon plateforme',4,['train_wagon_flat'],['railway','chassis_steel'],P(4,100)),
  'research_4':('Recherche IV',4,[],['research_3'],P(4,100)),
  # --- Palier 5 : paquets T5 et T4
+ 'deuterium':('Deutérium',5,['deuterium'],['centrifuge'],P(5,200)),
+ 'tritium':('Tritium',5,['tritium'],['reactor','lithium_salt'],P(5,200)),
+ 'air_compressor':('Compresseur d\'air',5,['machine_air_compressor','liquid_nitrogen'],['chassis_steel','engine_heavy','microcontroller'],P(5,200)),
+ 'supra_magnet':('Aimant supraconducteur',5,['supra_magnet'],['air_compressor','wires','microcontroller'],P(5,250)),
+ 'fusion_capsule':('Capsule de fusion',5,['fusion_capsule'],['deuterium','tritium','chassis_composite'],P(5,250)),
+ 'quantum_crystal':('Cristal quantique',5,['quantum_crystal'],['silicon_chip','glass','supra_magnet'],P(5,250)),
+ 'quantum_chest':('Coffre quantique',5,['machine_quantum_chest'],['quantum_crystal','microcontroller','chassis_composite'],P(5,300)),
+ 'fabricator':('Fabricateur universel',5,['machine_fabricator'],['supra_magnet','microcontroller','chassis_composite','assembler'],P(5,300)),
+ 'armor_5':('Armure 5',5,['armor5_head','armor5_torso','armor5_legs','armor5_feet'],['armor_4','carbon_fiber','aluminium_plate','microcontroller'],P(5,250,60)),
+ 'rail_turret':('Tourelle à rail',5,['machine_turret_rail'],['supra_magnet','chassis_composite','battery','turret_plasma','flatcar'],P(5,300,60)),
  'fusion':('Fusion',5,['machine_fusion_reactor'],['vitrifier','storage'],P(5,300)),
  'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],P(5,300)),
 }
@@ -201,8 +255,8 @@ def needs(item):
 START={'wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','crude_oil','uraninite','iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','carapace','living_tissue','combat_pack','nuclear_waste','piece_wall_wood','piece_door_wood','piece_door_stone','piece_wall_stone','piece_stairs_wood','piece_stairs_stone','piece_slab_wood','piece_slab_stone','piece_pillar_wood','piece_pillar_stone'}
 uncovered=[i for i in items if i not in owner and i not in START and not i.startswith('res_')]
 if uncovered: print('sans découverte :',uncovered)
-BASE={'graphite','lithium_salt','cast_iron_ingot','mould_plate','mould_gear','mould_wire','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod','crushed_stone','silica_sand','cloth','steel_ingot','slag','steel_plate','steel_rod','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot','aluminium_ingot','aluminium_plate','aluminium_rod','zamak_ingot','silicon_raw','glass'}
-INTER={'solar_cell','battery_lithium','kit_circuit','chassis_simple','chassis_steel','chassis_alu','circuit_advanced','microcontroller','motor','motor_heavy','silicon_chip','plastic_insulator','cable_insulated','rubber','concrete_block','barrel_empty','barrel_water','barrel_oil','uranium_enriched','uranium_depleted','uranium_rod','contaminated_glass'}
+BASE={'carbon_fiber','liquid_nitrogen','deuterium','tritium','graphite','lithium_salt','cast_iron_ingot','mould_plate','mould_gear','mould_wire','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod','crushed_stone','silica_sand','cloth','steel_ingot','slag','steel_plate','steel_rod','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot','aluminium_ingot','aluminium_plate','aluminium_rod','zamak_ingot','silicon_raw','glass'}
+INTER={'chassis_composite','graphite_filter','armored_glass','supra_magnet','quantum_crystal','fusion_capsule','solar_cell','battery_lithium','kit_circuit','chassis_simple','chassis_steel','chassis_alu','circuit_advanced','microcontroller','motor','motor_heavy','silicon_chip','plastic_insulator','cable_insulated','rubber','concrete_block','barrel_empty','barrel_water','barrel_oil','uranium_enriched','uranium_depleted','uranium_rod','contaminated_glass'}
 def category(k):
     """machine > intermédiaire > base > autre (équipement, armes, véhicules, pièces de construction, paquets…)."""
     un=D[k][2]

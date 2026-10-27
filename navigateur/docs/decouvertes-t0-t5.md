@@ -60,6 +60,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tuyau | 100 × Paquet de science T1 |
 | **Turbine à vapeur** | Turbine à vapeur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chaudière | 100 × Paquet de science T1 |
 | **Lampadaire électrique** | Lampadaire électrique | Vitre, Kit circuit, Châssis simple, Électricité, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Clôture en bois** | Clôture en bois | Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
 | **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Paquet de science T1, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
 | **Tourelle** | Tourelle légère | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
@@ -89,6 +90,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Poteau haute tension** | Poteau haute tension | Vitre, Kit circuit, Paquet de science T1, Paquet de science T2, Châssis renforcé | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Disjoncteur** | Disjoncteur | Vitre, Kit circuit, Paquet de science T1, Paquet de science T2, Châssis renforcé, Poteau haute tension | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Éolienne** | Éolienne | Kit circuit, Paquet de science T1, Moteur simple, Paquet de science T2, Châssis renforcé | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
+| **Barrière en béton** | Barrière en béton | Tige de fer, Paquet de science T1, Clôture en bois, Paquet de science T2, Bétonnière, Constructions en béton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Couchage de confort** | Lit | Paquet de science T1, Textile, Couchage de survie, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Recherche II** | (effet : paquets plus rapides) | Paquet de science T1, Recherche I (paquets plus vite), Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Fusil** | Fusil automatique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Pistolet, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 20 × Paquet de combat |
@@ -131,6 +133,9 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Cellule photovoltaïque** | Cellule photovoltaïque | Fil de cuivre, Vitre, Paquet de science T2, Paquet de science T3, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Panneau solaire** | Panneau solaire | Vitre, Paquet de science T2, Paquet de science T3, Châssis léger, Cellule photovoltaïque | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Graphite** | Graphite | Paquet de science T2, Paquet de science T3, Four électrique, Raffinerie | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Barrière en béton armé** | Barrière en béton armé | Paquet de science T2, Tige d'acier, Bétonnière, Barrière en béton, Paquet de science T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Armure 3** | Casque composite, Plastron composite, Jambières composites, Bottes composites | Textile, Paquet de science T2, Armure 2, Paquet de science T3, Isolant plastique, Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
+| **Exosquelette** | Exosquelette | Moteur simple, Paquet de science T2, Paquet de science T3, Microcontrôleur, Châssis léger | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Porte de garage** | Porte de garage en aluminium | Engrenage, Fil de cuivre, Paquet de science T2, Paquet de science T3, Moteur renforcé, Plaque d'aluminium, Constructions en aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Tapis T3** | Tapis express (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Tapis rapide, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Bras filtrant** | Bras filtrant (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Tapis T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
@@ -162,12 +167,36 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Borne de recharge** | Borne de recharge | Châssis renforcé, Paquet de science T3, Isolant plastique, Microcontrôleur, Paquet de science T4, Batterie lithium | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 | **Quad électrique** | Quad électrique | Moteur simple, Quad, Paquet de science T3, Châssis léger, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Accumulateur lithium** | Accumulateur (T3) | Châssis renforcé, Paquet de science T3, Microcontrôleur, Accumulateur, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Locomotive électrique** | Locomotive électrique | Paquet de science T3, Microcontrôleur, Moteur renforcé, Chemin de fer, Paquet de science T4, Batterie lithium, Borne de recharge | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Fibre de carbone** | Fibre de carbone | Paquet de science T3, Four électrique, Graphite, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Châssis composite** | Châssis composite | Paquet de science T3, Tige d'aluminium, Paquet de science T4, Fibre de carbone | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Électrolyseur** | Électrolyseur | Châssis renforcé, Paquet de science T3, Microcontrôleur, Graphite, Paquet de science T4 | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Pile à combustible** | Pile à combustible | Paquet de science T3, Microcontrôleur, Graphite, Paquet de science T4, Châssis composite, Électrolyseur | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Filtre en graphite** | Filtre en graphite | Paquet de science T3, Isolant plastique, Graphite, Paquet de science T4 | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Purificateur d'air** | Purificateur d'air | Châssis renforcé, Paquet de science T3, Microcontrôleur, Paquet de science T4, Filtre en graphite | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Foreuse à plasma** | Foreuse à plasma | Paquet de science T3, Microcontrôleur, Moteur renforcé, Foreuse économe, Paquet de science T4, Châssis composite | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Bras industriel** | Bras industriel | Bras robotique électrique, Paquet de science T3, Circuit avancé, Moteur renforcé, Paquet de science T4, Châssis composite | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Projecteur de mur holographique** | Projecteur de mur holographique | Vitre, Paquet de science T3, Microcontrôleur, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Propulseur dorsal** | Propulseur dorsal | Moteur simple, Paquet de science T3, Paquet de science T4, Batterie lithium, Châssis composite | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Vitre blindée** | Vitre blindée | Vitre, Paquet de science T3, Isolant plastique, Paquet de science T4 | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Constructions blindées** | Mur blindé, Porte blindée | Moteur simple, Plaque d'acier, Bétonnière, Constructions en béton, Paquet de science T3, Moteur renforcé, Paquet de science T4, Vitre blindée | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Wagon plateforme** | Wagon plateforme | Engrenage, Plaque d'acier, Châssis renforcé, Paquet de science T3, Chemin de fer, Paquet de science T4 | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 | **Recherche IV** | (effet : paquets plus rapides) | Paquet de science T3, Paquet de science T4, Recherche III | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 
 ## Palier 5 : paquets T5 + T4
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
+| **Deutérium** | Deutérium | Paquet de science T4, Centrifugeuse, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Tritium** | Tritium | Paquet de science T4, Réacteur à fission, Paquet de science T5, Sel de lithium | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Compresseur d'air** | Compresseur d'air, Azote liquide | Châssis renforcé, Microcontrôleur, Moteur renforcé, Paquet de science T4, Paquet de science T5 | 200 × Paquet de science T5 + 200 × Paquet de science T4 |
+| **Aimant supraconducteur** | Aimant supraconducteur | Fil de cuivre, Microcontrôleur, Paquet de science T4, Paquet de science T5, Compresseur d'air | 250 × Paquet de science T5 + 250 × Paquet de science T4 |
+| **Capsule de fusion** | Capsule de fusion | Paquet de science T4, Paquet de science T5, Châssis composite, Deutérium, Tritium | 250 × Paquet de science T5 + 250 × Paquet de science T4 |
+| **Cristal quantique** | Cristal quantique | Vitre, Puce de silicium, Paquet de science T4, Paquet de science T5, Aimant supraconducteur | 250 × Paquet de science T5 + 250 × Paquet de science T4 |
+| **Coffre quantique** | Coffre quantique | Microcontrôleur, Paquet de science T4, Paquet de science T5, Châssis composite, Cristal quantique | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Fabricateur universel** | Fabricateur universel | Assembleur, Microcontrôleur, Paquet de science T4, Paquet de science T5, Châssis composite, Aimant supraconducteur | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Armure 5** | Casque nano, Plastron nano, Jambières nano, Bottes nano | Microcontrôleur, Plaque d'aluminium, Paquet de science T4, Paquet de science T5, Armure 4, Fibre de carbone | 250 × Paquet de science T5 + 250 × Paquet de science T4 + 60 × Paquet de combat |
+| **Tourelle à rail** | Tourelle à rail | Paquet de science T4, Paquet de science T5, Tourelle plasma, Batterie lithium, Châssis composite, Wagon plateforme, Aimant supraconducteur | 300 × Paquet de science T5 + 300 × Paquet de science T4 + 60 × Paquet de combat |
 | **Fusion** | Réacteur à fusion magnétique | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Vitrificateur, Accumulateur lithium | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
 | **Balise quantique** | Relais émetteur hyperfréquence, Antenne d'alignement quantique | Plaque d'acier, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Fusion | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
 
