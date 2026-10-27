@@ -190,7 +190,7 @@ D={
  'sniper_magazine':('Chargeur de sniper',3,['sniper_magazine'],['sniper'],P(3,100,15)),
  'turret_laser':('Tourelle laser',3,['machine_turret_laser'],['turret_heavy','motor','silicon_chip'],P(3,150,30)),
  # --- Palier 4 : paquets T4 et T3
- 'centrifuge':('Centrifugeuse',4,['machine_centrifuge'],['aluminium','insulated_cable'],P(4,200)),
+ 'centrifuge':('Centrifugeuse',4,['machine_centrifuge'],['aluminium_plate','insulated_cable'],P(4,200)),
  'zamak':('Zamak',4,['zamak_ingot'],['aluminium_ingot','zinc'],P(4,150)),
  'uranium_enriched':('Uranium enrichi',4,['uranium_enriched'],['centrifuge'],P(4,200)),
  'uranium_depleted':('Uranium appauvri',4,['uranium_depleted'],['centrifuge'],P(4,100)),
@@ -199,7 +199,7 @@ D={
  'pack_5':('Paquet de science T5',4,[S5],['uranium_depleted'],P(4,100)),
  'evaporation':('Tour d\'évaporation',4,['machine_evaporation_tower'],['reactor'],P(4,150)),
  'vitrifier':('Vitrificateur',4,['machine_vitrifier','contaminated_glass'],['reactor'],P(4,200)),
- 'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_2','silicon_chip'],P(4,150,40)),
+ 'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_3','silicon_chip'],P(4,150,40)),
  'turret_plasma':('Tourelle plasma',4,['machine_turret_plasma'],['turret_laser','engine_heavy'],P(4,150,40)),
  'lithium_salt':('Sel de lithium',4,['lithium_salt'],['evaporation'],P(4,150)),
  'battery':('Batterie lithium',4,['battery_lithium'],['lithium_salt','graphite'],P(4,150)),

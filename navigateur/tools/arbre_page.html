@@ -54,6 +54,10 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 #mod .bd{overflow:auto;padding:10px} #mod svg{display:block;margin:auto}
 #mod .mn rect{fill:var(--bg);stroke:var(--line);stroke-width:1.5} #mod .mn.cur rect{stroke:var(--hl);stroke-width:3} #mod .mn{cursor:pointer} #mod .mn text{fill:var(--fg);font:400 10.5px var(--sans)} #mod .mn .tt{font:600 9px var(--mono);fill:var(--mut)}
 #mod .me{fill:none;stroke:var(--line);stroke-width:1.3} #mod .me.d{stroke:var(--hl)}
+#mod .mn.t0 rect{stroke:var(--t0)} #mod .mn.t1 rect{stroke:var(--t1)} #mod .mn.t2 rect{stroke:var(--t2)} #mod .mn.t3 rect{stroke:var(--t3)} #mod .mn.t4 rect{stroke:var(--t4)} #mod .mn.t5 rect{stroke:var(--t5)}
+#mod .mn .tb{fill:var(--line);opacity:.25} #mod .mn:hover rect{fill:color-mix(in srgb,var(--fg) 6%,var(--bg))} #mod .mn.cur rect{stroke:var(--hl)}
+#mod .pk{margin-top:12px;font-size:.85rem;color:var(--mut);display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center} #mod .chip2{font:600 11px var(--mono);padding:2px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+#mod .dn{font:400 12px var(--sans);color:var(--mut)} #mod .bd{max-height:78vh}
 </style>
 <main>
 <div class="top">
@@ -67,7 +71,7 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 <div class="layout"><div class="scroll"><div id="zoom"><svg id="arbre" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre vertical des découvertes, divisé en bandes P0 à P5"></svg></div></div>
 <aside class="panel" id="panel"></aside></div>
 </main>
-<div id="mod" role="dialog" aria-modal="true" aria-label="Prérequis d'une découverte"><div class="box"><div class="hd"><h2 id="mt"></h2><span class="seg"><button data-m="near">Prérequis proches</button><button data-m="far">Prérequis éloignés</button></span><button id="mx">Fermer</button></div><div class="bd" id="mb"></div></div></div>
+<div id="mod" role="dialog" aria-modal="true" aria-label="Prérequis d'une découverte"><div class="box"><div class="hd"><h2 id="mt"></h2><label class="dn">Déjà découvert jusqu'à <select id="md"><option value="-1">rien</option><option value="0">P0</option><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4</option></select></label><span class="seg"><button id="mzo">−</button><button id="mzi">+</button></span><span class="seg"><button data-m="near">Prérequis proches</button><button data-m="far">Prérequis éloignés</button></span><button id="mx">Fermer</button></div><div class="bd" id="mb"></div></div></div>
 <script>
 const DATA=@DATA@;
 const {N,E,B,W,H,LM,CW,CH,DD,ICN,ALL,MN,ORDER,RES,RN,S0}=DATA;
@@ -232,33 +236,68 @@ document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('z
 build();Object.keys(store.cost).forEach(refreshCost);setZ(window.innerWidth<700?.6:.9);showPanel();
 
 /* ---------- fenêtre des prérequis (Ctrl + clic droit sur une case) ---------- */
-const modEl=document.getElementById('mod'),modB=document.getElementById('mb');let modId=null,modMode='near';
-const PARENTS={};ORDER.forEach(k=>PARENTS[k]=[]);E.forEach(([d,k])=>PARENTS[k].push(d));
+const modEl=document.getElementById('mod'),modB=document.getElementById('mb');let modId=null,modMode='near',modDone=-1,modZ=0;
+const isPk=k=>k.startsWith('pack_');
+/* Parents « de recette » : les paquets qui paient la découverte ne sont pas des étapes de l'arbre, ils sont listés à part. */
+const PARENTS={};ORDER.forEach(k=>PARENTS[k]=[]);E.forEach(([d,k])=>{if(!(isPk(d)&&!isPk(k)))PARENTS[k].push(d)});
+const packsOf=k=>isPk(k)?[]:[...new Set(costOf(k).filter(([i])=>/^science_pack/.test(i)).map(([i])=>'pack_'+packLv(i)))].filter(p=>DD[p]).sort();
+const ancM={};const ancOf=k=>ancM[k]||(ancM[k]=PARENTS[k].reduce((s,d)=>{s.add(d);ancOf(d).forEach(x=>s.add(x));return s},new Set()));
+/** Parents directs sans les liens déjà impliqués par un autre parent (réduction transitive). */
+const redParents=k=>PARENTS[k].filter(d=>!PARENTS[k].some(o=>o!==d&&ancOf(o).has(d)));
 function openMod(id,mode){modId=id;if(mode)modMode=mode;
- const near=modMode==='near',set=new Set([id]);
- if(near)PARENTS[id].forEach(d=>set.add(d));else UP[id].forEach(d=>set.add(d));
- const lvl={},depth=k=>lvl[k]!==undefined?lvl[k]:(lvl[k]=Math.max(-1,...PARENTS[k].filter(d=>set.has(d)).map(depth))+1);
+ const near=modMode==='near',done=d=>N[d].p<=modDone&&d!==id;
+ const set=new Set([id]);
+ if(near)redParents(id).forEach(d=>set.add(d));else ancOf(id).forEach(d=>set.add(d));
+ [...set].filter(done).forEach(d=>set.delete(d));
+ const par=k=>redParents(k).filter(d=>set.has(d));
+ /* rangées : plus long chemin depuis les racines ; les liens qui sautent des rangées passent par des points relais */
+ const lvl={},depth=k=>lvl[k]!==undefined?lvl[k]:(lvl[k]=Math.max(-1,...par(k).map(depth))+1);
  [...set].forEach(depth);
- const rows=[];[...set].forEach(k=>(rows[lvl[k]]=rows[lvl[k]]||[]).push(k));
- const BW=140,BH=58,GX=16,GY=44,mx=Math.max(...rows.map(r=>r.length));const Wd=mx*(BW+GX)+GX,Hd=rows.length*(BH+GY)+GY-8,pp={};
- const g=el('g');
- rows.forEach((r,i)=>{r.sort((a,b)=>N[a].p-N[b].p||pos(a)[0]-pos(b)[0]);const off=(Wd-r.length*(BW+GX)+GX)/2;r.forEach((k,j)=>pp[k]=[off+j*(BW+GX),GX/2+i*(BH+GY)])});
+ const R=Math.max(...Object.values(lvl))+1,rows=Array.from({length:R},()=>[]),segs=[];
+ [...set].forEach(k=>rows[lvl[k]].push({id:k,w:132,g:12}));
+ [...set].forEach(k=>par(k).forEach(d=>{let prev=rows[lvl[d]].find(o=>o.id===d);
+  for(let r=lvl[d]+1;r<lvl[k];r++){const v={id:null,w:10,g:4,dummy:1};rows[r].push(v);segs.push([prev,v]);prev=v}
+  segs.push([prev,rows[lvl[k]].find(o=>o.id===k)])}));
+ const up=new Map(),dn=new Map();rows.flat().forEach(o=>{up.set(o,[]);dn.set(o,[])});segs.forEach(([a,b])=>{dn.get(a).push(b);up.get(b).push(a)});
+ rows.forEach(r=>r.sort((a,b)=>(a.dummy?1:0)-(b.dummy?1:0)||(a.id&&b.id?N[a.id].p-N[b.id].p||pos(a.id)[0]-pos(b.id)[0]:0)));
+ const bary=(o,nb,idx)=>{const l=nb.get(o);return l.length?l.reduce((s,n)=>s+idx.get(n),0)/l.length:null};
+ for(let it=0;it<6;it++)for(const r of (it%2?[...rows.keys()].reverse():[...rows.keys()])){
+  const idx=new Map();rows.forEach(rr=>rr.forEach((o,i)=>idx.set(o,i)));
+  const nb=it%2?dn:up,keys=new Map(rows[r].map((o,i)=>[o,bary(o,nb,idx)??i]));rows[r].sort((a,b)=>keys.get(a)-keys.get(b))}
+ const BH=60,GY=44,M=14,span=r=>r.reduce((t,o)=>t+o.w+o.g,0)-(r.length?r[r.length-1].g:0),WL=Math.max(...rows.map(span));
+ rows.forEach(r=>{let x=(WL-span(r))/2;r.forEach(o=>{o.x=x;x+=o.w+o.g})});
+ /* abscisses : on rapproche chaque case de la moyenne de ses voisines, sans chevauchement */
+ const centre=o=>o.x+o.w/2;
+ for(let it=0;it<8;it++)for(const r of (it%2?[...rows.keys()].reverse():[...rows.keys()])){
+  const nb=it%2?dn:up,want=rows[r].map(o=>{const l=[...up.get(o),...dn.get(o)];return l.length?l.reduce((s,n)=>s+centre(n),0)/l.length:centre(o)});
+  let x=0;rows[r].forEach((o,i)=>{o.x=Math.max(x,want[i]-o.w/2);x=o.x+o.w+o.g});
+  x=WL;for(let i=rows[r].length-1;i>=0;i--){const o=rows[r][i];if(o.x+o.w>x)o.x=x-o.w;x=o.x-(i?rows[r][i-1].g:0)}}
+ const minX=Math.min(...rows.flat().map(o=>o.x)),maxX=Math.max(...rows.flat().map(o=>o.x+o.w));
+ rows.forEach((r,i)=>r.forEach(o=>{o.x+=M-minX;o.y=M+i*(BH+GY)}));
+ const Wd=maxX-minX+2*M,Hd=R*(BH+GY)-GY+2*M;
  const ge=el('g'),gn=el('g');
- [...set].forEach(k=>PARENTS[k].filter(d=>set.has(d)).forEach(d=>{const [x1,y1]=pp[d],[x2,y2]=pp[k],a=x1+BW/2,b=y1+BH,c=x2+BW/2,e=y2,m=(b+e)/2;
-  ge.append(el('path',{class:'me'+(PARENTS[id].includes(d)&&k===id?' d':''),d:`M${a} ${b} C${a} ${m} ${c} ${m} ${c} ${e}`}))}));
- [...set].forEach(k=>{const [x,y]=pp[k],n=el('g',{class:'mn'+(k===id?' cur':''),transform:`translate(${x} ${y})`,tabindex:0,'data-id':k});
-  n.append(el('title',{},DD[k].n+' — cliquer pour recentrer'),el('rect',{width:BW,height:BH,rx:6}),el('text',{class:'tt',x:6,y:12},'T'+N[k].p+'  '+N[k].ct));
-  N[k].ic.slice(0,3).forEach((u,i)=>{if(ICN[u])n.append(el('image',{href:ICN[u],x:BW-30-i*24+24-24+0,y:2,width:22,height:22}))});
-  wrap(DD[k].n,22).forEach((l,i)=>n.append(el('text',{x:6,y:32+i*11},l)));
-  n.addEventListener('click',()=>openMod(k));n.addEventListener('keydown',e=>{if(e.key==='Enter')openMod(k)});gn.append(n)});
- g.append(ge,gn);const sv=el('svg',{viewBox:`0 0 ${Wd} ${Hd}`,width:Wd,height:Hd,role:'img','aria-label':'Prérequis de '+DD[id].n});sv.append(g);
- modB.replaceChildren(sv);
- document.getElementById('mt').textContent=`${DD[id].n} — ${near?'prérequis proches':'tous les prérequis'} (${set.size-1})`;
- modEl.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===modMode));modEl.classList.add('on')}
+ segs.forEach(([a,b])=>{const a1=[a.x+a.w/2,a.y+(a.dummy?4:BH)],b1=[b.x+b.w/2,b.y+(b.dummy?4:0)],m=(a1[1]+b1[1])/2;
+  const toId=b.id||null;ge.append(el('path',{class:'me'+(b.id===id&&!a.dummy||false?' d':''),d:`M${a1[0]} ${a1[1]} C${a1[0]} ${m} ${b1[0]} ${m} ${b1[0]} ${b1[1]}`}))});
+ rows.flat().filter(o=>!o.dummy).forEach(o=>{const k=o.id,n=el('g',{class:'mn t'+N[k].p+(k===id?' cur':''),transform:`translate(${o.x} ${o.y})`,tabindex:0});
+  n.append(el('title',{},DD[k].n+(k===id?'':' — cliquer pour recentrer')),el('rect',{width:o.w,height:BH,rx:7}),el('path',{class:'tb',d:'M1 22 V8 Q1 1 8 1 H28 Z'}),el('text',{class:'tt',x:5,y:12},'T'+N[k].p));
+  N[k].ic.slice(0,3).forEach((u,i)=>{if(ICN[u])n.append(el('image',{href:ICN[u],x:o.w-30-i*28,y:4,width:26,height:26}))});
+  wrap(DD[k].n,24).forEach((l,i)=>n.append(el('text',{x:8,y:40+i*11},l)));
+  n.addEventListener('click',()=>{if(k!==id){modZ=0;openMod(k)}});n.addEventListener('keydown',e=>{if(e.key==='Enter'&&k!==id)openMod(k)});gn.append(n)});
+ const fit=Math.min(1,(Math.min(innerWidth,1100)-80)/Wd),zz=modZ||Math.max(.5,fit);
+ const sv=el('svg',{viewBox:`0 0 ${Wd} ${Hd}`,width:Wd*zz,height:Hd*zz,role:'img','aria-label':'Prérequis de '+DD[id].n});sv.append(ge,gn);
+ const pk=packsOf(id),ft=document.createElement('div');ft.className='pk';
+ ft.innerHTML=(pk.length?'<b>Se paie avec :</b> '+pk.map(p=>`<button class="chip2" data-id="${p}">${esc(DD[p].n)}</button>`).join(' ')+'<span> — recette de ces paquets à découvrir avant</span>':'<b>Se paie en ressources</b> (pas de paquets).')+(near&&ancOf(id).size>redParents(id).length?`<span> · ${ancOf(id).size-redParents(id).length} prérequis plus éloignés (bouton « éloignés »)</span>`:'');
+ modB.replaceChildren(sv,ft);
+ document.getElementById('md').value=String(modDone);document.getElementById('mt').textContent=`${DD[id].n} — ${near?'prérequis proches':'tout le chemin'} (${set.size-1})`;
+ modEl.querySelectorAll('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===modMode));modEl.classList.add('on')}
+document.getElementById('md').addEventListener('change',e=>{modDone=+e.target.value;if(modId)openMod(modId)});
+const zoomMod=f=>{const s=modB.querySelector('svg');modZ=Math.max(.3,Math.min(1.6,(modZ||+s.getAttribute('width')/+s.getAttribute('viewBox').split(' ')[2])*f));if(modId)openMod(modId)};
+document.getElementById('mzo').addEventListener('click',()=>zoomMod(.8));document.getElementById('mzi').addEventListener('click',()=>zoomMod(1.25));
+modB.addEventListener('click',e=>{const b=e.target.closest('.chip2');if(b)openMod(b.dataset.id)});
 const closeMod=()=>modEl.classList.remove('on');
 document.getElementById('mx').addEventListener('click',closeMod);
 modEl.addEventListener('click',e=>{if(e.target===modEl)closeMod()});
-modEl.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&modId)openMod(modId,b.dataset.m)});
+modEl.querySelector('.seg [data-m]').parentNode.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&modId)openMod(modId,b.dataset.m)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMod()});
 /* Ctrl + clic (ou Ctrl + clic droit) sur une case de l'arbre ou sur une recette du panneau */
 document.addEventListener('contextmenu',e=>{if(!e.ctrlKey)return;const t=e.target.closest?e.target:e.target.parentNode,g=t.closest('.n'),r=t.closest('.rc');const id=g?g.dataset.id:r&&sel;if(!id)return;e.preventDefault();e.stopPropagation();openMod(id)},true);

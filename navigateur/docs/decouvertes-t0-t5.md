@@ -151,7 +151,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Centrifugeuse** | Centrifugeuse (T4) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Bétonnière, Paquet de science T3, Câble isolé, Moteur renforcé, Constructions en aluminium, Paquet de science T4 | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Centrifugeuse** | Centrifugeuse (T4) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Bétonnière, Paquet de science T3, Câble isolé, Moteur renforcé, Plaque d'aluminium, Paquet de science T4 | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
 | **Zamak** | Lingot de zamak | Lingot de zinc, Paquet de science T3, Four électrique, Lingot d'aluminium, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Uranium enrichi** | Uranium enrichi | Paquet de science T3, Paquet de science T4, Centrifugeuse | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
 | **Uranium appauvri** | Uranium appauvri (déchet) | Paquet de science T3, Paquet de science T4, Centrifugeuse | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
@@ -160,7 +160,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Paquet de science T5** | Paquet de science T5 | Plaque d'acier, Paquet de science T3, Puce de silicium, Paquet de science T4, Uranium appauvri | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 | **Tour d'évaporation** | Tour d'évaporation (T4) | Engrenage, Plaque d'acier, Bétonnière, Paquet de science T3, Paquet de science T4, Réacteur à fission | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Vitrificateur** | Station de vitrification (T4), Cylindre de verre contaminé | Plaque d'acier, Bétonnière, Paquet de science T3, Puce de silicium, Isolant plastique, Câble isolé, Paquet de science T4, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
-| **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Armure 2, Paquet de science T3, Puce de silicium, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
+| **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Paquet de science T3, Puce de silicium, Armure 3, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
 | **Tourelle plasma** | Tourelle à plasma | Plaque d'acier, Paquet de science T3, Puce de silicium, Moteur renforcé, Paquet de science T4, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
 | **Sel de lithium** | Sel de lithium | Paquet de science T3, Paquet de science T4, Tour d'évaporation | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Batterie lithium** | Batterie lithium | Paquet de science T3, Isolant plastique, Graphite, Paquet de science T4, Sel de lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
