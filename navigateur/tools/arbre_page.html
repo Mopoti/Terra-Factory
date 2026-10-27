@@ -151,10 +151,14 @@ const okIng=(item,id)=>avail(orig[item].disc).has(id);
 const okMach=(item,m)=>!m||MACH_START.has(m)||avail(orig[item].disc).has('machine_'+m);
 const editing=new Set();
 const editingCost=new Set();
+/** Un paquet Tk n'est proposé que si sa recette est découverte avant (la découverte « Paquet de science Tk » est en amont). Le paquet de combat est toujours permis. */
+const packOk=(id,p)=>p==='combat_pack'||UP[id].has('pack_'+packLv(p));
 function costOpts(id,cur){const av=ALL.filter(([i])=>avail(id).has(i)&&!PACKS.includes(i));
- return`<optgroup label="Paquets de science">${PACKS.map(p=>`<option value="${p}"${p===cur?' selected':''}>${esc(NM[p]||p)}</option>`).join('')}</optgroup><optgroup label="Objets disponibles">${av.map(([i,n])=>`<option value="${i}"${i===cur?' selected':''}>${esc(n)}</option>`).join('')}</optgroup>`}
+ return`<optgroup label="Paquets de science (recette déjà découverte)">${PACKS.filter(p=>packOk(id,p)||p===cur).map(p=>`<option value="${p}"${p===cur?' selected':''}>${packOk(id,p)?'':'⚠ '}${esc(NM[p]||p)}</option>`).join('')}</optgroup><optgroup label="Objets disponibles">${av.map(([i,n])=>`<option value="${i}"${i===cur?' selected':''}>${esc(n)}</option>`).join('')}</optgroup>`}
 function costWarn(id){const c=costOf(id),w=[],t=DD[id].t;
- c.filter(([i])=>/^science_pack/.test(i)).forEach(([i])=>{const pk='pack_'+packLv(i);if(!UP[id].has(pk)&&id!==pk)w.push(`la découverte « ${DD[pk]?DD[pk].n:pk} » n'est pas en amont`)});
+ c.filter(([i])=>/^science_pack/.test(i)).forEach(([i])=>{if(!packOk(id,i))w.push(`${NM[i]} : sa recette se découvre plus tard (« ${DD['pack_'+packLv(i)]?DD['pack_'+packLv(i)].n:''} » n'est pas en amont)`)});
+ if(t===0&&c.some(([i])=>/^science_pack/.test(i)))w.push('le palier 0 se paie en ressources, pas en paquets');
+ c.filter(([i])=>!PACKS.includes(i)&&!avail(id).has(i)).forEach(([i])=>w.push(`${NM[i]||i} : pas encore découvert à ce stade`));
  const want=t===0?[]:t===1?[1]:[t,t-1],have=c.filter(([i])=>/^science_pack/.test(i)).map(([i])=>packLv(i)).sort((a,b)=>b-a);
  if(t>0&&JSON.stringify(want)!==JSON.stringify(have))w.push(`règle du palier ${t} : paquets ${want.map(l=>'T'+l).join(' et ')}`);
  return w.length?`<div class="warn">⚠ ${w.map(esc).join(' ; ')}</div>`:''}
@@ -193,7 +197,7 @@ panelEl.addEventListener('click',e=>{
 panelEl.addEventListener('click',e=>{const b=e.target.closest('button');const box=b&&b.closest('[data-cost]');if(!box)return;const id=box.dataset.cost;
  if(b.classList.contains('edc'))editingCost.has(id)?editingCost.delete(id):editingCost.add(id);
  else if(b.classList.contains('cundo')){delete store.cost[id];save();refreshCost(id)}
- else if(b.classList.contains('cadd')){costList(id).push(['science_pack',1]);save();refreshCost(id)}
+ else if(b.classList.contains('cadd')){costList(id).push([PACKS.find(p=>packOk(id,p))||'wood',1]);save();refreshCost(id)}
  else if(b.classList.contains('crm')){const l=costList(id);l.splice(+b.closest('.ir').dataset.r,1);if(!l.length)l.push(['science_pack',1]);save();refreshCost(id)}
  showPanel()});
 panelEl.addEventListener('change',e=>{const box=e.target.closest('[data-cost]');if(!box)return;const id=box.dataset.cost,l=costList(id),r=+e.target.closest('.ir').dataset.r;
