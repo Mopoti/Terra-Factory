@@ -50,10 +50,10 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 <main>
 <div class="top">
 <h1>Arbre des découvertes</h1>
-<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> permet de changer ingrédients, machine et durée (un avertissement apparaît au-delà de 3 types d'ingrédients, 4 au palier 3 et plus).</p>
+<p>@N@ découvertes. À gauche, les bandes P0 à P5 sont les paliers. <b>Glissez une case</b> pour la déplacer (la disposition reste dans votre navigateur) ; <b>touchez-la</b> pour voir ses dépendances et ses recettes dans le panneau ; <b>« Modifier la recette »</b> change ingrédients, machine et durée (avertissement au-delà de 3 types d'ingrédients, 4 au palier 3 et plus) ; <b>« Modifier le coût »</b> change le prix et le type des paquets d'une découverte. <b>Traits rouges</b> d'une sélection : plein = lien avec le parent principal, pointillé = autre prérequis.</p>
 <div class="leg"><span><i style="border-color:var(--c-base)"></i>recette de base</span><span><i style="border-color:var(--c-inter)"></i>intermédiaire</span><span><i style="border-color:var(--c-machine)"></i>machine</span><span><i style="border-color:var(--c-autre)"></i>équipement, véhicule, construction, paquet</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <div class="bar"><button class="sq" id="zo" aria-label="Dézoomer">−</button><button class="sq" id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span>
-<button id="rp">Réinitialiser la disposition</button><button id="cp">Copier la disposition et mes recettes</button><button id="rr">Annuler toutes mes recettes</button><span id="info"></span></div>
+<button id="rp">Réinitialiser la disposition</button><button id="cp">Copier mes modifications</button><button id="rr">Annuler mes recettes et coûts</button><span id="info"></span></div>
 <textarea id="out" hidden readonly aria-label="Texte à copier"></textarea>
 </div>
 <div class="layout"><div class="scroll"><div id="zoom"><svg id="arbre" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre vertical des découvertes, divisé en bandes P0 à P5"></svg></div></div>
@@ -64,8 +64,8 @@ const DATA=@DATA@;
 const {N,E,B,W,H,LM,CW,CH,DD,ICN,ALL,MN,ORDER,RES,RN,S0}=DATA;
 const NS='http://www.w3.org/2000/svg',KEY='terra-arbre-v2';
 const svg=document.getElementById('arbre'),panelEl=document.getElementById('panel'),zoomEl=document.getElementById('zoom');
-let store={pos:{},rec:{}};
-try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')store={pos:s.pos||{},rec:s.rec||{}}}catch(e){}
+let store={pos:{},rec:{},cost:{}};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')store={pos:s.pos||{},rec:s.rec||{},cost:s.cost||{}}}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}};
 const NM=Object.assign(Object.fromEntries(ALL),RN);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -124,6 +124,13 @@ function applySel(){markRes();
  edges.forEach(e=>e.classList.toggle('on',all.has(e.dataset.from)&&all.has(e.dataset.to)))}
 /* ---------- recettes ---------- */
 const orig={};ORDER.forEach(k=>DD[k].it.forEach(it=>orig[it.id]={p:it.p,new:it.new,disc:k}));
+const PACKS=['science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'];
+const costOf=id=>store.cost[id]||DD[id].c;
+const packLv=i=>i==='science_pack'?1:+i.slice(-1);
+function costText(c){const packs=c.filter(([i])=>/^science_pack/.test(i));if(!packs.length)return'ressources';
+ const num=c.filter(([i])=>i!=='combat_pack').reduce((m,[,q])=>Math.max(m,q),0),lv=packs.map(([i])=>packLv(i)).sort((a,b)=>b-a).map(l=>'T'+l).join('+'),cb=c.find(([i])=>i==='combat_pack');
+ return`${num}×${lv}`+(cb?` +${cb[1]}⚔`:'')}
+function refreshCost(id){const g=gNodes.querySelector(`[data-id="${id}"] .ct`);if(g)g.textContent=costText(costOf(id))}
 const recOf=item=>store.rec[item]||(orig[item]?orig[item].p:[]);
 const isMod=item=>!!store.rec[item];
 const ing=(id,q,bad)=>`<span class="ing${bad?' bad':''}"${bad?' title="Pas encore découvert à ce stade de l\'arbre"':''}>${ICN[id]?`<img alt="" src="${ICN[id]}">`:''}<span>${bad?'⚠ ':''}${q} × ${esc(NM[id]||id)}</span></span>`;
@@ -143,9 +150,23 @@ const MACH_START=new Set(['furnace','drill','chest_wood']);
 const okIng=(item,id)=>avail(orig[item].disc).has(id);
 const okMach=(item,m)=>!m||MACH_START.has(m)||avail(orig[item].disc).has('machine_'+m);
 const editing=new Set();
+const editingCost=new Set();
+function costOpts(id,cur){const av=ALL.filter(([i])=>avail(id).has(i)&&!PACKS.includes(i));
+ return`<optgroup label="Paquets de science">${PACKS.map(p=>`<option value="${p}"${p===cur?' selected':''}>${esc(NM[p]||p)}</option>`).join('')}</optgroup><optgroup label="Objets disponibles">${av.map(([i,n])=>`<option value="${i}"${i===cur?' selected':''}>${esc(n)}</option>`).join('')}</optgroup>`}
+function costWarn(id){const c=costOf(id),w=[],t=DD[id].t;
+ c.filter(([i])=>/^science_pack/.test(i)).forEach(([i])=>{const pk='pack_'+packLv(i);if(!UP[id].has(pk)&&id!==pk)w.push(`la découverte « ${DD[pk]?DD[pk].n:pk} » n'est pas en amont`)});
+ const want=t===0?[]:t===1?[1]:[t,t-1],have=c.filter(([i])=>/^science_pack/.test(i)).map(([i])=>packLv(i)).sort((a,b)=>b-a);
+ if(t>0&&JSON.stringify(want)!==JSON.stringify(have))w.push(`règle du palier ${t} : paquets ${want.map(l=>'T'+l).join(' et ')}`);
+ return w.length?`<div class="warn">⚠ ${w.map(esc).join(' ; ')}</div>`:''}
+function costBlock(id){const c=costOf(id),mod=!!store.cost[id],ed=editingCost.has(id);
+ let h=`<div data-cost="${id}"><h3>Coût de la découverte${mod?' <span class="mod">✎ modifié</span>':''} <button class="edc" style="float:right">${ed?'Terminer':'Modifier le coût'}</button></h3>`;
+ if(!ed)h+=`<div class="row">${c.map(a=>ing(a[0],a[1])).join('')}</div>`;
+ else h+=`<div class="pe">${c.map((a,r)=>`<div class="ir" data-r="${r}"><select class="ci" aria-label="Objet du coût">${costOpts(id,a[0])}</select><input class="cq" type="number" min="1" value="${a[1]}"><button class="crm" aria-label="Retirer">×</button></div>`).join('')}<div class="ir"><button class="cadd">+ ligne de coût</button>${mod?'<button class="cundo">Rétablir le coût d\'origine</button>':''}</div></div>`;
+ return h+costWarn(id)+'</div>'}
+function costList(id){if(!store.cost[id])store.cost[id]=JSON.parse(JSON.stringify(DD[id].c));return store.cost[id]}
 function panel(id){
  const d=DD[id];let h=`<h2>${esc(d.n)}<span class="chip" style="border-color:var(--t${d.t})">palier ${d.t}</span></h2>`;
- h+=`<div><h3>Coût de la découverte</h3><div class="row">${d.c.map(c=>ing(c[0],c[1])).join('')}</div></div>`;
+ h+=costBlock(id);
  if(d.pre.length)h+=`<div><h3>Découvertes requises</h3><div class="pre">${d.pre.map(esc).join(', ')}</div></div>`;
  h+='<div><h3>Débloque et coût de fabrication</h3>';
  if(!d.it.length)h+='<div class="pre">Effet : les paquets de science sont consommés plus vite.</div>';
@@ -169,6 +190,14 @@ panelEl.addEventListener('click',e=>{
  else if(b.classList.contains('addp')){pathsFor(item).push({m:'',s:0,i:[['wood',1]],o:1});save()}
  else if(pe){const ps=pathsFor(item),p=ps[+pe.dataset.j];if(b.classList.contains('addi'))p.i.push([[...avail(orig[item].disc)].find(i=>NM[i]&&!i.startsWith('res_'))||'wood',1]);else if(b.classList.contains('rm')){p.i.splice(+b.closest('.ir').dataset.r,1);if(!p.i.length)ps.splice(+pe.dataset.j,1)}save()}
  showPanel()});
+panelEl.addEventListener('click',e=>{const b=e.target.closest('button');const box=b&&b.closest('[data-cost]');if(!box)return;const id=box.dataset.cost;
+ if(b.classList.contains('edc'))editingCost.has(id)?editingCost.delete(id):editingCost.add(id);
+ else if(b.classList.contains('cundo')){delete store.cost[id];save();refreshCost(id)}
+ else if(b.classList.contains('cadd')){costList(id).push(['science_pack',1]);save();refreshCost(id)}
+ else if(b.classList.contains('crm')){const l=costList(id);l.splice(+b.closest('.ir').dataset.r,1);if(!l.length)l.push(['science_pack',1]);save();refreshCost(id)}
+ showPanel()});
+panelEl.addEventListener('change',e=>{const box=e.target.closest('[data-cost]');if(!box)return;const id=box.dataset.cost,l=costList(id),r=+e.target.closest('.ir').dataset.r;
+ if(e.target.classList.contains('ci'))l[r][0]=e.target.value;else if(e.target.classList.contains('cq'))l[r][1]=Math.max(1,Math.round(+e.target.value)||1);save();refreshCost(id);showPanel()});
 panelEl.addEventListener('change',e=>{
  const pe=e.target.closest('.pe');if(!pe)return;const item=pe.dataset.item,ps=pathsFor(item),p=ps[+pe.dataset.j],t=e.target;
  if(t.classList.contains('m'))p.m=t.value;else if(t.classList.contains('s'))p.s=Math.max(0,+t.value||0);else if(t.classList.contains('o'))p.o=Math.max(1,Math.round(+t.value)||1);
@@ -177,14 +206,15 @@ panelEl.addEventListener('change',e=>{
 document.addEventListener('click',e=>{if(!e.target.closest('.bar')&&!e.target.closest('.panel')&&!suppress)pick(null)});
 /* ---------- barre d'outils ---------- */
 const info=document.getElementById('info'),out=document.getElementById('out');
-function updInfo(){const m=Object.keys(store.rec).length,p=Object.keys(store.pos).length;info.textContent=`${p} case${p>1?'s':''} déplacée${p>1?'s':''} · ${m} recette${m>1?'s':''} modifiée${m>1?'s':''}`}
+function updInfo(){const m=Object.keys(store.rec).length,p=Object.keys(store.pos).length,c=Object.keys(store.cost).length;info.textContent=`${p} case${p>1?'s':''} déplacée${p>1?'s':''} · ${m} recette${m>1?'s':''} modifiée${m>1?'s':''} · ${c} coût${c>1?'s':''} modifié${c>1?'s':''}`}
 document.getElementById('rp').onclick=()=>{store.pos={};save();build();updInfo()};
-document.getElementById('rr').onclick=()=>{store.rec={};editing.clear();save();showPanel()};
+document.getElementById('rr').onclick=()=>{const ids=Object.keys(store.cost);store.rec={};store.cost={};editing.clear();editingCost.clear();save();ids.forEach(refreshCost);showPanel()};
 document.getElementById('cp').onclick=async()=>{
  const rec={};for(const item in store.rec)rec[item]={avant:orig[item]?orig[item].p:[],apres:store.rec[item]};
- const txt=JSON.stringify({positions:store.pos,recettes:rec},null,1);
+ const cou={};for(const id in store.cost)cou[id]={avant:DD[id].c,apres:store.cost[id]};
+ const txt=JSON.stringify({positions:store.pos,recettes:rec,couts:cou},null,1);
  try{await navigator.clipboard.writeText(txt);info.textContent='Copié : collez-le dans la discussion.'}catch(e){out.hidden=false;out.value=txt;out.select();info.textContent='Sélectionnez le texte et copiez-le.'}};
 function setZ(v){z=Math.max(.4,Math.min(1.6,v));svg.setAttribute('width',W*z);svg.setAttribute('height',H*z);document.getElementById('zl').textContent=Math.round(z*100)+' %'}
 document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('zo').onclick=()=>setZ(z-.15);
-build();setZ(window.innerWidth<700?.6:.9);showPanel();
+build();Object.keys(store.cost).forEach(refreshCost);setZ(window.innerWidth<700?.6:.9);showPanel();
 </script>
