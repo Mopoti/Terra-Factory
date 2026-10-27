@@ -75,27 +75,30 @@ for k in ids:
         edges.append(f'<path class="e{" main" if main else ""}" data-from="{d}" data-to="{k}" d="M{x1:.0f} {y1} V{bus:.0f} H{x2:.0f} V{y2-2}"/>')
 svg+=edges
 for k in ids:
-    t=tier(k); cls=f'n t{t}'+(' cb' if 'combat_pack' in D[k][4] else '')
-    ic=[u for u in D[k][2] if ICONS.get(u,{}).get('icon')][:3]
+    t=tier(k); cls=f'n t{t} c-{G.CAT[k]}'+(' cb' if 'combat_pack' in D[k][4] else '')
+    ic=[u for u in D[k][2] if ICONS.get(u,{}).get('icon') or u in G.PROPOSED][:3]
     g=[f'<g class="{cls}" data-id="{k}" tabindex="0"><title>{html.escape(D[k][0])} : {html.escape(", ".join(n(u) for u in D[k][2]) or "paquets plus rapides")}</title>',
-       f'<rect x="{x[k]:.0f}" y="{y[k]}" width="{CW}" height="{CH}" rx="6"/>']
+       f'<rect class="box" x="{x[k]:.0f}" y="{y[k]}" width="{CW}" height="{CH}" rx="6"/>',
+       f'<path class="tab" d="M{x[k]+1:.0f} {y[k]+22} V{y[k]+7} Q{x[k]+1:.0f} {y[k]+1} {x[k]+7:.0f} {y[k]+1} H{x[k]+26:.0f} Z"/><text class="tt" x="{x[k]+5:.0f}" y="{y[k]+11}">T{t}</text>']
     if not D[k][2]:
         g.append(f'<text class="gl" x="{x[k]+CW/2:.0f}" y="{y[k]+27}" text-anchor="middle">I{"I" if "2" in k else ""}{"I" if "3" in k else ""}</text>')
     tot=len(ic)*32; sx=x[k]+(CW-tot)/2+1
-    for i,u in enumerate(ic): g.append(f'<use href="#i_{u}" x="{sx+i*32:.0f}" y="{y[k]+6}"/>')
+    for i,u in enumerate(ic):
+        if ICONS.get(u,{}).get('icon'): g.append(f'<use href="#i_{u}" x="{sx+i*32:.0f}" y="{y[k]+6}"/>')
+        else: g.append(f'<rect class="ph" x="{sx+i*32+2:.0f}" y="{y[k]+8}" width="26" height="26" rx="5"/><text class="phl" x="{sx+i*32+15:.0f}" y="{y[k]+26}" text-anchor="middle">{html.escape(n(u)[0])}</text>')
     more=len(D[k][2])-len(ic)
     if more>0: g.append(f'<text class="mo" x="{x[k]+CW-8}" y="{y[k]+16}" text-anchor="end">+{more}</text>')
     for i,line in enumerate(wrap(label(k))): g.append(f'<text class="nm" x="{x[k]+CW/2:.0f}" y="{y[k]+50+i*12}" text-anchor="middle">{html.escape(line)}</text>')
     g.append(f'<text class="ct" x="{x[k]+CW/2:.0f}" y="{y[k]+CH-6}" text-anchor="middle">{html.escape(costline(k))}</text></g>')
     svg.append(''.join(g))
 svg.append('</svg>')
-items_all={i['id']:i for i in json.load(open('content/items.json'))['items']}
-recs=json.load(open('content/recipes.json'))['recipes']
+items_all=G.items
+recs=G.rec
 def paths_of(item):
     out=[]
     it=items_all[item]
     if it.get('recipe'):
-        out.append({'m':'','s':0,'i':[[k,v] for k,v in it['recipe'].items()],'o':it.get('yield',1)})
+        out.append({'m':'','s':0,'i':[[k,v] for k,v in it['recipe'].items()],'o':it.get('yield',1),'new':item in G.PROPOSED})
     for r in recs:
         if item in r['out'] and not (r['machine']=='barreler' and item=='barrel_empty'):
             f=r.get('fluid')
@@ -110,7 +113,7 @@ for k in ids:
         ps=paths_of(u)
         for pth in ps:
             for a,_ in pth['i']: need_icons.add(a)
-        need_icons.add(u); its.append({'id':u,'n':n(u),'p':ps})
+        need_icons.add(u); its.append({'id':u,'n':n(u),'p':ps,'new':u in G.PROPOSED})
     cost=[[kk,v] for kk,v in D[k][4].items()]
     for kk,_ in cost: need_icons.add(kk)
     dd[k]={'n':D[k][0],'t':tier(k),'c':cost,'it':its,'pre':[D[d][0] for d in direct[k]]}
@@ -123,11 +126,11 @@ page='''<title>Arbre des découvertes</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
-/* Arbre vertical : on lit de haut en bas, une découverte débloque un groupe de recettes quand ses parents sont connus. Bordures = couleur des paquets du jeu. */
-:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--t4:#8a5cc4;--t5:#c4527a;--cb:#d4572a;--hl:#c0392b;--fade:.18;
+/* Arbre vertical : on lit de haut en bas, une découverte débloque un groupe de recettes quand ses parents sont connus. Bordure = type de recette ; onglet = palier. */
+:root{--bg:#f3f1ec;--panel:#fbfaf7;--fg:#22211e;--mut:#6c6860;--line:#a29d92;--rule:#d9d5cc;--t0:#9a958a;--t1:#b8a233;--t2:#2f9e82;--t3:#3a7bd5;--t4:#8a5cc4;--t5:#c4527a;--cb:#d4572a;--hl:#c0392b;--fade:.18;--c-base:#7a8d3a;--c-inter:#d98a1f;--c-machine:#3b6fb6;--c-autre:#8c8478;
 --sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;--c-base:#a6c25a;--c-inter:#f0a840;--c-machine:#6fa0ea;--c-autre:#a39d92;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--line:#6f6a60;--rule:#34352f;--t0:#8a867b;--t1:#d6c15a;--t2:#4fc3a1;--t3:#6aa3ff;--t4:#b48be8;--t5:#ee7fa3;--cb:#ee7a4e;--hl:#ff7a68;--c-base:#a6c25a;--c-inter:#f0a840;--c-machine:#6fa0ea;--c-autre:#a39d92;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 main{display:flex;flex-direction:column;gap:14px}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;align-items:start}
@@ -135,7 +138,7 @@ main{display:flex;flex-direction:column;gap:14px}
 .top{max-width:760px;display:flex;flex-direction:column;gap:12px}
 h1{font-size:1.5rem;margin:0;font-weight:600}
 p{margin:0;color:var(--mut);line-height:1.5}
-.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 12px var(--mono);color:var(--mut)} .leg i{display:inline-block;width:12px;height:12px;border:2px solid;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font:400 12px var(--mono);color:var(--mut)} .sw{display:inline-block;color:#fff;font:700 10px var(--mono);padding:1px 5px;border-radius:3px;margin-right:6px}.leg i{display:inline-block;width:12px;height:12px;border:2px solid;border-radius:3px;margin-right:6px;vertical-align:-2px}
 #det{display:none}
 .panel{position:sticky;top:12px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 24px);overflow:auto}
 .panel h2{margin:0;font-size:1.1rem;font-weight:600} .panel h3{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
@@ -148,19 +151,22 @@ p{margin:0;color:var(--mut);line-height:1.5}
 .bar button{font:600 14px var(--sans);width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:var(--panel);color:var(--fg);cursor:pointer}
 .scroll{overflow:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel);max-height:80vh}
 #zoom{transform-origin:0 0;display:block}
-.n rect{fill:var(--bg);stroke:var(--t0);stroke-width:2}
-.n.t1 rect{stroke:var(--t1)} .n.t2 rect{stroke:var(--t2)} .n.t3 rect{stroke:var(--t3)} .n.t4 rect{stroke:var(--t4)} .n.t5 rect{stroke:var(--t5)}
-.n.cb rect{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
+.n .box{fill:var(--bg);stroke:var(--c-autre);stroke-width:3}
+.n.c-base .box{stroke:var(--c-base)} .n.c-inter .box{stroke:var(--c-inter)} .n.c-machine .box{stroke:var(--c-machine)} .n.c-autre .box{stroke:var(--c-autre)}
+.n.cb .box{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
+.tab{fill:var(--t0)} .t1 .tab{fill:var(--t1)} .t2 .tab{fill:var(--t2)} .t3 .tab{fill:var(--t3)} .t4 .tab{fill:var(--t4)} .t5 .tab{fill:var(--t5)}
+.tt{font:700 8.5px var(--mono);fill:#fff;pointer-events:none} .ph{fill:var(--rule)} .phl{font:700 14px var(--sans);fill:var(--mut)}
 .nm{font:600 10.5px var(--sans);fill:var(--fg)} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
-.n{cursor:pointer;outline:none} .n:focus-visible rect{stroke:var(--hl);stroke-width:3}
+.n{cursor:pointer;outline:none} .n:focus-visible .box{stroke:var(--hl)}
 .e{fill:none;stroke:var(--line);stroke-width:1.4;opacity:.75;stroke-dasharray:5 4} .e.main{stroke-dasharray:none;opacity:.95;stroke-width:1.7}
-.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:.08} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel rect{stroke:var(--hl);stroke-width:3.5}
+.dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:.08} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel .box{stroke:var(--hl);stroke-width:4}
 </style>
 <main>
 <div class="top">
 <h1>Arbre des découvertes</h1>
 <p>Paliers 0 à 5 : @N@ découvertes, du haut (les premières) vers le bas. Chaque case débloque un groupe de recettes ; on la découvre quand ses parents sont connus. Une case a un trait plein vers son parent principal et des traits pointillés vers ses autres parents. Touchez une case pour mettre en évidence tout ce qu'il faut avant et tout ce qu'elle ouvre.</p>
-<div class="leg"><span><i style="border-color:var(--t0)"></i>palier 0 : ressources</span><span><i style="border-color:var(--t1)"></i>palier 1 : paquets T1</span><span><i style="border-color:var(--t2)"></i>palier 2 : T2 + T1</span><span><i style="border-color:var(--t3)"></i>palier 3 : T3 + T2</span><span><i style="border-color:var(--t4)"></i>palier 4 : T4 + T3</span><span><i style="border-color:var(--t5)"></i>palier 5 : T5 + T4</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
+<div class="leg"><span><i style="border-color:var(--c-base)"></i>recette de base (plaque, fil, engrenage, tissu…)</span><span><i style="border-color:var(--c-inter)"></i>intermédiaire (kit circuit, puce, moteur…)</span><span><i style="border-color:var(--c-machine)"></i>machine</span><span><i style="border-color:var(--c-autre)"></i>équipement, véhicule, construction, paquet</span></div>
+<div class="leg"><span><b style="background:var(--t0)" class="sw">T0</b>ressources</span><span><b style="background:var(--t1)" class="sw">T1</b>paquets T1</span><span><b style="background:var(--t2)" class="sw">T2</b>T2 + T1</span><span><b style="background:var(--t3)" class="sw">T3</b>T3 + T2</span><span><b style="background:var(--t4)" class="sw">T4</b>T4 + T3</span><span><b style="background:var(--t5)" class="sw">T5</b>T5 + T4</span><span><i style="border-color:var(--cb);background:color-mix(in srgb,var(--cb) 25%,transparent)"></i>+ paquets de combat (⚔)</span></div>
 <div class="bar"><button id="zo" aria-label="Dézoomer">−</button><button id="zi" aria-label="Zoomer">+</button><span id="zl">100 %</span></div>
 </div>
 <div class="layout"><div class="scroll"><div id="zoom">@SVG@</div></div><aside class="panel" id="panel"><p>Touchez une case de l'arbre : son coût de découverte et le coût de fabrication de ses recettes s'affichent ici.</p></aside></div>
@@ -181,7 +187,7 @@ function panel(id){
  d.it.forEach(it=>{
   h+='<div class="rc"><div class="it">'+(ICN[it.id]?'<img alt="" src="'+ICN[it.id]+'">':'')+'<span>'+esc(it.n)+'</span></div>';
   if(!it.p.length)h+='<div class="how">Pas de recette (butin ou ressource).</div>';
-  it.p.forEach(p=>{h+='<div class="how">'+(p.m?esc(p.m)+(p.s?' · '+p.s+' s':''):'À la main')+(p.mo?' · moule : '+esc(p.mo):'')+(p.o>1?' · donne '+p.o:'')+(p.f?' · '+esc(p.f):'')+'</div><div class="row">'+p.i.map(a=>ing(a[0],a[1])).join('')+'</div>'});
+  it.p.forEach(p=>{h+='<div class="how">'+(it.new||p.new?'<b>(proposé, pas encore dans le jeu)</b> ':'')+(p.m?esc(p.m)+(p.s?' · '+p.s+' s':''):'À la main')+(p.mo?' · moule : '+esc(p.mo):'')+(p.o>1?' · donne '+p.o:'')+(p.f?' · '+esc(p.f):'')+'</div><div class="row">'+p.i.map(a=>ing(a[0],a[1])).join('')+'</div>'});
   h+='</div>'});
  return h+'</div>';
 }

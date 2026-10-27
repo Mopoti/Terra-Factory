@@ -8,7 +8,17 @@ import json, sys
 fr=json.load(open('src/i18n/fr.json'))
 items={i['id']:i for i in json.load(open('content/items.json'))['items']}
 rec=json.load(open('content/recipes.json'))['recipes']
-n=lambda i: fr.get('item.'+i,i)
+# --- Propositions non implémentées : produits intermédiaires (règle : 3 types d'ingrédients au plus, 4 pour les recettes avancées)
+PROPOSED_NAMES={'kit_circuit':'Kit circuit','chassis_simple':'Châssis simple','glass':'Vitre','chassis_steel':'Châssis renforcé','aluminium_rod':'Tige d\'aluminium','chassis_alu':'Châssis léger','circuit_advanced':'Circuit avancé','microcontroller':'Microcontrôleur'}
+PROPOSED_HAND={'kit_circuit':{'copper_plate':1,'copper_wire':4},'chassis_simple':{'iron_plate':2,'iron_rod':1},'chassis_steel':{'steel_plate':2,'steel_rod':1},
+ 'chassis_alu':{'aluminium_plate':2,'aluminium_rod':1},'circuit_advanced':{'kit_circuit':1,'silicon_chip':1},'microcontroller':{'plastic_insulator':1,'silicon_chip':1,'kit_circuit':1}}
+PROPOSED_MACHINE=[{'id':'glass','machine':'furnace','in':{'silica_sand':1},'out':{'glass':1},'seconds':2},{'id':'aluminium_rod','machine':'stamper','in':{'aluminium_ingot':1},'out':{'aluminium_rod':2},'seconds':3}]
+PROPOSED_RECIPE_CHANGES={'machine_lab':{'kit_circuit':3,'chassis_simple':3,'glass':4}}   # le laboratoire : 2 ingrédients + des vitres
+for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
+for r in PROPOSED_MACHINE: items[r['out'] and next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
+for k,r in PROPOSED_RECIPE_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
+PROPOSED=set(PROPOSED_HAND)|{next(iter(r['out'])) for r in PROPOSED_MACHINE}|set(PROPOSED_RECIPE_CHANGES)
+n=lambda i: PROPOSED_NAMES.get(i) or fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
 S1,S2,S3,S4,S5,C='science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'
 def P(t,n,c=0):
@@ -30,7 +40,10 @@ D={
  'mould_wire':('Moule de fil',0,['mould_wire'],['cast_iron'],{'cast_iron_ingot':4}),
  'wires':('Fil de cuivre',0,['copper_wire'],['stamper','mould_wire'],{'copper_ingot':10}),
  'rods':('Tige de fer',0,['iron_rod'],['stamper'],{'iron_ingot':10}),
- 'crusher':('Concasseur',0,['machine_crusher','crushed_stone'],[],{'iron_ingot':10,'stone':10}),
+ 'crusher':('Concasseur',0,['machine_crusher','crushed_stone','silica_sand'],[],{'iron_ingot':10,'stone':10}),
+ 'glass':('Vitre',0,['glass'],['crusher'],{'stone':10}),
+ 'kit_circuit':('Kit circuit',0,['kit_circuit'],['plates','wires'],{'copper_ingot':10}),
+ 'chassis_simple':('Châssis simple',0,['chassis_simple'],['plates','rods'],{'iron_ingot':10}),
  'electricity':('Électricité',0,['machine_pole'],[],{'iron_ingot':15,'copper_ingot':10}),
  'crank':('Manivelle de réamorçage',0,['machine_crank'],['electricity'],{'iron_ingot':10}),
  'laboratory':('Laboratoire',0,['machine_lab'],['electricity','pack_1'],{'iron_ingot':10,'copper_ingot':10}),
@@ -66,6 +79,7 @@ D={
  'bessemer':('Convertisseur Bessemer',2,['machine_bessemer','steel_ingot','slag'],['pack_2'],P(2,100)),
  'steel_plate':('Plaque d\'acier',2,['steel_plate'],['bessemer'],P(2,100)),
  'steel_rod':('Tige d\'acier',2,['steel_rod'],['bessemer'],P(2,100)),
+ 'chassis_steel':('Châssis renforcé',2,['chassis_steel'],['steel_plate','steel_rod'],P(2,100)),
  'mixer':('Bétonnière',2,['machine_mixer','concrete_block'],['steel_plate'],P(2,100)),
  'concrete':('Constructions en béton',2,['piece_wall_concrete','piece_slab_concrete','piece_stairs_concrete','piece_pillar_concrete'],['mixer'],P(2,100)),
  'washer':('Station de lavage',2,['machine_washer'],['steel_plate'],P(2,100)),
@@ -99,6 +113,8 @@ D={
  'refinery':('Raffinerie',3,['machine_refinery'],['pumpjack','concrete'],P(3,150)),
  'plastic_press':('Presse à plastique',3,['machine_plastic_press'],['refinery'],P(3,150)),
  'plastic':('Isolant plastique',3,['plastic_insulator'],['plastic_press'],P(3,100)),
+ 'circuit_advanced':('Circuit avancé',3,['circuit_advanced'],['kit_circuit','silicon_chip'],P(3,100)),
+ 'microcontroller':('Microcontrôleur',3,['microcontroller'],['plastic','silicon_chip','kit_circuit'],P(3,100)),
  'insulated_cable':('Câble isolé',3,['cable_insulated'],['plastic'],P(3,100)),
  'rubber':('Caoutchouc',3,['rubber'],['plastic_press'],P(3,100)),
  'engine_heavy':('Moteur renforcé',3,['motor_heavy'],['motor','builder','rubber'],P(3,150)),
@@ -107,6 +123,8 @@ D={
  'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['turbine','steel_plate','engine_heavy'],P(3,200)),
  'aluminium_ingot':('Lingot d\'aluminium',3,['aluminium_ingot'],['plastic_press'],P(3,150)),
  'aluminium_plate':('Plaque d\'aluminium',3,['aluminium_plate'],['aluminium_ingot'],P(3,100)),
+ 'aluminium_rod':('Tige d\'aluminium',3,['aluminium_rod'],['aluminium_ingot'],P(3,100)),
+ 'chassis_alu':('Châssis léger',3,['chassis_alu'],['aluminium_plate','aluminium_rod'],P(3,100)),
  'aluminium':('Constructions en aluminium',3,['piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['aluminium_plate'],P(3,150)),
  'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],P(3,150)),
  'conveyor_3':('Tapis T3',3,['machine_conveyor_3'],['conveyor_2'],P(3,150)),
@@ -137,6 +155,7 @@ D={
  'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],P(5,300)),
 }
 owner={u:k for k,v in D.items() for u in v[2]}
+PACK_DISCOVERY={S1:'pack_1',S2:'pack_2',S3:'pack_3',S4:'pack_4',S5:'pack_5'}
 def needs(item):
     """Ce qu'il faut connaître pour fabriquer `item` par la voie la plus simple (recette à la main, sinon la première recette de machine)."""
     r=items[item].get('recipe')
@@ -147,12 +166,25 @@ def needs(item):
             if x.get('mould'): out.add(x['mould'])
             return out
     return set()
-START={'wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','silica_sand','crude_oil','uraninite','iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','carapace','living_tissue','combat_pack','nuclear_waste','piece_wall_wood','piece_door_wood','piece_door_stone','piece_wall_stone','piece_stairs_wood','piece_stairs_stone','piece_slab_wood','piece_slab_stone','piece_pillar_wood','piece_pillar_stone'}
+START={'wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','crude_oil','uraninite','iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','carapace','living_tissue','combat_pack','nuclear_waste','piece_wall_wood','piece_door_wood','piece_door_stone','piece_wall_stone','piece_stairs_wood','piece_stairs_stone','piece_slab_wood','piece_slab_stone','piece_pillar_wood','piece_pillar_stone'}
 uncovered=[i for i in items if i not in owner and i not in START and not i.startswith('res_')]
 if uncovered: print('sans découverte :',uncovered)
+BASE={'cast_iron_ingot','mould_plate','mould_gear','mould_wire','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod','crushed_stone','silica_sand','cloth','steel_ingot','slag','steel_plate','steel_rod','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot','aluminium_ingot','aluminium_plate','aluminium_rod','zamak_ingot','silicon_raw','glass'}
+INTER={'kit_circuit','chassis_simple','chassis_steel','chassis_alu','circuit_advanced','microcontroller','motor','motor_heavy','silicon_chip','plastic_insulator','cable_insulated','rubber','concrete_block','barrel_empty','barrel_water','barrel_oil','uranium_enriched','uranium_depleted','uranium_rod','contaminated_glass'}
+def category(k):
+    """machine > intermédiaire > base > autre (équipement, armes, véhicules, pièces de construction, paquets…)."""
+    un=D[k][2]
+    if any(u.startswith('machine_') or u=='waypoint' for u in un): return 'machine'
+    if any(u in INTER for u in un): return 'inter'
+    if any(u in BASE for u in un): return 'base'
+    return 'autre'
+CAT={k:category(k) for k in D}
 derived={}
 for k,(nm,t,un,pre,cost) in D.items():
     derived[k]={owner[need] for u in un for need in needs(u) if need in owner and owner[need]!=k}
+    # payer en paquets Tk suppose de savoir les fabriquer : la découverte du paquet Tk est un prérequis
+    for pack in cost:
+        if pack in PACK_DISCOVERY and PACK_DISCOVERY[pack]!=k: derived[k].add(PACK_DISCOVERY[pack])
 deps=lambda k: set(D[k][3])|derived[k]
 errors=[k for k in D if any(D[d][1]>D[k][1] for d in deps(k))]
 def cyc():
@@ -185,6 +217,7 @@ L+=["## Notes des paliers 3 à 5","",
 "- **Accumulateur** passe au palier 4 : sa recette demande du zamak, qui vient de la Fission (dans l'ancien arbre il était au palier 3, sans pouvoir être fabriqué).",
 "- **Palier 5** : Fusion et Balise quantique sont les seules découvertes (demandent Déchets nucléaires et Accumulateur).","",
 "## Points à confirmer","",
+"0. **Règle des recettes** (validée) : 3 types d'ingrédients au plus, 4 pour les recettes avancées. Les intermédiaires proposés (Kit circuit, Châssis simple/renforcé/léger, Vitre, Circuit avancé, Microcontrôleur) sont dans l'arbre mais **pas dans le jeu** ; seule la recette du laboratoire est montrée avec sa version proposée (3 kits circuit + 3 châssis simples + 4 vitres).",
 "1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).",
 "2. Y a-t-il des objets ou machines sans découverte qu'on a oublié (la liste est contrôlée par le script : tout objet débloqué par l'ancien arbre a une case) ?"]
 open('docs/decouvertes-t0-t5.md','w').write('\n'.join(L)+'\n')

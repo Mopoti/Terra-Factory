@@ -23,10 +23,13 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Moule de fil** | Moule de fil (fonte) | Fonte | 4 × Lingot de fonte |
 | **Fil de cuivre** | Fil de cuivre | Estampeuse, Moule de fil | 10 × Lingot de cuivre |
 | **Tige de fer** | Tige en fer | Estampeuse | 10 × Lingot de fer |
-| **Concasseur** | Concasseur, Pierre écrasée | — | 10 × Lingot de fer + 10 × Pierre |
+| **Concasseur** | Concasseur, Pierre écrasée, Sable siliceux | — | 10 × Lingot de fer + 10 × Pierre |
+| **Vitre** | Vitre | Concasseur | 10 × Pierre |
+| **Kit circuit** | Kit circuit | Plaques de fer et de cuivre, Fil de cuivre | 10 × Lingot de cuivre |
+| **Châssis simple** | Châssis simple | Plaques de fer et de cuivre, Tige de fer | 10 × Lingot de fer |
 | **Électricité** | Poteau électrique | — | 15 × Lingot de fer + 10 × Lingot de cuivre |
 | **Manivelle de réamorçage** | Manivelle de réamorçage | Plaques de fer et de cuivre, Engrenage, Électricité | 10 × Lingot de fer |
-| **Laboratoire** | Laboratoire | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Électricité, Paquet de science T1 | 10 × Lingot de fer + 10 × Lingot de cuivre |
+| **Laboratoire** | Laboratoire | Vitre, Kit circuit, Châssis simple, Électricité, Paquet de science T1 | 10 × Lingot de fer + 10 × Lingot de cuivre |
 | **Paquet de science T1** | Paquet de science T1 | — | 5 × Pierre + 5 × Fibre |
 | **Outil en fer** | Outil en fer | — | 10 × Lingot de fer |
 | **Roue à aubes** | Roue à aubes | Fil de cuivre | 10 × Plaque de cuivre |
@@ -38,116 +41,121 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Tapis roulant** | Tapis roulant | Laboratoire | 50 × Paquet de science T1 |
-| **Bras robotique** | Bras robotique | Plaques de fer et de cuivre, Engrenage, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
-| **Séparateur** | Séparateur | Plaques de fer et de cuivre, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
-| **Groupeur** | Groupeur | Plaques de fer et de cuivre, Tige de fer, Tapis roulant | 100 × Paquet de science T1 |
-| **Coffre en fer** | Coffre en fer | Plaques de fer et de cuivre, Tige de fer, Laboratoire | 50 × Paquet de science T1 |
-| **Balise** | Balise | Fil de cuivre, Laboratoire | 100 × Paquet de science T1 |
-| **Textile** | Tissu | Laboratoire | 100 × Paquet de science T1 |
-| **Vêtements** | Pantalon, Bottes, Gants, Capuche, Veste | Textile | 100 × Paquet de science T1 |
-| **Sac à dos** | Sac à dos | Textile | 100 × Paquet de science T1 |
-| **Couchage de survie** | Duvet d'exploration | Textile | 100 × Paquet de science T1 |
-| **Navigation** | Boussole | Laboratoire | 100 × Paquet de science T1 |
-| **Tuyau** | Tuyau en cuivre | Plaques de fer et de cuivre, Laboratoire | 50 × Paquet de science T1 |
-| **Moteur simple** | Moteur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire | 150 × Paquet de science T1 |
-| **Pompe à eau** | Pompe à eau électrique | Plaques de fer et de cuivre, Tige de fer, Tuyau, Moteur simple | 100 × Paquet de science T1 |
-| **Buggy** | Buggy | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Moteur simple | 100 × Paquet de science T1 |
-| **Quad** | Quad | Plaques de fer et de cuivre, Tige de fer, Moteur simple | 100 × Paquet de science T1 |
-| **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Tuyau | 100 × Paquet de science T1 |
-| **Turbine à vapeur** | Turbine à vapeur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Chaudière | 100 × Paquet de science T1 |
-| **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire | 100 × Paquet de science T1 |
-| **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
-| **Tourelle** | Tourelle légère | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
+| **Tapis roulant** | Tapis roulant | Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
+| **Bras robotique** | Bras robotique | Plaques de fer et de cuivre, Engrenage, Tige de fer, Paquet de science T1, Tapis roulant | 100 × Paquet de science T1 |
+| **Séparateur** | Séparateur | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tapis roulant | 100 × Paquet de science T1 |
+| **Groupeur** | Groupeur | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tapis roulant | 100 × Paquet de science T1 |
+| **Coffre en fer** | Coffre en fer | Plaques de fer et de cuivre, Tige de fer, Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
+| **Balise** | Balise | Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Textile** | Tissu | Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Vêtements** | Pantalon, Bottes, Gants, Capuche, Veste | Paquet de science T1, Textile | 100 × Paquet de science T1 |
+| **Sac à dos** | Sac à dos | Paquet de science T1, Textile | 100 × Paquet de science T1 |
+| **Couchage de survie** | Duvet d'exploration | Paquet de science T1, Textile | 100 × Paquet de science T1 |
+| **Navigation** | Boussole | Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Tuyau** | Tuyau en cuivre | Plaques de fer et de cuivre, Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
+| **Moteur simple** | Moteur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 150 × Paquet de science T1 |
+| **Pompe à eau** | Pompe à eau électrique | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tuyau, Moteur simple | 100 × Paquet de science T1 |
+| **Buggy** | Buggy | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Moteur simple | 100 × Paquet de science T1 |
+| **Quad** | Quad | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Moteur simple | 100 × Paquet de science T1 |
+| **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tuyau | 100 × Paquet de science T1 |
+| **Turbine à vapeur** | Turbine à vapeur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chaudière | 100 × Paquet de science T1 |
+| **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
+| **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Paquet de science T1, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
+| **Tourelle** | Tourelle légère | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
 
 ## Palier 2 : paquets T2 + T1
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Convertisseur Bessemer** | Convertisseur Bessemer, Lingot d'acier, Scorie | Fonte, Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Plaque d'acier** | Plaque d'acier | Estampeuse, Moule de plaque, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Tige d'acier** | Tige en acier | Estampeuse, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Bétonnière** | Bétonnière, Bloc de béton | Plaques de fer et de cuivre, Engrenage, Concasseur, Convertisseur Bessemer, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Constructions en béton** | Mur en béton, Dalle en béton, Escalier en béton, Pilier en béton | Bétonnière | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Station de lavage** | Station de lavage (T2) | Plaques de fer et de cuivre, Engrenage, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Minerais lavés** | Minerai de fer purifié, Minerai de cuivre purifié, Minerai de zinc purifié | Station de lavage | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Lingot de zinc** | Lingot de zinc | Minerais lavés | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Constructeur** | Constructeur (T2) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
-| **Tuyau de laiton** | Tuyau de laiton (T2) | Lingot de zinc, Constructeur | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Surpresseur** | Surpresseur (T2) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Tour de refroidissement** | Tour de refroidissement (T2) | Plaques de fer et de cuivre, Engrenage, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Tapis rapide** | Tapis rapide (T2) | Engrenage, Tapis roulant, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Bras robotique électrique** | Bras robotique électrique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Bras robotique, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Assembleur** | Assembleur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Bras robotique électrique | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
-| **Générateur à combustible** | Générateur à combustible | Plaques de fer et de cuivre, Engrenage, Tige de fer, Électricité, Turbine à vapeur | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Foreuse électrique** | Foreuse électrique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Générateur à combustible | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
-| **Couchage de confort** | Lit | Textile, Couchage de survie | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Recherche II** | (effet : paquets plus rapides) | Recherche I (paquets plus vite) | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
-| **Fusil** | Fusil automatique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Pistolet, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 20 × Paquet de combat |
-| **Chargeur de fusil** | Chargeur de fusil (30 balles) | Fusil | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 10 × Paquet de combat |
-| **Armure 2** | Casque blindé, Plastron blindé, Jambières blindées, Bottes blindées | Armure 1, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
-| **Tourelle lourde** | Tourelle lourde | Plaques de fer et de cuivre, Engrenage, Tourelle, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
-| **Paquet de science T3** | Paquet de science T3 | Plaque d'acier, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Convertisseur Bessemer** | Convertisseur Bessemer, Lingot d'acier, Scorie | Fonte, Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Plaque d'acier** | Plaque d'acier | Estampeuse, Moule de plaque, Paquet de science T1, Paquet de science T2, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Tige d'acier** | Tige en acier | Estampeuse, Paquet de science T1, Paquet de science T2, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Châssis renforcé** | Châssis renforcé | Paquet de science T1, Paquet de science T2, Plaque d'acier, Tige d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Bétonnière** | Bétonnière, Bloc de béton | Plaques de fer et de cuivre, Engrenage, Concasseur, Paquet de science T1, Paquet de science T2, Convertisseur Bessemer, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Constructions en béton** | Mur en béton, Dalle en béton, Escalier en béton, Pilier en béton | Paquet de science T1, Paquet de science T2, Bétonnière | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Station de lavage** | Station de lavage (T2) | Plaques de fer et de cuivre, Engrenage, Paquet de science T1, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Minerais lavés** | Minerai de fer purifié, Minerai de cuivre purifié, Minerai de zinc purifié | Paquet de science T1, Paquet de science T2, Station de lavage | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Lingot de zinc** | Lingot de zinc | Paquet de science T1, Paquet de science T2, Minerais lavés | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Constructeur** | Constructeur (T2) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Paquet de science T2, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
+| **Tuyau de laiton** | Tuyau de laiton (T2) | Paquet de science T1, Paquet de science T2, Lingot de zinc, Constructeur | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Surpresseur** | Surpresseur (T2) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Paquet de science T2, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Tour de refroidissement** | Tour de refroidissement (T2) | Plaques de fer et de cuivre, Engrenage, Paquet de science T1, Paquet de science T2, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Tapis rapide** | Tapis rapide (T2) | Engrenage, Paquet de science T1, Tapis roulant, Paquet de science T2, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Bras robotique électrique** | Bras robotique électrique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Bras robotique, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Assembleur** | Assembleur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Paquet de science T2, Bras robotique électrique | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
+| **Générateur à combustible** | Générateur à combustible | Plaques de fer et de cuivre, Engrenage, Tige de fer, Électricité, Paquet de science T1, Turbine à vapeur, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Foreuse électrique** | Foreuse électrique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Paquet de science T2, Générateur à combustible | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
+| **Couchage de confort** | Lit | Paquet de science T1, Textile, Couchage de survie, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Recherche II** | (effet : paquets plus rapides) | Paquet de science T1, Recherche I (paquets plus vite), Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Fusil** | Fusil automatique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Pistolet, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 20 × Paquet de combat |
+| **Chargeur de fusil** | Chargeur de fusil (30 balles) | Paquet de science T1, Paquet de science T2, Fusil | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 10 × Paquet de combat |
+| **Armure 2** | Casque blindé, Plastron blindé, Jambières blindées, Bottes blindées | Paquet de science T1, Paquet de science T2, Armure 1, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
+| **Tourelle lourde** | Tourelle lourde | Plaques de fer et de cuivre, Engrenage, Paquet de science T1, Paquet de science T2, Tourelle, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
+| **Paquet de science T3** | Paquet de science T3 | Paquet de science T1, Paquet de science T2, Plaque d'acier, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 
 ## Palier 3 : paquets T3 + T2
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Presse lourde** | Presse hydraulique lourde (T3) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Constructions en béton, Constructeur | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Tuyau T3** | Tuyau d'acier (T3) | Convertisseur Bessemer, Presse lourde | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Four électrique** | Four électrique (T3) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Presse lourde | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Silicium brut** | Silicium brut | Four électrique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Puce de silicium** | Puce en silicium | Fil de cuivre, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Remplisseuse de barils** | Remplisseuse / videuse de barils (T3), Baril vide, Baril d'eau (100 L) | Engrenage, Fil de cuivre, Convertisseur Bessemer, Plaque d'acier, Tuyau de laiton, Surpresseur | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Chevalet de pompage** | Chevalet de pompage (T3) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Moteur simple, Plaque d'acier, Tige d'acier, Presse lourde, Remplisseuse de barils | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Baril de pétrole** | Baril de pétrole (100 L) | Remplisseuse de barils, Chevalet de pompage | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Raffinerie** | Raffinerie (T3) | Engrenage, Fil de cuivre, Moteur simple, Plaque d'acier, Tige d'acier, Bétonnière, Constructions en béton, Chevalet de pompage | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Presse à plastique** | Presse à plastique (T3) | Engrenage, Fil de cuivre, Moteur simple, Plaque d'acier, Tige d'acier, Raffinerie | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Isolant plastique** | Isolant en plastique | Presse à plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Câble isolé** | Câble isolé | Fil de cuivre, Isolant plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Caoutchouc** | Caoutchouc | Presse à plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Moteur renforcé** | Moteur renforcé | Moteur simple, Plaque d'acier, Constructeur, Caoutchouc | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Char** | Char | Plaques de fer et de cuivre, Engrenage, Plaque d'acier, Tige d'acier, Caoutchouc, Moteur renforcé | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Camion benne** | Camionnette | Plaques de fer et de cuivre, Engrenage, Plaque d'acier, Tige d'acier, Caoutchouc, Moteur renforcé | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Chemin de fer** | Rail (tuile de 2,5 m), Locomotive à vapeur, Wagon de fret, Wagon-citerne, Station | Plaques de fer et de cuivre, Engrenage, Turbine à vapeur, Convertisseur Bessemer, Plaque d'acier, Tige d'acier, Moteur renforcé | 200 × Paquet de science T3 + 200 × Paquet de science T2 |
-| **Lingot d'aluminium** | Lingot d'aluminium | Four électrique, Presse à plastique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Plaque d'aluminium** | Plaque d'aluminium | Estampeuse, Moule de plaque, Lingot d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Constructions en aluminium** | Mur en aluminium, Dalle en aluminium, Escalier en aluminium, Battant de porte en aluminium (2 par porte), Pilier en aluminium | Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Porte de garage** | Porte de garage en aluminium | Engrenage, Fil de cuivre, Moteur renforcé, Plaque d'aluminium, Constructions en aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Tapis T3** | Tapis express (T3) | Engrenage, Fil de cuivre, Convertisseur Bessemer, Tapis rapide | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Bras filtrant** | Bras filtrant (T3) | Engrenage, Fil de cuivre, Convertisseur Bessemer, Tapis T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Trieur** | Trieur (T3) | Engrenage, Fil de cuivre, Convertisseur Bessemer, Bras filtrant | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Foreuse économe** | Foreuse économe (T3) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Foreuse électrique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Paquet de science T4** | Paquet de science T4 | Puce de silicium, Câble isolé | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Recherche III** | (effet : paquets plus rapides) | Recherche II | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Sniper** | Fusil de précision (sniper) | Engrenage, Fil de cuivre, Plaque d'acier, Fusil | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
-| **Chargeur de sniper** | Chargeur de sniper (5 balles) | Sniper | 100 × Paquet de science T3 + 100 × Paquet de science T2 + 15 × Paquet de combat |
-| **Tourelle laser** | Tourelle laser | Fil de cuivre, Moteur simple, Plaque d'acier, Tourelle lourde, Puce de silicium | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
+| **Presse lourde** | Presse hydraulique lourde (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Plaque d'acier, Tige d'acier, Constructions en béton, Constructeur, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Tuyau T3** | Tuyau d'acier (T3) | Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Presse lourde | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Four électrique** | Four électrique (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Plaque d'acier, Tige d'acier, Paquet de science T3, Presse lourde | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Silicium brut** | Silicium brut | Concasseur, Paquet de science T2, Paquet de science T3, Four électrique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Puce de silicium** | Puce en silicium | Fil de cuivre, Paquet de science T2, Paquet de science T3, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Remplisseuse de barils** | Remplisseuse / videuse de barils (T3), Baril vide, Baril d'eau (100 L) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Plaque d'acier, Tuyau de laiton, Surpresseur, Paquet de science T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Chevalet de pompage** | Chevalet de pompage (T3) | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Moteur simple, Paquet de science T2, Plaque d'acier, Tige d'acier, Paquet de science T3, Presse lourde, Remplisseuse de barils | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Baril de pétrole** | Baril de pétrole (100 L) | Paquet de science T2, Paquet de science T3, Remplisseuse de barils, Chevalet de pompage | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Raffinerie** | Raffinerie (T3) | Engrenage, Fil de cuivre, Moteur simple, Paquet de science T2, Plaque d'acier, Tige d'acier, Bétonnière, Constructions en béton, Paquet de science T3, Chevalet de pompage | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Presse à plastique** | Presse à plastique (T3) | Engrenage, Fil de cuivre, Moteur simple, Paquet de science T2, Plaque d'acier, Tige d'acier, Paquet de science T3, Raffinerie | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Isolant plastique** | Isolant en plastique | Paquet de science T2, Paquet de science T3, Presse à plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Circuit avancé** | Circuit avancé | Kit circuit, Paquet de science T2, Paquet de science T3, Puce de silicium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Microcontrôleur** | Microcontrôleur | Kit circuit, Paquet de science T2, Paquet de science T3, Puce de silicium, Isolant plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Câble isolé** | Câble isolé | Fil de cuivre, Paquet de science T2, Paquet de science T3, Isolant plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Caoutchouc** | Caoutchouc | Paquet de science T2, Paquet de science T3, Presse à plastique | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Moteur renforcé** | Moteur renforcé | Moteur simple, Paquet de science T2, Plaque d'acier, Constructeur, Paquet de science T3, Caoutchouc | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Char** | Char | Plaques de fer et de cuivre, Engrenage, Paquet de science T2, Plaque d'acier, Tige d'acier, Paquet de science T3, Caoutchouc, Moteur renforcé | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Camion benne** | Camionnette | Plaques de fer et de cuivre, Engrenage, Paquet de science T2, Plaque d'acier, Tige d'acier, Paquet de science T3, Caoutchouc, Moteur renforcé | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Chemin de fer** | Rail (tuile de 2,5 m), Locomotive à vapeur, Wagon de fret, Wagon-citerne, Station | Plaques de fer et de cuivre, Engrenage, Turbine à vapeur, Paquet de science T2, Convertisseur Bessemer, Plaque d'acier, Tige d'acier, Paquet de science T3, Moteur renforcé | 200 × Paquet de science T3 + 200 × Paquet de science T2 |
+| **Lingot d'aluminium** | Lingot d'aluminium | Paquet de science T2, Paquet de science T3, Four électrique, Presse à plastique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Plaque d'aluminium** | Plaque d'aluminium | Estampeuse, Moule de plaque, Paquet de science T2, Paquet de science T3, Lingot d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Tige d'aluminium** | Tige d'aluminium | Estampeuse, Paquet de science T2, Paquet de science T3, Lingot d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Châssis léger** | Châssis léger | Paquet de science T2, Paquet de science T3, Plaque d'aluminium, Tige d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Constructions en aluminium** | Mur en aluminium, Dalle en aluminium, Escalier en aluminium, Battant de porte en aluminium (2 par porte), Pilier en aluminium | Paquet de science T2, Paquet de science T3, Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Porte de garage** | Porte de garage en aluminium | Engrenage, Fil de cuivre, Paquet de science T2, Paquet de science T3, Moteur renforcé, Plaque d'aluminium, Constructions en aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Tapis T3** | Tapis express (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Tapis rapide, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Bras filtrant** | Bras filtrant (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Tapis T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Trieur** | Trieur (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Bras filtrant | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Foreuse économe** | Foreuse économe (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Plaque d'acier, Tige d'acier, Foreuse électrique, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Paquet de science T4** | Paquet de science T4 | Paquet de science T2, Paquet de science T3, Puce de silicium, Câble isolé | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Recherche III** | (effet : paquets plus rapides) | Paquet de science T2, Recherche II, Paquet de science T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Sniper** | Fusil de précision (sniper) | Engrenage, Fil de cuivre, Paquet de science T2, Plaque d'acier, Fusil, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
+| **Chargeur de sniper** | Chargeur de sniper (5 balles) | Paquet de science T2, Paquet de science T3, Sniper | 100 × Paquet de science T3 + 100 × Paquet de science T2 + 15 × Paquet de combat |
+| **Tourelle laser** | Tourelle laser | Fil de cuivre, Moteur simple, Paquet de science T2, Plaque d'acier, Tourelle lourde, Paquet de science T3, Puce de silicium | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
 
 ## Palier 4 : paquets T4 + T3
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Centrifugeuse** | Centrifugeuse (T4) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Bétonnière, Câble isolé, Moteur renforcé, Constructions en aluminium | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
-| **Zamak** | Lingot de zamak | Lingot de zinc, Four électrique, Lingot d'aluminium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
-| **Uranium enrichi** | Uranium enrichi | Centrifugeuse | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
-| **Uranium appauvri** | Uranium appauvri (déchet) | Centrifugeuse | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
-| **Barre d'uranium** | Barre d'uranium | Plaque d'acier, Zamak, Uranium enrichi | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
-| **Réacteur à fission** | Réacteur à fission (T4) | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Zamak, Barre d'uranium | 250 × Paquet de science T4 + 250 × Paquet de science T3 |
-| **Paquet de science T5** | Paquet de science T5 | Plaque d'acier, Puce de silicium, Uranium appauvri | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
-| **Tour d'évaporation** | Tour d'évaporation (T4) | Engrenage, Plaque d'acier, Bétonnière, Réacteur à fission | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
-| **Vitrificateur** | Station de vitrification (T4), Cylindre de verre contaminé | Plaque d'acier, Bétonnière, Puce de silicium, Isolant plastique, Câble isolé, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
-| **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Armure 2, Puce de silicium | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
-| **Tourelle plasma** | Tourelle à plasma | Plaque d'acier, Puce de silicium, Moteur renforcé, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
-| **Accumulateur** | Accumulateur (T3) | Plaque d'acier, Puce de silicium, Câble isolé, Zamak | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
-| **Recherche IV** | (effet : paquets plus rapides) | Recherche III | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Centrifugeuse** | Centrifugeuse (T4) | Engrenage, Fil de cuivre, Plaque d'acier, Tige d'acier, Bétonnière, Paquet de science T3, Câble isolé, Moteur renforcé, Constructions en aluminium, Paquet de science T4 | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Zamak** | Lingot de zamak | Lingot de zinc, Paquet de science T3, Four électrique, Lingot d'aluminium, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Uranium enrichi** | Uranium enrichi | Paquet de science T3, Paquet de science T4, Centrifugeuse | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Uranium appauvri** | Uranium appauvri (déchet) | Paquet de science T3, Paquet de science T4, Centrifugeuse | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Barre d'uranium** | Barre d'uranium | Plaque d'acier, Paquet de science T3, Paquet de science T4, Zamak, Uranium enrichi | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Réacteur à fission** | Réacteur à fission (T4) | Plaque d'acier, Bétonnière, Paquet de science T3, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Barre d'uranium | 250 × Paquet de science T4 + 250 × Paquet de science T3 |
+| **Paquet de science T5** | Paquet de science T5 | Plaque d'acier, Paquet de science T3, Puce de silicium, Paquet de science T4, Uranium appauvri | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Tour d'évaporation** | Tour d'évaporation (T4) | Engrenage, Plaque d'acier, Bétonnière, Paquet de science T3, Paquet de science T4, Réacteur à fission | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Vitrificateur** | Station de vitrification (T4), Cylindre de verre contaminé | Plaque d'acier, Bétonnière, Paquet de science T3, Puce de silicium, Isolant plastique, Câble isolé, Paquet de science T4, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
+| **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Armure 2, Paquet de science T3, Puce de silicium, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
+| **Tourelle plasma** | Tourelle à plasma | Plaque d'acier, Paquet de science T3, Puce de silicium, Moteur renforcé, Paquet de science T4, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
+| **Accumulateur** | Accumulateur (T3) | Plaque d'acier, Paquet de science T3, Puce de silicium, Câble isolé, Paquet de science T4, Zamak | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Recherche IV** | (effet : paquets plus rapides) | Paquet de science T3, Paquet de science T4, Recherche III | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 
 ## Palier 5 : paquets T5 + T4
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Fusion** | Réacteur à fusion magnétique | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Zamak, Vitrificateur, Accumulateur | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
-| **Balise quantique** | Relais émetteur hyperfréquence, Antenne d'alignement quantique | Plaque d'acier, Puce de silicium, Câble isolé, Zamak, Fusion | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Fusion** | Réacteur à fusion magnétique | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Vitrificateur, Accumulateur | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Balise quantique** | Relais émetteur hyperfréquence, Antenne d'alignement quantique | Plaque d'acier, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Fusion | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
 
 ## Notes des paliers 3 à 5
 
@@ -162,5 +170,6 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 ## Points à confirmer
 
+0. **Règle des recettes** (validée) : 3 types d'ingrédients au plus, 4 pour les recettes avancées. Les intermédiaires proposés (Kit circuit, Châssis simple/renforcé/léger, Vitre, Circuit avancé, Microcontrôleur) sont dans l'arbre mais **pas dans le jeu** ; seule la recette du laboratoire est montrée avec sa version proposée (3 kits circuit + 3 châssis simples + 4 vitres).
 1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).
 2. Y a-t-il des objets ou machines sans découverte qu'on a oublié (la liste est contrôlée par le script : tout objet débloqué par l'ancien arbre a une case) ?
