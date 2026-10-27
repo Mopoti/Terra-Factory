@@ -136,9 +136,9 @@ function pathEdit(item,j,p){const types=new Set(p.i.map(a=>a[0])).size,lim=limit
  ${p.i.map((a,r)=>`<div class="ir" data-r="${r}"><select class="ii" aria-label="Ingrédient">${optsFor(item,a[0])}</select><input class="iq" type="number" min="1" value="${a[1]}"><button class="rm" aria-label="Retirer">×</button></div>`).join('')}
  <div class="ir"><button class="addi">+ ingrédient</button>${types>lim?`<span class="warn">⚠ ${types} types d'ingrédients (max ${lim})</span>`:`<span class="pre">${types} type${types>1?'s':''} d'ingrédients</span>`}</div></div>`}
 const START=new Set(S0);
-/** Objets qu'on a déjà quand on découvre `disc` : ressources et objets de départ, plus tout ce que débloquent ses ancêtres. */
+/** Objets disponibles pour la recette d'une découverte : ressources et objets de départ, ce que débloquent ses ancêtres, et ce qu'elle débloque elle-même (machine et produits d'un même groupe). */
 const availCache={};
-function avail(disc){if(!availCache[disc]){const a=new Set(START);UP[disc].forEach(u=>DD[u].it.forEach(it=>a.add(it.id)));availCache[disc]=a}return availCache[disc]}
+function avail(disc){if(!availCache[disc]){const a=new Set(START);[disc,...UP[disc]].forEach(u=>DD[u].it.forEach(it=>a.add(it.id)));availCache[disc]=a}return availCache[disc]}
 const MACH_START=new Set(['furnace','drill','chest_wood']);
 const okIng=(item,id)=>avail(orig[item].disc).has(id);
 const okMach=(item,m)=>!m||MACH_START.has(m)||avail(orig[item].disc).has('machine_'+m);
