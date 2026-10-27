@@ -138,3 +138,18 @@ export function labPackSeconds(item: string, level: number): number {
   if (tier < 0 || tier >= level) return LAB_PACK_SECONDS;
   return LAB_PACK_SECONDS - (level - tier);
 }
+
+/**
+ * État d'une découverte vu du joueur : faite, à portée (tous ses prérequis sont connus), proche (il lui manque encore
+ * un prérequis mais elle en a déjà au moins un de connu) ou lointaine.
+ */
+export type TechStatus = 'done' | 'next' | 'near' | 'far';
+export function techStatus(tech: TechDef, known: readonly string[]): TechStatus {
+  if (known.includes(tech.id)) return 'done';
+  if (tech.requires.every((r) => known.includes(r))) return 'next';
+  return tech.requires.some((r) => known.includes(r)) ? 'near' : 'far';
+}
+
+/** Prérequis qui sont des étapes de l'arbre : les paquets qui paient une découverte n'en font pas partie. */
+export const treeParents = (tech: TechDef): string[] =>
+  tech.requires.filter((r) => tech.id.startsWith('pack_') || !r.startsWith('pack_'));
