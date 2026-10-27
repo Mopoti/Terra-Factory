@@ -1,0 +1,31 @@
+{
+ "key": "palier4-5",
+ "title": "Propositions palier 4 et 5",
+ "intro": "Nouvelles découvertes pour remplir les paliers 4 et 5. Répondez à chaque ligne : Oui (on garde), Non (on retire) ou À modifier (avec un commentaire). « Mécanique » = demande de nouveaux systèmes dans le jeu ; « Objet » = simple objet avec recette.",
+ "tabs": [{"id":"t4","label":"Palier 4"},{"id":"t5","label":"Palier 5"}],
+ "rows": [
+  {"id":"loco_elec","tab":"t4","name":"Locomotive électrique","recipe":"2 moteurs renforcés + 4 batteries lithium + 1 microcontrôleur","role":"Train sans carburant, rechargé à la borne de recharge. Le modèle 3D existe déjà.","effort":"objet"},
+  {"id":"fibre_carbone","tab":"t4","name":"Fibre de carbone","recipe":"2 graphites + 20 L de polymère","role":"Nouvelle matière légère, brique des équipements avancés.","effort":"objet"},
+  {"id":"chassis_composite","tab":"t4","name":"Châssis composite","recipe":"2 fibres de carbone + 1 tige d'aluminium","role":"Plus léger que le châssis léger : véhicules et équipements de haut niveau.","effort":"objet"},
+  {"id":"electrolyseur","tab":"t4","name":"Électrolyseur","recipe":"Machine : eau → hydrogène + oxygène (consomme de l'électricité)","role":"Nouveau fluide (hydrogène) et nouvelle chimie.","effort":"mécanique"},
+  {"id":"pile_combustible","tab":"t4","name":"Pile à combustible","recipe":"Machine : hydrogène → électricité, sans pollution","role":"Source d'énergie propre, suite logique de l'électrolyseur.","effort":"mécanique"},
+  {"id":"purificateur","tab":"t4","name":"Purificateur d'air","recipe":"1 filtre en graphite + 1 microcontrôleur + 1 châssis renforcé","role":"Réduit la pollution de la zone : agit directement sur la menace des nids.","effort":"mécanique"},
+  {"id":"foreuse_plasma","tab":"t4","name":"Foreuse à plasma","recipe":"2 moteurs renforcés + 1 châssis composite + 1 microcontrôleur","role":"Extraction plus rapide que la foreuse économe.","effort":"objet"},
+  {"id":"bras_industriel","tab":"t4","name":"Bras industriel","recipe":"1 châssis composite + 1 moteur renforcé + 1 circuit avancé","role":"Déplace plusieurs objets par geste : débit de logistique supérieur.","effort":"objet"},
+  {"id":"armure3","tab":"t4","name":"Armure 3 (comble le trou entre 2 et 4)","recipe":"Plaques d'aluminium + tissu + isolant plastique (4 pièces)","role":"Il n'y a aujourd'hui que les armures 1, 2 et 4. À placer plutôt au palier 3.","effort":"objet"},
+  {"id":"bouclier","tab":"t4","name":"Bouclier d'énergie (équipement)","recipe":"1 batterie lithium + 1 microcontrôleur + 1 isolant plastique","role":"Absorbe des dégâts puis se recharge.","effort":"mécanique"},
+  {"id":"propulseur","tab":"t4","name":"Propulseur dorsal (équipement)","recipe":"1 châssis composite + 1 moteur + 1 batterie lithium","role":"Saut plus haut et chute ralentie.","effort":"mécanique"},
+  {"id":"blindees","tab":"t4","name":"Constructions blindées","recipe":"Vitre blindée + plaque d'acier + bloc de béton","role":"Murs, portes et sas résistants aux attaques des ennemis.","effort":"objet"},
+  {"id":"deuterium","tab":"t5","name":"Deutérium","recipe":"Eau passée à la centrifugeuse","role":"Combustible de fusion, partie 1.","effort":"objet"},
+  {"id":"tritium","tab":"t5","name":"Tritium","recipe":"Lithium exposé dans le réacteur à fission","role":"Combustible de fusion, partie 2 : donne un usage au lithium.","effort":"objet"},
+  {"id":"capsule_fusion","tab":"t5","name":"Capsule de fusion","recipe":"1 deutérium + 1 tritium + 1 châssis composite","role":"Le combustible qui manque au réacteur à fusion (il a déjà deux cases pour lui).","effort":"objet"},
+  {"id":"aimant","tab":"t5","name":"Aimant supraconducteur","recipe":"Fil de cuivre + azote liquide + microcontrôleur","role":"Pièce clé des réacteurs et des machines avancées.","effort":"objet"},
+  {"id":"compresseur","tab":"t5","name":"Compresseur d'air","recipe":"Machine : air → azote liquide","role":"Nouveau fluide, nécessaire aux supraconducteurs.","effort":"mécanique"},
+  {"id":"teleporteur","tab":"t5","name":"Téléporteur","recipe":"1 antenne + 1 aimant supraconducteur + 1 circuit avancé","role":"Voyage instantané entre deux balises.","effort":"mécanique"},
+  {"id":"coffre_quantique","tab":"t5","name":"Coffre quantique","recipe":"1 cristal quantique + 1 microcontrôleur + 1 châssis composite","role":"Inventaire partagé entre tous les coffres du même nom.","effort":"mécanique"},
+  {"id":"fabricateur","tab":"t5","name":"Fabricateur universel","recipe":"Microcontrôleurs + 1 aimant supraconducteur + 1 châssis composite","role":"Assembleur plus rapide, jusqu'à 5 ingrédients.","effort":"mécanique"},
+  {"id":"armure5","tab":"t5","name":"Armure 5","recipe":"Fibre de carbone + plaques d'aluminium + microcontrôleur (4 pièces)","role":"Sommet de l'équipement.","effort":"objet"},
+  {"id":"tourelle_rail","tab":"t5","name":"Tourelle à rail","recipe":"1 aimant supraconducteur + 1 châssis composite + 1 batterie lithium","role":"La défense la plus puissante.","effort":"objet"},
+  {"id":"maglev","tab":"t5","name":"Train à lévitation","recipe":"Locomotive électrique + aimants + rails spéciaux","role":"Vitesse maximale sur rails.","effort":"mécanique"}
+ ]
+}
