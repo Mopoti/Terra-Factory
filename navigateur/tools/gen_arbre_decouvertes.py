@@ -52,7 +52,8 @@ for row in rows: place(row)
 for _ in range(10):
     sweep(rows[1:],lambda k:direct[k]); sweep(rows[-2::-1],lambda k:children[k])
 shift=LM-min(x.values())
-y={}; bands=[]; cur=24; last=None
+TOP=300   # place des deux rangées de ressources au-dessus du palier 0
+y={}; bands=[]; cur=24+TOP; last=None
 for row in rows:
     p=tier(row[0])
     if p!=last:
@@ -103,8 +104,14 @@ for r in recs:
     mach_names[r['machine']]=n('machine_'+r['machine'])
 icn={u:ICONS[u]['icon'] for u in need|{u for k in ids for u in node[k]['ic']} if ICONS.get(u,{}).get('icon')}
 ALL=sorted(([i,n(i)] for i in items_all if not i.startswith('res_')),key=lambda a:a[1].lower())
+RAW=['wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','uraninite','crude_oil','res_water','res_sand','carapace','living_tissue']
+OTHER=['iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','piece_wall_wood','piece_wall_stone']
+for u in RAW+OTHER: need.add(u)
+icn.update({u:ICONS[u]['icon'] for u in RAW+OTHER if ICONS.get(u,{}).get('icon')})
+NAMES_RES={u:n(u) for u in RAW+OTHER}
+START_IDS=sorted(set(RAW)|set(OTHER)|{u for u in G.START if u in items_all})
 data={'N':node,'E':edges,'B':bands,'W':round(VW),'H':round(VH),'LM':LM,'CW':CW,'CH':CH,'GY':GY,'DD':dd,'ICN':icn,'ALL':ALL,'MN':mach_names,
-      'ORDER':ids}
+      'ORDER':ids,'RES':[{'label':'Ressources','items':RAW},{'label':'Dès le départ','items':OTHER}],'RN':NAMES_RES,'S0':START_IDS,'TOP':TOP}
 page=open('tools/arbre_page.html').read().replace('@N@',str(len(ids))).replace('@DATA@',json.dumps(data,ensure_ascii=False))
 open('docs/arbre-decouvertes-t0-t5.html','w').write(page)
 print(len(page)//1024,'Ko',round(VW),round(VH),'bandes',len(bands))

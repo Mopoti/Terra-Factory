@@ -28,7 +28,7 @@ svg{display:block;user-select:none;-webkit-user-select:none}
 .n.cb .box{fill:color-mix(in srgb,var(--cb) 12%,var(--bg))}
 .tab{fill:var(--t0)} .t1 .tab{fill:var(--t1)} .t2 .tab{fill:var(--t2)} .t3 .tab{fill:var(--t3)} .t4 .tab{fill:var(--t4)} .t5 .tab{fill:var(--t5)}
 .tt{font:700 8.5px var(--mono);fill:#fff;pointer-events:none} .ph{fill:var(--rule)} .phl{font:700 14px var(--sans);fill:var(--mut)}
-.nm{font:600 10.5px var(--sans);fill:var(--fg)} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
+.nm{font:600 10.5px var(--sans);fill:var(--fg)} .rbox{fill:var(--bg);stroke:var(--rule);stroke-width:2;stroke-dasharray:4 3} .res .nm{font-size:9.5px;font-weight:500} .res.use .rbox{stroke:var(--hl);stroke-dasharray:none;stroke-width:3} .dim .res{opacity:var(--fade)} .dim .res.use{opacity:1} .ct{font:500 10px var(--mono);fill:var(--mut)} .mo{font:600 10px var(--mono);fill:var(--mut)} .gl{font:600 17px var(--mono);fill:var(--mut)}
 .n{cursor:grab;outline:none;touch-action:none} .n.drag{cursor:grabbing} .n:focus-visible .box{stroke:var(--hl)}
 .e{fill:none;stroke:var(--line);stroke-width:1.4;opacity:.75;stroke-dasharray:5 4} .e.main{stroke-dasharray:none;opacity:.95;stroke-width:1.7}
 .dim .n{opacity:var(--fade)} .dim .n.on{opacity:1} .dim .e{opacity:.08} .dim .e.on{opacity:1;stroke:var(--hl);stroke-width:2.2} .dim .n.sel .box{stroke:var(--hl);stroke-width:4}
@@ -36,7 +36,7 @@ svg{display:block;user-select:none;-webkit-user-select:none}
 .panel h2{margin:0;font-size:1.1rem;font-weight:600} .panel h3{margin:0 0 6px;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
 .chip{display:inline-block;font:600 11px var(--mono);padding:1px 7px;border-radius:10px;border:1.5px solid var(--t0);margin-left:6px;vertical-align:2px}
 .row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
-.ing{display:inline-flex;align-items:center;gap:4px;font-size:.85rem} .ing img{width:26px;height:26px}
+.ing{display:inline-flex;align-items:center;gap:4px;font-size:.85rem} .ing img{width:26px;height:26px} .ing.bad{color:var(--warn);font-weight:600}
 .rc{border-top:1px solid var(--rule);padding-top:8px;display:flex;flex-direction:column;gap:6px} .rc .it{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.95rem} .rc .it img{width:34px;height:34px} .rc .it button{margin-left:auto}
 .rc .how{font:400 11.5px var(--mono);color:var(--mut)} .pre{font-size:.85rem;color:var(--mut);line-height:1.5}
 .mod{font:600 10px var(--mono);color:var(--warn);margin-left:6px}
@@ -61,13 +61,13 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 </main>
 <script>
 const DATA=@DATA@;
-const {N,E,B,W,H,CW,CH,DD,ICN,ALL,MN,ORDER}=DATA;
+const {N,E,B,W,H,LM,CW,CH,DD,ICN,ALL,MN,ORDER,RES,RN,S0}=DATA;
 const NS='http://www.w3.org/2000/svg',KEY='terra-arbre-v2';
 const svg=document.getElementById('arbre'),panelEl=document.getElementById('panel'),zoomEl=document.getElementById('zoom');
 let store={pos:{},rec:{}};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')store={pos:s.pos||{},rec:s.rec||{}}}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}};
-const NM=Object.fromEntries(ALL);
+const NM=Object.assign(Object.fromEntries(ALL),RN);
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const el=(tag,attrs={},text)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!==undefined)e.textContent=text;return e};
 const pos=k=>store.pos[k]||[N[k].x,N[k].y];
@@ -78,7 +78,19 @@ function wrap(s,w=15){const out=[];let cur='';for(const word of s.split(' ')){if
 let sel=null,z=.9,drag=null,suppress=false;
 const gEdges=el('g'),gNodes=el('g');
 /* ---------- dessin ---------- */
-function drawBands(){B.forEach(b=>{svg.append(el('line',{class:'band',x1:0,x2:W,y1:b.y,y2:b.y}),el('text',{class:'bl',x:10,y:b.y+26},'P'+b.p),el('text',{class:'bs',x:10,y:b.y+40},BANDNAME[b.p]))})}
+function drawResources(){
+ const CWr=96,CHr=64,gap=10;let y=14;
+ RES.forEach(row=>{svg.append(el('text',{class:'bs',x:LM,y:y+10},row.label.toUpperCase()));
+  let x=LM,yy=y+18;
+  row.items.forEach(u=>{if(x+CWr>W-10){x=LM;yy+=CHr+8}
+   const g=el('g',{class:'res','data-id':u,transform:`translate(${x} ${yy})`});
+   g.append(el('title',{},NM[u]||u),el('rect',{class:'rbox',x:0,y:0,width:CWr,height:CHr,rx:6}));
+   if(ICN[u])g.append(el('image',{href:ICN[u],x:(CWr-30)/2,y:4,width:30,height:30}));
+   wrap(NM[u]||u,14).slice(0,2).forEach((l,i)=>g.append(el('text',{class:'nm',x:CWr/2,y:46+i*11,'text-anchor':'middle'},l)));
+   svg.append(g);x+=CWr+gap});
+  y=yy+CHr+14});
+ svg.append(el('line',{class:'band',x1:0,x2:W,y1:y,y2:y}))}
+function drawBands(){drawResources();B.forEach(b=>{svg.append(el('line',{class:'band',x1:0,x2:W,y1:b.y,y2:b.y}),el('text',{class:'bl',x:10,y:b.y+26},'P'+b.p),el('text',{class:'bs',x:10,y:b.y+40},BANDNAME[b.p]))})}
 function edgePath(d,k,i){const [dx,dy]=pos(d),[kx,ky]=pos(k);const x1=dx+CW/2,y1=dy+CH,x2=kx+CW/2,y2=ky;const bus=y1+8+(ORDER.indexOf(d)%5)*7;return`M${x1} ${y1} V${bus} H${x2} V${y2-2}`}
 function drawEdges(){[...gEdges.children].forEach((p,i)=>p.setAttribute('d',edgePath(E[i][0],E[i][1])))}
 function nodeEl(k){
@@ -102,7 +114,9 @@ function nodeEl(k){
 function build(){svg.replaceChildren();svg.setAttribute('viewBox',`0 0 ${W} ${H}`);gEdges.replaceChildren();gNodes.replaceChildren();drawBands();
  E.forEach(([d,k,m])=>gEdges.append(el('path',{class:'e'+(m?' main':''),'data-from':d,'data-to':k,d:edgePath(d,k)})));
  ORDER.forEach(k=>gNodes.append(nodeEl(k)));svg.append(gEdges,gNodes);applySel()}
-function applySel(){
+function markRes(){const used=new Set();if(sel){DD[sel].c.forEach(c=>used.add(c[0]));DD[sel].it.forEach(it=>recOf(it.id).forEach(p=>p.i.forEach(a=>used.add(a[0]))))}
+ svg.querySelectorAll('.res').forEach(g=>g.classList.toggle('use',used.has(g.dataset.id)))}
+function applySel(){markRes();
  const nodes=[...gNodes.children],edges=[...gEdges.children];
  if(!sel){svg.classList.remove('dim');nodes.forEach(n=>n.classList.remove('on','sel'));edges.forEach(e=>e.classList.remove('on'));return}
  const all=new Set([sel,...UP[sel],...DOWN[sel]]);svg.classList.add('dim');
@@ -112,15 +126,22 @@ function applySel(){
 const orig={};ORDER.forEach(k=>DD[k].it.forEach(it=>orig[it.id]={p:it.p,new:it.new,disc:k}));
 const recOf=item=>store.rec[item]||(orig[item]?orig[item].p:[]);
 const isMod=item=>!!store.rec[item];
-const ing=(id,q)=>`<span class="ing">${ICN[id]?`<img alt="" src="${ICN[id]}">`:''}<span>${q} × ${esc(NM[id]||id)}</span></span>`;
-const allOpts=ALL.map(([i,n])=>`<option value="${i}">${esc(n)}</option>`).join('');
-const machOpts=cur=>['',...Object.keys(MN)].map(m=>`<option value="${m}"${m===cur?' selected':''}>${m?esc(MN[m]):'À la main'}</option>`).join('');
+const ing=(id,q,bad)=>`<span class="ing${bad?' bad':''}"${bad?' title="Pas encore découvert à ce stade de l\'arbre"':''}>${ICN[id]?`<img alt="" src="${ICN[id]}">`:''}<span>${bad?'⚠ ':''}${q} × ${esc(NM[id]||id)}</span></span>`;
+const optsFor=(item,cur)=>ALL.filter(([i])=>okIng(item,i)||i===cur).map(([i,n])=>`<option value="${i}"${i===cur?' selected':''}>${okIng(item,i)?'':'⚠ '}${esc(n)}</option>`).join('');
+const machOpts=(item,cur)=>['',...Object.keys(MN)].filter(m=>okMach(item,m)||m===cur).map(m=>`<option value="${m}"${m===cur?' selected':''}>${m?esc(MN[m]):'À la main'}</option>`).join('');
 const limitOf=item=>DD[orig[item].disc].t<=2?3:4;
-function pathView(item,p){return`<div class="how">${p.m?esc(MN[p.m]||p.m)+(p.s?' · '+p.s+' s':''):'À la main'}${p.mo?' · moule : '+esc(NM[p.mo]||p.mo):''}${p.o>1?' · donne '+p.o:''}${p.f?' · '+esc(p.f):''}</div><div class="row">${p.i.map(a=>ing(a[0],a[1])).join('')}</div>`}
+function pathView(item,p){const badM=!okMach(item,p.m);return`<div class="how">${p.m?(badM?'⚠ ':'')+esc(MN[p.m]||p.m)+(p.s?' · '+p.s+' s':''):'À la main'}${p.mo?' · moule : '+esc(NM[p.mo]||p.mo):''}${p.o>1?' · donne '+p.o:''}${p.f?' · '+esc(p.f):''}</div><div class="row">${p.i.map(a=>ing(a[0],a[1],!okIng(item,a[0]))).join('')}</div>`}
 function pathEdit(item,j,p){const types=new Set(p.i.map(a=>a[0])).size,lim=limitOf(item);
- return`<div class="pe" data-item="${item}" data-j="${j}"><div class="hd"><select class="m" aria-label="Machine">${machOpts(p.m)}</select><label>durée (s) <input class="s" type="number" min="0" step="0.5" value="${p.s||0}"></label><label>donne <input class="o" type="number" min="1" value="${p.o||1}"></label></div>
- ${p.i.map((a,r)=>`<div class="ir" data-r="${r}"><select class="ii" aria-label="Ingrédient">${allOpts.replace(`value="${a[0]}"`,`value="${a[0]}" selected`)}</select><input class="iq" type="number" min="1" value="${a[1]}"><button class="rm" aria-label="Retirer">×</button></div>`).join('')}
+ return`<div class="pe" data-item="${item}" data-j="${j}"><div class="hd"><select class="m" aria-label="Machine">${machOpts(item,p.m)}</select><label>durée (s) <input class="s" type="number" min="0" step="0.5" value="${p.s||0}"></label><label>donne <input class="o" type="number" min="1" value="${p.o||1}"></label></div>
+ ${p.i.map((a,r)=>`<div class="ir" data-r="${r}"><select class="ii" aria-label="Ingrédient">${optsFor(item,a[0])}</select><input class="iq" type="number" min="1" value="${a[1]}"><button class="rm" aria-label="Retirer">×</button></div>`).join('')}
  <div class="ir"><button class="addi">+ ingrédient</button>${types>lim?`<span class="warn">⚠ ${types} types d'ingrédients (max ${lim})</span>`:`<span class="pre">${types} type${types>1?'s':''} d'ingrédients</span>`}</div></div>`}
+const START=new Set(S0);
+/** Objets qu'on a déjà quand on découvre `disc` : ressources et objets de départ, plus tout ce que débloquent ses ancêtres. */
+const availCache={};
+function avail(disc){if(!availCache[disc]){const a=new Set(START);UP[disc].forEach(u=>DD[u].it.forEach(it=>a.add(it.id)));availCache[disc]=a}return availCache[disc]}
+const MACH_START=new Set(['furnace','drill','chest_wood']);
+const okIng=(item,id)=>avail(orig[item].disc).has(id);
+const okMach=(item,m)=>!m||MACH_START.has(m)||avail(orig[item].disc).has('machine_'+m);
 const editing=new Set();
 function panel(id){
  const d=DD[id];let h=`<h2>${esc(d.n)}<span class="chip" style="border-color:var(--t${d.t})">palier ${d.t}</span></h2>`;
@@ -137,7 +158,7 @@ function panel(id){
  h+='</div>';
  const up=[...UP[id]];if(up.length)h+=`<div><h3>Tout l'amont (${up.length})</h3><div class="pre">${up.map(k=>esc(DD[k].n)).join(', ')}</div></div>`;
  return h}
-function showPanel(){panelEl.innerHTML=sel?panel(sel):'<p>Touchez une case de l\'arbre : son coût de découverte et les recettes de ses objets s\'affichent ici, et se modifient.</p>';updInfo()}
+function showPanel(){panelEl.innerHTML=sel?panel(sel):'<p>Touchez une case de l\'arbre : son coût de découverte et les recettes de ses objets s\'affichent ici, et se modifient.</p>';markRes();updInfo()}
 function pick(k){sel=k;applySel();showPanel()}
 function pathsFor(item){if(!store.rec[item])store.rec[item]=JSON.parse(JSON.stringify(orig[item]?orig[item].p:[]));return store.rec[item]}
 panelEl.addEventListener('click',e=>e.stopPropagation());
@@ -145,8 +166,8 @@ panelEl.addEventListener('click',e=>{
  const b=e.target.closest('button');if(!b)return;const rc=b.closest('.rc');if(!rc)return;const item=rc.dataset.item,pe=b.closest('.pe');
  if(b.classList.contains('ed')){editing.has(item)?editing.delete(item):editing.add(item)}
  else if(b.classList.contains('undo')){delete store.rec[item];save()}
- else if(b.classList.contains('addp')){pathsFor(item).push({m:'',s:0,i:[['iron_plate',1]],o:1});save()}
- else if(pe){const ps=pathsFor(item),p=ps[+pe.dataset.j];if(b.classList.contains('addi'))p.i.push(['iron_plate',1]);else if(b.classList.contains('rm')){p.i.splice(+b.closest('.ir').dataset.r,1);if(!p.i.length)ps.splice(+pe.dataset.j,1)}save()}
+ else if(b.classList.contains('addp')){pathsFor(item).push({m:'',s:0,i:[['wood',1]],o:1});save()}
+ else if(pe){const ps=pathsFor(item),p=ps[+pe.dataset.j];if(b.classList.contains('addi'))p.i.push([[...avail(orig[item].disc)].find(i=>NM[i]&&!i.startsWith('res_'))||'wood',1]);else if(b.classList.contains('rm')){p.i.splice(+b.closest('.ir').dataset.r,1);if(!p.i.length)ps.splice(+pe.dataset.j,1)}save()}
  showPanel()});
 panelEl.addEventListener('change',e=>{
  const pe=e.target.closest('.pe');if(!pe)return;const item=pe.dataset.item,ps=pathsFor(item),p=ps[+pe.dataset.j],t=e.target;
