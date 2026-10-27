@@ -9,11 +9,22 @@ fr=json.load(open('src/i18n/fr.json'))
 items={i['id']:i for i in json.load(open('content/items.json'))['items']}
 rec=json.load(open('content/recipes.json'))['recipes']
 # --- Propositions non implémentées : produits intermédiaires (règle : 3 types d'ingrédients au plus, 4 pour les recettes avancées)
-PROPOSED_NAMES={'kit_circuit':'Kit circuit','chassis_simple':'Châssis simple','glass':'Vitre','chassis_steel':'Châssis renforcé','aluminium_rod':'Tige d\'aluminium','chassis_alu':'Châssis léger','circuit_advanced':'Circuit avancé','microcontroller':'Microcontrôleur'}
+PROPOSED_NAMES={'kit_circuit':'Kit circuit','chassis_simple':'Châssis simple','glass':'Vitre','chassis_steel':'Châssis renforcé','aluminium_rod':'Tige d\'aluminium','chassis_alu':'Châssis léger','circuit_advanced':'Circuit avancé','microcontroller':'Microcontrôleur',
+ 'machine_pole_hv':'Poteau haute tension','machine_pole_uhv':'Poteau très haute tension','machine_transformer':'Transformateur','machine_breaker':'Disjoncteur','machine_lamp':'Lampadaire électrique',
+ 'machine_wind_turbine':'Éolienne','solar_cell':'Cellule photovoltaïque','machine_solar_panel':'Panneau solaire','machine_accumulator_basic':'Accumulateur','graphite':'Graphite','lithium_salt':'Sel de lithium',
+ 'battery_lithium':'Batterie lithium','machine_charger':'Borne de recharge','vehicle_quad_electric':'Quad électrique'}
 PROPOSED_HAND={'kit_circuit':{'copper_plate':1,'copper_wire':4},'chassis_simple':{'iron_plate':2,'iron_rod':1},'chassis_steel':{'steel_plate':2,'steel_rod':1},
- 'chassis_alu':{'aluminium_plate':2,'aluminium_rod':1},'circuit_advanced':{'kit_circuit':1,'silicon_chip':1},'microcontroller':{'plastic_insulator':1,'silicon_chip':1,'kit_circuit':1}}
-PROPOSED_MACHINE=[{'id':'glass','machine':'furnace','in':{'silica_sand':1},'out':{'glass':1},'seconds':2},{'id':'aluminium_rod','machine':'stamper','in':{'aluminium_ingot':1},'out':{'aluminium_rod':2},'seconds':3}]
-PROPOSED_RECIPE_CHANGES={'machine_lab':{'kit_circuit':3,'chassis_simple':3,'glass':4}}   # le laboratoire : 2 ingrédients + des vitres
+ 'chassis_alu':{'aluminium_plate':2,'aluminium_rod':1},'circuit_advanced':{'kit_circuit':1,'silicon_chip':1},'microcontroller':{'plastic_insulator':1,'silicon_chip':1,'kit_circuit':1},
+ 'machine_pole_hv':{'chassis_steel':1,'glass':4,'kit_circuit':1},'machine_pole_uhv':{'chassis_alu':2,'plastic_insulator':4,'microcontroller':1},
+ 'machine_transformer':{'chassis_steel':2,'copper_wire':24,'plastic_insulator':4},'machine_breaker':{'chassis_steel':1,'kit_circuit':1,'glass':1},
+ 'machine_lamp':{'chassis_simple':1,'glass':2,'kit_circuit':1},'machine_wind_turbine':{'chassis_steel':2,'motor':2,'kit_circuit':1},
+ 'solar_cell':{'silicon_raw':1,'glass':1,'copper_wire':2},'machine_solar_panel':{'solar_cell':4,'chassis_alu':1,'glass':1},
+ 'machine_accumulator_basic':{'chassis_steel':1,'plastic_insulator':2,'microcontroller':1},'battery_lithium':{'lithium_salt':1,'graphite':1,'plastic_insulator':1},
+ 'machine_charger':{'chassis_steel':1,'microcontroller':1,'plastic_insulator':2},'vehicle_quad_electric':{'chassis_alu':1,'motor':1,'battery_lithium':2}}
+PROPOSED_MACHINE=[{'id':'glass','machine':'furnace','in':{'silica_sand':1},'out':{'glass':1},'seconds':2},{'id':'aluminium_rod','machine':'stamper','in':{'aluminium_ingot':1},'out':{'aluminium_rod':2},'seconds':3},
+ {'id':'graphite','machine':'furnace_electric','in':{'coal':2},'out':{'graphite':2},'seconds':4,'fluid':{'kind':'polymère','amount':-10}},
+ {'id':'lithium_salt','machine':'evaporation_tower','in':{},'out':{'lithium_salt':1},'seconds':10,'fluid':{'kind':'eau','amount':-500}}]
+PROPOSED_RECIPE_CHANGES={'machine_lab':{'kit_circuit':3,'chassis_simple':3,'glass':4},'machine_accumulator':{'chassis_steel':2,'battery_lithium':4,'microcontroller':1}}   # le laboratoire : 2 ingrédients + des vitres
 for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
 for r in PROPOSED_MACHINE: items[r['out'] and next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
 for k,r in PROPOSED_RECIPE_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
@@ -72,6 +83,7 @@ D={
  'quad':('Quad',1,['vehicle_quad'],['motor'],P(1,100)),
  'boiler':('Chaudière',1,['machine_boiler'],['pipe'],P(1,100)),
  'turbine':('Turbine à vapeur',1,['machine_turbine'],['boiler'],P(1,100)),
+ 'lamp':('Lampadaire électrique',1,['machine_lamp'],['laboratory','electricity'],P(1,100)),
  'pack_2':('Paquet de science T2',1,[S2],['laboratory','gears','wires'],P(1,100)),
  'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],P(1,100,10)),
  'turret':('Tourelle',1,['machine_turret'],['conveyor','magazine'],P(1,100,10)),
@@ -94,6 +106,9 @@ D={
  'assembler':('Assembleur',2,['machine_assembler'],['arm_electric'],P(2,150)),
  'generator':('Générateur à combustible',2,['machine_generator'],['electricity','turbine'],P(2,100)),
  'drill_electric':('Foreuse électrique',2,['machine_drill_electric'],['generator'],P(2,150)),
+ 'pole_hv':('Poteau haute tension',2,['machine_pole_hv'],['chassis_steel'],P(2,100)),
+ 'breaker':('Disjoncteur',2,['machine_breaker'],['pole_hv'],P(2,100)),
+ 'wind':('Éolienne',2,['machine_wind_turbine'],['motor','chassis_steel','kit_circuit'],P(2,150)),
  'bedding_2':('Couchage de confort',2,['bed'],['bedding_1'],P(2,100)),
  'research_2':('Recherche II',2,[],['research_1'],P(2,100)),
  'rifle':('Fusil',2,['rifle'],['pistol','steel_plate'],P(2,100,20)),
@@ -126,6 +141,12 @@ D={
  'aluminium_rod':('Tige d\'aluminium',3,['aluminium_rod'],['aluminium_ingot'],P(3,100)),
  'chassis_alu':('Châssis léger',3,['chassis_alu'],['aluminium_plate','aluminium_rod'],P(3,100)),
  'aluminium':('Constructions en aluminium',3,['piece_wall_aluminium','piece_slab_aluminium','piece_stairs_aluminium','piece_door_aluminium','piece_pillar_aluminium'],['aluminium_plate'],P(3,150)),
+ 'pole_uhv':('Poteau très haute tension',3,['machine_pole_uhv'],['pole_hv','chassis_alu','microcontroller'],P(3,150)),
+ 'transformer':('Transformateur',3,['machine_transformer'],['pole_hv','plastic'],P(3,150)),
+ 'accumulator_basic':('Accumulateur',3,['machine_accumulator_basic'],['chassis_steel','plastic','microcontroller'],P(3,150)),
+ 'solar_cell':('Cellule photovoltaïque',3,['solar_cell'],['silicon_raw'],P(3,100)),
+ 'solar_panel':('Panneau solaire',3,['machine_solar_panel'],['solar_cell','chassis_alu'],P(3,150)),
+ 'graphite':('Graphite',3,['graphite'],['refinery','electric_furnace'],P(3,100)),
  'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],P(3,150)),
  'conveyor_3':('Tapis T3',3,['machine_conveyor_3'],['conveyor_2'],P(3,150)),
  'arm_filter':('Bras filtrant',3,['machine_arm_filter'],['conveyor_3'],P(3,100)),
@@ -148,7 +169,11 @@ D={
  'vitrifier':('Vitrificateur',4,['machine_vitrifier','contaminated_glass'],['reactor'],P(4,200)),
  'armor_4':('Armure 4',4,['armor4_head','armor4_torso','armor4_legs','armor4_feet'],['armor_2','silicon_chip'],P(4,150,40)),
  'turret_plasma':('Tourelle plasma',4,['machine_turret_plasma'],['turret_laser','engine_heavy'],P(4,150,40)),
- 'storage':('Accumulateur',4,['machine_accumulator'],['zamak'],P(4,150)),
+ 'lithium_salt':('Sel de lithium',4,['lithium_salt'],['evaporation'],P(4,150)),
+ 'battery':('Batterie lithium',4,['battery_lithium'],['lithium_salt','graphite'],P(4,150)),
+ 'charger':('Borne de recharge',4,['machine_charger'],['battery'],P(4,100)),
+ 'quad_electric':('Quad électrique',4,['vehicle_quad_electric'],['quad','battery','chassis_alu'],P(4,150)),
+ 'storage':('Accumulateur lithium',4,['machine_accumulator'],['battery','accumulator_basic'],P(4,150)),
  'research_4':('Recherche IV',4,[],['research_3'],P(4,100)),
  # --- Palier 5 : paquets T5 et T4
  'fusion':('Fusion',5,['machine_fusion_reactor'],['vitrifier','storage'],P(5,300)),
@@ -169,8 +194,8 @@ def needs(item):
 START={'wood','stone','fiber','coal','iron_ore','copper_ore','zinc_ore','bauxite','crude_oil','uraninite','iron_ingot','copper_ingot','machine_drill','machine_furnace','machine_chest_wood','tool_stone','vehicle_cart','carapace','living_tissue','combat_pack','nuclear_waste','piece_wall_wood','piece_door_wood','piece_door_stone','piece_wall_stone','piece_stairs_wood','piece_stairs_stone','piece_slab_wood','piece_slab_stone','piece_pillar_wood','piece_pillar_stone'}
 uncovered=[i for i in items if i not in owner and i not in START and not i.startswith('res_')]
 if uncovered: print('sans découverte :',uncovered)
-BASE={'cast_iron_ingot','mould_plate','mould_gear','mould_wire','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod','crushed_stone','silica_sand','cloth','steel_ingot','slag','steel_plate','steel_rod','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot','aluminium_ingot','aluminium_plate','aluminium_rod','zamak_ingot','silicon_raw','glass'}
-INTER={'kit_circuit','chassis_simple','chassis_steel','chassis_alu','circuit_advanced','microcontroller','motor','motor_heavy','silicon_chip','plastic_insulator','cable_insulated','rubber','concrete_block','barrel_empty','barrel_water','barrel_oil','uranium_enriched','uranium_depleted','uranium_rod','contaminated_glass'}
+BASE={'graphite','lithium_salt','cast_iron_ingot','mould_plate','mould_gear','mould_wire','iron_plate','copper_plate','iron_gear','copper_wire','iron_rod','crushed_stone','silica_sand','cloth','steel_ingot','slag','steel_plate','steel_rod','iron_ore_washed','copper_ore_washed','zinc_ore_washed','zinc_ingot','aluminium_ingot','aluminium_plate','aluminium_rod','zamak_ingot','silicon_raw','glass'}
+INTER={'solar_cell','battery_lithium','kit_circuit','chassis_simple','chassis_steel','chassis_alu','circuit_advanced','microcontroller','motor','motor_heavy','silicon_chip','plastic_insulator','cable_insulated','rubber','concrete_block','barrel_empty','barrel_water','barrel_oil','uranium_enriched','uranium_depleted','uranium_rod','contaminated_glass'}
 def category(k):
     """machine > intermédiaire > base > autre (équipement, armes, véhicules, pièces de construction, paquets…)."""
     un=D[k][2]
@@ -179,6 +204,8 @@ def category(k):
     if any(u in BASE for u in un): return 'base'
     return 'autre'
 CAT={k:category(k) for k in D}
+bad_rule=[(k,len(items[k]['recipe'])) for k in PROPOSED if items[k].get('recipe') and len(items[k]['recipe'])>4]
+if bad_rule: sys.exit(f'recette proposée à plus de 4 types : {bad_rule}')
 derived={}
 for k,(nm,t,un,pre,cost) in D.items():
     derived[k]={owner[need] for u in un for need in needs(u) if need in owner and owner[need]!=k}
@@ -216,6 +243,14 @@ L+=["## Notes des paliers 3 à 5","",
 "- **Palier 4** : l'ancien arbre découpait l'armure 4 en deux (haut / bas) et le réacteur en trois (fission, réacteur, déchets) ; l'armure 4 est ici une seule découverte.",
 "- **Accumulateur** passe au palier 4 : sa recette demande du zamak, qui vient de la Fission (dans l'ancien arbre il était au palier 3, sans pouvoir être fabriqué).",
 "- **Palier 5** : Fusion et Balise quantique sont les seules découvertes (demandent Déchets nucléaires et Accumulateur).","",
+"## Énergie : règles proposées (pas encore dans le jeu)","",
+"- **Trois poteaux** : bois (3 prises, 8 m, 500 kW), haute tension (4 prises, 20 m, 10 MW), très haute tension (5 prises, 40 m, 600 MW). Valeurs de départ à ajuster.",
+"- **Prises** : un câble entre deux poteaux prend une prise à chaque bout ; **chaque machine raccordée prend aussi une prise** (validé). Un poteau en bois alimente donc 3 machines au plus, ou 2 machines et un câble vers le poteau suivant.",
+"- **Réseau mixte** (validé) : un même réseau peut mélanger les trois poteaux ; chacun a son rôle (bois : distribution locale, haute tension : lignes moyennes, très haute tension : longues lignes et grosses centrales). Une surcharge ralentit les machines au lieu de détruire quoi que ce soit.",
+"- **Transformateur** : relie un poteau très haute tension à un poteau d'un niveau inférieur, avec sa propre limite de puissance.",
+"- **Compteur** (au clic sur un poteau) : graphique de production par machine productrice, graphique de consommation par machine ; un clic sur une machine de la liste en détaille la consommation. Pas d'objet à fabriquer.",
+"- **Disjoncteur** : coupe un réseau en surcharge, se réarme avec la touche d'activation ; il prend deux prises. **Lampadaire électrique** : consomme peu, éclaire la nuit. **Quad électrique** : roule avec des batteries lithium, rechargées à la borne de recharge.",
+"- **Éolienne** (palier 2, 2 moteurs) : puissance variable selon le vent. **Panneau solaire** (palier 3) : suit le jour et la nuit, d'où le besoin d'accumulateurs ; l'**accumulateur** passe au palier 3 (sans zamak) et la version à batteries lithium au palier 4.","",
 "## Points à confirmer","",
 "0. **Règle des recettes** (validée) : 3 types d'ingrédients au plus, 4 pour les recettes avancées. Les intermédiaires proposés (Kit circuit, Châssis simple/renforcé/léger, Vitre, Circuit avancé, Microcontrôleur) sont dans l'arbre mais **pas dans le jeu** ; seule la recette du laboratoire est montrée avec sa version proposée (3 kits circuit + 3 châssis simples + 4 vitres).",
 "1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).",

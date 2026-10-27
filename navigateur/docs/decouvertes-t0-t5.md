@@ -59,6 +59,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Quad** | Quad | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Moteur simple | 100 × Paquet de science T1 |
 | **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Paquet de science T1, Tuyau | 100 × Paquet de science T1 |
 | **Turbine à vapeur** | Turbine à vapeur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chaudière | 100 × Paquet de science T1 |
+| **Lampadaire électrique** | Lampadaire électrique | Vitre, Kit circuit, Châssis simple, Électricité, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Paquet de science T1, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
 | **Tourelle** | Tourelle légère | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
@@ -85,6 +86,9 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Assembleur** | Assembleur | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Paquet de science T2, Bras robotique électrique | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
 | **Générateur à combustible** | Générateur à combustible | Plaques de fer et de cuivre, Engrenage, Tige de fer, Électricité, Paquet de science T1, Turbine à vapeur, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Foreuse électrique** | Foreuse électrique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Tige de fer, Paquet de science T1, Paquet de science T2, Générateur à combustible | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
+| **Poteau haute tension** | Poteau haute tension | Vitre, Kit circuit, Paquet de science T1, Paquet de science T2, Châssis renforcé | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Disjoncteur** | Disjoncteur | Vitre, Kit circuit, Paquet de science T1, Paquet de science T2, Châssis renforcé, Poteau haute tension | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Éolienne** | Éolienne | Kit circuit, Paquet de science T1, Moteur simple, Paquet de science T2, Châssis renforcé | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
 | **Couchage de confort** | Lit | Paquet de science T1, Textile, Couchage de survie, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Recherche II** | (effet : paquets plus rapides) | Paquet de science T1, Recherche I (paquets plus vite), Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Fusil** | Fusil automatique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Paquet de science T1, Pistolet, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 20 × Paquet de combat |
@@ -121,6 +125,12 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Tige d'aluminium** | Tige d'aluminium | Estampeuse, Paquet de science T2, Paquet de science T3, Lingot d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Châssis léger** | Châssis léger | Paquet de science T2, Paquet de science T3, Plaque d'aluminium, Tige d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Constructions en aluminium** | Mur en aluminium, Dalle en aluminium, Escalier en aluminium, Battant de porte en aluminium (2 par porte), Pilier en aluminium | Paquet de science T2, Paquet de science T3, Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Poteau très haute tension** | Poteau très haute tension | Paquet de science T2, Poteau haute tension, Paquet de science T3, Isolant plastique, Microcontrôleur, Châssis léger | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Transformateur** | Transformateur | Fil de cuivre, Paquet de science T2, Châssis renforcé, Poteau haute tension, Paquet de science T3, Isolant plastique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Accumulateur** | Accumulateur | Paquet de science T2, Châssis renforcé, Paquet de science T3, Isolant plastique, Microcontrôleur | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Cellule photovoltaïque** | Cellule photovoltaïque | Fil de cuivre, Vitre, Paquet de science T2, Paquet de science T3, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
+| **Panneau solaire** | Panneau solaire | Vitre, Paquet de science T2, Paquet de science T3, Châssis léger, Cellule photovoltaïque | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
+| **Graphite** | Graphite | Paquet de science T2, Paquet de science T3, Four électrique, Raffinerie | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Porte de garage** | Porte de garage en aluminium | Engrenage, Fil de cuivre, Paquet de science T2, Paquet de science T3, Moteur renforcé, Plaque d'aluminium, Constructions en aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Tapis T3** | Tapis express (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Tapis rapide, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Bras filtrant** | Bras filtrant (T3) | Engrenage, Fil de cuivre, Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Tapis T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
@@ -147,14 +157,18 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Vitrificateur** | Station de vitrification (T4), Cylindre de verre contaminé | Plaque d'acier, Bétonnière, Paquet de science T3, Puce de silicium, Isolant plastique, Câble isolé, Paquet de science T4, Réacteur à fission | 200 × Paquet de science T4 + 200 × Paquet de science T3 |
 | **Armure 4** | Casque à blindage lourd, Plastron à blindage lourd, Jambières à blindage lourd, Bottes à blindage lourd | Plaque d'acier, Armure 2, Paquet de science T3, Puce de silicium, Paquet de science T4 | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
 | **Tourelle plasma** | Tourelle à plasma | Plaque d'acier, Paquet de science T3, Puce de silicium, Moteur renforcé, Paquet de science T4, Tourelle laser | 150 × Paquet de science T4 + 150 × Paquet de science T3 + 40 × Paquet de combat |
-| **Accumulateur** | Accumulateur (T3) | Plaque d'acier, Paquet de science T3, Puce de silicium, Câble isolé, Paquet de science T4, Zamak | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Sel de lithium** | Sel de lithium | Paquet de science T3, Paquet de science T4, Tour d'évaporation | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Batterie lithium** | Batterie lithium | Paquet de science T3, Isolant plastique, Graphite, Paquet de science T4, Sel de lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Borne de recharge** | Borne de recharge | Châssis renforcé, Paquet de science T3, Isolant plastique, Microcontrôleur, Paquet de science T4, Batterie lithium | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
+| **Quad électrique** | Quad électrique | Moteur simple, Quad, Paquet de science T3, Châssis léger, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
+| **Accumulateur lithium** | Accumulateur (T3) | Châssis renforcé, Paquet de science T3, Microcontrôleur, Accumulateur, Paquet de science T4, Batterie lithium | 150 × Paquet de science T4 + 150 × Paquet de science T3 |
 | **Recherche IV** | (effet : paquets plus rapides) | Paquet de science T3, Paquet de science T4, Recherche III | 100 × Paquet de science T4 + 100 × Paquet de science T3 |
 
 ## Palier 5 : paquets T5 + T4
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
-| **Fusion** | Réacteur à fusion magnétique | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Vitrificateur, Accumulateur | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
+| **Fusion** | Réacteur à fusion magnétique | Plaque d'acier, Bétonnière, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Vitrificateur, Accumulateur lithium | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
 | **Balise quantique** | Relais émetteur hyperfréquence, Antenne d'alignement quantique | Plaque d'acier, Puce de silicium, Câble isolé, Paquet de science T4, Zamak, Paquet de science T5, Fusion | 300 × Paquet de science T5 + 300 × Paquet de science T4 |
 
 ## Notes des paliers 3 à 5
@@ -167,6 +181,16 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 - **Palier 4** : l'ancien arbre découpait l'armure 4 en deux (haut / bas) et le réacteur en trois (fission, réacteur, déchets) ; l'armure 4 est ici une seule découverte.
 - **Accumulateur** passe au palier 4 : sa recette demande du zamak, qui vient de la Fission (dans l'ancien arbre il était au palier 3, sans pouvoir être fabriqué).
 - **Palier 5** : Fusion et Balise quantique sont les seules découvertes (demandent Déchets nucléaires et Accumulateur).
+
+## Énergie : règles proposées (pas encore dans le jeu)
+
+- **Trois poteaux** : bois (3 prises, 8 m, 500 kW), haute tension (4 prises, 20 m, 10 MW), très haute tension (5 prises, 40 m, 600 MW). Valeurs de départ à ajuster.
+- **Prises** : un câble entre deux poteaux prend une prise à chaque bout ; **chaque machine raccordée prend aussi une prise** (validé). Un poteau en bois alimente donc 3 machines au plus, ou 2 machines et un câble vers le poteau suivant.
+- **Réseau mixte** (validé) : un même réseau peut mélanger les trois poteaux ; chacun a son rôle (bois : distribution locale, haute tension : lignes moyennes, très haute tension : longues lignes et grosses centrales). Une surcharge ralentit les machines au lieu de détruire quoi que ce soit.
+- **Transformateur** : relie un poteau très haute tension à un poteau d'un niveau inférieur, avec sa propre limite de puissance.
+- **Compteur** (au clic sur un poteau) : graphique de production par machine productrice, graphique de consommation par machine ; un clic sur une machine de la liste en détaille la consommation. Pas d'objet à fabriquer.
+- **Disjoncteur** : coupe un réseau en surcharge, se réarme avec la touche d'activation ; il prend deux prises. **Lampadaire électrique** : consomme peu, éclaire la nuit. **Quad électrique** : roule avec des batteries lithium, rechargées à la borne de recharge.
+- **Éolienne** (palier 2, 2 moteurs) : puissance variable selon le vent. **Panneau solaire** (palier 3) : suit le jour et la nuit, d'où le besoin d'accumulateurs ; l'**accumulateur** passe au palier 3 (sans zamak) et la version à batteries lithium au palier 4.
 
 ## Points à confirmer
 
