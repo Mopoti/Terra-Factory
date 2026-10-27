@@ -53,7 +53,7 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 #mod .seg button{font:600 12px var(--sans);padding:5px 10px;border:1px solid var(--rule);background:var(--bg);color:var(--fg);cursor:pointer} #mod .seg button.on{background:var(--fg);color:var(--bg)}
 #mod .bd{overflow:auto;padding:10px} #mod svg{display:block;margin:auto}
 #mod .mn rect{fill:var(--bg);stroke:var(--line);stroke-width:1.5} #mod .mn.cur rect{stroke:var(--hl);stroke-width:3} #mod .mn{cursor:pointer} #mod .mn text{fill:var(--fg);font:400 10.5px var(--sans)} #mod .mn .tt{font:600 9px var(--mono);fill:var(--mut)}
-#mod .me{fill:none;stroke:var(--line);stroke-width:1.3} #mod .me.d{stroke:var(--hl)}
+#mod .me{fill:none;stroke:var(--line);stroke-width:1.6;stroke-linejoin:round} #mod .me.d{stroke:var(--hl)}
 #mod .mn.t0 rect{stroke:var(--t0)} #mod .mn.t1 rect{stroke:var(--t1)} #mod .mn.t2 rect{stroke:var(--t2)} #mod .mn.t3 rect{stroke:var(--t3)} #mod .mn.t4 rect{stroke:var(--t4)} #mod .mn.t5 rect{stroke:var(--t5)}
 #mod .mn .tb{fill:var(--line);opacity:.25} #mod .mn:hover rect{fill:color-mix(in srgb,var(--fg) 6%,var(--bg))} #mod .mn.cur rect{stroke:var(--hl)}
 #mod .pk{margin-top:12px;font-size:.85rem;color:var(--mut);display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center} #mod .chip2{font:600 11px var(--mono);padding:2px 8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
@@ -71,7 +71,7 @@ select,input{font:400 12px var(--sans);background:var(--bg);color:var(--fg);bord
 <div class="layout"><div class="scroll"><div id="zoom"><svg id="arbre" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Arbre vertical des découvertes, divisé en bandes P0 à P5"></svg></div></div>
 <aside class="panel" id="panel"></aside></div>
 </main>
-<div id="mod" role="dialog" aria-modal="true" aria-label="Prérequis d'une découverte"><div class="box"><div class="hd"><h2 id="mt"></h2><label class="dn">Déjà découvert jusqu'à <select id="md"><option value="-1">rien</option><option value="0">P0</option><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4</option></select></label><span class="seg"><button id="mzo">−</button><button id="mzi">+</button></span><span class="seg"><button data-m="near">Prérequis proches</button><button data-m="far">Prérequis éloignés</button></span><button id="mx">Fermer</button></div><div class="bd" id="mb"></div></div></div>
+<div id="mod" role="dialog" aria-modal="true" aria-label="Prérequis d'une découverte"><div class="box"><div class="hd"><h2 id="mt"></h2><label class="dn">Déjà découvert jusqu'à <select id="md"><option value="-1">rien</option><option value="0">P0</option><option value="1">P1</option><option value="2">P2</option><option value="3">P3</option><option value="4">P4</option></select></label><span class="seg"><button id="mzo">−</button><button id="mzi">+</button></span><span class="seg"><button data-m="far">Chemin complet</button><button data-m="near">Prérequis directs</button></span><button id="mx">Fermer</button></div><div class="bd" id="mb"></div></div></div>
 <script>
 const DATA=@DATA@;
 const {N,E,B,W,H,LM,CW,CH,DD,ICN,ALL,MN,ORDER,RES,RN,S0}=DATA;
@@ -236,7 +236,7 @@ document.getElementById('zi').onclick=()=>setZ(z+.15);document.getElementById('z
 build();Object.keys(store.cost).forEach(refreshCost);setZ(window.innerWidth<700?.6:.9);showPanel();
 
 /* ---------- fenêtre des prérequis (Ctrl + clic droit sur une case) ---------- */
-const modEl=document.getElementById('mod'),modB=document.getElementById('mb');let modId=null,modMode='near',modDone=-1,modZ=0;
+const modEl=document.getElementById('mod'),modB=document.getElementById('mb');let modId=null,modMode='far',modDone=-1,modZ=0;
 const isPk=k=>k.startsWith('pack_');
 /* Parents « de recette » : les paquets qui paient la découverte ne sont pas des étapes de l'arbre, ils sont listés à part. */
 const PARENTS={};ORDER.forEach(k=>PARENTS[k]=[]);E.forEach(([d,k])=>{if(!(isPk(d)&&!isPk(k)))PARENTS[k].push(d)});
@@ -276,8 +276,11 @@ function openMod(id,mode){modId=id;if(mode)modMode=mode;
  rows.forEach((r,i)=>r.forEach(o=>{o.x+=M-minX;o.y=M+i*(BH+GY)}));
  const Wd=maxX-minX+2*M,Hd=R*(BH+GY)-GY+2*M;
  const ge=el('g'),gn=el('g');
- segs.forEach(([a,b])=>{const a1=[a.x+a.w/2,a.y+(a.dummy?4:BH)],b1=[b.x+b.w/2,b.y+(b.dummy?4:0)],m=(a1[1]+b1[1])/2;
-  const toId=b.id||null;ge.append(el('path',{class:'me'+(b.id===id&&!a.dummy||false?' d':''),d:`M${a1[0]} ${a1[1]} C${a1[0]} ${m} ${b1[0]} ${m} ${b1[0]} ${b1[1]}`}))});
+ const rowIdx=new Map();rows.forEach(r=>r.forEach((o,i)=>rowIdx.set(o,i)));
+ /* traits orthogonaux : chaque parent a son couloir horizontal dans l'espace entre deux rangées, ses enfants s'y raccordent (comme un bus) */
+ segs.forEach(([a,b])=>{const x1=a.x+a.w/2,y1=a.y+(a.dummy?5:BH),x2=b.x+b.w/2,y2=b.y+(b.dummy?5:0),ch=y1+10+((rowIdx.get(a)||0)%5)*6,R=5,dir=x2>x1?1:-1;
+  const d=x1===x2?`M${x1} ${y1} V${y2}`:`M${x1} ${y1} V${ch-R} q0 ${R} ${dir*R} ${R} H${x2-dir*R} q${dir*R} 0 ${dir*R} ${R} V${y2}`;
+  ge.append(el('path',{class:'me'+(b.id===id&&!a.dummy?' d':''),d}))});
  rows.flat().filter(o=>!o.dummy).forEach(o=>{const k=o.id,n=el('g',{class:'mn t'+N[k].p+(k===id?' cur':''),transform:`translate(${o.x} ${o.y})`,tabindex:0});
   n.append(el('title',{},DD[k].n+(k===id?'':' — cliquer pour recentrer')),el('rect',{width:o.w,height:BH,rx:7}),el('path',{class:'tb',d:'M1 22 V8 Q1 1 8 1 H28 Z'}),el('text',{class:'tt',x:5,y:12},'T'+N[k].p));
   N[k].ic.slice(0,3).forEach((u,i)=>{if(ICN[u])n.append(el('image',{href:ICN[u],x:o.w-30-i*28,y:4,width:26,height:26}))});
@@ -286,9 +289,9 @@ function openMod(id,mode){modId=id;if(mode)modMode=mode;
  const fit=Math.min(1,(Math.min(innerWidth,1100)-80)/Wd),zz=modZ||Math.max(.5,fit);
  const sv=el('svg',{viewBox:`0 0 ${Wd} ${Hd}`,width:Wd*zz,height:Hd*zz,role:'img','aria-label':'Prérequis de '+DD[id].n});sv.append(ge,gn);
  const pk=packsOf(id),ft=document.createElement('div');ft.className='pk';
- ft.innerHTML=(pk.length?'<b>Se paie avec :</b> '+pk.map(p=>`<button class="chip2" data-id="${p}">${esc(DD[p].n)}</button>`).join(' ')+'<span> — recette de ces paquets à découvrir avant</span>':'<b>Se paie en ressources</b> (pas de paquets).')+(near&&ancOf(id).size>redParents(id).length?`<span> · ${ancOf(id).size-redParents(id).length} prérequis plus éloignés (bouton « éloignés »)</span>`:'');
+ ft.innerHTML=(pk.length?'<b>Se paie avec :</b> '+pk.map(p=>`<button class="chip2" data-id="${p}">${esc(DD[p].n)}</button>`).join(' ')+'<span> — recette de ces paquets à découvrir avant</span>':'<b>Se paie en ressources</b> (pas de paquets).')+(near&&ancOf(id).size>redParents(id).length?`<span> · ${ancOf(id).size-redParents(id).length} prérequis plus éloignés (bouton « Chemin complet »)</span>`:'');
  modB.replaceChildren(sv,ft);
- document.getElementById('md').value=String(modDone);document.getElementById('mt').textContent=`${DD[id].n} — ${near?'prérequis proches':'tout le chemin'} (${set.size-1})`;
+ document.getElementById('md').value=String(modDone);document.getElementById('mt').textContent=`${DD[id].n} — ${near?'prérequis directs':'chemin complet'} (${set.size-1})`;
  modEl.querySelectorAll('.seg button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===modMode));modEl.classList.add('on')}
 document.getElementById('md').addEventListener('change',e=>{modDone=+e.target.value;if(modId)openMod(modId)});
 const zoomMod=f=>{const s=modB.querySelector('svg');modZ=Math.max(.3,Math.min(1.6,(modZ||+s.getAttribute('width')/+s.getAttribute('viewBox').split(' ')[2])*f));if(modId)openMod(modId)};
