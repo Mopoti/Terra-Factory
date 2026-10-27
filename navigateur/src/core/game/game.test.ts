@@ -636,7 +636,7 @@ describe('assembleur dans la partie', () => {
     expect(s.placeMachine(f, 'assembler', 4, 4, 0, () => false)).toBe('ok');
     const m = s.changes.machines[0];
     expect(s.loadIngredient(m, 'iron_ingot', 5)).toBe(0); // pas de recette
-    s.changes.unlocked.push('logistics');
+    s.changes.unlocked.push('conveyor');
     expect(s.setRecipe(m, 'machine_conveyor')).toBe(true);
     expect(s.loadIngredient(m, 'copper_ingot', 4)).toBe(0); // pas un ingrédient
     expect(s.loadIngredient(m, 'iron_ingot', 100)).toBe(5); // plafonné à 5 pour 1 par objet
@@ -682,6 +682,18 @@ describe('équipement et sac à dos', () => {
   });
 });
 
+/** Marque des découvertes comme connues, avec tous leurs prérequis. */
+const know = (s: GameState, ...ids: string[]): void => {
+  const add = (id: string): void => {
+    if (s.changes.unlocked.includes(id)) return;
+    for (const r of techById(id).requires) add(r);
+    s.changes.unlocked.push(id);
+  };
+  ids.forEach(add);
+};
+/** Marque comme connus les prérequis d'une découverte (pas elle-même). */
+const knowRequirements = (s: GameState, id: string): void => know(s, ...techById(id).requires);
+
 describe('technologies', () => {
   it('fabriquer un objet verrouillé est refusé tant que la technologie n’est pas recherchée', () => {
     const s = new GameState({ inventory: { iron_ingot: 60, copper_ingot: 20, wood: 10 } });
@@ -696,49 +708,46 @@ describe('technologies', () => {
 
   it('prérequis et coût sont vérifiés ; la recherche est enregistrée', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
-    expect(s.research('automation')).toBe('lab');
-    expect(s.study('automation')).toBe('locked');
-    expect(s.research('logistics')).toBe('lab');
-    s.changes.unlocked.push('logistics');
-    expect(s.research('electricity')).toBe('ok');
-    expect(s.study('automation')).toBe('ok');
-    s.addStudy({ science_pack: 30, science_pack_2: 30 });
+    expect(s.research('arm_electric')).toBe('lab');
+    expect(s.study('arm_electric')).toBe('locked');
+    expect(s.research('cast_iron')).toBe('ok'); // payée à la main en lingots de fer
+    knowRequirements(s, 'arm_electric');
+    expect(s.study('arm_electric')).toBe('ok');
+    s.addStudy({ science_pack: 100, science_pack_2: 100 });
     expect(s.research('textile')).toBe('lab');
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
-    expect(copy.isUnlocked('machine_assembler')).toBe(true);
+    expect(copy.isUnlocked('machine_arm_electric')).toBe(true);
   });
 
   it('l’étude en laboratoire avance par paquets, se débloque à la fin et se sauvegarde', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, copper_ingot: 100 } });
-    s.changes.unlocked.push('logistics');
-    s.research('electricity');
+    knowRequirements(s, 'arm_electric');
+    s.research('cast_iron');
     expect(s.studyRemaining()).toBe(0);
-    expect(s.study('metallurgy')).toBe('notLab');
-    expect(s.study('automation')).toBe('ok');
+    expect(s.study('stamper')).toBe('notLab');
+    expect(s.study('arm_electric')).toBe('ok');
     // Un objet T2 coûte des paquets T2 ET T1.
-    expect(s.studyRemaining()).toBe(60);
+    expect(s.studyRemaining()).toBe(200);
     s.addStudy({ science_pack: 8 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
-    expect(copy.changes.researching).toBe('automation');
-    expect(copy.studyRemaining()).toBe(52);
-    copy.addStudy({ science_pack: 30, science_pack_2: 30 });
-    expect(copy.isUnlocked('machine_assembler')).toBe(true);
+    expect(copy.changes.researching).toBe('arm_electric');
+    expect(copy.studyRemaining()).toBe(192);
+    copy.addStudy({ science_pack: 100, science_pack_2: 100 });
+    expect(copy.isUnlocked('machine_arm_electric')).toBe(true);
     expect(copy.changes.researching).toBeNull();
   });
 
   it('une technologie T3 réclame des paquets T3 et T2 : les autres paquets ne comptent pas', () => {
     const s = new GameState({ inventory: {} });
-    for (const id of ['logistics', 'electricity', 'metallurgy', 'metallurgy_2', 'manufacturing_2'])
-      s.changes.unlocked.push(id);
-    s.changes.unlocked.push('construction_2');
-    expect(s.study('heavy_press_3')).toBe('ok');
-    expect(s.studyNeeds()).toEqual({ science_pack_3: 100, science_pack_2: 100 });
+    knowRequirements(s, 'heavy_press');
+    expect(s.study('heavy_press')).toBe('ok');
+    expect(s.studyNeeds()).toEqual({ science_pack_3: 150, science_pack_2: 150 });
     s.addStudy({ science_pack: 50 });
-    expect(s.studyRemaining()).toBe(200);
-    s.addStudy({ science_pack_3: 60, science_pack_2: 100 });
-    expect(s.studyNeeds()).toEqual({ science_pack_3: 40 });
+    expect(s.studyRemaining()).toBe(300);
+    s.addStudy({ science_pack_3: 60, science_pack_2: 150 });
+    expect(s.studyNeeds()).toEqual({ science_pack_3: 90 });
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
-    expect(copy.studyNeeds()).toEqual({ science_pack_3: 40 });
+    expect(copy.studyNeeds()).toEqual({ science_pack_3: 90 });
     copy.addStudy({ science_pack_3: 99 });
     expect(copy.isUnlocked('machine_heavy_press')).toBe(true);
   });
@@ -1069,6 +1078,7 @@ describe('mort, corps à récupérer, duvet et lit', () => {
 describe('roue à aubes : une technologie comme les autres', () => {
   it('se recherche avec 10 plaques de cuivre du sac, consommées au clic', () => {
     const s = new GameState({ inventory: { copper_plate: 9 } });
+    know(s, 'wires');
     expect(s.isUnlocked('machine_waterwheel')).toBe(false);
     expect(s.research('waterwheel')).toBe('missing');
     s.inventory = { copper_plate: 12 };
@@ -1085,15 +1095,12 @@ describe('roue à aubes : une technologie comme les autres', () => {
 });
 
 describe('versions du découpage des technologies et journal', () => {
-  it('une sauvegarde d’avant reçoit ce que ses anciennes technologies débloquaient, et le journal le dit', () => {
+  it('une sauvegarde d’avant garde tout ce qu’elle savait fabriquer, sous les noms des découvertes', () => {
     const c = normalizeChanges({ unlocked: ['electricity'] });
-    expect(c.unlocked).toEqual(expect.arrayContaining(['power_generation', 'laboratory']));
-    expect(
-      c.log
-        .filter((e) => e.kind === 'legacy')
-        .map((e) => e.id)
-        .sort(),
-    ).toEqual(['laboratory', 'power_generation']);
+    expect(c.unlocked).toEqual(
+      expect.arrayContaining(['electricity', 'crank', 'laboratory', 'plates']),
+    );
+    expect(c.unlocked).not.toContain('conveyor');
     expect(c.techVersion).toBe(TECH_VERSION);
   });
 
@@ -1108,23 +1115,23 @@ describe('versions du découpage des technologies et journal', () => {
   it('recherche à la main, étude en laboratoire et Créatif s’inscrivent au journal', () => {
     const s = new GameState({ inventory: { iron_ingot: 50, copper_ingot: 50 } });
     s.research('electricity');
-    s.changes.unlocked.push('logistics');
-    s.study('automation');
-    s.addStudy({ science_pack: 30, science_pack_2: 30 });
+    knowRequirements(s, 'arm_electric');
+    s.study('arm_electric');
+    s.addStudy({ science_pack: 100, science_pack_2: 100 });
     expect(s.changes.log.map((e) => [e.kind, e.id])).toEqual([
       ['research', 'electricity'],
-      ['study', 'automation'],
+      ['study', 'arm_electric'],
     ]);
     s.creative = true;
-    s.research('metallurgy');
-    expect(s.changes.log.at(-1)).toMatchObject({ kind: 'creative', id: 'metallurgy' });
+    s.research('iron_tool');
+    expect(s.changes.log.at(-1)).toMatchObject({ kind: 'creative', id: 'iron_tool' });
   });
 });
 
 describe('tuyau de cuivre, recettes verrouillées', () => {
   it('1 plaque de cuivre donne 2 tuyaux (fabrication à la main)', () => {
     const s = new GameState({ inventory: { copper_plate: 3 } });
-    s.changes.unlocked.push('steam');
+    s.changes.unlocked.push('pipe');
     expect(s.craft('machine_pipe', 2)).toEqual({ made: 2, stopped: null }); // 1 fabrication = 2 tuyaux
     expect(s.inventory.machine_pipe).toBe(2);
     expect(s.inventory.copper_plate).toBe(2);
@@ -1133,12 +1140,12 @@ describe('tuyau de cuivre, recettes verrouillées', () => {
     expect(s.craft('machine_pipe', 2).made).toBe(0); // plus de plaques
   });
 
-  it('le zinc n’est choisissable qu’une fois « Métallurgie T2 » recherchée', () => {
+  it('le zinc n’est choisissable qu’une fois « Lingot de zinc » découvert', () => {
     const s = new GameState({ inventory: {} });
     const furnace = emptyMachine(1, 'furnace', 0, 0, 0);
     expect(s.setRecipe(furnace, 'zinc')).toBe(false);
     expect(s.setRecipe(furnace, 'iron')).toBe(true);
-    s.changes.unlocked.push('metallurgy_2');
+    s.changes.unlocked.push('zinc');
     expect(s.setRecipe(furnace, 'zinc')).toBe(true);
     expect(furnace.recipe).toBe('zinc');
   });
@@ -1149,7 +1156,7 @@ describe('amélioration d’un tapis (palier supérieur posé par-dessus)', () =
   const none = (): boolean => false;
   it('remplace l’ancien tapis, qui revient dans le sac, en gardant les objets qui roulent dessus', () => {
     const s = new GameState({ inventory: { machine_conveyor: 1, machine_conveyor_2: 1 } });
-    s.changes.unlocked.push('logistics_2');
+    s.changes.unlocked.push('conveyor_2');
     const f = new Factory(s.changes.machines, noWorld);
     expect(s.placeMachine(f, 'conveyor', 4, 4, 0, none)).toBe('ok');
     f.machines[0].belt.push({ item: 'iron_ore', pos: 0.4 });
@@ -1170,7 +1177,8 @@ describe('mode Créatif', () => {
     const s = new GameState({ inventory: {} });
     expect(s.craft('machine_conveyor', 1).stopped).toBe('locked');
     s.creative = true;
-    expect(s.research('logistics')).toBe('ok'); // aucun objet demandé
+    knowRequirements(s, 'conveyor');
+    expect(s.research('conveyor')).toBe('ok'); // aucun paquet demandé
     expect(s.craft('machine_conveyor', 2).made).toBe(2); // aucun ingrédient demandé
     expect(s.inventory.iron_ingot ?? 0).toBe(0);
     expect(s.limits.maxWeightG).toBe(Infinity);
@@ -1178,24 +1186,24 @@ describe('mode Créatif', () => {
   });
   it('une technologie à paquets de science se débloque directement', () => {
     const s = new GameState({ inventory: {} });
-    expect(s.research('automation')).toBe('lab');
+    expect(s.research('arm_electric')).toBe('lab');
     s.creative = true;
-    s.changes.unlocked.push('logistics', 'electricity');
-    expect(s.research('automation')).toBe('ok');
-    expect(s.isUnlocked('machine_assembler')).toBe(true);
+    knowRequirements(s, 'arm_electric');
+    expect(s.research('arm_electric')).toBe('ok');
+    expect(s.isUnlocked('machine_arm_electric')).toBe(true);
   });
 });
 
 describe('technologies à plusieurs types de paquets', () => {
   it('Fusion réclame des paquets T5 ET T4 : l’étude n’est finie que quand les deux sont complets', () => {
     const s = new GameState({ inventory: {} });
-    s.changes.unlocked.push('waste_4', 'storage_3');
-    expect(s.study('fusion_5')).toBe('ok');
-    expect(s.studyNeeds()).toEqual({ science_pack_5: 200, science_pack_4: 100 });
-    s.addStudy({ science_pack_5: 200, science_pack_2: 50 }); // un paquet T2 ne sert à rien ici
-    expect(s.studyNeeds()).toEqual({ science_pack_4: 100 });
+    knowRequirements(s, 'fusion');
+    expect(s.study('fusion')).toBe('ok');
+    expect(s.studyNeeds()).toEqual({ science_pack_5: 300, science_pack_4: 300 });
+    s.addStudy({ science_pack_5: 300, science_pack_2: 50 }); // un paquet T2 ne sert à rien ici
+    expect(s.studyNeeds()).toEqual({ science_pack_4: 300 });
     expect(s.isUnlocked('machine_fusion_reactor')).toBe(false);
-    s.addStudy({ science_pack_4: 100 });
+    s.addStudy({ science_pack_4: 300 });
     expect(s.isUnlocked('machine_fusion_reactor')).toBe(true);
   });
 });
@@ -1262,11 +1270,11 @@ describe('difficulté : coûts multipliés', () => {
     const s = new GameState({
       inventory: { iron_ingot: 100, copper_ingot: 100, stone: 100, wood: 100 },
     });
-    const tech = techById('metallurgy');
+    const tech = techById('stamper');
     expect(s.techCost(tech)).toEqual(tech.cost);
     s.costs = { researchPacks: 2, researchItems: 0.5, crafting: 2 };
     expect(s.techCost(tech).iron_ingot).toBe(Math.round(tech.cost.iron_ingot * 0.5));
-    const packs = techById('manufacturing_2');
+    const packs = techById('builder');
     expect(s.packCostOf(packs).science_pack).toBe(packs.cost.science_pack * 2);
     // Jamais moins de 1 de chaque.
     s.costs = { researchPacks: 0.25, researchItems: 0.25, crafting: 0.25 };
@@ -1284,9 +1292,9 @@ describe('difficulté : coûts multipliés', () => {
   it('la recherche consomme le coût multiplié', () => {
     const s = new GameState({ inventory: { iron_ingot: 100, stone: 100 } });
     s.costs = { researchPacks: 1, researchItems: 2, crafting: 1 };
-    const tech = techById('metallurgy');
+    const tech = techById('stamper');
     const before = { ...s.inventory };
-    expect(s.research('metallurgy')).toBe('ok');
+    expect(s.research('stamper')).toBe('ok');
     expect(before.iron_ingot - s.inventory.iron_ingot).toBe(tech.cost.iron_ingot * 2);
   });
 });
@@ -1377,7 +1385,7 @@ describe('paquets de science par palier', () => {
   it('une ancienne sauvegarde voit ses paquets décalés renommés ; une récente reste telle quelle', () => {
     const old = new GameState({
       inventory: { science_pack: 5, science_pack_2: 3, science_pack_4: 1 },
-      changes: { researching: 'automation', packProgress: { automation: { science_pack: 7 } } },
+      changes: { researching: 'arm_electric', packProgress: { arm_electric: { science_pack: 7 } } },
     });
     expect(old.inventory).toMatchObject({
       science_pack_2: 5,
@@ -1385,7 +1393,7 @@ describe('paquets de science par palier', () => {
       science_pack_5: 1,
     });
     expect(old.inventory.science_pack).toBeUndefined();
-    expect(old.changes.packProgress.automation).toEqual({ science_pack_2: 7 });
+    expect(old.changes.packProgress.arm_electric).toEqual({ science_pack_2: 7 });
     const fresh = new GameState(JSON.parse(JSON.stringify(old.snapshot())));
     expect(fresh.inventory).toMatchObject({ science_pack_2: 5, science_pack_3: 3 });
     expect(fresh.changes.packVersion).toBe(2);

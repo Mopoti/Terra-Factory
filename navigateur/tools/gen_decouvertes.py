@@ -5,6 +5,7 @@ débloqué, s'ils sont débloqués par une autre découverte). Contrôle : aucun
 Lancer depuis `navigateur/` : python3 tools/gen_decouvertes.py
 """
 import json, sys
+JEU='--jeu' in sys.argv   # mode « jeu » : seulement les objets qui existent dans content/ (pas les intermédiaires proposés)
 fr=json.load(open('src/i18n/fr.json'))
 items={i['id']:i for i in json.load(open('content/items.json'))['items']}
 rec=json.load(open('content/recipes.json'))['recipes']
@@ -25,10 +26,11 @@ PROPOSED_MACHINE=[{'id':'glass','machine':'furnace','in':{'silica_sand':1},'out'
  {'id':'graphite','machine':'furnace_electric','in':{'coal':2},'out':{'graphite':2},'seconds':4,'fluid':{'kind':'polymère','amount':-10}},
  {'id':'lithium_salt','machine':'evaporation_tower','in':{},'out':{'lithium_salt':1},'seconds':10,'fluid':{'kind':'eau','amount':-500}}]
 PROPOSED_RECIPE_CHANGES={'machine_lab':{'kit_circuit':3,'chassis_simple':3,'glass':4},'machine_accumulator':{'chassis_steel':2,'battery_lithium':4,'microcontroller':1}}   # le laboratoire : 2 ingrédients + des vitres
-for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
-for r in PROPOSED_MACHINE: items[r['out'] and next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
-for k,r in PROPOSED_RECIPE_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
-PROPOSED=set(PROPOSED_HAND)|{next(iter(r['out'])) for r in PROPOSED_MACHINE}|set(PROPOSED_RECIPE_CHANGES)
+if not JEU:
+    for k,r in PROPOSED_HAND.items(): items[k]={'id':k,'recipe':r,'category':'proposed'}
+    for r in PROPOSED_MACHINE: items[next(iter(r['out']))]={'id':next(iter(r['out'])),'recipe':{},'category':'proposed'}; rec.append(r)
+    for k,r in PROPOSED_RECIPE_CHANGES.items(): items[k]['recipe_old']=items[k].get('recipe'); items[k]['recipe']=r
+PROPOSED=set() if JEU else set(PROPOSED_HAND)|{next(iter(r['out'])) for r in PROPOSED_MACHINE}|set(PROPOSED_RECIPE_CHANGES)
 n=lambda i: PROPOSED_NAMES.get(i) or fr.get('item.'+i,i)
 # id: (nom, palier, [objets débloqués], [prérequis choisis], coût)
 S1,S2,S3,S4,S5,C='science_pack','science_pack_2','science_pack_3','science_pack_4','science_pack_5','combat_pack'
@@ -179,6 +181,11 @@ D={
  'fusion':('Fusion',5,['machine_fusion_reactor'],['vitrifier','storage'],P(5,300)),
  'beacon':('Balise quantique',5,['machine_relay','machine_antenna'],['fusion'],P(5,300)),
 }
+if JEU:
+    for k,(nm,t,un,pre,cost) in list(D.items()): D[k]=(nm,t,[u for u in un if u in items],pre,cost)
+    for k in [k for k,v in D.items() if not v[2] and not k.startswith('research_')]: del D[k]
+    for k,(nm,t,un,pre,cost) in list(D.items()): D[k]=(nm,t,un,[x for x in pre if x in D],cost)
+    D['storage']=('Accumulateur',)+D['storage'][1:]
 owner={u:k for k,v in D.items() for u in v[2]}
 PACK_DISCOVERY={S1:'pack_1',S2:'pack_2',S3:'pack_3',S4:'pack_4',S5:'pack_5'}
 def needs(item):
@@ -255,5 +262,31 @@ L+=["## Notes des paliers 3 à 5","",
 "0. **Règle des recettes** (validée) : 3 types d'ingrédients au plus, 4 pour les recettes avancées. Les intermédiaires proposés (Kit circuit, Châssis simple/renforcé/léger, Vitre, Circuit avancé, Microcontrôleur) sont dans l'arbre mais **pas dans le jeu** ; seule la recette du laboratoire est montrée avec sa version proposée (3 kits circuit + 3 châssis simples + 4 vitres).",
 "1. **Paliers 4 et 5** : regroupements et coûts (200 à 300 paquets : ils sont plus chers parce que la production de paquets T4 et T5 est plus lente).",
 "2. Y a-t-il des objets ou machines sans découverte qu'on a oublié (la liste est contrôlée par le script : tout objet débloqué par l'ancien arbre a une case) ?"]
-open('docs/decouvertes-t0-t5.md','w').write('\n'.join(L)+'\n')
+open('docs/decouvertes-t0-t5.md' if not JEU else '/dev/null','w').write('\n'.join(L)+'\n')
 print(len(D),'découvertes')
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Mode jeu : écrit content/techs.json (les découvertes, au format des technologies) et les textes fr/en.
+EN={'cast_iron':'Cast iron','stamper':'Stamper','mould_plate':'Plate mould','plates':'Iron and copper plates','mould_gear':'Gear mould','gears':'Gear','mould_wire':'Wire mould','wires':'Copper wire','rods':'Iron rod','crusher':'Crusher','electricity':'Electricity','crank':'Priming crank','laboratory':'Laboratory','pack_1':'Science pack T1','iron_tool':'Iron tool','waterwheel':'Water wheel','pistol':'Pistol','magazine':'Pistol magazine','research_1':'Research I (faster packs)','conveyor':'Conveyor belt','arm':'Robotic arm','splitter':'Splitter','merger':'Merger','chest_iron':'Iron chest','waypoint':'Waypoint','textile':'Textile','clothing':'Clothing','backpack':'Backpack','bedding_1':'Survival bedding','navigation':'Navigation','pipe':'Pipe','motor':'Simple motor','pump':'Water pump','buggy':'Buggy','quad':'Quad','boiler':'Boiler','turbine':'Steam turbine','pack_2':'Science pack T2','armor_1':'Armor 1','turret':'Turret','bessemer':'Bessemer converter','steel_plate':'Steel plate','steel_rod':'Steel rod','mixer':'Concrete mixer','concrete':'Concrete buildings','washer':'Washing station','washed_ores':'Washed ores','zinc':'Zinc ingot','builder':'Builder','pipe_2':'Brass pipe','booster':'Booster pump','cooling':'Cooling tower','conveyor_2':'Fast conveyor','arm_electric':'Electric robotic arm','assembler':'Assembler','generator':'Fuel generator','drill_electric':'Electric drill','bedding_2':'Comfort bedding','research_2':'Research II','rifle':'Rifle','rifle_magazine':'Rifle magazine','armor_2':'Armor 2','turret_heavy':'Heavy turret','pack_3':'Science pack T3','heavy_press':'Heavy press','pipe_3':'T3 pipe','electric_furnace':'Electric furnace','silicon_raw':'Raw silicon','silicon_chip':'Silicon chip','barreler':'Barrel filler','pumpjack':'Pumpjack','barrel_oil':'Oil barrel','refinery':'Refinery','plastic_press':'Plastic press','plastic':'Plastic insulator','insulated_cable':'Insulated cable','rubber':'Rubber','engine_heavy':'Reinforced motor','tank':'Tank','van':'Dump truck','railway':'Railway','aluminium_ingot':'Aluminium ingot','aluminium_plate':'Aluminium plate','aluminium':'Aluminium buildings','garage':'Garage door','conveyor_3':'T3 conveyor','arm_filter':'Filter arm','sorting':'Sorter','drill_eco':'Eco drill','pack_4':'Science pack T4','research_3':'Research III','sniper':'Sniper','sniper_magazine':'Sniper magazine','turret_laser':'Laser turret','centrifuge':'Centrifuge','zamak':'Zamak','uranium_enriched':'Enriched uranium','uranium_depleted':'Depleted uranium','uranium_rod':'Uranium rod','reactor':'Fission reactor','pack_5':'Science pack T5','evaporation':'Evaporation tower','vitrifier':'Vitrifier','armor_4':'Armor 4','turret_plasma':'Plasma turret','storage':'Accumulator','research_4':'Research IV','fusion':'Fusion','beacon':'Quantum beacon'}
+if JEU:
+    import re
+    def direct_of(k):
+        dd=deps(k); anc=lambda x: set().union(*([deps(y)|anc(y) for y in deps(x)] or [set()]))
+        return [d for d in sorted(dd,key=order.index) if not any(d in anc(o) for o in dd if o!=d)]
+    techs=[]
+    for k,(nm,t,un,pre,cost) in D.items():
+        e={'id':k,'tier':t,'cost':cost,'requires':direct_of(k),'unlocks':un}
+        techs.append(e)
+    # une ligne par champ court : lisible dans Git
+    def fmt(e): return '    '+json.dumps(e,ensure_ascii=False)
+    out='{\n  "_comment": "Découvertes (ex-technologies), générées par tools/gen_decouvertes.py --jeu : une case de l\'arbre débloque la fabrication d\'un objet ou d\'un petit groupe d\'objets. « tier » : palier 0 (payé en ressources) à 5 ; un palier n coûte des paquets Tn et T(n-1). Les découvertes de palier 2 et plus sont cachées tant que leurs prérequis ne sont pas connus ; en mode Créatif tout est visible. Un objet qui n\'est dans aucune découverte est disponible dès le départ.",\n  "techs": [\n'+',\n'.join(fmt(e) for e in techs)+'\n  ]\n}\n'
+    open('content/techs.json','w').write(out)
+    old_ids=[t['id'] for t in json.load(open('content/techs_legacy.json'))['techs']]
+    for lang in ('fr','en'):
+        path=f'src/i18n/{lang}.json'
+        txt=open(path).read()
+        for oid in old_ids: txt=re.sub(rf'^  "tech\.{re.escape(oid)}": "[^"]*",\n','',txt,flags=re.M)
+        lines=''.join(f'  "tech.{k}": {json.dumps(D[k][0] if lang=="fr" else EN[k],ensure_ascii=False)},\n' for k in D)
+        txt=re.sub(r'^(  "tech\.title": )"[^"]*",\n',lambda m: m.group(1)+('"Découvertes"' if lang=='fr' else '"Discoveries"')+',\n'+lines,txt,count=1,flags=re.M)
+        open(path,'w').write(txt)
+    print('techs.json et textes écrits :',len(techs))

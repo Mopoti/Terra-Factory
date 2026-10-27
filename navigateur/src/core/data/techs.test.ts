@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS, ITEM_CATEGORIES, categoryOf, itemById } from './items';
 import {
-  expandLegacyTechs,
+  discoveriesFromLegacy,
   isTechVisible,
   labPackSeconds,
   labResearchLevel,
@@ -18,9 +18,9 @@ const counted = (item: string): boolean =>
   item === 'bed';
 
 describe('technologies', () => {
-  it('chaque technologie débloque 2 machines ou équipements au plus', () => {
+  it('chaque découverte débloque 5 machines ou équipements au plus (les vêtements sont groupés)', () => {
     for (const tech of TECHS) {
-      expect(tech.unlocks.filter(counted).length, tech.id).toBeLessThanOrEqual(2);
+      expect(tech.unlocks.filter(counted).length, tech.id).toBeLessThanOrEqual(5);
     }
   });
 
@@ -36,19 +36,25 @@ describe('technologies', () => {
     }
   });
 
-  it('une ancienne sauvegarde garde ce que débloquait l’ancienne technologie découpée', () => {
-    const ids = expandLegacyTechs(['electricity', 'textile', 'logistics', 'steam']);
+  it("une ancienne sauvegarde garde ce qu'elle savait fabriquer", () => {
+    // Anciennes technologies : Logistique (découpée en Manutention et Aiguillage), Électricité, Métallurgie.
+    const got = discoveriesFromLegacy(['logistics', 'electricity', 'metallurgy']);
     for (const id of [
-      'power_generation',
-      'laboratory',
-      'clothing',
-      'handwear',
-      'bedding',
-      'handling',
-      'steam_power',
+      'conveyor',
+      'splitter',
+      'merger',
+      'waypoint',
+      'chest_iron',
+      'electricity',
+      'stamper',
     ])
-      expect(ids).toContain(id);
-    expect(expandLegacyTechs(['electricity'])).not.toContain('handling');
+      expect(got, id).toContain(id);
+    // Pas de Textile ni de Vapeur dans cette partie.
+    expect(got).not.toContain('clothing');
+    expect(got).not.toContain('boiler');
+    // Les prérequis suivent : un objet acquis n'arrive jamais sans son prérequis.
+    for (const id of got)
+      for (const r of techById(id).requires) expect(got, `${id} → ${r}`).toContain(r);
   });
 });
 
@@ -71,24 +77,25 @@ describe('visibilité des technologies', () => {
   const vis = (id: string, done: string[], creative = false): boolean =>
     isTechVisible(techById(id), done, creative);
 
-  it('palier 1 toujours visible ; paliers supérieurs cachés jusqu’à la technologie du palier inférieur', () => {
-    expect(vis('logistics', [])).toBe(true);
-    expect(vis('metallurgy_2', [])).toBe(false);
-    expect(vis('metallurgy_2', ['metallurgy'])).toBe(true);
-    expect(vis('logistics_3', ['logistics'])).toBe(false);
-    expect(vis('logistics_3', ['logistics_2'])).toBe(true);
-    expect(vis('fusion_5', [])).toBe(false);
+  it('paliers 0 et 1 toujours visibles ; paliers supérieurs cachés jusqu’à leurs prérequis', () => {
+    expect(vis('cast_iron', [])).toBe(true);
+    expect(vis('conveyor', [])).toBe(true);
+    expect(vis('bessemer', [])).toBe(false);
+    expect(vis('bessemer', ['pack_2'])).toBe(true);
+    expect(vis('fusion', [])).toBe(false);
   });
 
   it('le mode Créatif montre tout', () => {
     expect(TECHS.every((t) => isTechVisible(t, [], true))).toBe(true);
   });
 
-  it('les technologies du palier 1 sont payées en objets (départ) ou en paquets T1', () => {
+  it('le palier 0 se paie en ressources, le palier 1 en paquets T1 (et de combat)', () => {
+    for (const t of TECHS.filter((x) => x.tier === 0)) expect(scienceCost(t), t.id).toBe(0);
     for (const t of TECHS.filter((x) => x.tier === 1))
-      expect(Object.keys(t.cost).every((k) => k === 'science_pack') || scienceCost(t) === 0).toBe(
-        true,
-      );
+      expect(
+        Object.keys(t.cost).every((k) => k === 'science_pack' || k === 'combat_pack'),
+        t.id,
+      ).toBe(true);
   });
 });
 

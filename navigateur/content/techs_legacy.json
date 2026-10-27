@@ -1,0 +1,562 @@
+{
+ "_comment": "Anciennes technologies (avant les découvertes) : sert à migrer les sauvegardes. Identifiant, prérequis et objets débloqués.",
+ "techs": [
+  {
+   "id": "logistics",
+   "requires": [],
+   "unlocks": [
+    "machine_conveyor",
+    "machine_arm"
+   ]
+  },
+  {
+   "id": "handling",
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_chest_iron",
+    "waypoint"
+   ]
+  },
+  {
+   "id": "metallurgy",
+   "requires": [],
+   "unlocks": [
+    "machine_stamper",
+    "machine_crusher"
+   ]
+  },
+  {
+   "id": "metallurgy_2",
+   "requires": [
+    "metallurgy",
+    "laboratory"
+   ],
+   "unlocks": [
+    "zinc_ingot",
+    "machine_bessemer",
+    "steel_plate"
+   ]
+  },
+  {
+   "id": "construction_2",
+   "requires": [
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_mixer",
+    "concrete_block",
+    "piece_wall_concrete",
+    "piece_slab_concrete",
+    "piece_stairs_concrete",
+    "piece_pillar_concrete"
+   ]
+  },
+  {
+   "id": "manufacturing_2",
+   "requires": [
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_builder",
+    "machine_pipe_2",
+    "science_pack_2"
+   ]
+  },
+  {
+   "id": "fluids_2",
+   "requires": [
+    "manufacturing_2"
+   ],
+   "unlocks": [
+    "machine_booster",
+    "machine_cooling_tower"
+   ]
+  },
+  {
+   "id": "washing_2",
+   "requires": [
+    "manufacturing_2"
+   ],
+   "unlocks": [
+    "machine_washer",
+    "iron_ore_washed",
+    "copper_ore_washed",
+    "zinc_ore_washed"
+   ]
+  },
+  {
+   "id": "heavy_press_3",
+   "requires": [
+    "manufacturing_2",
+    "construction_2"
+   ],
+   "unlocks": [
+    "machine_heavy_press",
+    "machine_pipe_3"
+   ]
+  },
+  {
+   "id": "silicon_3",
+   "requires": [
+    "heavy_press_3"
+   ],
+   "unlocks": [
+    "machine_furnace_electric",
+    "silicon_raw",
+    "silicon_chip"
+   ]
+  },
+  {
+   "id": "oil_3",
+   "requires": [
+    "barrels_3",
+    "heavy_press_3"
+   ],
+   "unlocks": [
+    "machine_pumpjack",
+    "barrel_oil"
+   ]
+  },
+  {
+   "id": "plastic_3",
+   "requires": [
+    "oil_3",
+    "silicon_3"
+   ],
+   "unlocks": [
+    "machine_refinery",
+    "machine_plastic_press",
+    "plastic_insulator",
+    "cable_insulated",
+    "science_pack_3",
+    "rubber",
+    "motor_heavy",
+    "vehicle_tank",
+    "vehicle_van",
+    "train_locomotive"
+   ]
+  },
+  {
+   "id": "fission_4",
+   "requires": [
+    "plastic_3",
+    "aluminium_3"
+   ],
+   "unlocks": [
+    "machine_centrifuge",
+    "zamak_ingot",
+    "uranium_enriched",
+    "uranium_depleted",
+    "uranium_rod"
+   ]
+  },
+  {
+   "id": "reactor_4",
+   "requires": [
+    "fission_4"
+   ],
+   "unlocks": [
+    "machine_fission_reactor",
+    "science_pack_4"
+   ]
+  },
+  {
+   "id": "waste_4",
+   "requires": [
+    "reactor_4"
+   ],
+   "unlocks": [
+    "machine_evaporation_tower",
+    "machine_vitrifier",
+    "contaminated_glass"
+   ]
+  },
+  {
+   "id": "storage_3",
+   "requires": [
+    "plastic_3"
+   ],
+   "unlocks": [
+    "machine_accumulator"
+   ]
+  },
+  {
+   "id": "aluminium_3",
+   "requires": [
+    "plastic_3"
+   ],
+   "unlocks": [
+    "aluminium_ingot",
+    "aluminium_plate",
+    "piece_wall_aluminium",
+    "piece_slab_aluminium",
+    "piece_stairs_aluminium",
+    "piece_door_aluminium",
+    "piece_pillar_aluminium",
+    "piece_garage_aluminium"
+   ]
+  },
+  {
+   "id": "fusion_5",
+   "requires": [
+    "waste_4",
+    "storage_3"
+   ],
+   "unlocks": [
+    "machine_fusion_reactor"
+   ]
+  },
+  {
+   "id": "beacon_5",
+   "requires": [
+    "fusion_5"
+   ],
+   "unlocks": [
+    "machine_relay",
+    "machine_antenna"
+   ]
+  },
+  {
+   "id": "logistics_2",
+   "requires": [
+    "logistics",
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "machine_conveyor_2"
+   ]
+  },
+  {
+   "id": "logistics_3",
+   "requires": [
+    "logistics_2"
+   ],
+   "unlocks": [
+    "machine_conveyor_3",
+    "machine_arm_filter"
+   ]
+  },
+  {
+   "id": "sorting_3",
+   "requires": [
+    "logistics_3"
+   ],
+   "unlocks": [
+    "machine_sorter"
+   ]
+  },
+  {
+   "id": "extraction_3",
+   "requires": [
+    "metallurgy_2",
+    "power_generation"
+   ],
+   "unlocks": [
+    "machine_drill_eco"
+   ]
+  },
+  {
+   "id": "textile",
+   "requires": [],
+   "unlocks": [
+    "cloth",
+    "backpack",
+    "hood"
+   ]
+  },
+  {
+   "id": "clothing",
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "trousers",
+    "boots"
+   ]
+  },
+  {
+   "id": "handwear",
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "gloves"
+   ]
+  },
+  {
+   "id": "bedding",
+   "requires": [
+    "textile"
+   ],
+   "unlocks": [
+    "sleeping_bag",
+    "bed"
+   ]
+  },
+  {
+   "id": "electricity",
+   "requires": [],
+   "unlocks": [
+    "machine_pole",
+    "machine_crank"
+   ]
+  },
+  {
+   "id": "power_generation",
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "tool_iron"
+   ]
+  },
+  {
+   "id": "laboratory",
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_lab",
+    "science_pack"
+   ]
+  },
+  {
+   "id": "automation",
+   "requires": [
+    "electricity",
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_arm_electric",
+    "machine_assembler"
+   ]
+  },
+  {
+   "id": "steam",
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_pipe",
+    "machine_pump",
+    "motor",
+    "vehicle_quad",
+    "vehicle_buggy"
+   ]
+  },
+  {
+   "id": "steam_power",
+   "requires": [
+    "steam"
+   ],
+   "unlocks": [
+    "machine_boiler",
+    "machine_turbine"
+   ]
+  },
+  {
+   "id": "barrels_3",
+   "requires": [
+    "steam",
+    "logistics_3"
+   ],
+   "unlocks": [
+    "machine_barreler",
+    "barrel_empty"
+   ]
+  },
+  {
+   "id": "navigation",
+   "requires": [],
+   "unlocks": [
+    "compass"
+   ]
+  },
+  {
+   "id": "defense",
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_turret"
+   ]
+  },
+  {
+   "id": "weapons_1",
+   "requires": [],
+   "unlocks": [
+    "pistol",
+    "magazine"
+   ]
+  },
+  {
+   "id": "armor_1a",
+   "requires": [],
+   "unlocks": [
+    "armor1_head",
+    "armor1_torso"
+   ]
+  },
+  {
+   "id": "armor_1b",
+   "requires": [],
+   "unlocks": [
+    "armor1_legs",
+    "armor1_feet"
+   ]
+  },
+  {
+   "id": "weapons_2",
+   "requires": [
+    "weapons_1"
+   ],
+   "unlocks": [
+    "rifle",
+    "rifle_magazine"
+   ]
+  },
+  {
+   "id": "weapons_3",
+   "requires": [
+    "weapons_2",
+    "metallurgy_2"
+   ],
+   "unlocks": [
+    "sniper",
+    "sniper_magazine"
+   ]
+  },
+  {
+   "id": "armor_2a",
+   "requires": [
+    "armor_1a"
+   ],
+   "unlocks": [
+    "armor2_head",
+    "armor2_torso"
+   ]
+  },
+  {
+   "id": "armor_2b",
+   "requires": [
+    "armor_1b"
+   ],
+   "unlocks": [
+    "armor2_legs",
+    "armor2_feet"
+   ]
+  },
+  {
+   "id": "turret_2",
+   "requires": [
+    "defense"
+   ],
+   "unlocks": [
+    "machine_turret_heavy"
+   ]
+  },
+  {
+   "id": "turret_3",
+   "requires": [
+    "turret_2"
+   ],
+   "unlocks": [
+    "machine_turret_laser"
+   ]
+  },
+  {
+   "id": "armor_4a",
+   "requires": [
+    "armor_2a"
+   ],
+   "unlocks": [
+    "armor4_head",
+    "armor4_torso"
+   ]
+  },
+  {
+   "id": "armor_4b",
+   "requires": [
+    "armor_2b"
+   ],
+   "unlocks": [
+    "armor4_legs",
+    "armor4_feet"
+   ]
+  },
+  {
+   "id": "turret_4",
+   "requires": [
+    "turret_3"
+   ],
+   "unlocks": [
+    "machine_turret_plasma"
+   ]
+  },
+  {
+   "id": "routing",
+   "requires": [
+    "logistics"
+   ],
+   "unlocks": [
+    "machine_splitter",
+    "machine_merger"
+   ]
+  },
+  {
+   "id": "electricity_2",
+   "requires": [
+    "electricity"
+   ],
+   "unlocks": [
+    "machine_generator"
+   ]
+  },
+  {
+   "id": "power_generation_2",
+   "requires": [
+    "power_generation"
+   ],
+   "unlocks": [
+    "machine_drill_electric"
+   ]
+  },
+  {
+   "id": "waterwheel",
+   "requires": [],
+   "unlocks": [
+    "machine_waterwheel"
+   ]
+  },
+  {
+   "id": "research_1",
+   "requires": [
+    "laboratory"
+   ],
+   "unlocks": []
+  },
+  {
+   "id": "research_2",
+   "requires": [
+    "research_1"
+   ],
+   "unlocks": []
+  },
+  {
+   "id": "research_3",
+   "requires": [
+    "research_2"
+   ],
+   "unlocks": []
+  },
+  {
+   "id": "research_4",
+   "requires": [
+    "research_3"
+   ],
+   "unlocks": []
+  }
+ ]
+}

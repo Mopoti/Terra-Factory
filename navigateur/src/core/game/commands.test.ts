@@ -94,7 +94,7 @@ describe('commandes (bus)', () => {
 
   it('recette et ingrédients d’un assembleur par commande', () => {
     const { state, bus, factory } = make({ iron_ingot: 10 });
-    state.changes.unlocked.push('electricity', 'logistics', 'automation');
+    state.changes.unlocked.push('conveyor');
     const asm = emptyMachine(5, 'assembler', 10, 10, 0);
     factory.add(asm);
     expect(bus.dispatch<'setRecipe'>({ type: 'setRecipe', id: 5, item: 'machine_conveyor' })).toBe(

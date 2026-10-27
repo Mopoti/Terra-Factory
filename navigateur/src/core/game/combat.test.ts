@@ -8,21 +8,27 @@ import { GameState } from './state';
 import { normalizeChanges } from './worldChanges';
 
 describe('technologies de combat', () => {
-  it('palier 1 : 10 plaques de fer ; palier 2 : 5 paquets de combat ; 3 : 10 ; 4 : 20', () => {
-    const costOf = (id: string): Record<string, number> => techById(id).cost;
-    for (const id of ['defense', 'weapons_1', 'armor_1a', 'armor_1b'])
-      expect(costOf(id), id).toEqual({ iron_plate: 10 });
-    for (const id of ['weapons_2', 'armor_2a', 'armor_2b', 'turret_2'])
-      expect(costOf(id), id).toEqual({ combat_pack: 5 });
-    expect(costOf('turret_3')).toEqual({ combat_pack: 10 });
-    for (const id of ['armor_4a', 'armor_4b', 'turret_4'])
-      expect(costOf(id), id).toEqual({ combat_pack: 20 });
+  it('les armes, armures et tourelles se paient en paquets de combat en plus des paquets de leur palier', () => {
+    const combat: Record<string, number> = {
+      armor_1: 10,
+      turret: 10,
+      rifle: 20,
+      armor_2: 20,
+      turret_heavy: 20,
+      sniper: 30,
+      turret_laser: 30,
+      armor_4: 40,
+      turret_plasma: 40,
+    };
+    for (const [id, n] of Object.entries(combat)) expect(techById(id).cost.combat_pack, id).toBe(n);
+    // Le pistolet reste payé en plaques de fer, au palier 0.
+    expect(techById('pistol').cost).toEqual({ iron_plate: 10 });
   });
 
   it('le paquet de combat est un paquet de science à part, fabriqué avec les dépouilles', () => {
     expect(isSciencePack('combat_pack')).toBe(true);
     expect(itemById('combat_pack').recipe).toEqual({ carapace: 2, living_tissue: 1 });
-    expect(scienceCost(techById('turret_3'))).toBe(10);
+    expect(scienceCost(techById('turret_laser'))).toBe(330);
   });
 
   it('chaque arme, armure et tourelle est débloquée par une technologie de combat', () => {
@@ -40,9 +46,7 @@ describe('technologies de combat', () => {
       ...ITEMS.filter((i) => /^armor\d_/.test(i.id)).map((i) => i.id),
     ])
       expect(techFor(item), item).not.toBeNull();
-    expect(TECHS.filter((t) => t.cost.combat_pack).every((t) => (t.reveal?.length ?? 0) > 0)).toBe(
-      true,
-    );
+    expect(TECHS.filter((t) => t.cost.combat_pack).every((t) => t.requires.length > 0)).toBe(true);
   });
 });
 

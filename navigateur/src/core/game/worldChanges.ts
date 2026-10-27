@@ -13,12 +13,12 @@ import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
 import { DISCOVERIES } from '../data/discoveries';
 import { WEAPONS, isWeapon } from '../data/weapons';
-import { TECHS, expandLegacyTechs, isSciencePack, knownTechs } from '../data/techs';
+import { TECHS, discoveriesFromLegacy, isSciencePack, knownTechs } from '../data/techs';
 import { TUTORIAL_STEPS } from './tutorial';
 import type { ChunkData, PlacedObject } from '../world/worldgen';
 
 /** Version actuelle du découpage des technologies (voir `LEGACY_TECH_SPLITS`). */
-export const TECH_VERSION = 3;
+export const TECH_VERSION = 4;
 export const MAX_LOG = 300;
 
 /**
@@ -498,9 +498,11 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   // Le découpage des anciennes technologies n'est appliqué qu'aux sauvegardes d'avant : sinon une technologie payée à
   // la main (Électricité…) redonnerait à chaque chargement celles qui demandent maintenant des paquets de science.
   const olderSave = r.techVersion !== TECH_VERSION;
+  // Version 4 : les technologies sont devenues des découvertes (autres identifiants) ; une ancienne sauvegarde garde tout
+  // ce qu'elle savait fabriquer (`discoveriesFromLegacy`).
   result.unlocked = Array.isArray(r.unlocked)
     ? olderSave
-      ? expandLegacyTechs(r.unlocked as unknown[])
+      ? discoveriesFromLegacy(r.unlocked as unknown[])
       : knownTechs(r.unlocked as unknown[])
     : TECHS.map((t) => t.id);
   if (
@@ -519,11 +521,7 @@ export function normalizeChanges(raw: unknown): WorldChanges {
         typeof (e as LogEntry).id === 'string',
     )
     .slice(-MAX_LOG);
-  if (olderSave && Array.isArray(r.unlocked)) {
-    const had = new Set(r.unlocked as unknown[]);
-    for (const id of result.unlocked)
-      if (!had.has(id)) result.log.push({ t: Date.now(), kind: 'legacy', id });
-  }
+  // Le passage aux découvertes (version 4) ne remplit pas le journal : presque tout y serait « hérité ».
   result.techVersion = TECH_VERSION;
   result.packVersion = PACK_VERSION;
   if (typeof r.progress === 'object' && r.progress !== null) {

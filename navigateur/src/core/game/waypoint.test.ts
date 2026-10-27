@@ -6,11 +6,11 @@ import {
   normalizeMachines,
 } from '../factory/factory';
 import { itemById } from '../data/items';
-import { techFor, expandLegacyTechs } from '../data/techs';
+import { techFor, discoveriesFromLegacy } from '../data/techs';
 
 describe('balise', () => {
-  it('se débloque avec la technologie Manutention', () => {
-    expect(techFor('waypoint')?.id).toBe('handling');
+  it('se débloque avec la découverte Balise', () => {
+    expect(techFor('waypoint')?.id).toBe('waypoint');
     expect(itemById('waypoint').recipe).not.toBeNull();
   });
 
@@ -27,15 +27,15 @@ describe('balise', () => {
 });
 
 describe('tapis et aiguillage', () => {
-  it('les tapis demandent Logistique ; séparateur et groupeur, Aiguillage', () => {
-    expect(techFor('machine_conveyor')?.id).toBe('logistics');
-    expect(techFor('machine_splitter')?.id).toBe('routing');
-    expect(techFor('machine_merger')?.id).toBe('routing');
+  it('le tapis, le séparateur et le groupeur sont trois découvertes', () => {
+    expect(techFor('machine_conveyor')?.id).toBe('conveyor');
+    expect(techFor('machine_splitter')?.id).toBe('splitter');
+    expect(techFor('machine_merger')?.id).toBe('merger');
   });
 
   it('une ancienne sauvegarde qui avait Logistique garde l’aiguillage', () => {
-    expect(expandLegacyTechs(['logistics'])).toEqual(
-      expect.arrayContaining(['logistics', 'handling', 'routing']),
+    expect(discoveriesFromLegacy(['logistics'])).toEqual(
+      expect.arrayContaining(['conveyor', 'splitter', 'merger', 'waypoint']),
     );
   });
 });

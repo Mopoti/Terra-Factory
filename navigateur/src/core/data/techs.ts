@@ -1,11 +1,13 @@
 import raw from '../../../content/techs.json';
+import legacyRaw from '../../../content/techs_legacy.json';
+import { ITEMS } from './items';
 
 export interface TechDef {
   id: string;
   /** Objets du sac consommés à la recherche. */
   cost: Record<string, number>;
   requires: string[];
-  /** Palier (1 à 5). */
+  /** Palier : 0 (payé en ressources) à 5. */
   tier: number;
   /** Technologies à avoir recherchées pour faire apparaître celle-ci (palier ≥ 2 ; par défaut `requires`). */
   reveal?: string[];
@@ -72,18 +74,44 @@ export const LEGACY_TECH_SPLITS: Record<string, string[]> = {
   textile: ['clothing', 'handwear', 'bedding'],
 };
 
-/** Technologies connues parmi `ids` (sans rien ajouter). */
+/** Découvertes connues parmi `ids` (sans rien ajouter). */
 export const knownTechs = (ids: readonly unknown[]): string[] => {
   const have = new Set(ids);
   return TECHS.map((t) => t.id).filter((id) => have.has(id));
 };
 
-/** Technologies connues parmi `ids`, avec celles qui remplacent une ancienne technologie découpée. */
-export function expandLegacyTechs(ids: readonly unknown[]): string[] {
-  const have = new Set(ids);
+/** Identifiants des anciennes technologies (avant les découvertes), avec ceux d'avant leur découpage. */
+export function expandLegacyIds(ids: readonly unknown[]): Set<unknown> {
+  const have = new Set<unknown>(ids);
   for (const [old, parts] of Object.entries(LEGACY_TECH_SPLITS))
     if (have.has(old)) for (const p of parts) have.add(p);
-  return TECHS.map((t) => t.id).filter((id) => have.has(id));
+  return have;
+}
+
+/**
+ * Découvertes d'une partie qui avait des technologies : une découverte est acquise si tous les objets qu'elle débloque
+ * étaient déjà fabricables (aucune technologie, ou technologie recherchée). Les prérequis suivent toujours.
+ */
+export function discoveriesFromLegacy(oldIds: readonly unknown[]): string[] {
+  const researched = expandLegacyIds(oldIds);
+  const gated = new Set(legacyRaw.techs.flatMap((t) => t.unlocks));
+  const available = new Set(ITEMS.map((i) => i.id).filter((id) => !gated.has(id)));
+  for (const t of legacyRaw.techs)
+    if (researched.has(t.id)) for (const u of t.unlocks) available.add(u);
+  const got = new Set(
+    TECHS.filter((t) =>
+      t.unlocks.length > 0 ? t.unlocks.every((u) => available.has(u)) : researched.has(t.id),
+    ).map((t) => t.id),
+  );
+  const add = (id: string): void => {
+    for (const r of techById(id).requires)
+      if (!got.has(r)) {
+        got.add(r);
+        add(r);
+      }
+  };
+  for (const id of [...got]) add(id);
+  return TECHS.map((t) => t.id).filter((id) => got.has(id));
 }
 
 /** Durée de base (en secondes) pour qu'un laboratoire consomme un paquet. */
