@@ -215,7 +215,13 @@ describe('embranchements et croisements dans la partie', () => {
       const straight = g.advance({ piece: line[2].id, u: 0, dir: 1 }, 4);
       expect(straight.pos.piece).toBe(line[3].id);
       // La pointe est un choix de voie pour le train qui arrive.
-      expect(s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60)).not.toBeNull();
+      const choice = s.railGraph().choiceAhead({ piece: line[1].id, u: 0, dir: 1 }, 60);
+      expect(choice).not.toBeNull();
+      // Le côté de la voie qui tourne : à gauche (écart négatif) pour un virage à gauche, à droite sinon ; tout droit : 0.
+      const turn = choice!.options.find((o) => o.piece === curve!.id)!;
+      expect(kind === 'curve_l' ? turn.lateral < -0.3 : turn.lateral > 0.3).toBe(true);
+      const ahead = choice!.options.find((o) => o.piece === line[3].id)!;
+      expect(Math.abs(ahead.lateral)).toBeLessThan(0.3);
     },
   );
 

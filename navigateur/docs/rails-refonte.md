@@ -5,6 +5,8 @@ Statut : **validé par le PO le 28/10/2026 ; étape 1 faite (tour 265)** (page d
 ## Décisions
 | Sujet | Décision |
 | --- | --- |
+| Pose en chaîne (tour 266) | **Clic gauche maintenu** : le patron se fixe, le curseur qui avance ajoute des patrons à la suite (reculer en retire), **relâcher pose** toute la chaîne, **clic droit retire** les patrons. Départ libre : la première pièce se tourne vers le curseur par pas de 45°. Un simple clic pose une pièce. |
+| Embranchement au volant | À un Y, le train suit son chemin (tout droit sans consigne) ; avec **Q** ou **D** (gauche / droite) il prend la voie de ce côté si elle existe. |
 | Vocabulaire | « Patron vert » = pose possible, « patron rouge » = pose impossible (le patron rouge dit pourquoi). Pas de « fantôme », pas de croix. |
 | Pièces | Peu de pièces, toutes de même taille : un **droit**, un **virage unique de 45°**, des **droits en diagonale** ; plus de virages serré / large / très large / grand / géant. Huit virages de 45° font un cercle. |
 | Accrochage | Le patron se colle au bout libre le plus proche et prend l'orientation qui prolonge la voie ; loin d'un rail, il suit la grille. Une touche tourne le patron. |

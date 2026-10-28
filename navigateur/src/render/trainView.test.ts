@@ -66,6 +66,20 @@ function bench() {
     down.delete('interact');
     view.update(frame, { x: 0, z: 0 });
   };
+  /** Le clic gauche est enfoncé en (x, z), puis le curseur glisse, puis on relâche. */
+  const press = (x: number, z: number): void => {
+    aim = { x, z };
+    down.add('interact');
+    view.update(frame, { x: 0, z: 0 });
+  };
+  const slide = (x: number, z: number): void => {
+    aim = { x, z };
+    view.update(frame, { x: 0, z: 0 });
+  };
+  const letGo = (): void => {
+    down.delete('interact');
+    view.update(frame, { x: 0, z: 0 });
+  };
   /** Le curseur survole (x, z) sans cliquer. */
   const hover = (x: number, z: number): void => {
     aim = { x, z };
@@ -80,6 +94,9 @@ function bench() {
     view,
     click,
     hover,
+    press,
+    slide,
+    letGo,
     tick,
     /** Tout ce qui est plus au nord que cette ligne de tuiles est un obstacle. */
     blockNorthOf: (tz: number) => (blockBelowGz = (tz * TILE_M) / CELL_SIZE_M),
@@ -153,6 +170,49 @@ describe('patron de voie : une pièce par clic', () => {
     const curve = placeAt(state, 'curve_l', joint)!;
     const g = state.railGraph();
     expect(g.linksAt(line[3], 1).map((l) => l.piece)).toEqual([line[4], curve.id]);
+  });
+});
+
+describe('patrons en chaîne : clic gauche maintenu', () => {
+  it('le curseur qui avance ajoute des patrons, relâcher pose toute la chaîne', () => {
+    const { state, view, press, slide, letGo } = bench();
+    press(50, 50);
+    expect((view as unknown as { chain: unknown[] }).chain.length).toBe(1);
+    expect(state.changes.rails).toHaveLength(0); // rien n'est posé avant le relâchement
+    // Le premier patron est un droit vers +z (cap 0) ; on tire vers +z.
+    for (let z = 52; z <= 66; z += 2) slide(50, z);
+    letGo();
+    const n = state.changes.rails.length;
+    expect(n).toBeGreaterThanOrEqual(5);
+    // Une voie continue, de bout en bout.
+    const g = state.railGraph();
+    const ids = state.changes.rails.map((p) => p.id);
+    expect(g.advance({ piece: ids[0], u: 0, dir: 1 }, 2.5 * (n - 1)).blocked).toBe(false);
+  });
+
+  it('reculer retire des patrons ; le clic droit annule tout', () => {
+    const { state, view, press, slide, letGo } = bench();
+    press(50, 50);
+    for (let z = 52; z <= 66; z += 2) slide(50, z);
+    const far = (view as unknown as { chain: unknown[] }).chain.length;
+    for (let z = 64; z >= 54; z -= 2) slide(50, z);
+    expect((view as unknown as { chain: unknown[] }).chain.length).toBeLessThan(far);
+    expect(view.isTracing()).toBe(true);
+    expect(view.cancelTrace()).toBe(true);
+    slide(50, 70);
+    letGo();
+    expect(state.changes.rails).toHaveLength(0);
+  });
+
+  it('un obstacle arrête la chaîne : seule la partie libre est posée', () => {
+    const { state, press, slide, letGo, blockNorthOf } = bench();
+    blockNorthOf(1000);
+    msgs.length = 0;
+    press(50, 50);
+    for (let z = 52; z <= 66; z += 2) slide(50, z);
+    letGo();
+    expect(state.changes.rails).toHaveLength(0);
+    expect(msgs.at(-1)).toBeTruthy();
   });
 });
 

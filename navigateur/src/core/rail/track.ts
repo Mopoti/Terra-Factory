@@ -227,7 +227,8 @@ export class TrackGraph {
     const sl = lengthOfPiece(s);
     const at = portsOf(s)[link.port];
     const q = poseOn(s, link.port === 0 ? Math.min(5, sl) : sl - Math.min(5, sl));
-    return (q.x - at.x) * -at.dz + (q.z - at.z) * at.dx;
+    // Le port regarde vers le train qui arrive : le sens de marche est son opposé, et sa droite est (dz, −dx).
+    return (q.x - at.x) * at.dz - (q.z - at.z) * at.dx;
   }
 
   /**

@@ -30,7 +30,9 @@ import {
   centerOf,
   freePorts,
   lengthOfPiece,
+  headingOf,
   poseOn,
+  portsOf,
   flip,
   TILE_M,
   type Port,
@@ -70,6 +72,8 @@ export function railModelName(p: RailPiece): string | undefined {
 }
 /** Distance (m) jusqu'à laquelle on regarde, devant la locomotive, l'embranchement à prendre (touches gauche / droite). */
 const SWITCH_AHEAD_M = 60;
+/** Nombre maximal de patrons d'une chaîne (clic maintenu). */
+const MAX_CHAIN = 120;
 const GREEN: Rgb = hexToRgb('#4cd964');
 const RED: Rgb = hexToRgb('#ff5a4a');
 const STEP = 1 / 60;
@@ -1177,14 +1181,27 @@ export class TrainView {
   /** Ligne d'infos du patron : pourquoi on ne peut pas poser, vide sinon. */
   private traceInfo = '';
 
-  /** Il n'y a plus de tracé qu'on glisse : une pièce par clic. */
+  /** Patrons posés en chaîne tant que le clic gauche est maintenu (relâcher pose, clic droit annule). */
+  private chain: RailCandidate[] = [];
+  /** Le clic droit a annulé la chaîne : rien ne se pose tant que le clic gauche n'est pas relâché. */
+  private chainCancelled = false;
+  /** Point visé au début d'une chaîne qui ne part d'aucune voie (sinon null). */
+  private chainOrigin: { x: number; z: number } | null = null;
+
+  /** Une chaîne de patrons est-elle en cours (clic gauche maintenu) ? */
   isTracing(): boolean {
-    return false;
+    return this.chain.length > 0 && this.wasDown;
   }
 
-  /** Clic droit : rien à annuler (le patron se pose pièce par pièce). */
+  /** Clic droit pendant la chaîne : retire les patrons ; rien ne se pose au relâchement. */
   cancelTrace(): boolean {
-    return false;
+    if (this.chain.length === 0) return false;
+    this.chain = [];
+    this.chainCancelled = true;
+    this.ghostKey = '';
+    this.setGhost([]);
+    this.traceInfo = '';
+    return true;
   }
 
   private handlePlacing(graph: TrackGraph, frame: TrainFrame): void {
@@ -1195,12 +1212,14 @@ export class TrainView {
     const station = item === STATION_ITEM;
     const down = this.host.held('interact');
     const edge = down && !this.wasDown;
+    const release = !down && this.wasDown;
     this.wasDown = down;
     if (!carKind) this.setCarGhost(null, false);
     if (!station) this.stations.showGhost(graph, null, false);
     if (this.mountedCar !== null || (!rail && !carKind && !station)) {
       this.setGhost([]);
       this.hintShown = '';
+      this.chain = [];
       if (!rail) this.tilt = 0;
       return;
     }
@@ -1209,7 +1228,7 @@ export class TrainView {
       if (frame.levelUp) this.setTilt(Math.min(1, this.tilt + 1) as -1 | 0 | 1);
       if (frame.levelDown) this.setTilt(Math.max(-1, this.tilt - 1) as -1 | 0 | 1);
       if (frame.rotate) this.railTurn = (this.railTurn + 1) % 8;
-      this.placePatron(aim, edge);
+      this.placePatron(aim, edge, down, release);
       this.showHint('train.railHint');
     } else if (station) {
       this.setGhost([]);
@@ -1278,58 +1297,158 @@ export class TrainView {
     return best?.port ?? null;
   }
 
+  /** Pièce que montre le patron au curseur : près d'un bout de voie libre elle s'y colle, ailleurs c'est un droit sur la grille. */
+  private patronAt(aim: { x: number; z: number }): { cand: RailCandidate | null; free: boolean } {
+    const port = this.nearestFreePort(aim);
+    return port
+      ? { cand: pickCandidate(candidatesFrom(port, this.tilt), port, aim), free: false }
+      : { cand: freeCandidate(aim, this.railTurn, 0), free: true };
+  }
+
+  /**
+   * Vérifie une chaîne de patrons : chaque pièce doit tenir (terrain, chevauchement avec la voie ou avec les pièces
+   * précédentes de la chaîne) et il faut assez de rails ; au premier refus, tout le reste est refusé.
+   */
+  private checkChain(chain: readonly RailCandidate[]): {
+    items: { piece: RailPiece; ok: boolean }[];
+    reason: 'terrain' | 'overlap' | 'missing' | null;
+    cost: number;
+  } {
+    const { state } = this.host;
+    let stock = state.inventory[RAIL_ITEM] ?? 0;
+    const placed: RailPiece[] = [];
+    let reason: 'terrain' | 'overlap' | 'missing' | null = null;
+    let cost = 0;
+    const items = chain.map((cand) => {
+      const piece = pieceOf(cand);
+      let ok = reason === null;
+      if (ok) {
+        const problem = state.railProblem(piece, (c) => this.host.blocked(c.gx, c.gz), placed);
+        if (problem) reason = problem;
+        else if (stock < cand.cost) reason = 'missing';
+        ok = reason === null;
+      }
+      if (ok) {
+        stock -= cand.cost;
+        cost += cand.cost;
+        placed.push({ ...piece, id: -(placed.length + 2) });
+      }
+      return { piece, ok };
+    });
+    return { items, reason, cost };
+  }
+
   /**
    * Le patron de la prochaine pièce : vert si elle se pose, rouge sinon (avec la raison). Près d'un bout de voie libre il
    * s'y colle et prend la forme que montre le curseur (droit, virage à gauche ou à droite, rampe) ; ailleurs c'est un
-   * droit sur la grille, que R tourne par pas de 45°. Un clic pose la pièce.
+   * droit sur la grille, que R tourne par pas de 45°. Clic gauche maintenu : le patron se fixe et le curseur qui avance
+   * ajoute des patrons à la suite (reculer en retire) ; relâcher pose toute la chaîne, clic droit l'annule.
    */
-  private placePatron(aim: { x: number; z: number } | null, edge: boolean): void {
+  private placePatron(
+    aim: { x: number; z: number } | null,
+    edge: boolean,
+    down: boolean,
+    release: boolean,
+  ): void {
     const { state } = this.host;
+    if (this.chainCancelled) {
+      if (!down) this.chainCancelled = false;
+      this.chain = [];
+      this.setGhost([]);
+      return;
+    }
     if (!aim) {
+      if (release) this.chain = [];
       this.setGhost([]);
       return;
     }
-    const port = this.nearestFreePort(aim);
-    const cand: RailCandidate | null = port
-      ? pickCandidate(candidatesFrom(port, this.tilt), port, aim)
-      : freeCandidate(aim, this.railTurn, 0);
-    if (!cand) {
+    if (edge) {
+      const first = this.patronAt(aim);
+      this.chain = first.cand ? [first.cand] : [];
+      // Départ libre : la première pièce se tourne vers le curseur dès qu'on glisse.
+      this.chainOrigin = first.free ? { x: aim.x, z: aim.z } : null;
+    }
+    if (down && this.chain.length > 0) this.growChain(aim);
+    // Relâcher : on pose la chaîne (ou, sans chaîne, le patron sous le curseur n'est qu'un aperçu).
+    if (release && this.chain.length > 0) {
+      const { items, reason: why } = this.checkChain(this.chain);
+      let placed = 0;
+      for (let i = 0; i < items.length; i++) {
+        if (!items[i].ok) break;
+        const c = this.chain[i];
+        if (
+          state.placeRail(c.kind, c.x, c.z, c.h, c.level, (cell) =>
+            this.host.blocked(cell.gx, cell.gz),
+          ) === 'ok'
+        )
+          placed++;
+      }
+      const stopped = placed < this.chain.length;
+      this.chain = [];
+      this.ghostKey = '';
+      this.setGhost([]);
+      this.traceInfo = '';
+      if (placed > 0) {
+        this.host.sfx('placeStone');
+        this.host.message(t(stopped ? 'train.railStopped' : 'train.railPlaced'));
+      } else {
+        this.host.sfx('deny');
+        this.host.message(why ? t(`train.rail.${why}` as TranslationKey) : t('train.railBlocked'));
+      }
+      return;
+    }
+    const shown = this.chain.length > 0 ? this.chain : this.single(aim);
+    if (shown.length === 0) {
       this.setGhost([]);
       return;
     }
-    // La même pièce est déjà là : rien à montrer.
-    if (state.railAlready(cand.kind, cand.x, cand.z, cand.h, cand.level)) {
-      this.setGhost([]);
-      return;
+    const { items, reason, cost } = this.checkChain(shown);
+    this.setGhost(items);
+    if (reason) this.traceInfo = t(`train.rail.${reason}` as TranslationKey);
+    else if (shown.length > 1)
+      this.traceInfo = t('train.trace', {
+        rails: String(cost),
+        length: String(Math.round(shown.reduce((n, c) => n + lengthOfPiece(pieceOf(c)), 0))),
+      });
+    else this.traceInfo = '';
+  }
+
+  /** Le patron seul sous le curseur (sans chaîne), ou rien s'il n'y a rien à montrer. */
+  private single(aim: { x: number; z: number }): RailCandidate[] {
+    const { cand } = this.patronAt(aim);
+    if (!cand || this.host.state.railAlready(cand.kind, cand.x, cand.z, cand.h, cand.level))
+      return [];
+    return [cand];
+  }
+
+  /** Allonge la chaîne vers le curseur : un patron de plus chaque fois qu'il est devant le bout, un de moins s'il recule. */
+  private growChain(aim: { x: number; z: number }): void {
+    // Départ libre : tant que la chaîne n'a qu'une pièce, elle regarde vers le curseur (par pas de 45°).
+    if (this.chain.length === 1 && this.chainOrigin) {
+      const o = this.chainOrigin;
+      if (Math.hypot(aim.x - o.x, aim.z - o.z) > TILE_M)
+        this.chain = [freeCandidate(o, headingOf(aim.x - o.x, aim.z - o.z), this.chain[0].level)];
     }
-    const piece = pieceOf(cand);
-    const problem = state.railProblem(piece, (c) => this.host.blocked(c.gx, c.gz));
-    const missing = (state.inventory[RAIL_ITEM] ?? 0) < cand.cost;
-    const reason =
-      problem === 'terrain'
-        ? 'terrain'
-        : problem === 'overlap'
-          ? 'overlap'
-          : missing
-            ? 'missing'
-            : null;
-    this.setGhost([{ piece, ok: reason === null }]);
-    this.traceInfo = reason ? t(`train.rail.${reason}` as TranslationKey) : '';
-    if (!edge) return;
-    const placed =
-      reason === null &&
-      state.placeRail(cand.kind, cand.x, cand.z, cand.h, cand.level, (c) =>
-        this.host.blocked(c.gx, c.gz),
-      ) === 'ok';
-    this.ghostKey = '';
-    if (placed) {
-      this.host.sfx('placeStone');
-      this.host.message(t('train.railPlaced'));
-    } else {
-      this.host.sfx('deny');
-      this.host.message(
-        reason ? t(`train.rail.${reason}` as TranslationKey) : t('train.railBlocked'),
-      );
+    for (let guard = 0; guard < 6 && this.chain.length < MAX_CHAIN; guard++) {
+      const last = this.chain[this.chain.length - 1];
+      const tail = portsOf(pieceOf(last))[1];
+      const dx = aim.x - tail.x;
+      const dz = aim.z - tail.z;
+      const along = dx * tail.dx + dz * tail.dz;
+      // Le curseur doit avoir dépassé le bout d'au moins une demi-pièce droite pour qu'une pièce s'ajoute.
+      if (along < TILE_M / 2 || Math.hypot(dx, dz) < TILE_M) break;
+      const next = pickCandidate(candidatesFrom(tail, 0), tail, aim);
+      if (!next) break;
+      this.chain.push(next);
+    }
+    // Le curseur est revenu derrière le début de la dernière pièce : on la retire (jamais la première).
+    while (this.chain.length > 1) {
+      const last = this.chain[this.chain.length - 1];
+      const start = portsOf(pieceOf(last))[0];
+      // Le port 0 regarde en arrière : le sens de marche de la pièce est son opposé.
+      const ahead = -((aim.x - start.x) * start.dx + (aim.z - start.z) * start.dz);
+      if (ahead < TILE_M / 2) this.chain.pop();
+      else break;
     }
   }
 

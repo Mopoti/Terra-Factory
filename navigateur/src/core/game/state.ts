@@ -1429,9 +1429,13 @@ export class GameState {
    * (elle chevauche la voie existante), ou null si elle tient. Un raccord, un départ commun d'embranchement et un
    * croisement en travers ne comptent pas comme un chevauchement.
    */
-  railProblem(piece: RailPiece, blocked: (c: Cell) => boolean): 'terrain' | 'overlap' | null {
+  railProblem(
+    piece: RailPiece,
+    blocked: (c: Cell) => boolean,
+    extra: readonly RailPiece[] = [],
+  ): 'terrain' | 'overlap' | null {
     if (!trackCellsOf(piece).every(([x, z]) => !blocked({ gx: x, gz: z }))) return 'terrain';
-    return this.railsOverlapping(piece).length > 0 ? 'overlap' : null;
+    return this.railsOverlapping(piece, extra).length > 0 ? 'overlap' : null;
   }
 
   /** La pièce tient-elle là ? */
@@ -1440,13 +1444,14 @@ export class GameState {
   }
 
   /** Pièces de voie qui gênent une nouvelle pièce : celles dont une case est prise, hors raccords et croisements. */
-  railsOverlapping(piece: RailPiece): RailPiece[] {
+  railsOverlapping(piece: RailPiece, extra: readonly RailPiece[] = []): RailPiece[] {
     const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
-    return this.changes.rails.filter(
+    const all = extra.length > 0 ? [...this.changes.rails, ...extra] : this.changes.rails;
+    return all.filter(
       (p) =>
         trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
         !neighbours(piece, p) &&
-        !sharesOrigin(piece, p, this.changes.rails) &&
+        !sharesOrigin(piece, p, all) &&
         !crossesAtLevel(piece, p),
     );
   }
