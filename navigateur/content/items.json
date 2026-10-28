@@ -806,9 +806,8 @@
       "volumeL": 0.2,
       "color": "#c9b458",
       "recipe": {
-        "fiber": 2,
-        "stone": 1,
-        "wood": 1
+        "stone": 2,
+        "iron_ore": 1
       }
     },
     {
@@ -2549,6 +2548,22 @@
         "steel_plate": 8,
         "motor": 1,
         "armored_glass": 2
+      }
+    },
+    {
+      "id": "jetpack",
+      "stack": 1,
+      "category": "equipment",
+      "weightKg": 6,
+      "volumeL": 20,
+      "color": "#c4752b",
+      "recipe": {
+        "chassis_composite": 1,
+        "motor": 1,
+        "battery_lithium": 1
+      },
+      "equip": {
+        "slot": "back"
       }
     }
   ]

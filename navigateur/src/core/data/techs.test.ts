@@ -85,7 +85,7 @@ describe('visibilité des technologies', () => {
     expect(vis('cast_iron', [])).toBe(true);
     expect(vis('conveyor', [])).toBe(true);
     expect(vis('bessemer', [])).toBe(false);
-    expect(vis('bessemer', ['gears', 'pack_2'])).toBe(true);
+    expect(vis('bessemer', ['gears', 'laboratory', 'pack_2'])).toBe(true);
     expect(vis('fusion', [])).toBe(false);
   });
 

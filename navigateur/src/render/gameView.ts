@@ -1125,6 +1125,9 @@ export function startGameView(
   const MACHINE_REACH_M = 20;
   /** Un tapis emporte le joueur à CARRY_BOOST fois la vitesse des objets (on le sent mieux en marchant dessus). */
   const CARRY_BOOST = 2;
+  /** Propulseur dorsal : poussée (m/s²) en plus de la gravité et vitesse de montée maximale. */
+  const JETPACK_THRUST_M_S2 = 40;
+  const JETPACK_MAX_UP_M_S = 6;
   /** Série de poteaux : le dernier posé pendant que le clic gauche reste maintenu. */
   let poleChain: Machine | null = null;
   const MAX_BELT_PATH = 150;
@@ -2261,6 +2264,9 @@ export function startGameView(
       PLAYER_HEIGHT_M,
       input.isActionActive('jump'),
     );
+    // Propulseur dorsal : Saut maintenu en l'air = poussée vers le haut (une batterie lithium dure 20 s).
+    if (!next.onGround && input.isActionActive('jump') && options.state.useJetpack(dt))
+      next.vy = Math.min(JETPACK_MAX_UP_M_S, next.vy + JETPACK_THRUST_M_S2 * dt);
     if (onGround && !next.onGround && next.vy > 0) playSfx('jump');
     if (!onGround && next.onGround && airTime > 0.25) {
       playSfx('land', Math.min(1.4, Math.abs(velY) / 8));
@@ -2288,8 +2294,17 @@ export function startGameView(
     playSfx(id, sprinting ? 1.25 : 1);
   }
   /** Un tapis emporte le joueur qui s'y tient (à la vitesse des objets), tant que rien ne le bloque. */
+  /** L'exosquelette (jambes) : un peu plus de vitesse de marche et le tapis n'emporte plus le joueur qui avance. */
+  const wearsExoskeleton = (): boolean => options.state.changes.equipment.legs === 'exoskeleton';
+  const EXO_SPEED = 1.1;
+  const isWalking = (): boolean =>
+    input.isActionActive('forward') ||
+    input.isActionActive('backward') ||
+    input.isActionActive('left') ||
+    input.isActionActive('right');
   function carryByBelt(dt: number): void {
     if (!onGround) return;
+    if (wearsExoskeleton() && isWalking()) return;
     // Un tapis surélevé ou une rampe emporte aussi quand on se tient dessus ; au sol, seulement les tapis à plat.
     let m: Machine | null = factory.beltUnder(playerX, playerZ, playerY);
     if (!m && playerY <= 0.2) {
@@ -2348,6 +2363,7 @@ export function startGameView(
       WALK_SPEED_M_S *
       base *
       (flying ? FLY_SPEED_FACTOR : 1) *
+      (!mounted && wearsExoskeleton() ? EXO_SPEED : 1) *
       (!mounted && input.isActionActive('sprint') && !crouching
         ? flying
           ? 2

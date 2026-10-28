@@ -1761,6 +1761,14 @@
   font-size: 9px;
   opacity: 0.6;
 }
+.tech-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-size: 11px;
+  opacity: 0.6;
+  pointer-events: none;
+}
 .tech-tools {
   position: absolute;
   right: 8px;

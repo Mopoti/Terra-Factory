@@ -1878,6 +1878,30 @@ export class GameState {
     return 0;
   }
 
+  /** Secondes de poussée restantes dans la batterie du propulseur en cours (non sauvegardées : une batterie par rechargement). */
+  private jetpackSeconds = 0;
+  /** Durée de poussée d'une batterie lithium. */
+  static readonly JETPACK_BATTERY_S = 20;
+
+  /** Le propulseur dorsal est-il porté ? */
+  wearsJetpack(): boolean {
+    return this.changes.equipment.back === 'jetpack';
+  }
+
+  /** Une poussée de `dt` secondes : prend une batterie lithium du sac quand la précédente est vide. */
+  useJetpack(dt: number): boolean {
+    if (!this.wearsJetpack()) return false;
+    if (this.creative) return true;
+    if (this.jetpackSeconds <= 0) {
+      if ((this.inventory.battery_lithium ?? 0) < 1) return false;
+      this.inventory = remove(this.inventory, 'battery_lithium', 1).inventory;
+      this.jetpackSeconds = GameState.JETPACK_BATTERY_S;
+      this.emit({ type: 'inventory' });
+    }
+    this.jetpackSeconds -= dt;
+    return true;
+  }
+
   // --- Machines ------------------------------------------------------------------------------------
 
   /** Pose une machine ou un élément de tapis (consomme l'objet du sac). */

@@ -1377,7 +1377,7 @@ describe('sac : clic gauche sur une pile', () => {
 
 describe('paquets de science par palier', () => {
   it('chaque paquet Tn se fabrique avec des éléments du palier précédent', () => {
-    expect(itemById('science_pack').recipe).toEqual({ fiber: 2, stone: 1, wood: 1 });
+    expect(itemById('science_pack').recipe).toEqual({ stone: 2, iron_ore: 1 });
     expect(itemById('science_pack_2').recipe).toEqual({ iron_gear: 1, copper_wire: 1 });
     expect(itemById('science_pack_5').recipe).toBeTruthy();
   });

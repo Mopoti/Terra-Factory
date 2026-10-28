@@ -8,7 +8,7 @@ T0 (disponible dès le départ, ou débloqué avec des ressources du début de p
 ## Un paquet de science par palier
 | Paquet | Fabriqué avec des éléments du palier | Recette actuelle |
 | --- | --- | --- |
-| T1 `science_pack` | T0 | 2 fibres + 1 pierre + 1 bois (**provisoire**, « on en reparlera ») |
+| T1 `science_pack` | T0 | 2 pierres + 1 hématite (minerai de fer) : décision du PO (tour 261), car la fibre et le bois ne s'automatisent pas |
 | T2 `science_pack_2` | T1 | 1 engrenage de fer + 1 fil de cuivre |
 | T3 `science_pack_3` | T2 | 1 plaque d'acier + 1 tuyau de laiton |
 | T4 `science_pack_4` | T3 | 1 puce de silicium + 1 câble isolé |

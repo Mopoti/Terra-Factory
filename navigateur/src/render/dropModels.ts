@@ -109,6 +109,7 @@ export function dropShape(item: string): DropShape {
   if (item === 'res_water') return 'eau';
   if (PROVISIONAL_SHAPES[item]) return PROVISIONAL_SHAPES[item];
   if (item === 'exoskeleton') return 'pantalon';
+  if (item === 'jetpack') return 'sac_a_dos';
   const own = EQUIPMENT_SHAPES[item];
   if (own) return own;
   const armor = /^armor(1|2|3|4|5)_(head|torso|legs|feet)$/.exec(item);

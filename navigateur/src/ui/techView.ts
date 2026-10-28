@@ -420,7 +420,7 @@ export function mountTech(
       mk('+', t('tech.zoomIn'), () => zoomAt(1.25, ...mid())),
       mk('⤢', t('tech.fit'), fit),
     );
-    treeView.append(tools);
+    treeView.append(tools, el('div', 'tech-hint', t('tech.navHint')));
   }
 
   let dragged = false;
@@ -452,8 +452,15 @@ export function mountTech(
       'wheel',
       (e) => {
         e.preventDefault();
-        const r = treeView.getBoundingClientRect();
-        zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+        // Ctrl + molette : zoom autour du curseur ; molette seule : on fait défiler l'arbre.
+        if (e.ctrlKey) {
+          const r = treeView.getBoundingClientRect();
+          zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+        } else {
+          view.x -= e.shiftKey ? e.deltaY : e.deltaX;
+          view.y -= e.shiftKey ? 0 : e.deltaY;
+          applyView();
+        }
       },
       { passive: false },
     );

@@ -95,27 +95,27 @@ D={
  'magazine':('Chargeur de pistolet',0,['magazine'],['pistol'],{'iron_ingot':10}),
  'research_1':('Recherche I (paquets plus vite)',0,[],['laboratory'],{'iron_ingot':20,'copper_ingot':20}),
  # --- Palier 1 : paquets T1
- 'conveyor':('Tapis roulant',1,['machine_conveyor'],['laboratory'],P(1,50)),
+ 'conveyor':('Tapis roulant',1,['machine_conveyor'],[],P(1,50)),
  'arm':('Bras robotique',1,['machine_arm'],['conveyor'],P(1,100)),
  'splitter':('Séparateur',1,['machine_splitter'],['conveyor'],P(1,100)),
  'merger':('Groupeur',1,['machine_merger'],['conveyor'],P(1,100)),
- 'chest_iron':('Coffre en fer',1,['machine_chest_iron'],['laboratory'],P(1,50)),
- 'waypoint':('Balise',1,['waypoint'],['laboratory'],P(1,100)),
- 'textile':('Textile',1,['cloth'],['laboratory'],P(1,100)),
+ 'chest_iron':('Coffre en fer',1,['machine_chest_iron'],[],P(1,50)),
+ 'waypoint':('Balise',1,['waypoint'],[],P(1,100)),
+ 'textile':('Textile',1,['cloth'],[],P(1,100)),
  'clothing':('Vêtements',1,['trousers','boots','gloves','hood','jacket'],['textile'],P(1,100)),
  'backpack':('Sac à dos',1,['backpack'],['textile'],P(1,100)),
  'bedding_1':('Couchage de survie',1,['sleeping_bag'],['textile'],P(1,100)),
- 'navigation':('Navigation',1,['compass'],['laboratory'],P(1,100)),
- 'pipe':('Tuyau',1,['machine_pipe'],['laboratory'],P(1,50)),
- 'motor':('Moteur simple',1,['motor'],['laboratory'],P(1,150)),
+ 'navigation':('Navigation',1,['compass'],[],P(1,100)),
+ 'pipe':('Tuyau',1,['machine_pipe'],[],P(1,50)),
+ 'motor':('Moteur simple',1,['motor'],[],P(1,150)),
  'pump':('Pompe à eau',1,['machine_pump'],['pipe','motor'],P(1,100)),
  'buggy':('Buggy',1,['vehicle_buggy'],['motor'],P(1,100)),
  'quad':('Quad',1,['vehicle_quad'],['motor'],P(1,100)),
  'boiler':('Chaudière',1,['machine_boiler'],['pipe'],P(1,100)),
  'turbine':('Turbine à vapeur',1,['machine_turbine'],['boiler'],P(1,100)),
- 'lamp':('Lampadaire électrique',1,['machine_lamp'],['laboratory','electricity'],P(1,100)),
- 'fence':('Clôture en bois',1,['piece_fence_wood'],['laboratory'],P(1,50)),
- 'pack_2':('Paquet de science T2',1,[S2],['laboratory','gears','wires'],P(1,100)),
+ 'lamp':('Lampadaire électrique',1,['machine_lamp'],['electricity'],P(1,100)),
+ 'fence':('Clôture en bois',1,['piece_fence_wood'],[],P(1,50)),
+ 'pack_2':('Paquet de science T2',1,[S2],['gears','wires'],P(1,100)),
  'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],P(1,100,10)),
  'turret':('Tourelle',1,['machine_turret'],['conveyor','magazine'],P(1,100,10)),
  # --- Palier 2 : paquets T2 et T1
@@ -155,7 +155,7 @@ D={
  'silicon_raw':('Silicium brut',3,['silicon_raw'],['electric_furnace'],P(3,100)),
  'silicon_chip':('Puce de silicium',3,['silicon_chip'],['silicon_raw'],P(3,100)),
  'barreler':('Remplisseuse de barils',3,['machine_barreler','barrel_empty','barrel_water'],['pipe_2','booster'],P(3,100)),
- 'pumpjack':('Chevalet de pompage',3,['machine_pumpjack'],['heavy_press','barreler'],P(3,150)),
+ 'pumpjack':('Chevalet de pompage',3,['machine_pumpjack'],['heavy_press'],P(3,150)),
  'barrel_oil':('Baril de pétrole',3,['barrel_oil'],['pumpjack'],P(3,100)),
  'refinery':('Raffinerie',3,['machine_refinery'],['pumpjack','concrete'],P(3,150)),
  'plastic_press':('Presse à plastique',3,['machine_plastic_press'],['refinery'],P(3,150)),
@@ -168,7 +168,7 @@ D={
  'tank':('Char',3,['vehicle_tank'],['engine_heavy','steel_plate'],P(3,150)),
  'van':('Camion benne',3,['vehicle_van'],['engine_heavy','steel_plate'],P(3,150)),
  'railway':('Chemin de fer',3,['rail','train_locomotive','train_wagon_freight','train_wagon_tanker','train_station'],['turbine','steel_plate','engine_heavy'],P(3,200)),
- 'aluminium_ingot':('Lingot d\'aluminium',3,['aluminium_ingot'],['plastic_press'],P(3,150)),
+ 'aluminium_ingot':('Lingot d\'aluminium',3,['aluminium_ingot'],[],P(3,150)),
  'aluminium_plate':('Plaque d\'aluminium',3,['aluminium_plate'],['aluminium_ingot'],P(3,100)),
  'aluminium_rod':('Tige d\'aluminium',3,['aluminium_rod'],['aluminium_ingot'],P(3,100)),
  'chassis_alu':('Châssis léger',3,['chassis_alu'],['aluminium_plate','aluminium_rod'],P(3,100)),
@@ -276,6 +276,7 @@ for k,(nm,t,un,pre,cost) in D.items():
     # payer en paquets Tk suppose de savoir les fabriquer : la découverte du paquet Tk est un prérequis
     for pack in cost:
         if pack in PACK_DISCOVERY and PACK_DISCOVERY[pack]!=k: derived[k].add(PACK_DISCOVERY[pack])
+        if pack in PACK_DISCOVERY and k not in ('laboratory','pack_1'): derived[k].add('laboratory')   # étudier des paquets se fait au laboratoire
 deps=lambda k: set(D[k][3])|derived[k]
 errors=[k for k in D if any(D[d][1]>D[k][1] for d in deps(k))]
 def cyc():
@@ -325,7 +326,7 @@ print(len(D),'découvertes')
 # ---------------------------------------------------------------------------------------------------------------------
 # Mode jeu : écrit content/techs.json (les découvertes, au format des technologies) et les textes fr/en.
 EN={'cast_iron':'Cast iron','stamper':'Stamper','mould_plate':'Plate mould','plates':'Iron and copper plates','mould_gear':'Gear mould','gears':'Gear','mould_wire':'Wire mould','wires':'Copper wire','rods':'Iron rod','crusher':'Crusher','electricity':'Electricity','crank':'Priming crank','laboratory':'Laboratory','pack_1':'Science pack T1','iron_tool':'Iron tool','waterwheel':'Water wheel','pistol':'Pistol','magazine':'Pistol magazine','research_1':'Research I (faster packs)','conveyor':'Conveyor belt','arm':'Robotic arm','splitter':'Splitter','merger':'Merger','chest_iron':'Iron chest','waypoint':'Waypoint','textile':'Textile','clothing':'Clothing','backpack':'Backpack','bedding_1':'Survival bedding','navigation':'Navigation','pipe':'Pipe','motor':'Simple motor','pump':'Water pump','buggy':'Buggy','quad':'Quad','boiler':'Boiler','turbine':'Steam turbine','pack_2':'Science pack T2','armor_1':'Armor 1','turret':'Turret','bessemer':'Bessemer converter','steel_plate':'Steel plate','steel_rod':'Steel rod','mixer':'Concrete mixer','concrete':'Concrete buildings','washer':'Washing station','washed_ores':'Washed ores','zinc':'Zinc ingot','builder':'Builder','pipe_2':'Brass pipe','booster':'Booster pump','cooling':'Cooling tower','conveyor_2':'Fast conveyor','arm_electric':'Electric robotic arm','assembler':'Assembler','generator':'Fuel generator','drill_electric':'Electric drill','bedding_2':'Comfort bedding','research_2':'Research II','rifle':'Rifle','rifle_magazine':'Rifle magazine','armor_2':'Armor 2','turret_heavy':'Heavy turret','pack_3':'Science pack T3','heavy_press':'Heavy press','pipe_3':'T3 pipe','electric_furnace':'Electric furnace','silicon_raw':'Raw silicon','silicon_chip':'Silicon chip','barreler':'Barrel filler','pumpjack':'Pumpjack','barrel_oil':'Oil barrel','refinery':'Refinery','plastic_press':'Plastic press','plastic':'Plastic insulator','insulated_cable':'Insulated cable','rubber':'Rubber','engine_heavy':'Reinforced motor','tank':'Tank','van':'Dump truck','railway':'Railway','aluminium_ingot':'Aluminium ingot','aluminium_plate':'Aluminium plate','aluminium':'Aluminium buildings','garage':'Garage door','conveyor_3':'T3 conveyor','arm_filter':'Filter arm','sorting':'Sorter','drill_eco':'Eco drill','pack_4':'Science pack T4','research_3':'Research III','sniper':'Sniper','sniper_magazine':'Sniper magazine','turret_laser':'Laser turret','centrifuge':'Centrifuge','zamak':'Zamak','uranium_enriched':'Enriched uranium','uranium_depleted':'Depleted uranium','uranium_rod':'Uranium rod','reactor':'Fission reactor','pack_5':'Science pack T5','evaporation':'Evaporation tower','vitrifier':'Vitrifier','armor_4':'Armor 4','turret_plasma':'Plasma turret','storage':'Accumulator','research_4':'Research IV','fusion':'Fusion','beacon':'Quantum beacon'}
-EN.update({'glass':'Glass pane','kit_circuit':'Circuit kit','chassis_simple':'Simple frame','chassis_steel':'Reinforced frame','circuit_advanced':'Advanced circuit','microcontroller':'Microcontroller','aluminium_rod':'Aluminium rod','chassis_alu':'Light frame','solar_cell':'Solar cell','graphite':'Graphite','lithium_salt':'Lithium salt','battery':'Lithium battery','carbon_fiber':'Carbon fibre','chassis_composite':'Composite frame','graphite_filter':'Graphite filter','armored_glass':'Armoured glass','deuterium':'Deuterium','tritium':'Tritium','air_compressor':'Air compressor','supra_magnet':'Superconducting magnet','fusion_capsule':'Fusion capsule','quantum_crystal':'Quantum crystal'})
+EN.update({'jetpack':'Jetpack','glass':'Glass pane','kit_circuit':'Circuit kit','chassis_simple':'Simple frame','chassis_steel':'Reinforced frame','circuit_advanced':'Advanced circuit','microcontroller':'Microcontroller','aluminium_rod':'Aluminium rod','chassis_alu':'Light frame','solar_cell':'Solar cell','graphite':'Graphite','lithium_salt':'Lithium salt','battery':'Lithium battery','carbon_fiber':'Carbon fibre','chassis_composite':'Composite frame','graphite_filter':'Graphite filter','armored_glass':'Armoured glass','deuterium':'Deuterium','tritium':'Tritium','air_compressor':'Air compressor','supra_magnet':'Superconducting magnet','fusion_capsule':'Fusion capsule','quantum_crystal':'Quantum crystal'})
 EN.update({'armored_buildings':'Armoured buildings','armor_3':'Armor 3','armor_5':'Armor 5','exoskeleton':'Exoskeleton'})
 if JEU:
     import re
