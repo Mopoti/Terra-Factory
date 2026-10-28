@@ -111,23 +111,15 @@ export const isCarKind = (x: unknown): x is CarKind =>
 export const carKindOfItem = (item: string): CarKind | null =>
   CAR_KINDS.find((k) => CARS[k].item === item) ?? null;
 
-/** Objet du sac qui pose la voie : 1 rail = 1 m de voie (une tuile droite). */
 /** Objet qui pose une station sur la voie. */
 export const STATION_ITEM = 'train_station';
+/** Objet du sac qui pose la voie. */
 export const RAIL_ITEM = 'rail';
-/**
- * Rails consommés par chaque forme de pièce (un rail ≈ 2,5 m de voie) : virage serré (5,9 m) 3, large (9,8 m) 4, très
- * large (13,7 m) 6, rampe (10 m) 4, aiguillage (ses deux voies et ses lames) 6.
- */
+/** Rails consommés par chaque forme de pièce (un rail ≈ 2,5 m de voie) : droit 1, virage de 45° (6,9 m) 3, rampe (10 m) 4. */
 export const RAIL_COST: Record<RailKind, number> = {
   straight: 1,
-  curve: 3,
-  curve_wide: 4,
-  curve_large: 6,
-  curve_big: 9,
-  curve_huge: 12,
-  curve45: 3,
-  curve45_b: 3,
+  curve_l: 3,
+  curve_r: 3,
   ramp: 4,
 };
 

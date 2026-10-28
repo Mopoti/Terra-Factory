@@ -2,20 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { CARS } from '../data/trains';
 import {
   TrackGraph,
-  cellsOf,
   flip,
-  centerOf,
-  cornerFor,
   freePorts,
-  lengthOf,
+  lengthOfPiece,
   RAMP_RISE_M,
-  TILE_CELLS,
   TILE_M,
-  matesFor,
   portsOf,
   poseOn,
   type RailPiece,
 } from './track';
+import { attach, line } from './testTrack';
 import {
   coupleConsists,
   collide,
@@ -31,17 +27,6 @@ import {
   type Car,
   type Consist,
 } from './train';
-
-/** Une voie droite de `n` tuiles de 1 m le long de z (tuile k à gz = −TILE_CELLS·k : on avance vers −z, le port 1). */
-const line = (n: number, gx = 0): RailPiece[] =>
-  Array.from({ length: n }, (_, k) => ({
-    id: k + 1,
-    kind: 'straight',
-    gx,
-    gz: -TILE_CELLS * k,
-    turns: 0,
-    level: 0,
-  }));
 
 const car = (id: number, kind: Car['kind'], fuel = 0): Car => ({
   id,
@@ -91,40 +76,29 @@ describe('voies : géométrie et raccords', () => {
   it('un virage se raccorde au bout d’une voie droite, quel que soit le côté, et on le parcourt', () => {
     const pieces = line(2);
     for (const port of freePorts(pieces)) {
-      const mates = matesFor('curve', port.at);
-      expect(mates.length).toBeGreaterThan(0);
       let id = 10;
-      for (const m of mates) {
-        const g = new TrackGraph([...pieces, { id: id++, kind: 'curve', ...m }]);
+      for (const kind of ['curve_l', 'curve_r'] as const) {
+        const g = new TrackGraph([...pieces, attach(kind, port.at, id++)]);
         expect(g.neighbour(port.piece, port.port)).not.toBeNull();
       }
     }
-    // Longueur d'un quart de cercle de 1,5 m, cap qui tourne de 90°.
-    const curve: RailPiece = { id: 1, kind: 'curve', gx: 0, gz: 0, turns: 0, level: 0 };
-    expect(lengthOf('curve')).toBeCloseTo((Math.PI / 2) * 3.75, 3);
+    // Un virage de 45° : 6,9 m de voie et un cap qui tourne de 45°.
+    const curve: RailPiece = { id: 1, kind: 'curve_l', x: 0, z: 0, h: 0, level: 0 };
+    expect(lengthOfPiece(curve)).toBeCloseTo((Math.PI / 4) * 8.75, 3);
     const a = poseOn(curve, 0);
-    const b = poseOn(curve, lengthOf('curve'));
+    const b = poseOn(curve, lengthOfPiece(curve));
     let dyaw = b.yaw - a.yaw;
     dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
-    expect(Math.abs(dyaw)).toBeCloseTo(Math.PI / 2, 3);
+    expect(Math.abs(dyaw)).toBeCloseTo(Math.PI / 4, 3);
   });
 
-  it('une rampe monte d’un mètre et la pièce suivante se pose à la bonne hauteur', () => {
-    const ramp: RailPiece = { id: 1, kind: 'ramp', gx: 0, gz: 0, turns: 0, level: 0 };
+  it('une rampe monte de 2,5 m et la pièce suivante se pose à la bonne hauteur', () => {
+    const ramp: RailPiece = { id: 1, kind: 'ramp', x: 0, z: 0, h: 0, level: 0 };
     const [low, high] = portsOf(ramp);
     expect(high.y - low.y).toBeCloseTo(RAMP_RISE_M);
-    const next = matesFor('straight', high)[0];
+    const next = attach('straight', high, 2);
     expect(next.level).toBeCloseTo(RAMP_RISE_M);
-    expect(poseOn(ramp, lengthOf('ramp')).slope).toBeGreaterThan(0.2);
-  });
-
-  it('emprise : une tuile, un virage de 3 × 3 tuiles, une rampe de 1 × 4 tuiles', () => {
-    const s: RailPiece = { id: 1, kind: 'straight', gx: 4, gz: 6, turns: 0, level: 0 };
-    expect(cellsOf(s)).toHaveLength(TILE_CELLS ** 2);
-    expect(cellsOf({ ...s, kind: 'curve' })).toHaveLength(9 * TILE_CELLS ** 2);
-    expect(cellsOf({ ...s, kind: 'ramp' })).toHaveLength(4 * TILE_CELLS ** 2);
-    const c = centerOf({ ...s, kind: 'ramp', turns: 1 });
-    expect(cornerFor('ramp', 1, c.x, c.z)).toEqual({ gx: 4, gz: 6 });
+    expect(poseOn(ramp, lengthOfPiece(ramp)).slope).toBeGreaterThan(0.2);
   });
 });
 
@@ -220,8 +194,7 @@ describe('véhicules en courbe', () => {
     let id = 50;
     for (const t of turns) {
       const end = freePorts(pieces).find((p) => p.piece === (id === 50 ? 14 : id - 1))!;
-      const mates = matesFor('curve', end.at);
-      pieces.push({ id, kind: 'curve', ...mates[Math.min(t, mates.length - 1)] });
+      pieces.push(attach(t === 0 ? 'curve_l' : 'curve_r', end.at, id));
       id++;
     }
     return { g: new TrackGraph(pieces), last: id - 1 };
@@ -270,7 +243,7 @@ describe('véhicules en courbe', () => {
       [0, 1, 0],
     ] as (0 | 1)[][]) {
       const { g, last } = track(turns);
-      const len = lengthOf('curve');
+      const len = lengthOfPiece(g.byId.get(last)!);
       for (let k = 0; k <= 8; k++) {
         // Tête dans le dernier virage, puis (u négatif) dans le précédent.
         const u = (k / 8) * len;
@@ -309,7 +282,7 @@ describe('véhicules en courbe', () => {
     const cars = train();
     cars[0].rev = true;
     for (let k = 0; k <= 12; k++)
-      check(g, placed(g, cars, last - (k % 3), (k / 12) * lengthOf('curve')));
+      check(g, placed(g, cars, last - (k % 3), (k / 12) * lengthOfPiece(g.byId.get(last)!)));
   });
 
   it('en ligne droite, les véhicules restent bout à bout, attelage contre attelage', () => {

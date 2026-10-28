@@ -1,4 +1,5 @@
 import { getPseudo } from '../core/profile/store';
+import { slotPlayable } from '../core/game/worldChanges';
 import type { SaveLibrary } from '../core/save/library';
 import { splitPlayTime } from '../core/save/playTime';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
@@ -123,8 +124,15 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
 
   /** Bouton « Continuer » : reprend la dernière sauvegarde de la partie la plus récente. */
   function continueButton(game: GameSummary): HTMLButtonElement {
-    const b = button('', () => onStartGame(game, latestSlot(game)), 'menu-btn primary');
+    const slot = latestSlot(game);
+    const playable = !slot || slotPlayable(slot.changes);
+    const b = button('', () => onStartGame(game, slot), 'menu-btn primary');
+    b.disabled = !playable;
     b.append(el('span', undefined, t('menu.continue')));
+    if (!playable) {
+      b.append(el('small', undefined, t('load.incompatible', { name: game.name })));
+      return b;
+    }
     b.append(
       el(
         'small',
@@ -405,12 +413,15 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
     );
     const slots = [...game.saves].sort((a, b) => b.savedAt - a.savedAt);
     for (const slot of slots) {
+      const playable = slotPlayable(slot.changes);
       const b = button('', () => onStartGame(game, slot));
+      b.disabled = !playable;
       const top = el('span', 'slot-meta');
       top.append(
         el('span', undefined, slot.name),
         el('span', `badge ${slot.kind}`, t(`save.kind.${slot.kind}` as TranslationKey)),
       );
+      if (!playable) top.append(el('span', 'badge', t('load.incompatibleBadge')));
       b.append(
         top,
         el(
@@ -446,6 +457,8 @@ export function mountMenu(root: HTMLElement, options: MenuOptions): () => void {
       );
       right.append(row);
     }
+    if (slots.some((x) => !slotPlayable(x.changes)))
+      right.append(el('small', 'help', t('load.incompatibleHelp')));
     if (slots.length === 0) right.append(button(t('load.noSave'), () => onStartGame(game)));
 
     layout.append(left, right);

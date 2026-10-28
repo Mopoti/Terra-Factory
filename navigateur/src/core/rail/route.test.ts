@@ -2,24 +2,30 @@ import { describe, expect, it } from 'vitest';
 import { GameState } from '../game/state';
 import { normalizeChanges } from '../game/worldChanges';
 import { AUTO_SPEED, autoControl, findRoute } from './route';
-import { TILE_CELLS, lengthOfPiece, matesFor, poseOn, portsOf } from './track';
+import { lengthOfPiece, poseOn, portsOf } from './track';
+import { placeAt, placeLine } from './testTrack';
 import { carPoses, stepConsist } from './train';
 
-const free = (): boolean => false;
-
-/** Ligne de 12 tuiles vers −z, avec un virage large posé tangent au joint des tuiles 2 et 3 (embranchement). */
-function network(): { s: GameState; curveId: number; lineIds: number[] } {
+/**
+ * Ligne de 12 droits vers −z, avec un virage de 45° posé au joint des droits 3 et 4 (embranchement), suivi de six droits en
+ * diagonale : la branche fait une vingtaine de mètres.
+ */
+function network(): { s: GameState; curveId: number; lineIds: number[]; branchIds: number[] } {
   const s = new GameState({
-    inventory: { rail: 200, train_locomotive: 1, train_wagon_freight: 2, coal: 30 },
+    inventory: { rail: 300, train_locomotive: 1, train_wagon_freight: 2, coal: 30 },
   });
   s.creative = true;
-  for (let k = 0; k < 12; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
+  placeLine(s, 12);
   const lineIds = s.changes.rails.map((p) => p.id);
   const joint = portsOf(s.changes.rails[2]).find((p) => p.dz === -1)!;
-  for (const m of matesFor('curve_wide', joint))
-    if (s.placeRail('curve_wide', m.gx, m.gz, m.turns, m.level, free, true) === 'ok') break;
-  const curve = s.changes.rails[s.changes.rails.length - 1];
-  return { s, curveId: curve.id, lineIds };
+  const curve = placeAt(s, 'curve_l', joint)!;
+  const branchIds = [curve.id];
+  for (let k = 0; k < 6; k++) {
+    const last = s.changes.rails[s.changes.rails.length - 1];
+    const end = portsOf(last)[1];
+    branchIds.push(placeAt(s, 'straight', end)!.id);
+  }
+  return { s, curveId: curve.id, lineIds, branchIds };
 }
 
 describe('itinéraires', () => {
@@ -131,56 +137,33 @@ describe('itinéraires', () => {
   });
 
   it('un train qui franchit un embranchement garde sa queue sur la voie d’où il vient', () => {
-    const s = new GameState({
-      inventory: { rail: 300, train_locomotive: 1, train_wagon_freight: 1, coal: 30 },
-    });
-    s.creative = true;
-    for (let k = 0; k < 14; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
-    const line = s.changes.rails.map((p) => p.id);
-    const joint = portsOf(s.changes.rails[2]).find((p) => p.dz === -1)!;
-    for (const m of matesFor('curve_huge', joint))
-      if (s.placeRail('curve_huge', m.gx, m.gz, m.turns, m.level, free, true) === 'ok') break;
-    const curve = s.changes.rails[s.changes.rails.length - 1];
-    expect(curve.kind).toBe('curve_huge');
+    const { s, curveId, lineIds, branchIds } = network();
+    s.inventory.train_locomotive = 1;
     const g = s.railGraph();
-    const len = lengthOfPiece(g.byId.get(curve.id)!);
-    // Port du virage qui touche l'embranchement : l'autre bout du virage est loin.
-    const ports = portsOf(curve);
-    const near = ports.findIndex((p) => Math.hypot(p.x - joint.x, p.z - joint.z) < 0.3);
-    const dir = near === 1 ? 1 : -1;
-    const loco = s.placeCar('locomotive_steam', {
-      piece: curve.id,
-      u: near === 1 ? len - 4 : 4,
-      dir,
-    })!;
+    const curve = g.byId.get(curveId)!;
+    // Le train part de la branche, tête vers le joint (port 0 du virage), et passe sur la ligne.
+    const loco = s.placeCar('locomotive_steam', { piece: branchIds[2], u: 1, dir: -1 })!;
     loco.cars[0].fuel = { item: 'coal', count: 30 };
-    // Un wagon attelé derrière la locomotive.
-    const wagon = { id: 99, kind: 'wagon_freight' as const, rev: false, heatKJ: 0, fuel: null };
-    loco.cars.push(wagon);
-    // Remonte la queue sur la voie parcourue : le train vient du virage.
-    loco.head = { piece: curve.id, u: near === 1 ? len - 13 : 13, dir };
-    for (let i = 0; i < 20 * 40; i++) {
+    loco.cars.push({ id: 99, kind: 'wagon_freight', rev: false, heatKJ: 0, fuel: null });
+    for (let i = 0; i < 20 * 60; i++) {
       stepConsist(g, loco, 0.05, { throttle: 1, brake: 0, parked: false });
-      if (loco.head.piece === line[2] && loco.head.u > 2.2) break;
+      if (loco.head.piece === lineIds[2] && loco.head.u > 1) break;
     }
-    expect(loco.head.piece === line[2] || loco.head.piece === line[1]).toBe(true);
-    // Le wagon est resté sur le virage (et non téléporté sur la voie droite).
+    expect(loco.head.piece).toBe(lineIds[2]);
+    // Le wagon est resté sur la branche (et non téléporté sur la voie droite).
     const w = carPoses(g, loco)[1];
-    const onCurve = Math.min(
-      ...Array.from({ length: 60 }, (_, k) => {
-        const q = poseOn(g.byId.get(curve.id)!, (len * k) / 59);
-        return Math.hypot(q.x - w.x, q.z - w.z);
-      }),
-    );
-    const straight = g.byId.get(line[3])!;
-    const onStraight = Math.min(
-      ...Array.from({ length: 30 }, (_, k) => {
-        const q = poseOn(straight, (lengthOfPiece(straight) * k) / 29);
-        return Math.hypot(q.x - w.x, q.z - w.z);
-      }),
-    );
-    expect(onCurve).toBeLessThan(0.6);
-    expect(onStraight).toBeGreaterThan(1.5);
+    const dist = (piece: number): number => {
+      const q = g.byId.get(piece)!;
+      return Math.min(
+        ...Array.from({ length: 40 }, (_, k) => {
+          const at = poseOn(q, (lengthOfPiece(q) * k) / 39);
+          return Math.hypot(at.x - w.x, at.z - w.z);
+        }),
+      );
+    };
+    expect(Math.min(...branchIds.map(dist))).toBeLessThan(0.6);
+    expect(dist(lineIds[3])).toBeGreaterThan(1.5);
+    void curve;
   });
 
   it("à l'embranchement, le convoi va tout droit sans consigne et prend le virage si on le choisit", () => {

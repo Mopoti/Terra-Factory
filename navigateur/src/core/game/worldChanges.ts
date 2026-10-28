@@ -212,7 +212,7 @@ export interface WorldChanges {
   trains: Consist[];
   /** Stations nommées sur la voie, où les convois automatiques s'arrêtent. */
   stations: Station[];
-  /** Version de l'échelle de la voie : une voie d'avant l'agrandissement (version 1) est abandonnée au chargement. */
+  /** Version des rails (voir `RAIL_VERSION`) : une partie d'une autre version n'est plus jouable (refonte des rails). */
   railVersion: number;
   /** Nids nés de l'expansion des colonies (les nids d'origine viennent du monde généré). */
   nests: ExtraNest[];
@@ -617,6 +617,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
       });
     }
   }
+  // On garde la version lue : une partie d'avant la refonte des rails est refusée par le menu (`slotPlayable`).
+  result.railVersion = isNum(r.railVersion) ? Math.floor(r.railVersion) : 0;
   if (r.railVersion === RAIL_VERSION) {
     result.rails = normalizeRails(r.rails);
     result.trains = normalizeTrains(r.trains, result.rails);
@@ -746,3 +748,7 @@ function migrateFootprints(changes: WorldChanges): void {
   }
   changes.machines = kept;
 }
+
+/** La sauvegarde est-elle jouable ? Non si elle date d'avant la refonte des rails (les anciennes parties sont refusées). */
+export const slotPlayable = (changes: Pick<WorldChanges, 'railVersion'>): boolean =>
+  changes.railVersion === RAIL_VERSION;

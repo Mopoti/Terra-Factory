@@ -1,5 +1,5 @@
 {
- "key": "discussions5",
+ "key": "discussions6",
  "title": "Discussions : suite (3)",
  "intro": "Tes réponses sont notées. Je ne code pas les rails ni la batterie tant que tu n'as pas tranché les points ci-dessous.",
  "cols": [
@@ -14,6 +14,10 @@
   "À discuter"
  ],
  "tabs": [
+  {
+   "id": "g",
+   "label": "Rails : étape 1 à essayer"
+  },
   {
    "id": "a",
    "label": "Batterie et objets abîmés"
@@ -36,6 +40,38 @@
   }
  ],
  "rows": [
+  {
+   "id": "g1",
+   "tab": "g",
+   "name": "Comment essayer",
+   "tag": "g1",
+   "recipe": "Étape 1 faite et envoyée sur la branche. En jeu (mode Créatif) : prends le rail dans l'inventaire, mets-le en main. Un patron vert suit le curseur. Clic = une pièce. Loin d'une voie : un droit sur la grille, R le tourne de 45°. Près du bout d'une voie : le patron se colle ; curseur droit devant = un droit, de côté et assez loin = un virage de 45° de ce côté. Un patron rouge dit pourquoi (obstacle, chevauche une voie, il manque des rails). PageUp / PageDown : rampe.",
+   "role": "Dis-moi ce qui ne va pas : par exemple « le virage ne se choisit pas quand je veux », « la diagonale a un décalage », « je n'arrive pas à me coller au bout »."
+  },
+  {
+   "id": "g2",
+   "tab": "g",
+   "name": "Anciennes parties",
+   "tag": "g2",
+   "recipe": "Toutes les parties d'avant sont grisées dans « Charger » et « Continuer » avec un message : « date d'avant la refonte des rails : incompatible. Crée une nouvelle partie. ». Rien n'est supprimé : les fichiers restent exportables.",
+   "role": "Le texte te convient ? Veux-tu pouvoir ouvrir une ancienne partie en lecture seule pour récupérer des objets ?"
+  },
+  {
+   "id": "g3",
+   "tab": "g",
+   "name": "Rayon du virage et diagonales",
+   "tag": "g3",
+   "recipe": "Virage unique : 45°, rayon 8,75 m (cercle de 17,5 m de diamètre avec 8 pièces). Un droit en diagonale fait 3,54 m. Le modèle 3D des virages et des diagonales n'existe pas encore : le jeu les dessine (ballast, traverses, rails).",
+   "role": "Rayon plus petit (cercle plus compact) ou plus grand ? Les trains actuels passent bien dans 8,75 m."
+  },
+  {
+   "id": "g4",
+   "tab": "g",
+   "name": "Ce qui reste des étapes",
+   "tag": "g4",
+   "recipe": "Étape 3 (embranchements) : déjà possible ; étape 4 (croisement en +) : deux droits perpendiculaires qui se coupent en leur milieu ; étape 5 (survol avec crochets jaunes, infos du tronçon) : pas encore, il y a seulement la boîte de surbrillance actuelle.",
+   "role": "Je fais l'étape 5 ensuite, ou tu préfères d'abord les modèles 3D avec la session Blender ?"
+  },
   {
    "id": "a1",
    "tab": "a",

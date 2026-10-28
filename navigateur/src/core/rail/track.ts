@@ -1,67 +1,32 @@
 /**
- * Voies ferrées (voir `docs/trains.md`) : pièces posées sur la grille, comme les modèles de
- * `blender/scripts/ferroviaire.py`, agrandis de `RAIL_SCALE` pour aller avec des trains à l'échelle du personnage
- * (écartement d'environ 1,5 m) :
- *  - `straight` : une tuile de 2,5 m (5 × 5 cases) ;
- *  - `curve`, `curve_wide`, `curve_large` : virages serré (3 × 3 tuiles, rayon 3,75 m), large (5 × 5, 6,25 m) et très
- *    large (7 × 7, 8,75 m) ; quart de cercle reliant le milieu de deux bords voisins du bloc ;
- *  - `ramp` : 1 × 4 tuiles (10 m), monte de 2,5 m ; la descente est la même pièce tournée d'un demi-tour ;
- * Une pièce est posée sur la grille de cases ; ses extrémités (« ports ») se raccordent à celles d'une pièce voisine.
- * Un train est repéré sur la voie par une pièce, une abscisse `u` (m le long de la voie, depuis le port 0) et un sens.
- * Il n'y a pas de pièce « aiguillage » : un embranchement est un virage posé dans le prolongement d'une ligne (voies
- * tangentes). Le conducteur (touches gauche / droite) ou le pilote automatique choisit la voie à prendre ; sans choix,
- * on va tout droit.
+ * Voies ferrées (voir `docs/rails-refonte.md`) : peu de pièces, toutes à l'échelle des trains (écartement d'environ
+ * 1,5 m), posées bout à bout au millimètre près, dans huit directions (tous les 45°) :
+ *  - `straight` : un droit, long d'une tuile (2,5 m) le long d'un axe, d'une diagonale de tuile (3,54 m) en diagonale ;
+ *  - `curve_l` / `curve_r` : le virage unique de 45° (à gauche / à droite), de rayon 8,75 m ; huit font un cercle ;
+ *  - `ramp` : 10 m de long, monte de 2,5 m (la descente est la même pièce prise par l'autre bout).
+ * Une pièce est repérée par son port 0 (position en mètres, `x`, `z`, et hauteur `level`) et son cap `h` (0 à 7, par pas
+ * de 45° : 0 vers +z, 2 vers +x, 4 vers −z, 6 vers −x) : le sens de marche en quittant le port 0. Ses extrémités
+ * (« ports ») se raccordent à celles d'une pièce voisine. Un train est repéré sur la voie par une pièce, une abscisse `u`
+ * (m le long de la voie, depuis le port 0) et un sens.
+ * Il n'y a pas de pièce « aiguillage » : un embranchement est une pièce posée au bout d'une voie qui en a déjà une autre
+ * (un bout de voie a plusieurs suites). Le conducteur ou le pilote automatique choisit la voie ; sans choix, tout droit.
  */
 import { CELL_SIZE_M } from '../constants';
 
-export type RailKind =
-  | 'straight'
-  | 'curve'
-  | 'curve_wide'
-  | 'curve_large'
-  | 'curve_big'
-  | 'curve_huge'
-  | 'ramp'
-  | 'curve45'
-  | 'curve45_b';
-export const RAIL_KINDS: readonly RailKind[] = [
-  'straight',
-  'curve',
-  'curve_wide',
-  'curve_large',
-  'curve_big',
-  'curve_huge',
-  'ramp',
-  'curve45',
-  'curve45_b',
-];
-export type CurveKind = 'curve' | 'curve_wide' | 'curve_large' | 'curve_big' | 'curve_huge';
-export const CURVE_KINDS: readonly CurveKind[] = [
-  'curve',
-  'curve_wide',
-  'curve_large',
-  'curve_big',
-  'curve_huge',
-];
-export const isCurve = (k: RailKind): k is CurveKind =>
-  (CURVE_KINDS as readonly string[]).includes(k);
-/**
- * Demi-virages (45°) : les deux moitiés d'un virage très large, dans le même bloc de 7 × 7 tuiles. `curve45` va du
- * milieu du bord +z jusqu'au milieu de l'arc (sur la diagonale du bloc), `curve45_b` de là au milieu du bord +x. Deux
- * à la suite font un quart de tour ; un seul tourne de 45° (son bout est alors en diagonale).
- */
-export const isHalfCurve = (k: RailKind): k is 'curve45' | 'curve45_b' =>
-  k === 'curve45' || k === 'curve45_b';
+export type RailKind = 'straight' | 'curve_l' | 'curve_r' | 'ramp';
+export const RAIL_KINDS: readonly RailKind[] = ['straight', 'curve_l', 'curve_r', 'ramp'];
+export const isCurve = (k: RailKind): k is 'curve_l' | 'curve_r' =>
+  k === 'curve_l' || k === 'curve_r';
 
 export interface RailPiece {
   id: number;
   kind: RailKind;
-  /** Coin de l'emprise, en cases. */
-  gx: number;
-  gz: number;
-  /** Quarts de tour (0 à 3), comme `MeshBuilder.model`. */
-  turns: number;
-  /** Hauteur (m) du bas de la pièce : 0 au sol, 1 sur une rampe qui a monté… */
+  /** Position du port 0 (m), au millimètre. */
+  x: number;
+  z: number;
+  /** Cap du sens de marche en quittant le port 0 : 0 à 7, par pas de 45° (0 vers +z, 2 vers +x, 4 vers −z, 6 vers −x). */
+  h: number;
+  /** Hauteur (m) du port 0 : 0 au sol, 2,5 au sommet d'une rampe… */
   level: number;
 }
 
@@ -75,73 +40,33 @@ export const TILE_M = RAIL_SCALE;
 export const TILE_CELLS = TILE_M / CELL_SIZE_M;
 /** Hauteur du dessus des rails au-dessus du bas d'une pièce (m) : les roues des trains y reposent. */
 export const RAIL_TOP_M = 0.12 * RAIL_SCALE;
-/** Rayon du virage serré (m) et élévation d'une rampe (m). */
-export const CURVE_RADIUS_M = 1.5 * RAIL_SCALE;
+/** Rayon du virage de 45° (m) : 3,5 tuiles. */
+export const CURVE_RADIUS_M = 3.5 * TILE_M;
 export const RAMP_RISE_M = 1 * RAIL_SCALE;
-const RAMP_RUN_M = 4 * RAIL_SCALE;
+export const RAMP_RUN_M = 4 * RAIL_SCALE;
+/** Demi-largeur de l'emprise d'une voie (m) : deux voies côte à côte, à une tuile d'écart, ne se touchent pas. */
+export const HALF_WIDTH_M = 1.2;
 
-/** Côté du bloc d'un virage ou d'un aiguillage (en tuiles). */
-export function blockTiles(kind: RailKind): number {
-  if (kind === 'curve_wide') return 5;
-  if (kind === 'curve_large' || kind === 'curve45' || kind === 'curve45_b') return 7;
-  if (kind === 'curve_big') return 11;
-  if (kind === 'curve_huge') return 15;
-  return 3;
-}
-/** Rayon (m) d'un virage, ou de la voie déviée d'un aiguillage : la moitié du côté du bloc. */
-export const radiusOf = (kind: RailKind): number => (blockTiles(kind) * TILE_M) / 2;
+/** Arrondi au millimètre : les positions enregistrées restent propres. */
+export const mm = (v: number): number => Math.round(v * 1000) / 1000;
 
-/** Dimensions de l'emprise en cases (largeur selon x, profondeur selon z) pour ce quart de tour. */
-export function footprintOf(kind: RailKind, turns: number): { w: number; d: number } {
-  if (kind === 'straight') return { w: TILE_CELLS, d: TILE_CELLS };
-  if (kind !== 'ramp')
-    return { w: blockTiles(kind) * TILE_CELLS, d: blockTiles(kind) * TILE_CELLS };
-  return turns % 2 === 0
-    ? { w: TILE_CELLS, d: 4 * TILE_CELLS }
-    : { w: 4 * TILE_CELLS, d: TILE_CELLS };
+/** Direction (vecteur unitaire dans le plan) du cap `h`. */
+export function headingDir(h: number): { dx: number; dz: number } {
+  const a = (((h % 8) + 8) % 8) * (Math.PI / 4);
+  return { dx: Math.round(Math.sin(a) * 1e9) / 1e9, dz: Math.round(Math.cos(a) * 1e9) / 1e9 };
 }
-
-/** Centre de la pièce (m). */
-export function centerOf(p: RailPiece): { x: number; z: number } {
-  const { w, d } = footprintOf(p.kind, p.turns);
-  return { x: (p.gx + w / 2) * CELL_SIZE_M, z: (p.gz + d / 2) * CELL_SIZE_M };
-}
-
-/** Position de la pièce pour qu'elle soit centrée en (x, z) (m), au quart de case près. */
-export function cornerFor(
-  kind: RailKind,
-  turns: number,
-  x: number,
-  z: number,
-): { gx: number; gz: number } {
-  const { w, d } = footprintOf(kind, turns);
-  return { gx: Math.round(x / CELL_SIZE_M - w / 2), gz: Math.round(z / CELL_SIZE_M - d / 2) };
-}
-
-/** Tourne un point local de `turns` quarts de tour (même convention que `MeshBuilder.model`). */
-function turn(x: number, z: number, turns: number): [number, number] {
-  switch (((turns % 4) + 4) % 4) {
-    case 1:
-      return [z, -x];
-    case 2:
-      return [-x, -z];
-    case 3:
-      return [-z, x];
-    default:
-      return [x, z];
-  }
-}
+/** Cap (0 à 7) le plus proche d'une direction. */
+export const headingOf = (dx: number, dz: number): number =>
+  (((Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) % 8) + 8) % 8) as number;
 
 /** Longueur de la voie d'une pièce (m), de son port 0 à son port 1. */
-export function lengthOf(kind: RailKind): number {
-  if (kind === 'straight') return TILE_M;
+export function lengthOf(kind: RailKind, h = 0): number {
+  if (kind === 'straight') return h % 2 === 0 ? TILE_M : TILE_M * Math.SQRT2;
   if (kind === 'ramp') return Math.hypot(RAMP_RUN_M, RAMP_RISE_M);
-  if (isHalfCurve(kind)) return (radiusOf(kind) * Math.PI) / 4;
-  return (radiusOf(kind) * Math.PI) / 2;
+  return (CURVE_RADIUS_M * Math.PI) / 4;
 }
-
 /** Longueur de la voie d'une pièce posée. */
-export const lengthOfPiece = (p: RailPiece): number => lengthOf(p.kind);
+export const lengthOfPiece = (p: RailPiece): number => lengthOf(p.kind, p.h);
 
 export interface Pose {
   x: number;
@@ -153,50 +78,48 @@ export interface Pose {
   slope: number;
 }
 
-/** Point local (avant rotation) et tangente de la voie vers le port 1, à l'abscisse `u`. */
-function local(
-  kind: RailKind,
-  u: number,
-): { x: number; y: number; z: number; tx: number; tz: number; dy: number } {
-  if (kind === 'straight') return { x: 0, y: 0, z: TILE_M / 2 - u, tx: 0, tz: -1, dy: 0 };
-  if (kind !== 'ramp') {
-    // Quart de cercle du milieu du bord +z au milieu du bord +x.
-    const r = radiusOf(kind);
-    // La seconde moitié d'un demi-virage commence au milieu de l'arc (45° plus loin).
-    const th = Math.PI + (kind === 'curve45_b' ? Math.PI / 4 : 0) + u / r;
-    return {
-      x: r + r * Math.cos(th),
-      y: 0,
-      z: r + r * Math.sin(th),
-      tx: -Math.sin(th),
-      tz: Math.cos(th),
-      dy: 0,
-    };
+/** Position et cap sur la voie d'une pièce, à l'abscisse `u`, en marchant dans le sens `dir` (+1 : vers le port 1). */
+export function poseOn(p: RailPiece, u: number, dir: 1 | -1 = 1): Pose {
+  const len = lengthOfPiece(p);
+  const s = Math.max(0, Math.min(len, u));
+  const y0 = (p.h * Math.PI) / 4;
+  let x: number;
+  let z: number;
+  let yaw: number;
+  let rise = 0;
+  if (p.kind === 'straight' || p.kind === 'ramp') {
+    // Une rampe avance de `RAMP_RUN_M` à plat pendant que la voie fait `len` en pente.
+    const along = p.kind === 'ramp' ? (s / len) * RAMP_RUN_M : s;
+    x = p.x + Math.sin(y0) * along;
+    z = p.z + Math.cos(y0) * along;
+    yaw = y0;
+    if (p.kind === 'ramp') rise = (s / len) * RAMP_RISE_M;
+  } else {
+    // Centre de courbure à gauche (yaw qui croît) ou à droite ; θ = angle déjà tourné.
+    const sign = p.kind === 'curve_l' ? 1 : -1;
+    const th = s / CURVE_RADIUS_M;
+    const lx = Math.cos(y0) * sign;
+    const lz = -Math.sin(y0) * sign;
+    const cx = p.x + lx * CURVE_RADIUS_M;
+    const cz = p.z + lz * CURVE_RADIUS_M;
+    const yaw1 = y0 + sign * th;
+    x = cx - Math.cos(yaw1) * sign * CURVE_RADIUS_M;
+    z = cz + Math.sin(yaw1) * sign * CURVE_RADIUS_M;
+    yaw = yaw1;
   }
-  const len = lengthOf('ramp');
   return {
-    x: 0,
-    y: (u / len) * RAMP_RISE_M,
-    z: RAMP_RUN_M / 2 - (u / len) * RAMP_RUN_M,
-    tx: 0,
-    tz: -1,
-    dy: RAMP_RISE_M / len,
+    x,
+    y: p.level + rise,
+    z,
+    yaw: dir === 1 ? yaw : yaw + Math.PI,
+    slope: p.kind === 'ramp' ? (RAMP_RISE_M / len) * dir : 0,
   };
 }
 
-/** Position et cap sur la voie d'une pièce, à l'abscisse `u`, en marchant dans le sens `dir` (+1 : vers le port 1). */
-export function poseOn(p: RailPiece, u: number, dir: 1 | -1 = 1): Pose {
-  const l = local(p.kind, Math.max(0, Math.min(lengthOf(p.kind), u)));
-  const [rx, rz] = turn(l.x, l.z, p.turns);
-  const [tx, tz] = turn(l.tx, l.tz, p.turns);
-  const c = centerOf(p);
-  return {
-    x: c.x + rx,
-    y: p.level + l.y,
-    z: c.z + rz,
-    yaw: Math.atan2(tx * dir, tz * dir),
-    slope: l.dy * dir,
-  };
+/** Milieu de la voie d'une pièce (m). */
+export function centerOf(p: RailPiece): { x: number; z: number } {
+  const q = poseOn(p, lengthOfPiece(p) / 2);
+  return { x: q.x, z: q.z };
 }
 
 export interface Port {
@@ -410,21 +333,6 @@ export class TrackGraph {
   }
 }
 
-/**
- * Deux tuiles droites qui se croisent : même tuile, même hauteur, axes perpendiculaires. Elles se superposent sans
- * se raccorder (chaque voie traverse l'autre) : un croisement à niveau.
- */
-export function crossesStraight(a: RailPiece, b: RailPiece): boolean {
-  return (
-    a.kind === 'straight' &&
-    b.kind === 'straight' &&
-    a.gx === b.gx &&
-    a.gz === b.gz &&
-    a.turns % 2 !== b.turns % 2 &&
-    Math.abs(a.level - b.level) <= 0.05
-  );
-}
-
 /** Points de la voie d'une pièce, tous les ~0,3 m, avec le cap : de quoi chercher où deux voies se coupent. */
 function centreline(
   p: RailPiece,
@@ -447,13 +355,12 @@ function centreline(
 }
 
 /**
- * Croisement à niveau de deux pièces quelconques (droite, virage…) : à la même hauteur, leurs voies se coupent en
- * travers (plus de 30°), loin des bouts, sans se raccorder. Les trains traversent chacune sans passer sur l'autre.
+ * Croisement à niveau de deux pièces quelconques : à la même hauteur, leurs voies se coupent en travers (plus de 30°),
+ * loin des bouts, sans se raccorder. Les trains traversent chacune sans passer sur l'autre (le « + »).
  */
 export function crossesAtLevel(a: RailPiece, b: RailPiece): boolean {
   if (a.id === b.id || a.kind === 'ramp' || b.kind === 'ramp') return false;
   if (Math.abs(a.level - b.level) > 0.05) return false;
-  if (crossesStraight(a, b)) return true;
   const pa = centreline(a);
   const pb = centreline(b);
   let crossing = false;
@@ -469,44 +376,59 @@ export function crossesAtLevel(a: RailPiece, b: RailPiece): boolean {
   return crossing;
 }
 
-const SHARE_M = 11.5;
+/** Deux ports se touchent-ils, ou partent-ils du même point dans le même sens (deux pièces qui divergent d'un bout) ? */
+function portsRelated(a: Port, b: Port): boolean {
+  if (Math.hypot(a.x - b.x, a.z - b.z) > SAME_M || Math.abs(a.y - b.y) > SAME_M) return false;
+  return a.dx * b.dx + a.dz * b.dz < -0.9 || a.dx * b.dx + a.dz * b.dz > 0.9;
+}
+
 /**
- * Deux pièces dont les cases se chevauchent forment-elles un embranchement tangent ? Un virage part d'un point de la
- * voie (où une pièce attend déjà de l'autre côté) dans le sens même d'une voie droite : les deux restent tangents sur
- * quelques mètres, leurs cases se recouvrent donc sans que ce soit une erreur.
+ * Deux pièces sont-elles voisines (raccordées bout à bout ou issues du même bout) ? Leurs emprises se touchent alors sans
+ * que ce soit une erreur : le raccord, ou le départ commun d'un embranchement.
  */
-export function tangentOverlap(a: RailPiece, b: RailPiece, rails: readonly RailPiece[]): boolean {
-  if (a.kind === 'straight' && b.kind === 'straight') return false;
-  if (Math.abs(a.level - b.level) > 0.3) return false;
-  for (const [c, o] of [
-    [a, b],
-    [b, a],
-  ] as const) {
-    if (!isCurve(c.kind)) continue;
-    for (const q of portsOf(c)) {
+export function neighbours(a: RailPiece, b: RailPiece): boolean {
+  // Deux pièces identiques posées au même endroit ne sont pas voisines : c'est un doublon.
+  if (a.kind === b.kind && a.h === b.h && Math.hypot(a.x - b.x, a.z - b.z) <= SAME_M) return false;
+  const pa = portsOf(a);
+  const pb = portsOf(b);
+  return pa.some((p) => pb.some((q) => portsRelated(p, q)));
+}
+
+/** Distance (m) autour d'un nœud de la voie où deux voies qui en partent peuvent se recouvrir (départ d'un embranchement). */
+const SHARE_M = 10;
+
+/**
+ * Deux pièces dont les emprises se recouvrent partent-elles du même nœud de la voie ? Un virage qui s'écarte d'un bout de
+ * voie reste tangent aux droits qui continuent pendant quelques mètres : leurs cases se recouvrent sans que ce soit une
+ * erreur, tant que le recouvrement reste près du nœud (un port où une autre pièce se raccorde).
+ */
+export function sharesOrigin(a: RailPiece, b: RailPiece, rails: readonly RailPiece[]): boolean {
+  const cellsB = new Set(trackCellsOf(b).map(([x, z]) => `${x},${z}`));
+  const common = trackCellsOf(a).filter(([x, z]) => cellsB.has(`${x},${z}`));
+  if (common.length === 0) return true;
+  // Seul un virage s'écarte d'une voie qui continue ; deux pièces droites qui se recouvrent sont un doublon.
+  if (!isCurve(a.kind) && !isCurve(b.kind)) return false;
+  for (const owner of [a, b])
+    for (const q of portsOf(owner)) {
       const mated = rails.some(
-        (z) => z.id !== c.id && z.id !== o.id && portsOf(z).some((zp) => portsMeet(q, zp)),
+        (z) => z.id !== a.id && z.id !== b.id && portsOf(z).some((zp) => portsRelated(q, zp)),
       );
       if (!mated) continue;
-      const sameStart = portsOf(o).some(
-        (op) =>
-          Math.hypot(op.x - q.x, op.z - q.z) <= SAME_M &&
-          Math.abs(op.y - q.y) <= SAME_M &&
-          op.dx * q.dx + op.dz * q.dz > 0.9,
-      );
-      if (sameStart) return true;
-      if (o.kind !== 'straight' || o.turns % 2 !== (Math.abs(q.dx) > 0.5 ? 1 : 0)) continue;
-      const oc = centerOf(o);
-      // Le port regarde vers la pointe : la voie part dans le sens opposé.
-      const along = -((oc.x - q.x) * q.dx + (oc.z - q.z) * q.dz);
-      const lateral = (oc.x - q.x) * -q.dz + (oc.z - q.z) * q.dx;
-      if (along > 0 && along <= SHARE_M && Math.abs(lateral) < 0.3) return true;
+      if (
+        common.every(
+          ([gx, gz]) =>
+            Math.hypot((gx + 0.5) * CELL_SIZE_M - q.x, (gz + 0.5) * CELL_SIZE_M - q.z) <= SHARE_M,
+        )
+      )
+        return true;
     }
-  }
   return false;
 }
 
-/** Les ports de la voie où l'on peut raccorder une nouvelle pièce (aucune pièce de l'autre côté). */
+/**
+ * Les ports de la voie où l'on peut raccorder une nouvelle pièce : ceux où rien n'est raccordé. Un bout où plusieurs
+ * voies se raccordent déjà n'est pas libre ; un bout seul l'est, et on peut y poser un embranchement.
+ */
 export function freePorts(
   pieces: readonly RailPiece[],
 ): { piece: number; port: 0 | 1; at: Port }[] {
@@ -522,91 +444,62 @@ export function freePorts(
 }
 
 /**
- * Pièces qui se raccordent exactement au port libre `target` : pour chaque quart de tour et chaque extrémité de la
- * nouvelle pièce, celle qui tombe pile sur le port avec la direction opposée.
+ * Cases (gx, gz) couvertes par la voie d'une pièce : celles dont le centre est à moins de `HALF_WIDTH_M` de la voie.
+ * Deux voies parallèles à une tuile d'écart n'ont aucune case en commun.
  */
-export function matesFor(
-  kind: RailKind,
-  target: Port,
-): { gx: number; gz: number; turns: number; level: number }[] {
-  const out: { gx: number; gz: number; turns: number; level: number }[] = [];
-  for (let turns = 0; turns < 4; turns++) {
-    const probe: RailPiece = { id: -1, kind, gx: 0, gz: 0, turns, level: 0 };
-    const ports = portsOf(probe);
-    for (let i = 0; i < ports.length; i++) {
-      const mine = ports[i];
-      if (mine.dx * target.dx + mine.dz * target.dz > -0.9) continue;
-      // Décalage qui amène ce port sur la cible.
-      const ox = target.x - mine.x;
-      const oz = target.z - mine.z;
-      const gx = Math.round(ox / CELL_SIZE_M);
-      const gz = Math.round(oz / CELL_SIZE_M);
-      const placed: RailPiece = { ...probe, gx, gz, level: target.y - mine.y };
-      const check = portsOf(placed)[i];
-      if (Math.hypot(check.x - target.x, check.z - target.z) > SAME_M) continue;
-      out.push({ gx, gz, turns, level: placed.level });
-    }
+export function trackCellsOf(p: RailPiece): [number, number][] {
+  const len = lengthOfPiece(p);
+  const span = Math.ceil(HALF_WIDTH_M / CELL_SIZE_M);
+  // Pour chaque case voisine de la voie : l'échantillon de voie le plus proche de son centre.
+  const best = new Map<string, { d: number; last: number; dot: number }>();
+  const n = Math.max(1, Math.ceil(len / (CELL_SIZE_M / 2)));
+  for (let i = 0; i <= n; i++) {
+    const q = poseOn(p, (len * i) / n);
+    const fx = Math.sin(q.yaw);
+    const fz = Math.cos(q.yaw);
+    const cx = Math.floor(q.x / CELL_SIZE_M);
+    const cz = Math.floor(q.z / CELL_SIZE_M);
+    for (let dx = -span; dx <= span; dx++)
+      for (let dz = -span; dz <= span; dz++) {
+        const gx = cx + dx;
+        const gz = cz + dz;
+        const ox = (gx + 0.5) * CELL_SIZE_M - q.x;
+        const oz = (gz + 0.5) * CELL_SIZE_M - q.z;
+        const d = Math.hypot(ox, oz);
+        const key = `${gx},${gz}`;
+        const cur = best.get(key);
+        if (!cur || d < cur.d) best.set(key, { d, last: i, dot: ox * fx + oz * fz });
+      }
   }
-  // Pas deux fois la même pose : une pièce droite tournée d'un demi-tour est la même pièce.
-  const seen = new Set<string>();
-  return out.filter((m) => {
-    const key = `${m.gx},${m.gz},${kind === 'straight' ? m.turns % 2 : m.turns}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-/** Cases (gx, gz) couvertes par l'emprise d'une pièce. */
-export function cellsOf(p: RailPiece): [number, number][] {
-  const { w, d } = footprintOf(p.kind, p.turns);
   const out: [number, number][] = [];
-  for (let x = 0; x < w; x++) for (let z = 0; z < d; z++) out.push([p.gx + x, p.gz + z]);
+  for (const [key, c] of best) {
+    if (c.d > HALF_WIDTH_M) continue;
+    // Aux bouts, l'emprise s'arrête net (pas de calotte ronde) : pas de case au-delà du bout de la voie.
+    if (c.last === 0 && c.dot < -CELL_SIZE_M / 2 + 1e-6) continue;
+    if (c.last === n && c.dot > CELL_SIZE_M / 2 - 1e-6) continue;
+    out.push(key.split(',').map(Number) as [number, number]);
+  }
   return out;
 }
 
-/**
- * Cases réellement prises par la voie : toute l'emprise pour une tuile droite et une rampe, mais pour un virage ou un
- * aiguillage seulement les cases proches de la voie (le reste du bloc est libre : arbres, rochers, autre voie).
- */
-/**
- * La case est-elle du côté du bloc qui revient à ce demi-virage ? Le bloc est coupé par sa diagonale (celle où se
- * rejoignent les deux moitiés) : deux demi-virages qui se complètent n'ont aucune case en commun.
- */
-function inHalf(p: RailPiece, gx: number, gz: number): boolean {
-  const c = centerOf(p);
-  const [lx, lz] = turn(
-    (gx + 0.5) * CELL_SIZE_M - c.x,
-    (gz + 0.5) * CELL_SIZE_M - c.z,
-    4 - (p.turns % 4),
-  );
-  return p.kind === 'curve45' ? lz >= lx : lz < lx;
-}
-
-export function trackCellsOf(p: RailPiece): [number, number][] {
-  if (p.kind === 'straight' || p.kind === 'ramp') return cellsOf(p);
-  const keep = new Set<string>();
-  const { w, d } = footprintOf(p.kind, p.turns);
-  const reach = 1.6; // demi-écartement + marge (m)
-  const span = Math.ceil(reach / CELL_SIZE_M);
-  {
-    const r = p;
-    const len = lengthOfPiece(r);
-    for (let u = 0; u <= len + 1e-6; u += CELL_SIZE_M / 2) {
-      const q = poseOn(r, Math.min(u, len));
-      const cx = Math.floor(q.x / CELL_SIZE_M);
-      const cz = Math.floor(q.z / CELL_SIZE_M);
-      for (let dx = -span; dx <= span; dx++)
-        for (let dz = -span; dz <= span; dz++) {
-          const gx = cx + dx;
-          const gz = cz + dz;
-          // Jamais hors du bloc : les cases au-delà des bords appartiennent à la pièce voisine.
-          if (gx < p.gx || gx >= p.gx + w || gz < p.gz || gz >= p.gz + d) continue;
-          if (isHalfCurve(p.kind) && !inHalf(p, gx, gz)) continue;
-          if (Math.hypot((gx + 0.5) * CELL_SIZE_M - q.x, (gz + 0.5) * CELL_SIZE_M - q.z) <= reach)
-            keep.add(`${gx},${gz}`);
-        }
-    }
+/** Boîte qui entoure la voie d'une pièce (m) : pour la surbrillance. */
+export function boundsOf(p: RailPiece): { x0: number; x1: number; z0: number; z1: number } {
+  const len = lengthOfPiece(p);
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let z0 = Infinity;
+  let z1 = -Infinity;
+  for (let u = 0; u <= len + 1e-6; u += 0.5) {
+    const q = poseOn(p, Math.min(u, len));
+    x0 = Math.min(x0, q.x);
+    x1 = Math.max(x1, q.x);
+    z0 = Math.min(z0, q.z);
+    z1 = Math.max(z1, q.z);
   }
-  return [...keep].map((k) => k.split(',').map(Number) as [number, number]);
+  return {
+    x0: x0 - HALF_WIDTH_M,
+    x1: x1 + HALF_WIDTH_M,
+    z0: z0 - HALF_WIDTH_M,
+    z1: z1 + HALF_WIDTH_M,
+  };
 }

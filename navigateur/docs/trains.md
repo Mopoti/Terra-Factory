@@ -1,5 +1,7 @@
 # Voies ferrées et trains
 
+> **Mise à jour (tour 265, refonte des rails, étape 1)** : les pièces de voie et la pose décrites ci-dessous sont **remplacées** (voir `docs/rails-refonte.md`). Il n'y a plus que : un **droit** (2,5 m le long d'un axe, 3,54 m en diagonale), un **virage de 45°** (à gauche ou à droite, rayon 8,75 m, 3 rails) et la **rampe** (10 m, monte de 2,5 m, 4 rails). Les pièces sont repérées par leur port 0 (`x`, `z` en mètres, `level`) et un cap `h` de 0 à 7 (par pas de 45°). La pose se fait **une pièce par clic** avec un patron (vert : possible, rouge : impossible avec la raison) ; il n'y a plus de tracé glissé ni de virages serré / large / très large / grand / géant. Les anciennes parties sont refusées au chargement (`RAIL_VERSION` 3). Le reste du fichier (véhicules, conduite, attelage, itinéraires) est inchangé ; les passages sur les virages de 90°, les tuiles et le tracé en glissé sont périmés.
+
 Première version (octobre 2026) : le joueur pose des rails, des véhicules, conduit la locomotive, attelle et dételle. Aiguillages manœuvrés à la main (levier, ou depuis la locomotive) ; pas encore de signalisation : plus tard les trains seront automatisés par des signaux.
 
 ## Matériel

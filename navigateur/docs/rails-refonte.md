@@ -1,6 +1,6 @@
 # Refonte des rails (cahier des charges)
 
-Statut : **validé par le PO le 28/10/2026** (page de discussion, onglet « Rails : ce que montre la vidéo »), à coder par étapes. Référence : la vidéo de pose de rails de Factorio du PO, images dans `docs/rails-reference/`. Le principe : le comportement de Factorio, **dans l'esprit de Terra Factory** (nos échelles, nos règles de stations et de programmes). Les signaux, passages à niveau, ponts, etc. viennent plus tard, quand les rails seront parfaitement fonctionnels.
+Statut : **validé par le PO le 28/10/2026 ; étape 1 faite (tour 265)** (page de discussion, onglet « Rails : ce que montre la vidéo »), à coder par étapes. Référence : la vidéo de pose de rails de Factorio du PO, images dans `docs/rails-reference/`. Le principe : le comportement de Factorio, **dans l'esprit de Terra Factory** (nos échelles, nos règles de stations et de programmes). Les signaux, passages à niveau, ponts, etc. viennent plus tard, quand les rails seront parfaitement fonctionnels.
 
 ## Décisions
 | Sujet | Décision |
@@ -16,6 +16,8 @@ Statut : **validé par le PO le 28/10/2026** (page de discussion, onglet « Rail
 | Plus tard | Signaux, gares, trains en marche, ponts : fonctionnement de Factorio « dans l'esprit de Terra Factory », une fois les rails parfaits. |
 
 ## Étapes de réalisation (une validation du PO entre chaque)
+
+**Fait au tour 265 (étape 1, avec le cœur de l'étape 2)** : nouvelle géométrie (`core/rail/track.ts`, pièces à port 0 + cap), pose pièce par pièce avec patron vert / rouge (`core/rail/place.ts`, `render/trainView.ts`), accrochage au bout libre (droit / virage selon le côté du curseur), embranchement sans aiguillage, croisement en + (deux droits perpendiculaires), refus des anciennes parties. À valider : rayon du virage, texte de refus, règle de choix droit / virage, aspect de la voie en diagonale.
 1. **Pièces** : droit, droit diagonal, virage 45° (les deux demi-modèles `rail_virage_45` / `rail_virage_45_b` existent, rayon 8,75 m) ; retrait des autres virages du jeu ; version de voie incrémentée et blocage des anciennes parties.
 2. **Patron** : patron vert / rouge avec la raison, accrochage au bout libre, rotation par une touche, pose pièce par pièce (le nombre de rails restants suit le curseur).
 3. **Embranchement** : un bout de rail avec plusieurs suites ; le pilote choisit selon l'itinéraire.

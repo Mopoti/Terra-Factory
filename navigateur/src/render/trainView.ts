@@ -6,7 +6,6 @@ import * as THREE from 'three';
 import { STATION_ITEM } from '../core/data/trains';
 import {
   CARS,
-  RAIL_COST,
   RAIL_ITEM,
   carIdOfCargo,
   carIdOfWindow,
@@ -17,27 +16,24 @@ import {
 } from '../core/data/trains';
 import { emptyMachine, type Machine } from '../core/factory/factory';
 import type { GameState } from '../core/game/state';
-import { leadTile, planRails, tileOf, type PlannedPiece, type Tile } from '../core/rail/plan';
+import {
+  candidatesFrom,
+  freeCandidate,
+  pickCandidate,
+  pieceOf,
+  type RailCandidate,
+} from '../core/rail/place';
 import {
   RAIL_SCALE,
   RAIL_TOP_M,
-  TILE_M,
+  boundsOf,
   centerOf,
-  cornerFor,
-  trackCellsOf,
   freePorts,
-  footprintOf,
-  matesFor,
-  portsOf,
   lengthOfPiece,
-  crossesStraight,
-  flip,
-  isCurve,
-  lengthOf,
   poseOn,
-  radiusOf,
+  flip,
+  TILE_M,
   type Port,
-  type RailKind,
   type RailPiece,
   type TrackGraph,
   type TrackPos,
@@ -56,42 +52,26 @@ import {
   type Car,
   type Consist,
 } from '../core/rail/train';
-import { t } from '../i18n';
+import { t, type TranslationKey } from '../i18n';
 import { MeshBuilder, hexToRgb, type Rgb } from './meshBuilder';
 import { StationView } from './stationView';
 import { AUTO_SPEED, autoControl as autoThrottle, findRoute, type Route } from '../core/rail/route';
 import { bakedModel } from './models';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 
-const RAIL_MODEL: Record<RailKind, string> = {
+/** Modèles des pièces qui en ont un (le droit le long d'un axe et la rampe) ; les autres sont dessinées par le code. */
+const RAIL_MODEL: Partial<Record<RailPiece['kind'], string>> = {
   straight: 'rail_droit',
-  curve: 'rail_virage',
-  curve_wide: 'rail_virage_large',
-  curve_large: 'rail_virage_tres_large',
-  curve_big: 'rail_virage_grand',
-  curve_huge: 'rail_virage_geant',
   ramp: 'rail_rampe',
-  curve45: 'rail_virage_45',
-  curve45_b: 'rail_virage_45_b',
 };
-/** Modèle d'une pièce de voie. */
-export function railModelName(p: RailPiece): string {
-  return RAIL_MODEL[p.kind];
+/** Modèle d'une pièce de voie, ou undefined si elle est dessinée par le code (droit en diagonale, virage). */
+export function railModelName(p: RailPiece): string | undefined {
+  return p.kind === 'straight' && p.h % 2 !== 0 ? undefined : RAIL_MODEL[p.kind];
 }
 /** Distance (m) jusqu'à laquelle on regarde, devant la locomotive, l'embranchement à prendre (touches gauche / droite). */
 const SWITCH_AHEAD_M = 60;
 const GREEN: Rgb = hexToRgb('#4cd964');
 const RED: Rgb = hexToRgb('#ff5a4a');
-/** Couleur des virages selon leur taille (posés comme en patron) : serré bleu, large violet, très large marron… */
-const CURVE_TINT: Partial<Record<RailPiece['kind'], Rgb>> = {
-  curve: hexToRgb('#3d7de0'),
-  curve_wide: hexToRgb('#9a55d6'),
-  curve_large: hexToRgb('#a0663a'),
-  curve45: hexToRgb('#a0663a'),
-  curve45_b: hexToRgb('#a0663a'),
-  curve_big: hexToRgb('#e0912f'),
-  curve_huge: hexToRgb('#2fb5a8'),
-};
 const STEP = 1 / 60;
 /** Portée (m) pour monter dans une locomotive ou reprendre un véhicule (en plus de sa demi-longueur). */
 const REACH_M = 4;
@@ -105,8 +85,6 @@ const SNAP_M = 1.9;
 const PORT_REACH_M = 30;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
 const CAR_AIM_M = 2.2;
-/** Longueur maximale d'un tracé (tuiles). */
-const MAX_PATH = 150;
 
 /**
  * Vitres de la cabine (coordonnées du fichier du modèle, m : centre x, y, z, largeur, hauteur) : la façade du modèle a
@@ -420,60 +398,50 @@ export class TrainView {
     sy: number;
     sz: number;
   } {
-    const { w, d } = footprintOf(piece.kind, piece.turns);
-    const c = centerOf(piece);
+    const b = boundsOf(piece);
     const sy = piece.kind === 'ramp' ? 1.3 * RAIL_SCALE : 0.3 * RAIL_SCALE;
-    return { x: c.x, y: piece.level + sy / 2, z: c.z, sx: w * 0.5, sy, sz: d * 0.5 };
+    return {
+      x: (b.x0 + b.x1) / 2,
+      y: piece.level + sy / 2,
+      z: (b.z0 + b.z1) / 2,
+      sx: b.x1 - b.x0,
+      sy,
+      sz: b.z1 - b.z0,
+    };
   }
 
   // --- Dessin ------------------------------------------------------------------------------------
 
-  /** Le modèle d'une pièce, recentré sur le milieu de sa tuile (et non sur sa boîte englobante). */
+  /** Le modèle d'une pièce, recentré sur le milieu de sa voie (et non sur sa boîte englobante). */
   private railModel(p: RailPiece): ReturnType<typeof bakedModel> {
-    const m = bakedModel(railModelName(p));
+    const name = railModelName(p);
+    const m = name ? bakedModel(name) : null;
     if (!m) return null;
     return { ...m, min: { x: -m.size.x / 2, y: m.min.y, z: -m.size.z / 2 } };
   }
 
-  private addPiece(mb: MeshBuilder, p: RailPiece, tint?: Rgb, valid = true): void {
+  private addPiece(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
     const model = this.railModel(p);
-    const c = centerOf(p);
-    // Un virage garde la couleur de sa taille (posé comme en patron) ; un patron non posable reste rouge.
-    const own = CURVE_TINT[p.kind];
-    if (own && valid) tint = own;
     if (model) {
-      mb.model(
-        model,
-        c.x,
-        p.level,
-        c.z,
-        p.turns,
-        RAIL_SCALE,
-        tint,
-        tint ? (own && valid ? 0.6 : 0.55) : 0,
-      );
+      const c = centerOf(p);
+      // Quarts de tour du modèle : un droit le long de z (cap 0 ou 4) n'est pas tourné ; une rampe monte vers −z au cap 4.
+      const turns = p.kind === 'ramp' ? (p.h / 2 + 2) % 4 : p.h / 2;
+      mb.model(model, c.x, p.level, c.z, turns, RAIL_SCALE, tint, tint ? 0.55 : 0);
       return;
     }
-    // Forme de secours tant que le modèle n'est pas chargé : une dalle à la taille de la voie.
-    const color = tint ?? hexToRgb('#7d776e');
-    if (isCurve(p.kind)) {
-      this.addProceduralCurve(mb, p, tint);
-      return;
-    }
-    const { w, d } = footprintOf(p.kind, p.turns);
-    mb.box(c.x, p.level, c.z, w * 0.5, RAIL_TOP_M, d * 0.5, color, true);
+    this.addProcedural(mb, p, tint);
   }
 
   /**
-   * Un virage sans modèle 3D : ballast, traverses et rails dessinés le long de l'arc (propre pour n'importe quel
-   * rayon). Boîtes orientées le long de la voie, assez courtes pour suivre la courbe sans escalier.
+   * Une pièce sans modèle 3D (virage, droit en diagonale) : ballast, traverses et rails dessinés le long de la voie.
+   * Boîtes orientées le long de la voie, assez courtes pour suivre la courbe sans escalier.
    */
-  private addProceduralCurve(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
+  private addProcedural(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
     const pick = (hex: string): Rgb => tint ?? hexToRgb(hex);
     const ballast = pick('#7a7167');
     const sleeper = pick('#4a3325');
     const steel = pick('#8d939c');
-    const len = lengthOf(p.kind);
+    const len = lengthOfPiece(p);
     const STEP = 0.5;
     // Une boîte orientée : centre (x, z), cap (fx, fz), demi-longueur, demi-largeur, de y0 à y0 + h.
     const obox = (
@@ -552,26 +520,6 @@ export class TrainView {
     }
   }
 
-  /** Les deux rails d'une voie qui en croise une autre : posés sur le lit de la première, sans traverses ni ballast. */
-  private addCrossingRails(mb: MeshBuilder, p: RailPiece): void {
-    const c = centerOf(p);
-    const alongX = p.turns % 2 === 1;
-    const steel = hexToRgb('#8d939c');
-    for (const side of [-1, 1]) {
-      const x = c.x + (alongX ? 0 : 0.75 * side);
-      const z = c.z + (alongX ? 0.75 * side : 0);
-      mb.box(
-        x,
-        p.level + 0.2,
-        z,
-        alongX ? TILE_M : 0.12,
-        RAIL_TOP_M - 0.2,
-        alongX ? 0.12 : TILE_M,
-        steel,
-      );
-    }
-  }
-
   private geometryOf(mb: MeshBuilder): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(mb.positions, 3));
@@ -584,36 +532,33 @@ export class TrainView {
   private rebuildRails(): void {
     const mb = new MeshBuilder();
     const rails = this.host.state.changes.rails;
-    // Croisement à niveau : la voie la plus ancienne de la tuile garde son lit complet, l'autre n'y ajoute que ses rails.
-    const first = new Map<string, RailPiece>();
+    // Croisement en « + » : deux droits le long des axes qui se coupent en leur milieu, dessinés une seule fois avec le
+    // modèle du croisement.
+    const mid = new Map<string, RailPiece[]>();
     for (const p of rails)
-      if (p.kind === 'straight') {
-        const key = `${p.gx},${p.gz},${p.level}`;
-        const have = first.get(key);
-        if (!have || p.id < have.id) first.set(key, p);
+      if (p.kind === 'straight' && p.h % 2 === 0) {
+        const c = centerOf(p);
+        const key = `${Math.round(c.x * 2)},${Math.round(c.z * 2)},${p.level}`;
+        const list = mid.get(key) ?? [];
+        list.push(p);
+        mid.set(key, list);
       }
-    // Tuiles où deux droites se croisent : dessinées une seule fois, avec le modèle du croisement.
-    const crossed = new Set<RailPiece>();
-    for (const p of rails) {
-      const base = p.kind === 'straight' ? first.get(`${p.gx},${p.gz},${p.level}`) : undefined;
-      if (base && base !== p && crossesStraight(base, p)) crossed.add(base).add(p);
-    }
     const crossModel = bakedModel('rail_croisement');
-    for (const p of rails) {
-      const base = p.kind === 'straight' ? first.get(`${p.gx},${p.gz},${p.level}`) : undefined;
-      if (crossModel && crossed.has(p)) {
-        // La plus ancienne des deux porte le modèle du croisement (centré sur la tuile) ; l'autre n'ajoute rien.
-        if (base === p) {
-          const c = centerOf(p);
-          const m = {
-            ...crossModel,
-            min: { x: -crossModel.size.x / 2, y: crossModel.min.y, z: -crossModel.size.z / 2 },
-          };
-          mb.model(m, c.x, p.level, c.z, 0, RAIL_SCALE);
-        }
-      } else if (base && base !== p && crossesStraight(base, p)) this.addCrossingRails(mb, p);
-      else this.addPiece(mb, p);
-    }
+    const crossed = new Set<number>();
+    if (crossModel)
+      for (const list of mid.values()) {
+        const a = list.find((p) => p.h % 4 === 0);
+        const b = list.find((p) => p.h % 4 === 2);
+        if (!a || !b) continue;
+        crossed.add(a.id).add(b.id);
+        const c = centerOf(a);
+        const m = {
+          ...crossModel,
+          min: { x: -crossModel.size.x / 2, y: crossModel.min.y, z: -crossModel.size.z / 2 },
+        };
+        mb.model(m, c.x, a.level, c.z, 0, RAIL_SCALE);
+      }
+    for (const p of rails) if (!crossed.has(p.id)) this.addPiece(mb, p);
     this.rails.geometry.dispose();
     this.rails.geometry = this.geometryOf(mb);
     this.rails.material = this.host.material;
@@ -621,13 +566,13 @@ export class TrainView {
 
   private setGhost(pieces: { piece: RailPiece; ok: boolean }[]): void {
     const key = pieces
-      .map(({ piece: p, ok }) => `${p.kind}${p.gx},${p.gz},${p.turns},${p.level}${ok ? '+' : '-'}`)
+      .map(({ piece: p, ok }) => `${p.kind}${p.x},${p.z},${p.h},${p.level}${ok ? '+' : '-'}`)
       .join(';');
     this.ghost.visible = pieces.length > 0;
     if (key === this.ghostKey) return;
     this.ghostKey = key;
     const mb = new MeshBuilder();
-    for (const { piece, ok } of pieces) this.addPiece(mb, piece, ok ? GREEN : RED, ok);
+    for (const { piece, ok } of pieces) this.addPiece(mb, piece, ok ? GREEN : RED);
     this.ghost.geometry.dispose();
     this.ghost.geometry = this.geometryOf(mb);
   }
@@ -918,7 +863,7 @@ export class TrainView {
     this.traceInfo = '';
     if (active && !frame.uiOpen) {
       this.handleMounted(graph, frame, player);
-      this.handlePlacing(graph, frame, player);
+      this.handlePlacing(graph, frame);
     } else this.setGhost([]);
 
     if (active && this.mountedCar === null) this.collideWithPlayer(player, frame.dt);
@@ -1227,53 +1172,22 @@ export class TrainView {
   // --- Pose ---------------------------------------------------------------------------------------
 
   private tilt: -1 | 0 | 1 = 0;
-  /** Tracé en cours (tuiles de 1 m), comme celui d'un convoyeur : on glisse, on relâche, tout est posé. */
-  private path: Tile[] = [];
-  private pathLead = 0;
-  private pathLevel = 0;
+  /** Cap (0 à 7) du droit posé librement, loin de toute voie : R le tourne par pas de 45°. */
   private railTurn = 0;
-  /** Ligne droite d'où part le tracé en cours : s'il la quitte de côté, un aiguillage est posé. */
-  private branch: RailPiece | null = null;
-  /** Ligne d'infos du tracé en cours (rails, longueur, virages) ; vide si rien n'est tracé. */
+  /** Ligne d'infos du patron : pourquoi on ne peut pas poser, vide sinon. */
   private traceInfo = '';
-  /** Le tracé en cours part d'un bout de voie : sa route est recalculée vers le curseur à chaque image. */
-  private fromPort = false;
-  private traceCancelled = false;
 
-  /** Tracé de voie en cours (clic gauche maintenu) ? */
+  /** Il n'y a plus de tracé qu'on glisse : une pièce par clic. */
   isTracing(): boolean {
-    return this.path.length > 0 && this.wasDown;
+    return false;
   }
 
-  private hideHover = false;
-  private hideAt: Tile = { tx: 0, tz: 0 };
-  private lastHere: Tile = { tx: 0, tz: 0 };
-
-  /** Clic droit : annule le tracé en cours (patron et point de départ) ; au repos, il fait disparaître le patron sous le curseur. */
+  /** Clic droit : rien à annuler (le patron se pose pièce par pièce). */
   cancelTrace(): boolean {
-    if (!this.isTracing()) {
-      if (this.host.state.selectedItem() === RAIL_ITEM) {
-        this.hideHover = true;
-        this.hideAt = this.lastHere;
-        this.setGhost([]);
-        this.traceInfo = '';
-      }
-      return false;
-    }
-    this.path = [];
-    this.branch = null;
-    this.traceCancelled = true;
-    this.ghostKey = '';
-    this.setGhost([]);
-    this.traceInfo = '';
-    return true;
+    return false;
   }
 
-  private handlePlacing(
-    graph: TrackGraph,
-    frame: TrainFrame,
-    player: { x: number; z: number },
-  ): void {
+  private handlePlacing(graph: TrackGraph, frame: TrainFrame): void {
     const { state } = this.host;
     const item = state.selectedItem();
     const rail = item === RAIL_ITEM;
@@ -1281,14 +1195,12 @@ export class TrainView {
     const station = item === STATION_ITEM;
     const down = this.host.held('interact');
     const edge = down && !this.wasDown;
-    const release = !down && this.wasDown;
     this.wasDown = down;
     if (!carKind) this.setCarGhost(null, false);
     if (!station) this.stations.showGhost(graph, null, false);
     if (this.mountedCar !== null || (!rail && !carKind && !station)) {
       this.setGhost([]);
       this.hintShown = '';
-      this.path = [];
       if (!rail) this.tilt = 0;
       return;
     }
@@ -1296,8 +1208,8 @@ export class TrainView {
     if (rail) {
       if (frame.levelUp) this.setTilt(Math.min(1, this.tilt + 1) as -1 | 0 | 1);
       if (frame.levelDown) this.setTilt(Math.max(-1, this.tilt - 1) as -1 | 0 | 1);
-      if (frame.rotate) this.railTurn++;
-      this.trace(graph, aim, edge, release, down, frame, player);
+      if (frame.rotate) this.railTurn = (this.railTurn + 1) % 8;
+      this.placePatron(aim, edge);
       this.showHint('train.railHint');
     } else if (station) {
       this.setGhost([]);
@@ -1366,335 +1278,59 @@ export class TrainView {
     return best?.port ?? null;
   }
 
-  /** Les pièces du tracé avec ce qu'on peut vraiment poser : par-dessus la voie existante, on la remplace (rails rendus). */
-  private evaluate(
-    planned: PlannedPiece[],
-  ): { piece: RailPiece; ok: boolean; plan: PlannedPiece }[] {
-    const { state } = this.host;
-    const gone = new Set<number>();
-    const added = new Set<string>();
-    let stock = state.inventory[RAIL_ITEM] ?? 0;
-    return planned.map((plan) => {
-      const piece: RailPiece = {
-        id: -1,
-        kind: plan.kind,
-        gx: plan.gx,
-        gz: plan.gz,
-        turns: plan.turns,
-        level: plan.level,
-      };
-      if (state.railAlready(plan.kind, plan.gx, plan.gz, plan.turns, plan.level))
-        return { piece, ok: true, plan };
-      const over = state.railsOverlapping(piece).filter((p) => !gone.has(p.id));
-      const refund = over.reduce((n, p) => n + RAIL_COST[p.kind], 0);
-      const cells = trackCellsOf(piece);
-      const free = cells.every(([x, z]) => !added.has(`${x},${z}`) && !this.host.blocked(x, z));
-      const ok = free && !over.some((p) => state.railOccupied(p.id)) && stock + refund >= plan.cost;
-      if (ok) {
-        stock += refund - plan.cost;
-        for (const p of over) gone.add(p.id);
-        for (const [x, z] of cells) added.add(`${x},${z}`);
-      }
-      return { piece, ok, plan };
-    });
-  }
-
-  /** Tuile droite posée sur cette tuile de tracé, s'il y en a une. */
-  private straightAt(tile: Tile): RailPiece | null {
-    for (const p of this.host.state.changes.rails) {
-      if (p.kind !== 'straight') continue;
-      const c = centerOf(p);
-      const t = tileOf(c.x, c.z);
-      if (t.tx === tile.tx && t.tz === tile.tz) return p;
-    }
-    return null;
-  }
-
   /**
-   * Embranchement d'un tracé qui quitte une ligne de côté : un virage serré posé dans le prolongement de la ligne
-   * (voies tangentes), centré sur la tuile de départ, dont la sortie va du côté où l'on glisse. R choisit de quel bout
-   * de la ligne part le virage. Il n'y a pas de pièce « aiguillage » : le train choisit sa voie (gauche / droite).
+   * Le patron de la prochaine pièce : vert si elle se pose, rouge sinon (avec la raison). Près d'un bout de voie libre il
+   * s'y colle et prend la forme que montre le curseur (droit, virage à gauche ou à droite, rampe) ; ailleurs c'est un
+   * droit sur la grille, que R tourne par pas de 45°. Un clic pose la pièce.
    */
-  private branchCurve(line: RailPiece, side: Tile): PlannedPiece | null {
-    const c = centerOf(line);
-    const want = { x: c.x + side.tx * 1.5 * TILE_M, z: c.z + side.tz * 1.5 * TILE_M };
-    const found: PlannedPiece[] = [];
-    for (let turns = 0; turns < 4; turns++) {
-      const at = { ...cornerFor('curve', turns, c.x, c.z), turns, level: line.level };
-      const exit = portsOf({ id: -1, kind: 'curve', ...at })[1];
-      if (Math.hypot(exit.x - want.x, exit.z - want.z) < 0.3)
-        found.push({ kind: 'curve', ...at, cost: RAIL_COST.curve });
-    }
-    return found.length > 0 ? found[this.railTurn % found.length] : null;
-  }
-
-  /** Prolonge le tracé tuile à tuile vers la tuile visée (jamais de demi-tour sur soi-même). */
-  private growPath(path: Tile[], here: Tile): void {
-    const cur = { ...path[path.length - 1] };
-    for (let guard = 0; guard < MAX_PATH && (cur.tx !== here.tx || cur.tz !== here.tz); guard++) {
-      const dx = here.tx - cur.tx;
-      const dz = here.tz - cur.tz;
-      const prev = path[path.length - 2];
-      const horizontal = Math.abs(dx) >= Math.abs(dz);
-      let step = horizontal ? { tx: Math.sign(dx), tz: 0 } : { tx: 0, tz: Math.sign(dz) };
-      if (prev && cur.tx + step.tx === prev.tx && cur.tz + step.tz === prev.tz) {
-        const other = horizontal ? { tx: 0, tz: Math.sign(dz) } : { tx: Math.sign(dx), tz: 0 };
-        if (other.tx === 0 && other.tz === 0) break;
-        step = other;
-      }
-      cur.tx += step.tx;
-      cur.tz += step.tz;
-      path.push({ ...cur });
-    }
-  }
-
-  /**
-   * Route d'un bout de voie jusqu'au curseur, au mieux : tout droit devant soi, puis un seul virage vers le côté du
-   * curseur. Le virage ne peut pas partir trop près (il lui faut 2 tuiles de voie droite avant et 2 après) : si le
-   * curseur est de côté ou derrière, la voie va plus loin tout droit avant de tourner ; un décalage de moins de 2
-   * tuiles est ignoré. `path` commence par la dernière tuile de la voie existante, puis la première tuile à poser.
-   */
-  private routeTo(path: Tile[], here: Tile): void {
-    const MIN = 2;
-    const lead = 1;
-    let turned = false;
-    for (let guard = 0; guard < MAX_PATH; guard++) {
-      const cur = path[path.length - 1];
-      const prev = path[path.length - 2];
-      const dx = here.tx - cur.tx;
-      const dz = here.tz - cur.tz;
-      if (dx === 0 && dz === 0) break;
-      const hd = { tx: cur.tx - prev.tx, tz: cur.tz - prev.tz };
-      const ahead = dx * hd.tx + dz * hd.tz; // reste devant (< 0 : le curseur est derrière)
-      const sideX = dx - ahead * hd.tx;
-      const sideZ = dz - ahead * hd.tz;
-      const side = Math.abs(sideX) + Math.abs(sideZ);
-      const index = path.length - 1; // la tuile courante serait le coin
-      if (!turned && side >= MIN && ahead <= 0 && index >= lead + MIN) {
-        path.push({ tx: cur.tx + Math.sign(sideX), tz: cur.tz + Math.sign(sideZ) });
-        turned = true;
-        continue;
-      }
-      if (ahead > 0 || (!turned && side >= MIN)) {
-        path.push({ tx: cur.tx + hd.tx, tz: cur.tz + hd.tz });
-        continue;
-      }
-      break;
-    }
-  }
-
-  private trace(
-    graph: TrackGraph,
-    aim: { x: number; z: number } | null,
-    edge: boolean,
-    release: boolean,
-    down: boolean,
-    frame: TrainFrame,
-    player: { x: number; z: number },
-  ): void {
-    void graph;
+  private placePatron(aim: { x: number; z: number } | null, edge: boolean): void {
     const { state } = this.host;
-    const blocked = (c: { gx: number; gz: number }): boolean => this.host.blocked(c.gx, c.gz);
     if (!aim) {
       this.setGhost([]);
       return;
     }
-    // Tracé annulé au clic droit : rien ne se pose tant que le clic gauche n'est pas relâché.
-    if (this.traceCancelled) {
-      if (!down) this.traceCancelled = false;
-      this.path = [];
-      this.branch = null;
+    const port = this.nearestFreePort(aim);
+    const cand: RailCandidate | null = port
+      ? pickCandidate(candidatesFrom(port, this.tilt), port, aim)
+      : freeCandidate(aim, this.railTurn, 0);
+    if (!cand) {
       this.setGhost([]);
       return;
     }
-    const here = tileOf(aim.x, aim.z);
-    this.lastHere = here;
-    // Après une pose ou un clic droit, le patron sous le curseur disparaît jusqu'à ce qu'on change de tuile.
-    if (!down && this.path.length === 0 && this.hideHover) {
-      if (here.tx === this.hideAt.tx && here.tz === this.hideAt.tz) {
-        this.setGhost([]);
-        this.traceInfo = '';
-        return;
-      }
-      this.hideHover = false;
+    // La même pièce est déjà là : rien à montrer.
+    if (state.railAlready(cand.kind, cand.x, cand.z, cand.h, cand.level)) {
+      this.setGhost([]);
+      return;
     }
-    if (down) this.hideHover = false;
-    const port = this.nearestFreePort(aim);
-    if (port && this.path.length === 0 && this.halfCurve(port, edge)) return;
-    // Début du tracé : au bout de la voie la plus proche (la voie se prolonge), sinon sur la tuile visée.
-    const startFor = (): { tiles: Tile[]; lead: number; level: number } => {
-      if (port) {
-        const lead = leadTile(port);
-        const dx = Math.round(port.dx);
-        const dz = Math.round(port.dz);
-        return { tiles: [lead, { tx: lead.tx + dx, tz: lead.tz + dz }], lead: 1, level: port.y };
-      }
-      return { tiles: [here], lead: 0, level: 0 };
-    };
-    // Rails et véhicules : poser prime sur le reste (les rails déjà posés sont eux-mêmes une cible visée).
-    if (edge) {
-      const s = startFor();
-      this.path = s.tiles;
-      this.pathLead = s.lead;
-      this.pathLevel = s.level;
-      // Départ sur une ligne droite (et pas à son bout) : si le tracé la quitte de côté, ce sera un aiguillage.
-      const onLine = this.straightAt(here);
-      this.branch =
-        onLine && !(port && Math.hypot(port.x - aim.x, port.z - aim.z) < 1.4) ? onLine : null;
-      this.fromPort = !!port;
-      if (this.branch) {
-        this.fromPort = false;
-        this.path = [here];
-        this.pathLead = 0;
-        this.pathLevel = this.branch.level;
-      }
-    }
-    if (this.path.length > 0 && down && this.fromPort) {
-      // Depuis un bout de voie : la route est recalculée à chaque image jusqu'au curseur (pas de mémoire du chemin).
-      const route = this.path.slice(0, 2);
-      this.routeTo(route, here);
-      this.path = route;
-    } else if (this.path.length > 0 && down) {
-      const back = this.path.findIndex(
-        (p, i) => i >= this.pathLead && p.tx === here.tx && p.tz === here.tz,
-      );
-      if (back >= 0 && back >= this.pathLead)
-        this.path.length = Math.max(back + 1, this.pathLead + 1);
-      else {
-        this.growPath(this.path, here);
-        if (this.path.length > MAX_PATH) this.path.length = MAX_PATH;
-      }
-    }
-    // Aperçu : le tracé en cours, ou une seule tuile (ou rampe) sous le curseur.
-    let tiles = this.path;
-    let lead = this.pathLead;
-    let level = this.pathLevel;
-    let single = false;
-    if (tiles.length === 0) {
-      const s = startFor();
-      tiles = s.tiles;
-      lead = s.lead;
-      level = s.level;
-      if (!port) {
-        const dirs = [
-          { tx: 0, tz: -1 },
-          { tx: 1, tz: 0 },
-          { tx: 0, tz: 1 },
-          { tx: -1, tz: 0 },
-        ];
-        const base = Math.round((((-frame.facing / (Math.PI / 2)) % 4) + 4) % 4);
-        const d = dirs[(base + this.railTurn) % 4];
-        const len = this.tilt !== 0 ? 4 : 2;
-        tiles = Array.from({ length: len }, (_, i) => ({
-          tx: here.tx + d.tx * i,
-          tz: here.tz + d.tz * i,
-        }));
-        single = this.tilt === 0;
-      } else if (this.tilt !== 0) {
-        const lastDir = { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz };
-        tiles = [
-          tiles[0],
-          ...Array.from({ length: 4 }, (_, i) => ({
-            tx: tiles[0].tx + lastDir.tx * (i + 1),
-            tz: tiles[0].tz + lastDir.tz * (i + 1),
-          })),
-        ];
-      } else {
-        // Le tracé que ferait un glissé du bout de voie jusqu'au curseur : un clic le pose en entier.
-        tiles = [...tiles];
-        this.routeTo(tiles, here);
-        if (tiles.length > MAX_PATH) tiles.length = MAX_PATH;
-        single = tiles.length <= 2;
-      }
-    }
-    let planned: PlannedPiece[];
-    // Une ligne droite est quittée de côté (départ) ou jointe de côté (arrivée) : un embranchement tangent s'y pose.
-    const perpendicular = (line: RailPiece, d: Tile): boolean =>
-      line.turns % 2 === 0 ? d.tx !== 0 : d.tz !== 0;
-    let sw: PlannedPiece | null = null;
-    let rest: Tile[] = [];
-    let restTilt: -1 | 0 | 1 = this.tilt;
-    if (this.branch && tiles.length >= 2) {
-      const side = { tx: tiles[1].tx - tiles[0].tx, tz: tiles[1].tz - tiles[0].tz };
-      if (perpendicular(this.branch, side)) sw = this.branchCurve(this.branch, side);
-      rest = tiles.slice(1);
-    } else if (!this.branch && this.pathLead === 0 && this.path.length >= 3) {
-      const end = this.path[this.path.length - 1];
-      const prev = this.path[this.path.length - 2];
-      const line = this.straightAt(end);
-      const side = { tx: prev.tx - end.tx, tz: prev.tz - end.tz };
-      if (line && perpendicular(line, side)) {
-        sw = this.branchCurve(line, side);
-        // Le tracé est lu de la ligne vers son départ : la branche du côté de l'embranchement, le reste la prolonge.
-        rest = this.path.slice(0, -1).reverse();
-        restTilt = 0;
-      }
-    }
-    if (sw) {
-      const exit = portsOf({ id: -1, ...sw })[1];
-      planned = [sw, ...planRails(rest, { level: exit.y, tilt: restTilt, lead: 1, curve: 'auto' })];
+    const piece = pieceOf(cand);
+    const problem = state.railProblem(piece, (c) => this.host.blocked(c.gx, c.gz));
+    const missing = (state.inventory[RAIL_ITEM] ?? 0) < cand.cost;
+    const reason =
+      problem === 'terrain'
+        ? 'terrain'
+        : problem === 'overlap'
+          ? 'overlap'
+          : missing
+            ? 'missing'
+            : null;
+    this.setGhost([{ piece, ok: reason === null }]);
+    this.traceInfo = reason ? t(`train.rail.${reason}` as TranslationKey) : '';
+    if (!edge) return;
+    const placed =
+      reason === null &&
+      state.placeRail(cand.kind, cand.x, cand.z, cand.h, cand.level, (c) =>
+        this.host.blocked(c.gx, c.gz),
+      ) === 'ok';
+    this.ghostKey = '';
+    if (placed) {
+      this.host.sfx('placeStone');
+      this.host.message(t('train.railPlaced'));
     } else {
-      planned = planRails(tiles, { level, tilt: this.tilt, lead, curve: 'auto' });
-      if (single) planned = planned.slice(0, 1);
-      if (this.branch && tiles.length < 2) planned = [];
-    }
-    // Repères pour reproduire une forme : longueur, rails et virages (angle et rayon) du tracé en cours.
-    if (planned.length > 0) {
-      const radii = new Map<string, number>();
-      for (const q of planned) if (isCurve(q.kind)) radii.set(q.kind, (radii.get(q.kind) ?? 0) + 1);
-      const curves = [...radii].map(
-        ([kind, n]) =>
-          ` · ${n} × ${t('train.traceCurve', {
-            r: radiusOf(kind as RailKind)
-              .toFixed(1)
-              .replace('.', ','),
-          })}`,
+      this.host.sfx('deny');
+      this.host.message(
+        reason ? t(`train.rail.${reason}` as TranslationKey) : t('train.railBlocked'),
       );
-      this.traceInfo =
-        t('train.trace', {
-          rails: String(planned.reduce((n, q) => n + q.cost, 0)),
-          length: String(Math.round(planned.reduce((n, q) => n + lengthOf(q.kind), 0))),
-        }) + curves.join('');
     }
-    const checked = this.evaluate(planned);
-    // On s'arrête avant le premier obstacle : tout ce qui suit est rouge et ne sera pas posé.
-    const stop = checked.findIndex((c) => !c.ok);
-    if (stop >= 0) for (let i = stop; i < checked.length; i++) checked[i].ok = false;
-    this.setGhost(checked.map(({ piece, ok }) => ({ piece, ok })));
-    if (release && this.path.length > 0 && planned.length === 0) {
-      this.path = [];
-      this.branch = null;
-    } else if (release && this.path.length > 0) {
-      let placed = 0;
-      for (const c of checked) {
-        if (!c.ok) continue;
-        if (
-          state.placeRail(
-            c.plan.kind,
-            c.plan.gx,
-            c.plan.gz,
-            c.plan.turns,
-            c.plan.level,
-            blocked,
-            true,
-          ) === 'ok'
-        )
-          placed++;
-      }
-      this.path = [];
-      this.branch = null;
-      this.ghostKey = '';
-      this.hideHover = true;
-      this.hideAt = here;
-      if (placed > 0) {
-        this.host.sfx('placeStone');
-        this.host.message(t(stop >= 0 ? 'train.railStopped' : 'train.railPlaced'));
-      } else {
-        this.host.sfx('deny');
-        this.host.message(t('train.railBlocked'));
-      }
-    }
-    void player;
   }
 
   /** Pose d'une station sur la voie la plus proche du curseur (fantôme vert : on peut ; rouge : non). */
@@ -1723,56 +1359,6 @@ export class TrainView {
       this.host.sfx('deny');
       this.host.message(t('train.cannotStation'));
     }
-  }
-
-  /**
-   * Demi-virage (45°) au bout d'une voie : R fait défiler, après le tracé normal, le demi-virage à gauche puis à
-   * droite ; un clic le pose. Au bout d'un demi-virage (port en diagonale), on ne peut poser que la moitié qui
-   * complète le quart de tour (le tracé en tuiles ne sait pas partir en diagonale). Renvoie vrai si c'est le cas.
-   */
-  private halfCurve(port: Port, edge: boolean): boolean {
-    const diagonal = Math.abs(port.dx) > 0.3 && Math.abs(port.dz) > 0.3;
-    const pick = diagonal ? 0 : (this.railTurn % 3) - 1;
-    if (pick < 0 || this.tilt !== 0) return false;
-    const { state } = this.host;
-    // Poses exactes seulement : le port de la pièce tombe pile sur le bout de voie (sinon hors de la grille).
-    const options: PlannedPiece[] = [];
-    for (const kind of ['curve45', 'curve45_b'] as const)
-      for (const m of matesFor(kind, port)) {
-        const ports = portsOf({ id: -1, kind, ...m });
-        if (ports.some((q) => Math.hypot(q.x - port.x, q.z - port.z) < 0.02))
-          options.push({ kind, ...m, cost: RAIL_COST[kind] });
-      }
-    if (options.length === 0) {
-      if (diagonal) this.setGhost([]);
-      return diagonal;
-    }
-    const chosen = options[pick % options.length];
-    const [checked] = this.evaluate([chosen]);
-    this.setGhost([{ piece: checked.piece, ok: checked.ok }]);
-    this.traceInfo = t('train.half45');
-    if (!edge) return true;
-    const blocked = (c: { gx: number; gz: number }): boolean => this.host.blocked(c.gx, c.gz);
-    const r = checked.ok
-      ? state.placeRail(
-          chosen.kind,
-          chosen.gx,
-          chosen.gz,
-          chosen.turns,
-          chosen.level,
-          blocked,
-          true,
-        )
-      : 'blocked';
-    this.ghostKey = '';
-    if (r === 'ok') {
-      this.host.sfx('placeStone');
-      this.host.message(t('train.railPlaced'));
-    } else {
-      this.host.sfx('deny');
-      this.host.message(t('train.railBlocked'));
-    }
-    return true;
   }
 
   private placeCar(

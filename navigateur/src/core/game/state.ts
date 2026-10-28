@@ -19,9 +19,11 @@ import {
   TrackGraph,
   baseId,
   flip,
-  tangentOverlap,
+  neighbours,
+  sharesOrigin,
   crossesAtLevel,
   trackCellsOf,
+  mm,
   type RailKind,
   type RailPiece,
   type TrackPos,
@@ -1423,74 +1425,71 @@ export class GameState {
   }
 
   /**
-   * La pièce tient-elle là : aucune de ses cases n'est prise par la voie (sauf par les pièces `ignore`, qu'elle
-   * remplace) ni bloquée par le terrain ?
+   * Pourquoi une pièce ne se poserait pas là : `terrain` (une de ses cases est bloquée : machine, mur, arbre…), `overlap`
+   * (elle chevauche la voie existante), ou null si elle tient. Un raccord, un départ commun d'embranchement et un
+   * croisement en travers ne comptent pas comme un chevauchement.
    */
-  railFits(
-    piece: RailPiece,
-    blocked: (c: Cell) => boolean,
-    ignore: ReadonlySet<number> = new Set(),
-  ): boolean {
-    return (
-      trackCellsOf(piece).every(([x, z]) => !blocked({ gx: x, gz: z })) &&
-      this.railsOverlapping(piece).every((p) => ignore.has(p.id))
+  railProblem(piece: RailPiece, blocked: (c: Cell) => boolean): 'terrain' | 'overlap' | null {
+    if (!trackCellsOf(piece).every(([x, z]) => !blocked({ gx: x, gz: z }))) return 'terrain';
+    return this.railsOverlapping(piece).length > 0 ? 'overlap' : null;
+  }
+
+  /** La pièce tient-elle là ? */
+  railFits(piece: RailPiece, blocked: (c: Cell) => boolean): boolean {
+    return this.railProblem(piece, blocked) === null;
+  }
+
+  /** Pièces de voie qui gênent une nouvelle pièce : celles dont une case est prise, hors raccords et croisements. */
+  railsOverlapping(piece: RailPiece): RailPiece[] {
+    const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
+    return this.changes.rails.filter(
+      (p) =>
+        trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
+        !neighbours(piece, p) &&
+        !sharesOrigin(piece, p, this.changes.rails) &&
+        !crossesAtLevel(piece, p),
     );
   }
 
-  /** Pièces de voie qu'une nouvelle pièce remplacerait : celles dont une case est prise, et les tuiles sous un aiguillage. */
-  railsOverlapping(piece: RailPiece): RailPiece[] {
-    const cells = new Set(trackCellsOf(piece).map(([x, z]) => `${x},${z}`));
-    const out = new Set<RailPiece>();
-    for (const p of this.changes.rails)
-      if (
-        trackCellsOf(p).some(([x, z]) => cells.has(`${x},${z}`)) &&
-        !tangentOverlap(piece, p, this.changes.rails) &&
-        !crossesAtLevel(piece, p)
-      )
-        out.add(p);
-    return [...out];
-  }
-
   /** La même pièce est-elle déjà posée exactement là ? */
-  railAlready(kind: RailKind, gx: number, gz: number, turns: number, level: number): boolean {
-    const tu = ((turns % 4) + 4) % 4;
+  railAlready(kind: RailKind, x: number, z: number, h: number, level: number): boolean {
+    const hh = ((h % 8) + 8) % 8;
     return this.changes.rails.some(
       (p) =>
         p.kind === kind &&
-        p.gx === gx &&
-        p.gz === gz &&
-        p.turns === tu &&
+        Math.abs(p.x - x) < 0.01 &&
+        Math.abs(p.z - z) < 0.01 &&
+        p.h === hh &&
         Math.abs(p.level - level) < 0.05,
     );
   }
 
   /**
-   * Pose une pièce de voie (consomme l'objet du sac) ; refuse si une case est prise, bloquée ou déjà occupée par la
-   * voie. Un aiguillage remplace les tuiles droites de sa voie directe (rendues au sac), sauf si un convoi y est.
+   * Pose une pièce de voie (consomme les rails du sac) ; refuse si le terrain la bloque, si elle chevauche la voie
+   * existante ou s'il manque des rails.
    */
   placeRail(
     kind: RailKind,
-    gx: number,
-    gz: number,
-    turns: number,
+    x: number,
+    z: number,
+    h: number,
     level: number,
     blocked: (c: Cell) => boolean,
-    replace = false,
   ): 'ok' | 'missing' | 'blocked' {
-    if (replace && this.railAlready(kind, gx, gz, turns, level)) return 'ok';
     const id = this.changes.rails.reduce((m, p) => Math.max(m, p.id), 0) + 1;
-    const piece: RailPiece = { id, kind, gx, gz, turns: ((turns % 4) + 4) % 4, level };
-    // `replace` : on pose par-dessus la voie existante (changer de forme).
-    const replaced = replace ? this.railsOverlapping(piece) : [];
-    if (replaced.some((p) => this.railOccupied(p.id))) return 'blocked';
-    const refund = replaced.reduce((n, p) => n + RAIL_COST[p.kind], 0);
+    const piece: RailPiece = {
+      id,
+      kind,
+      x: mm(x),
+      z: mm(z),
+      h: ((h % 8) + 8) % 8,
+      level: mm(level),
+    };
     const cost = RAIL_COST[kind];
-    if ((this.inventory[RAIL_ITEM] ?? 0) + refund < cost) return 'missing';
-    if (!this.railFits(piece, blocked, new Set(replaced.map((p) => p.id)))) return 'blocked';
-    for (const p of replaced) this.changes.rails.splice(this.changes.rails.indexOf(p), 1);
-    if (refund > cost) this.inventory = add(this.inventory, RAIL_ITEM, refund - cost);
-    else if (cost > refund)
-      this.inventory = remove(this.inventory, RAIL_ITEM, cost - refund).inventory;
+    if ((this.inventory[RAIL_ITEM] ?? 0) < cost) return 'missing';
+    if (this.railAlready(kind, piece.x, piece.z, piece.h, piece.level)) return 'blocked';
+    if (!this.railFits(piece, blocked)) return 'blocked';
+    this.inventory = remove(this.inventory, RAIL_ITEM, cost).inventory;
     this.changes.rails.push(piece);
     this.railsChanged();
     return 'ok';

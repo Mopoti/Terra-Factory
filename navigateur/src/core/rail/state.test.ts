@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CARS, carIdOfWindow, locoWindowId } from '../data/trains';
 import { emptyMachine } from '../factory/factory';
 import { GameState } from '../game/state';
-import { planRails } from './plan';
-import { TILE_CELLS, TILE_M, matesFor, portsOf } from './track';
+import { candidatesFrom } from './place';
+import { placeAt, placeLine } from './testTrack';
+import { TILE_M, portsOf } from './track';
 
 const free = (): boolean => false;
 
@@ -21,18 +22,19 @@ describe('voies et trains dans la partie', () => {
     return s;
   };
   const laidLine = (s: GameState, n: number): void => {
-    for (let k = 0; k < n; k++)
-      expect(s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free)).toBe('ok');
+    placeLine(s, n);
+    expect(s.changes.rails).toHaveLength(n);
   };
 
   it('poser une voie consomme l’objet et refuse de recouvrir une autre pièce', () => {
     const s = start();
-    expect(s.placeRail('straight', 0, 0, 0, 0, free)).toBe('ok');
+    expect(s.placeRail('straight', 0, 0, 4, 0, free)).toBe('ok');
     expect(s.inventory.rail).toBe(199);
-    expect(s.placeRail('straight', 1, 1, 0, 0, free)).toBe('blocked'); // recouvre une case
-    expect(s.placeRail('straight', 40, 0, 0, 0, () => true)).toBe('blocked'); // terrain bloqué
+    expect(s.placeRail('straight', 0.5, 0, 4, 0, free)).toBe('blocked'); // recouvre des cases
+    expect(s.placeRail('straight', 0, 0, 4, 0, free)).toBe('blocked'); // même pièce, au même endroit
+    expect(s.placeRail('straight', 40, 0, 4, 0, () => true)).toBe('blocked'); // terrain bloqué
     s.inventory.rail = 2;
-    expect(s.placeRail('ramp', 80, 0, 0, 0, free)).toBe('missing'); // une rampe coûte 4 rails
+    expect(s.placeRail('ramp', 80, 0, 4, 0, free)).toBe('missing'); // une rampe coûte 4 rails
     expect(s.removeRail(s.changes.rails[0].id, { x: 0, z: 0 })).toBe(true);
     expect(s.inventory.rail).toBe(3); // 2 en stock + 1 rendu
   });
@@ -127,42 +129,32 @@ describe('voies et trains dans la partie', () => {
     expect(rest.cars.map((c) => c.id)).toContain(wagon.cars[0].id);
   });
 
-  it('un virage ne prend que les cases de son arc : un obstacle dans le coin du bloc ne gêne pas', () => {
+  it('un virage ne prend que les cases de son arc : un obstacle loin de la voie ne gêne pas', () => {
     const s = start();
-    // Un obstacle au coin du bloc, loin de l'arc (le coin opposé au centre du cercle).
-    const corner = { gx: 0, gz: 0 };
-    const blocked = (c: { gx: number; gz: number }): boolean =>
-      c.gx === corner.gx && c.gz === corner.gz;
     s.inventory.rail = 10;
-    expect(s.placeRail('curve', 0, 0, 0, 0, blocked)).toBe('ok');
+    // Cases de l'arc : le virage part de l'origine vers +z et tourne vers +x ; un obstacle sur la voie le bloque.
+    const onArc = (c: { gx: number; gz: number }): boolean => c.gx === 0 && c.gz === 2;
+    expect(s.placeRail('curve_l', 0, 0, 0, 0, onArc)).toBe('blocked');
+    // Un obstacle de l'autre côté de l'origine, à plusieurs mètres de l'arc, ne le gêne pas.
+    const away = (c: { gx: number; gz: number }): boolean => c.gx === -12 && c.gz === 8;
+    expect(s.placeRail('curve_l', 0, 0, 0, 0, away)).toBe('ok');
   });
 
-  it('un tracé avec coins se pose en entier, dans les huit combinaisons de sens', () => {
-    const dirs: [number, number][] = [
-      [0, -1],
-      [1, 0],
-      [0, 1],
-      [-1, 0],
-    ];
-    for (const a of dirs)
-      for (const b of dirs) {
-        if (a[0] * b[0] + a[1] * b[1] !== 0) continue;
-        const s = start();
-        s.inventory.rail = 500;
-        const first = Array.from({ length: 5 }, (_, i) => ({
-          tx: 20 + a[0] * i,
-          tz: 20 + a[1] * i,
-        }));
-        const c = first[4];
-        const second = Array.from({ length: 5 }, (_, i) => ({
-          tx: c.tx + b[0] * (i + 1),
-          tz: c.tz + b[1] * (i + 1),
-        }));
-        const plan = planRails([...first, ...second], { level: 0, tilt: 0, lead: 0 });
-        for (const p of plan)
-          expect(s.placeRail(p.kind, p.gx, p.gz, p.turns, p.level, free)).toBe('ok');
-        expect(s.changes.rails).toHaveLength(plan.length);
-      }
+  it('huit virages de 45° se posent bout à bout et le cercle se referme', () => {
+    const s = start();
+    s.inventory.rail = 100;
+    // Le premier virage part de l'origine vers +z (le port libre regarde vers +z).
+    let port = { x: 0, y: 0, z: 0, dx: 0, dz: 1 };
+    for (let k = 0; k < 8; k++) {
+      const c = candidatesFrom(port, 0).find((m) => m.kind === 'curve_l')!;
+      expect(s.placeRail(c.kind, c.x, c.z, c.h, c.level, free), `virage ${k + 1}`).toBe('ok');
+      port = portsOf(s.changes.rails[s.changes.rails.length - 1])[1];
+    }
+    expect(s.changes.rails).toHaveLength(8);
+    // Le dernier bout retombe sur le premier : la voie est un anneau sans bout libre.
+    const g = s.railGraph();
+    expect(g.neighbour(s.changes.rails[7].id, 1)?.piece).toBe(s.changes.rails[0].id);
+    expect(g.neighbour(s.changes.rails[0].id, 0)?.piece).toBe(s.changes.rails[7].id);
   });
 
   it('l’état se relit sans erreur et ignore ce qui est invalide', () => {
@@ -174,7 +166,7 @@ describe('voies et trains dans la partie', () => {
     expect(copy.changes.trains).toHaveLength(1);
     const broken = new GameState({
       changes: {
-        rails: [{ id: 1, kind: 'monorail', gx: 0, gz: 0 }],
+        rails: [{ id: 1, kind: 'monorail', x: 0, z: 0, h: 0 }],
         trains: [{ id: 1, head: { piece: 9, u: 0 }, cars: [] }],
       },
     });
@@ -185,46 +177,32 @@ describe('voies et trains dans la partie', () => {
 
 describe('embranchements et croisements dans la partie', () => {
   const start = (): GameState => {
-    const s = new GameState({ inventory: { rail: 40, train_wagon_freight: 1 } });
+    const s = new GameState({ inventory: { rail: 60, train_wagon_freight: 1 } });
     s.creative = true;
-    for (let k = 0; k < 10; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
+    placeLine(s, 10);
     return s;
   };
-  it('une voie reposée par-dessus la voie existante la remplace', () => {
+
+  it('une pièce reposée par-dessus la voie existante est refusée, sans rien dépenser', () => {
     const s = start();
     const before = s.changes.rails.length;
-    const mid = s.changes.rails[3];
-    // Même pièce : rien ne change, rien n'est dépensé.
     const stock = s.inventory.rail ?? 0;
-    expect(s.placeRail(mid.kind, mid.gx, mid.gz, mid.turns, mid.level, () => false, true)).toBe(
-      'ok',
-    );
+    const mid = s.changes.rails[3];
+    expect(s.placeRail(mid.kind, mid.x, mid.z, mid.h, mid.level, free)).toBe('blocked');
+    expect(s.placeRail('ramp', mid.x, mid.z, mid.h, mid.level, free)).toBe('blocked');
     expect(s.changes.rails).toHaveLength(before);
     expect(s.inventory.rail ?? 0).toBe(stock);
-    // Sans `replace`, la pièce est refusée ; avec, elle prend la place d'une autre.
-    expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false)).toBe('blocked');
-    expect(s.placeRail('ramp', mid.gx, mid.gz, mid.turns, mid.level, () => false, true)).toBe('ok');
-    expect(s.changes.rails).not.toContain(mid);
   });
 
-  it.each(['curve_wide', 'curve_large', 'curve_big', 'curve_huge'] as const)(
-    'un virage %s posé dans le prolongement d’une ligne en fait un embranchement tangent',
+  it.each(['curve_l', 'curve_r'] as const)(
+    'un virage %s posé au bout d’une pièce qui en a déjà une suite en fait un embranchement',
     (kind) => {
       const s = start();
       const line = s.changes.rails.slice(0, 10);
-      // Joint entre la tuile 2 et la tuile 3 : la ligne va vers −z, le port avant de la tuile 2 y est.
+      // Joint entre le droit 3 et le droit 4 : la ligne va vers −z, le port avant du droit 3 y est.
       const joint = portsOf(line[2]).find((p) => p.dz === -1)!;
-      const mates = matesFor(kind, joint);
-      expect(mates.length).toBeGreaterThan(0);
       const before = s.changes.rails.length;
-      let curve = null as null | (typeof s.changes.rails)[number];
-      for (const m of mates) {
-        const r = s.placeRail(kind, m.gx, m.gz, m.turns, m.level, free, true);
-        if (r === 'ok') {
-          curve = s.changes.rails[s.changes.rails.length - 1];
-          break;
-        }
-      }
+      const curve = placeAt(s, kind, joint);
       expect(curve).not.toBeNull();
       // Rien n'a été remplacé : la ligne reste, le virage s'y ajoute.
       expect(s.changes.rails).toHaveLength(before + 1);
@@ -243,14 +221,14 @@ describe('embranchements et croisements dans la partie', () => {
 
   it('deux voies droites se croisent à niveau : chacune traverse l’autre, dans les deux sens', () => {
     const s = start();
-    // La ligne verticale (10 tuiles) est posée ; on pose une ligne horizontale qui la coupe à la tuile 5.
+    // La ligne verticale (10 droits) est posée ; on pose une ligne horizontale qui la coupe au droit 6.
     const mid = s.changes.rails[5];
+    const zc = mid.z - TILE_M / 2;
     const before = s.changes.rails.length;
     for (let k = -3; k <= 3; k++)
-      expect(s.placeRail('straight', mid.gx + TILE_CELLS * k, mid.gz, 1, 0, free, true)).toBe('ok');
-    // Rien n'a été remplacé : 7 tuiles de plus, la ligne verticale est entière.
+      expect(s.placeRail('straight', k * TILE_M - TILE_M / 2, zc, 2, 0, free)).toBe('ok');
+    // Rien n'a été remplacé : 7 pièces de plus, la ligne verticale est entière.
     expect(s.changes.rails).toHaveLength(before + 7);
-    expect(s.changes.rails.filter((p) => p.gx === mid.gx && p.gz === mid.gz)).toHaveLength(2);
     const g = s.railGraph();
     const vertical = s.changes.rails.slice(0, 10).map((p) => p.id);
     const horizontal = s.changes.rails.slice(before).map((p) => p.id);
@@ -266,8 +244,26 @@ describe('embranchements et croisements dans la partie', () => {
         expect(ok).toBe(true);
       }
     }
-    // Une droite de même axe sur la même tuile reste un remplacement (pas un croisement).
-    expect(s.placeRail('straight', mid.gx, mid.gz, 0, 0, free, true)).toBe('ok');
-    expect(s.changes.rails.filter((p) => p.gx === mid.gx && p.gz === mid.gz)).toHaveLength(2);
+    // Une seconde droite de même axe au même endroit est un doublon, pas un croisement.
+    expect(s.placeRail('straight', mid.x, mid.z, mid.h, 0, free)).toBe('blocked');
+  });
+});
+
+describe('anciennes parties et sauvegarde des pièces', () => {
+  it('une partie d’avant la refonte des rails n’est plus jouable', async () => {
+    const { normalizeChanges, slotPlayable } = await import('../game/worldChanges');
+    expect(slotPlayable(normalizeChanges({ railVersion: 2, rails: [{ id: 1 }] }))).toBe(false);
+    expect(slotPlayable(normalizeChanges({}))).toBe(false);
+    expect(slotPlayable(normalizeChanges(new GameState().snapshot().changes))).toBe(true);
+  });
+
+  it('les pièces se relisent au millimètre près et les caps restent entre 0 et 7', () => {
+    const s = new GameState({ inventory: { rail: 50 } });
+    s.creative = true;
+    s.placeRail('straight', 12.3456, -7.0004, 11, 0, () => false);
+    const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
+    expect(copy.changes.rails).toEqual([
+      { id: 1, kind: 'straight', x: 12.346, z: -7, h: 3, level: 0 },
+    ]);
   });
 });
