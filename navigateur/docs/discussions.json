@@ -1,7 +1,7 @@
 {
- "key": "discussions4",
- "title": "Discussions : suite (2)",
- "intro": "Tes réponses sont appliquées ou notées. Voici ce qui reste, surtout des choix de conception avant de coder la batterie portable, l'assembleur avancé, les portails et le terrain en voxels.",
+ "key": "discussions5",
+ "title": "Discussions : suite (3)",
+ "intro": "Tes réponses sont notées. Je ne code pas les rails ni la batterie tant que tu n'as pas tranché les points ci-dessous.",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -16,205 +16,129 @@
  "tabs": [
   {
    "id": "a",
-   "label": "Batterie portable"
+   "label": "Batterie et objets abîmés"
   },
   {
    "id": "b",
-   "label": "Assembleurs"
+   "label": "Portails et barrières T5"
   },
   {
    "id": "c",
-   "label": "Portails"
+   "label": "Démo et équilibrage"
   },
   {
    "id": "d",
-   "label": "Monde creusable"
+   "label": "Rails : à fixer"
   },
   {
    "id": "e",
-   "label": "Rails et Unreal"
-  },
-  {
-   "id": "f",
-   "label": "Rails : ce que montre la vidéo"
+   "label": "Décidé (pour info)"
   }
  ],
  "rows": [
   {
    "id": "a1",
    "tab": "a",
-   "name": "Principe",
+   "name": "Batterie portable : stock d'énergie",
    "tag": "a1",
-   "recipe": "Noté : une batterie portable (nouvelle recette) se met dans le propulseur par glisser-déposer depuis le sac et se retire de la même façon. Elle se recharge dans un accumulateur. Une jauge est dessinée sur son icône et aussi sur l'icône du propulseur quand il est équipé. La batterie lithium actuelle devient un ingrédient de la batterie portable et n'est plus consommée par le propulseur.",
-   "role": "Recette proposée : 2 batteries lithium + 1 châssis simple + 1 kit circuit (3 types). Autonomie : 60 s de poussée pour une batterie pleine. Ok ?"
+   "recipe": "Noté : recette 1 batterie lithium + 1 châssis composite (palier 4). Pas d'autonomie en secondes : la batterie stocke une quantité d'énergie et le propulseur en consomme à la poussée. Il faut une unité : le jeu compte l'énergie en kJ (kW × secondes).",
+   "role": "Proposition : capacité 2 400 kJ ; le propulseur consomme 60 kW quand il pousse, donc 40 s de poussée pleine. Ces nombres te vont ?"
   },
   {
    "id": "a2",
    "tab": "a",
-   "name": "Charge d'une batterie : limite technique",
+   "name": "Vraies données par objet",
    "tag": "a2",
-   "recipe": "Aujourd'hui le sac ne retient que « combien de tel objet » : il ne sait pas qu'une batterie est à 40 % et une autre à 90 %. Pour une jauge par batterie il faut soit une vraie donnée par objet (gros chantier : sac, coffres, sauvegarde, réseau), soit des niveaux séparés.",
-   "role": "Recommandation : 5 niveaux (vide, 25, 50, 75, plein), chacun étant un objet distinct qui s'empile. Le propulseur garde la charge exacte de la batterie insérée. Ok, ou tu veux la charge exacte par batterie ?"
+   "recipe": "Tu veux que chaque objet puisse porter ses propres valeurs : la charge d'une batterie, et aussi l'usure (vie restante sur vie totale). C'est la bonne méthode, mais c'est un gros chantier : aujourd'hui le sac, les coffres, les véhicules et les sauvegardes ne comptent que « combien d'objets de tel type ».",
+   "role": "Proposition : un objet à données (batterie, outil, arme, armure) n'est plus empilable (1 par case) et porte `{charge, usure}` ; les autres restent des piles. À faire après l'équilibrage, en une fois, avec une migration des sauvegardes. D'accord ?"
   },
   {
    "id": "a3",
    "tab": "a",
-   "name": "Où se recharge-t-elle ?",
+   "name": "Usure : on en veut où ?",
    "tag": "a3",
-   "recipe": "Tu dis « dans un accu ». Aujourd'hui l'accumulateur (T4) stocke l'énergie du réseau mais n'a pas de case pour un objet. La borne de recharge (T4, prévue pour la locomotive) est faite pour ça.",
-   "role": "Recommandation : la borne de recharge recharge les batteries portables ET la locomotive ; l'accumulateur reste un stockage du réseau. Ou tu préfères que l'accumulateur ait une case de recharge ?"
+   "recipe": "Tu parles d'objets « abîmés ». Aujourd'hui rien ne s'use dans le jeu.",
+   "role": "Qui s'use : outils (pioche, hache), armes, armures ? Comment se répare-t-on (établi, matériaux, borne) ? Ou seulement la batterie pour l'instant ?"
   },
   {
    "id": "a4",
    "tab": "a",
-   "name": "Dépendance à l'énergie",
+   "name": "Borne de recharge posée n'importe où",
    "tag": "a4",
-   "recipe": "La recharge demande un réseau électrique et la borne (T4) ; l'énergie lot 1 n'est pas codée. Le propulseur ne se recharge donc pas encore.",
-   "role": "Je code la batterie portable, le glisser-déposer et la jauge maintenant, et la borne de recharge avec le lot énergie. D'accord ?"
+   "recipe": "Noté : la borne n'est pas limitée aux quais, elle se pose partout sur la grille. Elle recharge les batteries portables mises dedans et la locomotive électrique quand elle est à côté.",
+   "role": "Portée de recharge d'un véhicule : une case autour de la borne. Ok ? Consommation : 500 kW ?"
   },
   {
    "id": "b1",
    "tab": "b",
-   "name": "Assembleur avancé",
+   "name": "Barrière et portail holographiques (T5)",
    "tag": "b1",
-   "recipe": "Idée retenue : l'assembleur simple fait les recettes à 3 types d'ingrédients au plus, l'avancé (palier 3) en fait 4 au plus et travaille plus vite (1,5 s au lieu de 3 s). Problème : aujourd'hui l'assembleur fabrique déjà des objets à 4, 5 ou 6 types, par exemple la foreuse électrique (5), la raffinerie (6), le buggy (6), la locomotive (5) : 25 objets dépassent 3 types, 12 dépassent 4.",
-   "role": "Recommandation : d'abord réécrire ces recettes avec les intermédiaires (kit circuit, châssis, microcontrôleur…) pour respecter 3 et 4 types, ENSUITE ajouter l'assembleur avancé et appliquer la limite. Ok ? Je te prépare la page de réponse des recettes à réécrire."
-  },
-  {
-   "id": "b2",
-   "tab": "b",
-   "name": "Paquets de science à l'assembleur",
-   "tag": "b2",
-   "recipe": "Les paquets ont 2 à 3 types d'ingrédients : l'assembleur simple suffit. À la main : plus lent (ma proposition 5 s × palier), à l'assembleur : plus rapide.",
-   "role": "Les durées te conviennent-elles : main 5 s × palier, assembleur 2 s × palier ?"
+   "recipe": "Noté : en plus des barrières et portails de palier 1 à 3 (bois, béton, béton armé), une version holographique au palier 5. Le projecteur de mur holographique (T4) existe déjà dans les propositions.",
+   "role": "Questions : l'hologramme bloque-t-il les ennemis mais laisse-t-il passer le joueur et les véhicules ? Il consomme de l'énergie en continu ? Le portail holographique s'ouvre à la touche d'action comme les autres ?"
   },
   {
    "id": "c1",
    "tab": "c",
-   "name": "Portail de 3 m",
+   "name": "Voxels : on ne fait rien maintenant",
    "tag": "c1",
-   "recipe": "Décidé : portail de 3 m (un véhicule passe), s'ouvre à la touche d'action, les ennemis ne l'ouvrent pas. Un par palier de barrière (bois, béton, béton armé). Donc 6 objets : 3 barrières et 3 portails.",
-   "role": "Les ennemis le détruisent-ils quand même (comme les murs) ? Un portail se pose-t-il entre deux poteaux comme une porte, ou comme une pièce seule ?"
+   "recipe": "Noté : le terrain en voxels attend Unreal. J'ajoute seulement dans les notes tes idées pour plus tard : gisements qui descendent (surface plus petite, plus profonde), renforts sous les foreuses quand une case est minée dessous, le joueur nivelle et renforce lui-même.",
+   "role": "—"
+  },
+  {
+   "id": "c2",
+   "tab": "c",
+   "name": "Équilibrer le jeu navigateur pour une démo",
+   "tag": "c2",
+   "recipe": "Objectif : une version équilibrée présentable en démo, puis seulement Unreal. Il faut définir « la démo » : durée, public, jusqu'où le joueur va.",
+   "role": "Propose-moi : une démo de 1 h, 3 h ou 10 h ? Jusqu'à quel palier (T2, T3, T5) ? Avec les ennemis ? Je te prépare ensuite la liste de ce qui reste à équilibrer (rythme des découvertes, coûts, vitesse des machines, menace)."
+  },
+  {
+   "id": "c3",
+   "tab": "c",
+   "name": "Unreal : prérequis",
+   "tag": "c3",
+   "recipe": "Noté : on réfléchit à ce qu'il faut pour faire proprement avant de commencer. Le brouillon `unreal/prerequis.md` reste la base, à compléter.",
+   "role": "Veux-tu que je continue ce brouillon pendant l'équilibrage (par exemple : liste des données de jeu à reprendre, conventions de nommage) ?"
   },
   {
    "id": "d1",
    "tab": "d",
-   "name": "Terrain en voxels : ce que j'ai compris",
+   "name": "Vocabulaire : patron vert et rouge",
    "tag": "d1",
-   "recipe": "Voxels, profondeur réglable dans l'éditeur de partie (50 blocs par défaut), couches de terrain différentes comme Minecraft, relief aussi en surface, pas de tunnels pour tapis et tuyaux (ils passent en bas, à un niveau plus bas).",
-   "role": "C'est bien ça ? « Passer en bas » = poser le tapis ou le tuyau plus bas dans le terrain creusé ?"
+   "recipe": "Corrigé : j'utilise « patron vert » (pose possible) et « patron rouge » (pose impossible) comme dans le reste du jeu, avec la raison du refus affichée.",
+   "role": "—"
   },
   {
    "id": "d2",
    "tab": "d",
-   "name": "Taille d'un bloc",
+   "name": "Anciennes parties : option C",
    "tag": "d2",
-   "recipe": "Aujourd'hui tout est sur une grille de 50 cm (machines de 4 × 4 cases, murs en blocs de 50 cm). Un bloc de terrain de 1 m est plus léger à calculer (8 fois moins de blocs qu'à 50 cm) ; 50 cm colle à la grille actuelle.",
-   "role": "Recommandation : blocs de 1 m, 50 de profondeur = 50 m, et la grille de construction reste à 50 cm. Ok ?"
+   "recipe": "Noté : on bloque l'accès aux parties d'avant la refonte. Message dans le menu au lieu du chargement.",
+   "role": "Texte du message : « Cette partie date d'avant la refonte des rails. Crée une nouvelle partie. » Ok ? Les fichiers restent-ils exportables ?"
   },
   {
    "id": "d3",
    "tab": "d",
-   "name": "Minerais et ressources",
+   "name": "Croisement en +",
    "tag": "d3",
-   "recipe": "Aujourd'hui un minerai est une case en surface avec une quantité. En voxels les gisements deviennent des blocs ou des veines sous terre, extraits en creusant ou par les foreuses.",
-   "role": "Les foreuses creusent-elles les blocs ? Les gisements de surface actuels deviennent-ils des veines qui descendent ? Pétrole, uranium, eau souterraine ?"
+   "recipe": "Noté : on garde nos rails en + pour croiser une voie. Ils devront se raccorder aux nouvelles pièces.",
+   "role": "—"
   },
   {
    "id": "d4",
    "tab": "d",
-   "name": "Machines, rails et sol",
+   "name": "Longueur du droit, diagonales et virage",
    "tag": "d4",
-   "recipe": "Une machine de 4 × 4 cases sur un terrain irrégulier : on doit niveler (creuser ou remblayer), ou la machine pose sa propre dalle. Les rails demandent un sol régulier (voir aussi la refonte).",
-   "role": "Recommandation : poser une machine aplatit automatiquement son emprise si l'écart est de 1 m au plus ; au-delà il faut niveler à la main. Ok ?"
-  },
-  {
-   "id": "d5",
-   "tab": "d",
-   "name": "Faisabilité et ordre",
-   "tag": "d5",
-   "recipe": "C'est le plus gros chantier du projet : terrain découpé en tranches de blocs, sauvegarde seulement des modifications, mise à jour de la mise en maillage sans saccade. Je propose un essai de 2 semaines de travail dans le navigateur (terrain voxel simple, creuser, poser une machine), avant de l'intégrer à l'usine et de choisir Unreal.",
-   "role": "D'accord pour commencer par ce prototype ? Il passe avant ou après l'énergie lot 1 ?"
+   "recipe": "Le droit actuel fait une tuile de 2,5 m. Le virage unique de 45° reprend le demi-virage du très grand rayon (8,75 m), dont les modèles existent. Un droit en diagonale avance d'une tuile en x et en z.",
+   "role": "Tu veux un rayon plus grand ou plus petit ? 8,75 m fait un cercle de 17,5 m de diamètre."
   },
   {
    "id": "e1",
    "tab": "e",
-   "name": "Rails à refaire",
+   "name": "Fait ou noté",
    "tag": "e1",
-   "recipe": "Vidéo reçue et regardée (80 s, c'est Factorio : le HUD parle de « tronçon » et de « santé »). Je ne touche plus aux rails tant que tu n'as pas validé la page « Rails : ce que montre la vidéo ». Images de référence : `navigateur/docs/rails-reference/`.",
-   "role": "Voir l'onglet « Rails : ce que montre la vidéo »."
-  },
-  {
-   "id": "e2",
-   "tab": "e",
-   "name": "Unreal : on ne se lance pas",
-   "tag": "e2",
-   "recipe": "Fait : j'ai écrit le brouillon des prérequis dans `unreal/prerequis.md` (matériel, décisions de projet, plugins à étudier, configuration de l'éditeur, premier essai). Aucun projet n'est créé.",
-   "role": "Relis-le : qu'est-ce qui manque dans la liste ?"
-  },
-  {
-   "id": "f1",
-   "tab": "f",
-   "name": "Fantôme vert qui suit le curseur",
-   "tag": "f1",
-   "recipe": "Ce que je vois : la pièce choisie apparaît en vert transparent sous le curseur, avec le nombre de rails restants. Un clic la pose. Quand la pose est impossible le fantôme est remplacé par une croix rouge (par exemple une pièce posée par-dessus une autre, ou trop loin).",
-   "role": "Je garde ça : fantôme vert pour valide, croix rouge pour impossible, avec une phrase qui dit pourquoi (en survol)."
-  },
-  {
-   "id": "f2",
-   "tab": "f",
-   "name": "Peu de pièces, toutes de même taille",
-   "tag": "f2",
-   "recipe": "Ce que je vois : un rail droit de 2 cases de long, un virage de 45° de rayon fixe (8 virages font un cercle complet, on le voit sur la vidéo), et des droits en diagonale pour continuer après un virage. Pas de longueur libre, pas de virage serré, moyen ou grand.",
-   "role": "Je remplace nos trois tailles de virages (bleu, violet, marron) par UN virage de 45°. Le droit existe en 8 orientations. Ok ?"
-  },
-  {
-   "id": "f3",
-   "tab": "f",
-   "name": "Accrochage automatique au bout d'un rail",
-   "tag": "f3",
-   "recipe": "Ce que je vois : le fantôme se colle tout seul sur le bout libre d'un rail et prend l'orientation qui prolonge la voie (virage dans le prolongement du droit, puis le cercle se referme pièce après pièce). Loin d'un rail, il suit la grille libre (cases de 2).",
-   "role": "Même principe chez nous : bout libre le plus proche du curseur dans un rayon de 3 cases, sinon grille libre. Une touche (R) fait tourner le fantôme (ou choisit droite / gauche)."
-  },
-  {
-   "id": "f4",
-   "tab": "f",
-   "name": "Embranchement SANS pièce d'aiguillage",
-   "tag": "f4",
-   "recipe": "Ce que je vois : à la fin d'un rail droit, on pose un virage qui part de ce même bout : le droit continue et le virage s'écarte, ce qui forme un Y. Aucune pièce spéciale : un bout de rail peut avoir plusieurs suites. Le train choisira la branche selon sa destination.",
-   "role": "C'est ce que tu veux. Nous avons aujourd'hui des aiguillages en pièce : je les retire. Règle du train à un embranchement : il va vers sa prochaine station ; sinon tout droit."
-  },
-  {
-   "id": "f5",
-   "tab": "f",
-   "name": "Croix rouge : causes",
-   "tag": "f5",
-   "recipe": "Ce que je vois : croix rouge quand la pièce chevauche une autre voie (essai de prolonger tout droit sur une voie déjà posée), ou quand elle ne se raccorde à rien de valide.",
-   "role": "Causes que je gérerais : chevauche une voie, trop loin du joueur, obstacle (machine, mur, arbre), pente trop forte (avec le terrain en voxels), raccord non aligné."
-  },
-  {
-   "id": "f6",
-   "tab": "f",
-   "name": "Sélection et retrait",
-   "tag": "f6",
-   "recipe": "Ce que je vois : en survolant un rail, des crochets jaunes l'entourent et un panneau donne « Trains dans le tronçon » et « Santé 200/200 ». Un clic de la pioche retire la pièce.",
-   "role": "Même chose : survol = crochets + infos (nombre de trains, santé), retrait avec la pioche ; le rail retiré rend l'objet."
-  },
-  {
-   "id": "f7",
-   "tab": "f",
-   "name": "Sauvegardes existantes",
-   "tag": "f7",
-   "recipe": "Les anciens rails ne sont pas dans la logique des pièces fixes (virages de 3 tailles, aiguillages).",
-   "role": "Option A : on supprime les rails des anciennes parties et on les rend dans le sac. Option B : conversion automatique en pièces fixes (risque d'erreurs de raccord). Je recommande A."
-  },
-  {
-   "id": "f8",
-   "tab": "f",
-   "name": "Ce que je ne vois pas dans la vidéo",
-   "tag": "f8",
-   "recipe": "Pas de signaux, pas de gares, pas de train en marche, pas de passage à niveau, pas de pont.",
-   "role": "Veux-tu aussi le comportement de Factorio pour les signaux et les trains, ou on garde nos règles (stations et programmes) ?"
+   "recipe": "Rails : cahier des charges dans `docs/rails-refonte.md`. Voxels : reportés. Unreal : après l'équilibrage. Assembleur avancé et paquets à l'assembleur : validés, mais après la réécriture des recettes (voir la discussion précédente).",
+   "role": "—"
   }
  ]
 }
