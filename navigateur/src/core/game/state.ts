@@ -56,10 +56,20 @@ import {
   type Stack,
 } from '../factory/factory';
 import { DISCOVERIES, discoveryFor } from '../data/discoveries';
-import { TECHS, isSciencePack, scienceCost, techById, techFor, type TechDef } from '../data/techs';
+import {
+  SCIENCE_PACKS,
+  TECHS,
+  isSciencePack,
+  scienceCost,
+  techById,
+  techFor,
+  type TechDef,
+} from '../data/techs';
 import { DEFAULT_DIFFICULTY, type Difficulty } from '../save/saveIndex';
 import { WEAPONS, type WeaponSpec } from '../data/weapons';
 import {
+  assemblerMaxTypes,
+  isAssembler,
   isSmith,
   isTurret,
   itemOfTier,
@@ -170,6 +180,8 @@ export interface CraftJob {
 
 /** Secondes de fabrication à la main par ingrédient, à vitesse d'outil ×1. */
 export const CRAFT_SECONDS_PER_INGREDIENT = 0.5;
+/** Un paquet de science fait à la main prend 5 s par palier (l'assembleur est plus rapide). */
+export const PACK_HAND_SECONDS_PER_TIER = 5;
 /** Mode Créatif : quantité tirée au hasard d'une case de minerai posée. */
 export const CREATIVE_ORE_MIN = 300;
 export const CREATIVE_ORE_MAX = 3000;
@@ -1063,10 +1075,16 @@ export class GameState {
   /** Fabrications à la main en attente (non enregistrées : on les relance après un chargement). */
   craftQueue: CraftJob[] = [];
 
-  /** Durée (s) d'une fabrication à la main : 0,5 s par ingrédient, divisée par la vitesse de l'outil ; instantanée en Créatif. */
+  /**
+   * Durée (s) d'une fabrication à la main : 0,5 s par ingrédient, divisée par la vitesse de l'outil ; instantanée en
+   * Créatif. Un paquet de science prend 5 s par palier (T1 5 s … T5 25 s), plus qu'à l'assembleur.
+   */
   craftSeconds(item: string): number {
     const recipe = this.recipeFor(item);
     if (!recipe || this.creative) return 0;
+    const pack = SCIENCE_PACKS.indexOf(item as (typeof SCIENCE_PACKS)[number]);
+    if (pack >= 0 && pack < 5)
+      return (PACK_HAND_SECONDS_PER_TIER * (pack + 1)) / (this.harvestTool()?.speed ?? 1);
     const count = Object.values(recipe).reduce((a, b) => a + b, 0);
     return Math.max(
       0.25,
@@ -1981,9 +1999,15 @@ export class GameState {
 
   /** Assembleur : choisit l'objet à fabriquer ; les ingrédients et le produit en cours reviennent au sac. */
   setRecipe(m: Machine, item: string | null): boolean {
-    if (m.type !== 'assembler' && !isSmith(m.type)) return false;
+    if (!isAssembler(m.type) && !isSmith(m.type)) return false;
     if (item !== null) {
       if (isSmith(m.type) ? recipeById(item)?.machine !== m.type : !itemById(item).recipe)
+        return false;
+      // L'assembleur simple fait des recettes à 3 types d'ingrédients au plus, l'avancé à 4.
+      if (
+        !isSmith(m.type) &&
+        Object.keys(itemById(item).recipe ?? {}).length > assemblerMaxTypes(m.type)
+      )
         return false;
       // Une recette dont le produit n'est pas encore débloqué (technologie) reste fermée.
       const product = isSmith(m.type) ? Object.keys(recipeById(item)?.out ?? {})[0] : item;

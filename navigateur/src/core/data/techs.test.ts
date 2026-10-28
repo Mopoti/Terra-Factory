@@ -164,3 +164,44 @@ describe('objets intermédiaires des paliers 3 à 5', () => {
     }
   });
 });
+
+describe('règle des types d’ingrédients et assembleurs', () => {
+  const types = (id: string): number => Object.keys(itemById(id).recipe ?? {}).length;
+  const tierOf = (id: string): number => techFor(id)?.tier ?? 0;
+
+  it('une recette a 4 types d’ingrédients au plus, 3 avant le palier 3', () => {
+    for (const item of ITEMS.filter((i) => i.recipe && !i.creativeOnly)) {
+      const n = types(item.id);
+      expect(n, item.id).toBeLessThanOrEqual(4);
+      if (tierOf(item.id) < 3)
+        expect(n, `${item.id} (palier ${tierOf(item.id)})`).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('l’assembleur simple refuse une recette à 4 types, l’avancé l’accepte', async () => {
+    const { GameState } = await import('../game/state');
+    const { emptyMachine } = await import('../factory/factory');
+    const four = ITEMS.find((i) => i.recipe && Object.keys(i.recipe).length === 4)!;
+    const three = ITEMS.find(
+      (i) => i.recipe && Object.keys(i.recipe).length === 3 && !i.creativeOnly,
+    )!;
+    const s = new GameState();
+    s.creative = true;
+    for (const id of [four.id, three.id]) {
+      const tech = techFor(id);
+      if (tech) s.changes.unlocked.push(tech.id);
+    }
+    const simple = emptyMachine(1, 'assembler', 0, 0, 0);
+    const advanced = emptyMachine(2, 'assembler_advanced', 8, 0, 0);
+    expect(s.setRecipe(simple, four.id)).toBe(false);
+    expect(s.setRecipe(simple, three.id)).toBe(true);
+    expect(s.setRecipe(advanced, four.id)).toBe(true);
+  });
+
+  it('un paquet de science fait à la main prend 5 s par palier', async () => {
+    const { GameState } = await import('../game/state');
+    const s = new GameState({ inventory: { stone: 10, iron_ore: 10 } });
+    expect(s.craftSeconds('science_pack')).toBeGreaterThanOrEqual(5 - 1e-9);
+    expect(s.craftSeconds('science_pack_3')).toBeGreaterThan(s.craftSeconds('science_pack'));
+  });
+});

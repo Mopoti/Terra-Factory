@@ -114,6 +114,7 @@ const ADDED_AFTER_LEGACY = new Set([
   'liquid_nitrogen',
   'exoskeleton',
   'jetpack',
+  'machine_assembler_advanced',
   ...['3', '5'].flatMap((n) => ['head', 'torso', 'legs', 'feet'].map((s) => `armor${n}_${s}`)),
 ]);
 

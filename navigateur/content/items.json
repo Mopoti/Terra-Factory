@@ -488,9 +488,8 @@
       "volumeL": 20,
       "color": "#5f7a5a",
       "recipe": {
-        "iron_plate": 3,
-        "iron_gear": 1,
-        "iron_rod": 8,
+        "chassis_simple": 2,
+        "iron_rod": 6,
         "stone": 12
       }
     },
@@ -539,11 +538,9 @@
       "volumeL": 15,
       "color": "#4a86a8",
       "recipe": {
-        "iron_plate": 3,
-        "iron_gear": 2,
-        "iron_rod": 4,
-        "copper_wire": 16,
-        "stone": 4
+        "chassis_simple": 2,
+        "motor": 1,
+        "kit_circuit": 2
       }
     },
     {
@@ -605,10 +602,9 @@
       "volumeL": 6,
       "color": "#4a7fb5",
       "recipe": {
+        "chassis_simple": 2,
         "iron_gear": 2,
-        "iron_plate": 2,
-        "iron_rod": 8,
-        "copper_wire": 12
+        "kit_circuit": 3
       }
     },
     {
@@ -645,10 +641,22 @@
       "volumeL": 30,
       "color": "#6d7f95",
       "recipe": {
-        "iron_plate": 6,
+        "chassis_simple": 3,
         "iron_gear": 4,
-        "iron_rod": 8,
-        "copper_wire": 24
+        "kit_circuit": 6
+      }
+    },
+    {
+      "id": "machine_assembler_advanced",
+      "stack": 10,
+      "category": "machining",
+      "weightKg": 22.5,
+      "volumeL": 45.0,
+      "color": "#5b7fa8",
+      "recipe": {
+        "chassis_steel": 3,
+        "motor": 2,
+        "circuit_advanced": 3
       }
     },
     {
@@ -926,9 +934,8 @@
       "volumeL": 8,
       "color": "#3f7fb5",
       "recipe": {
-        "iron_plate": 2,
-        "iron_rod": 8,
-        "copper_plate": 1,
+        "chassis_simple": 2,
+        "iron_rod": 4,
         "motor": 1
       }
     },
@@ -1046,10 +1053,9 @@
       "volumeL": 20,
       "color": "#6a7f95",
       "recipe": {
-        "iron_plate": 6,
+        "chassis_simple": 3,
         "iron_gear": 4,
-        "copper_wire": 6,
-        "copper_ingot": 4
+        "kit_circuit": 2
       }
     },
     {
@@ -1087,12 +1093,9 @@
       "volumeL": 80,
       "color": "#3a3f47",
       "recipe": {
-        "steel_plate": 5,
-        "steel_rod": 10,
-        "iron_gear": 4,
-        "iron_plate": 10,
-        "copper_wire": 6,
-        "motor": 1
+        "chassis_steel": 4,
+        "motor": 1,
+        "kit_circuit": 2
       }
     },
     {
@@ -1110,12 +1113,10 @@
       "volumeL": 120,
       "color": "#6a7a86",
       "recipe": {
-        "steel_plate": 8,
-        "steel_rod": 16,
-        "iron_gear": 6,
-        "copper_wire": 16,
+        "chassis_steel": 6,
         "concrete_block": 8,
-        "motor": 1
+        "motor": 1,
+        "kit_circuit": 4
       }
     },
     {
@@ -1126,11 +1127,9 @@
       "volumeL": 60,
       "color": "#4a5a6a",
       "recipe": {
-        "steel_plate": 4,
-        "steel_rod": 8,
-        "iron_gear": 2,
-        "copper_wire": 10,
-        "motor": 1
+        "chassis_steel": 4,
+        "motor": 1,
+        "kit_circuit": 3
       }
     },
     {
@@ -1221,12 +1220,10 @@
       "volumeL": 80,
       "color": "#6a7a70",
       "recipe": {
-        "steel_plate": 7,
-        "steel_rod": 14,
-        "iron_gear": 6,
-        "copper_wire": 14,
-        "concrete_block": 4,
-        "motor_heavy": 1
+        "chassis_steel": 6,
+        "motor_heavy": 1,
+        "kit_circuit": 4,
+        "concrete_block": 4
       }
     },
     {
@@ -1237,10 +1234,9 @@
       "volumeL": 600,
       "color": "#5a6a5f",
       "recipe": {
-        "steel_plate": 30,
+        "chassis_steel": 15,
         "concrete_block": 40,
-        "cable_insulated": 20,
-        "silicon_chip": 10,
+        "circuit_advanced": 10,
         "zamak_ingot": 20
       }
     },
@@ -1299,10 +1295,9 @@
       "volumeL": 4000,
       "color": "#7a8ad0",
       "recipe": {
-        "steel_plate": 200,
+        "chassis_steel": 100,
         "concrete_block": 200,
-        "cable_insulated": 100,
-        "silicon_chip": 50,
+        "microcontroller": 50,
         "zamak_ingot": 100
       }
     },
@@ -1354,11 +1349,9 @@
       "volumeL": 25,
       "color": "#a9b4bd",
       "recipe": {
-        "iron_plate": 4,
+        "chassis_simple": 4,
         "iron_gear": 4,
-        "iron_rod": 16,
-        "copper_plate": 4,
-        "copper_wire": 16
+        "kit_circuit": 4
       }
     },
     {
@@ -1425,10 +1418,9 @@
       "volumeL": 10,
       "color": "#6b5b45",
       "recipe": {
-        "iron_plate": 4,
+        "chassis_simple": 3,
         "iron_gear": 2,
-        "iron_rod": 8,
-        "copper_wire": 12
+        "kit_circuit": 3
       }
     },
     {
@@ -1439,10 +1431,7 @@
       "volumeL": 40,
       "color": "#c9a227",
       "recipe": {
-        "iron_plate": 4,
-        "iron_gear": 2,
-        "iron_rod": 8,
-        "copper_wire": 8,
+        "chassis_simple": 4,
         "wood": 6,
         "motor": 1
       }
@@ -1455,8 +1444,7 @@
       "volumeL": 30,
       "color": "#4f8f5a",
       "recipe": {
-        "iron_plate": 2,
-        "iron_rod": 12,
+        "chassis_simple": 4,
         "wood": 3,
         "motor": 1
       }
@@ -1481,10 +1469,7 @@
       "volumeL": 50,
       "color": "#c9ccd2",
       "recipe": {
-        "steel_plate": 12,
-        "steel_rod": 12,
-        "iron_plate": 8,
-        "iron_gear": 6,
+        "chassis_steel": 10,
         "motor_heavy": 2,
         "rubber": 8
       }
@@ -1497,10 +1482,7 @@
       "volumeL": 55,
       "color": "#6b7a4a",
       "recipe": {
-        "steel_plate": 16,
-        "steel_rod": 16,
-        "iron_plate": 6,
-        "iron_gear": 4,
+        "chassis_steel": 14,
         "motor_heavy": 2,
         "rubber": 4
       }
@@ -1526,9 +1508,7 @@
       "volumeL": 55,
       "color": "#c9572e",
       "recipe": {
-        "steel_plate": 12,
-        "steel_rod": 16,
-        "iron_plate": 8,
+        "chassis_steel": 10,
         "iron_gear": 10,
         "motor_heavy": 2
       }

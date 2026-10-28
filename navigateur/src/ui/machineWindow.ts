@@ -14,6 +14,7 @@ import { draftFor, programEditorView } from './programEditor';
 import { playSfx } from '../audio/sfx';
 import { ITEMS, itemById } from '../core/data/items';
 import {
+  assemblerMaxTypes,
   isAssembler,
   isChest,
   isDrill,
@@ -707,7 +708,12 @@ export function mountMachineWindow(
         );
     } else {
       for (const def of ITEMS) {
-        if (def.recipe && !def.creativeOnly && state.isUnlocked(def.id))
+        if (
+          def.recipe &&
+          !def.creativeOnly &&
+          state.isUnlocked(def.id) &&
+          Object.keys(def.recipe).length <= assemblerMaxTypes(m.type)
+        )
           select.append(new Option(itemName(def.id), def.id, false, def.id === m.recipe));
       }
     }

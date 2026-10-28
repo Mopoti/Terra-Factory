@@ -112,6 +112,12 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
     plateau: { kind: 'step', angle: Math.PI / 2, period: 3 },
     ventilateur: spin(14),
   },
+  assembler_advanced: {
+    bras1: { kind: 'swing', angle: 0.9, period: 1.5 },
+    bras2: { kind: 'swing', angle: 0.9, period: 1.5, offset: 0.5 },
+    plateau: { kind: 'step', angle: Math.PI / 2, period: 1.5 },
+    ventilateur: spin(20),
+  },
   builder: {
     portique: {
       kind: 'slide',

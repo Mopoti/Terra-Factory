@@ -30,6 +30,7 @@ export type MachineType =
   | 'arm_electric'
   | 'arm_filter'
   | 'assembler'
+  | 'assembler_advanced'
   | 'lab'
   | 'waypoint'
   | 'turret'
@@ -127,7 +128,7 @@ export const isDrill = (type: MachineType): boolean =>
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean =>
-  isDrill(type) || isSmith(type) || type === 'assembler' || type === 'fission_reactor';
+  isDrill(type) || isSmith(type) || isAssembler(type) || type === 'fission_reactor';
 
 /** Fourneau ou estampeuse : machine à combustible dont la recette (de `recipes.json`) se choisit dans la fenêtre. */
 export const isSmith = (type: MachineType): boolean =>
@@ -146,7 +147,12 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'washer';
 
 /** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
-export const isAssembler = (type: MachineType): boolean => type === 'assembler';
+export const isAssembler = (type: MachineType): boolean =>
+  type === 'assembler' || type === 'assembler_advanced';
+
+/** Types d'ingrédients au plus d'une recette qu'un assembleur sait fabriquer : 3 pour le simple, 4 pour l'avancé. */
+export const assemblerMaxTypes = (type: MachineType): number =>
+  type === 'assembler_advanced' ? 4 : 3;
 
 /** Séparateur (1 entrée, 3 sorties) ou groupeur (3 entrées, 1 sortie) : aiguille les objets d'un tapis à l'autre. */
 export const isRouter = (type: MachineType): boolean =>

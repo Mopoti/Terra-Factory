@@ -1437,6 +1437,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   arm_filter: 0.7,
   sorter: 0.4,
   assembler: 1.0,
+  assembler_advanced: 1.0,
   lab: 0.9,
   pipe: 0.3,
   pump: 0.8,

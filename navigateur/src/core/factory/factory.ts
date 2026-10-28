@@ -407,6 +407,7 @@ export function ports(
     case 'arm_electric':
     case 'arm_filter':
     case 'assembler':
+    case 'assembler_advanced':
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
     case 'turret':
@@ -650,6 +651,7 @@ const MACHINE_TYPES: MachineType[] = [
   'arm',
   'arm_electric',
   'assembler',
+  'assembler_advanced',
   'lab',
   'waypoint',
   'turret',

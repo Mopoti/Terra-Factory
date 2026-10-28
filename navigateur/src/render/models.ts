@@ -83,6 +83,7 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
   mixer: 'piston-round',
   generator: 'machine-fortified',
   assembler: 'machine-window-bar',
+  assembler_advanced: 'machine-window-bar',
   builder: 'machine-bed',
   lab: 'machine',
   heavy_press: 'piston-square',
@@ -120,6 +121,8 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   sorter: 'trieur',
   stamper: 'estampeuse_t1',
   assembler: 'assembleur_t2',
+  // Provisoire : l'assembleur avancé garde le modèle de l'assembleur en attendant le sien (Blender).
+  assembler_advanced: 'assembleur_t2',
   crusher: 'concasseur_t1',
   bessemer: 'convertisseur_t2',
   mixer: 'betonniere_t2',
