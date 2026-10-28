@@ -1,0 +1,264 @@
+{
+ "key": "discussions",
+ "title": "Discussions en cours",
+ "intro": "Pour chaque ligne : D'accord (on fait comme ma recommandation), Pas d'accord, ou À discuter, avec un commentaire libre. Une ligne sans recommandation attend ta décision : réponds en commentaire.",
+ "cols": [
+  "Sujet",
+  "Mes remarques",
+  "Ma recommandation",
+  "Ta réponse"
+ ],
+ "btns": [
+  "D'accord",
+  "Pas d'accord",
+  "À discuter"
+ ],
+ "tabs": [
+  {
+   "id": "s1",
+   "label": "1. Cohérence de l'arbre des découvertes"
+  },
+  {
+   "id": "s2",
+   "label": "2. Objets ajoutés au tour 259 (écarts provisoires)"
+  },
+  {
+   "id": "s3",
+   "label": "3. Énergie (chantier non commencé)"
+  },
+  {
+   "id": "s4",
+   "label": "4. Paquets de science et laboratoire"
+  },
+  {
+   "id": "s5",
+   "label": "5. Écran des découvertes en jeu"
+  },
+  {
+   "id": "s6",
+   "label": "6. Projet et documents"
+  },
+  {
+   "id": "s7",
+   "label": "7. Design à demander à la session Blender"
+  }
+ ],
+ "rows": [
+  {
+   "id": "1.1",
+   "tab": "s1",
+   "name": "Lingot d'aluminium après la presse à plastique",
+   "tag": "1.1",
+   "recipe": "Le lingot d'aluminium (T3) a pour prérequis la presse à plastique, parce que c'est la machine de sa recette actuelle. Pas logique : l'aluminium se fond au four électrique.",
+   "role": "garder la recette au four électrique et retirer la presse à plastique des prérequis (le plastique reste nécessaire pour l'isolant)."
+  },
+  {
+   "id": "1.2",
+   "tab": "s1",
+   "name": "« Laboratoire » partout en T1",
+   "tag": "1.2",
+   "recipe": "Presque toutes les découvertes T1 listent le laboratoire comme prérequis direct, alors que la recette du paquet T1 l'implique déjà.",
+   "role": "le retirer des liens explicites, il reste dans la chaîne."
+  },
+  {
+   "id": "1.3",
+   "tab": "s1",
+   "name": "Chaîne du pétrole trop longue",
+   "tag": "1.3",
+   "recipe": "Tuyau de laiton → Surpresseur → Remplisseuse de barils → Chevalet de pompage → Raffinerie. Cinq étapes avant le plastique.",
+   "role": "sortir la remplisseuse de la chaîne (elle sert aux barils, pas au pompage)."
+  },
+  {
+   "id": "1.4",
+   "tab": "s1",
+   "name": "Convertisseur Bessemer très haut",
+   "tag": "1.4",
+   "recipe": "L'acier passe avant presque tout dans l'arbre du coffre quantique (T2 en tête). Voulu ?",
+   "role": "oui, l'acier est la base des châssis renforcés ; rien à changer."
+  },
+  {
+   "id": "1.5",
+   "tab": "s1",
+   "name": "Armures 3 et 5 sans carapace",
+   "tag": "1.5",
+   "recipe": "Les armures 1, 2 et 4 demandent des carapaces (butin des ennemis) ; les armures 3 et 5 que tu as validées n'en demandent pas (aluminium, tissu, isolant ; fibre de carbone, aluminium, microcontrôleur). Les paquets de combat les paient déjà.",
+   "role": "laisser comme validé."
+  },
+  {
+   "id": "1.6",
+   "tab": "s1",
+   "name": "Recettes à plus de 3 ou 4 types",
+   "tag": "1.6",
+   "recipe": "Règle validée (3 types, 4 pour les recettes avancées). Laboratoire et accumulateur sont refaits. Il reste une dizaine de recettes à revoir avec les intermédiaires (liste dans la page réponse).",
+   "role": "—"
+  },
+  {
+   "id": "2.1",
+   "tab": "s2",
+   "name": "Sel de lithium, deutérium, tritium, azote liquide",
+   "tag": "2.1",
+   "recipe": "Ils sortent de la centrifugeuse faute de comportement pour la tour d'évaporation et le compresseur d'air.",
+   "role": "coder la tour (sel de lithium) et le compresseur (azote) avec le réseau électrique, et garder la centrifugeuse pour le deutérium et le tritium."
+  },
+  {
+   "id": "2.2",
+   "tab": "s2",
+   "name": "Exosquelette",
+   "tag": "2.2",
+   "recipe": "Il se porte à l'emplacement du pantalon et donne +40 kg de sac, rien d'autre. Faut-il aussi un bonus de vitesse de marche ?",
+   "role": "—"
+  },
+  {
+   "id": "2.3",
+   "tab": "s2",
+   "name": "Propulseur dorsal",
+   "tag": "2.3",
+   "recipe": "Pas ajouté : il prendrait l'emplacement du sac à dos et le vol n'est pas codé. Options : (a) un emplacement dédié, (b) l'intégrer au sac à dos T4, (c) abandonner.",
+   "role": "(a) avec vol plané limité par une batterie."
+  },
+  {
+   "id": "2.4",
+   "tab": "s2",
+   "name": "Clôture et barrières",
+   "tag": "2.4",
+   "recipe": "Pièces basses (1 m) : passables en sautant ? Ferment-elles une pièce pour le calcul d'intérieur ? Bloquent-elles les ennemis ?",
+   "role": "non passables, ne ferment pas une pièce, bloquent les ennemis."
+  },
+  {
+   "id": "2.5",
+   "tab": "s2",
+   "name": "Quad électrique, locomotive électrique, wagon plateforme",
+   "tag": "2.5",
+   "recipe": "Rien de codé. La locomotive demande la borne de recharge et la charge progressive que tu as validées.",
+   "role": "les faire après le réseau électrique."
+  },
+  {
+   "id": "2.6",
+   "tab": "s2",
+   "name": "Formes provisoires",
+   "tag": "2.6",
+   "recipe": "Les 33 nouveaux objets utilisent des formes voisines (tige, verre, puce…) ; les quatre châssis ont la forme du moteur. La liste des modèles à demander à la session Blender est dans `docs/objets-sans-design.md`.",
+   "role": "—"
+  },
+  {
+   "id": "3.1",
+   "tab": "s3",
+   "name": "Par où commencer",
+   "tag": "3.1",
+   "recipe": "Validé : trois poteaux (bois 3 prises / 8 m, haute tension 4 / 20 m, très haute tension 5 / 40 m), chaque machine consomme une prise, réseaux mixtes, transformateur, compteur au clic, disjoncteur, lampadaire, quad électrique.",
+   "role": "lot 1 = prises sur le poteau bois + compteur au clic ; lot 2 = poteaux HT/THT + transformateur ; lot 3 = éolienne, solaire, accumulateurs."
+  },
+  {
+   "id": "3.2",
+   "tab": "s3",
+   "name": "Compatibilité des sauvegardes",
+   "tag": "3.2",
+   "recipe": "Les poteaux existants ont un nombre de prises libre aujourd'hui. Passer à 3 prises peut casser des usines posées.",
+   "role": "appliquer la limite seulement aux poteaux posés après la mise à jour."
+  },
+  {
+   "id": "4.1",
+   "tab": "s4",
+   "name": "Machine de fabrication des paquets",
+   "tag": "4.1",
+   "recipe": "Constructeur ou assembleur ? Quels paquets se font à la main ? Sans réponse j'ai gardé : T1 à la main, les autres à la machine.",
+   "role": "—"
+  },
+  {
+   "id": "4.2",
+   "tab": "s4",
+   "name": "Recette du paquet T1",
+   "tag": "4.2",
+   "recipe": "« On va en reparler » : recette provisoire 2 fibres + 1 pierre + 1 bois.",
+   "role": "—"
+  },
+  {
+   "id": "4.3",
+   "tab": "s4",
+   "name": "Visuel des paquets",
+   "tag": "4.3",
+   "recipe": "Les six paquets ont la même forme, seule la couleur change. Un symbole par palier serait plus lisible.",
+   "role": "—"
+  },
+  {
+   "id": "5.1",
+   "tab": "s5",
+   "name": "Vue d'ensemble",
+   "tag": "5.1",
+   "recipe": "L'arbre entier tient à l'écran mais reste illisible de loin (135 cases).",
+   "role": "zoom automatique sur la découverte choisie et ses prérequis, bouton « tout voir » pour l'ensemble."
+  },
+  {
+   "id": "5.2",
+   "tab": "s5",
+   "name": "Téléphone",
+   "tag": "5.2",
+   "recipe": "Mise en page à une colonne seulement ébauchée.",
+   "role": "—"
+  },
+  {
+   "id": "5.3",
+   "tab": "s5",
+   "name": "Liste",
+   "tag": "5.3",
+   "recipe": "Pas de tri ni de filtre par palier ; en rouge je ne montre que les découvertes qui ont déjà un prérequis connu. Trop restrictif ?",
+   "role": "—"
+  },
+  {
+   "id": "5.4",
+   "tab": "s5",
+   "name": "Étapes déjà faites dans la fenêtre des prérequis",
+   "tag": "5.4",
+   "recipe": "Dans le jeu, la fenêtre « chemin complet » devrait griser les étapes faites (en attendant, simulation par palier dans la page de test).",
+   "role": "l'ajouter à l'écran en jeu au prochain lot."
+  },
+  {
+   "id": "6.1",
+   "tab": "s6",
+   "name": "GDD",
+   "tag": "6.1",
+   "recipe": "Seul fichier commun aux deux versions. Proposition : décrire les règles seulement (sans technique), une section à la fois, validée avec toi avant la suivante. Par laquelle commencer ?",
+   "role": "—"
+  },
+  {
+   "id": "6.2",
+   "tab": "s6",
+   "name": "Unreal",
+   "tag": "6.2",
+   "recipe": "Dossier `unreal/` avec le README seulement. Quel est l'objectif de l'essai (rendu, mécanique d'usine, performances) ? Je propose de commencer par une scène avec le personnage et une machine.",
+   "role": "—"
+  },
+  {
+   "id": "6.3",
+   "tab": "s6",
+   "name": "Rails : grands virages",
+   "tag": "6.3",
+   "recipe": "Les virages grand et géant sont retirés du tracé automatique (essai). À remettre ou à supprimer ?",
+   "role": "—"
+  },
+  {
+   "id": "6.4",
+   "tab": "s6",
+   "name": "Bug « D ne prend pas la branche marron »",
+   "tag": "6.4",
+   "recipe": "Impossible à reproduire sans fichier. Il me faut le rapport (bouton de rapport, 60 s d'actions).",
+   "role": "—"
+  },
+  {
+   "id": "7.1",
+   "tab": "s7",
+   "name": "Ordre des modèles",
+   "tag": "7.1",
+   "recipe": "",
+   "role": "(1) modèles portés de l'équipement (aujourd'hui des boîtes), (2) visuels des paquets par palier et des moules, (3) poteaux, transformateur, panneau solaire, éolienne, (4) le reste des 59 objets prévus."
+  },
+  {
+   "id": "7.2",
+   "tab": "s7",
+   "name": "Veste",
+   "tag": "7.2",
+   "recipe": "Seul objet du jeu sans icône ni modèle.",
+   "role": "—"
+  }
+ ]
+}

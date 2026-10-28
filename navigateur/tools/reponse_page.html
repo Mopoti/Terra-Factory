@@ -27,7 +27,7 @@ td.name{width:22%;font-weight:600} td.rec{width:27%} td.role{width:23%;color:var
 .note{width:100%;min-height:34px;margin-top:6px;resize:vertical}
 tr.done td.name::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px}
 #out{width:100%;min-height:140px;font:400 12px var(--mono)}
-@media (max-width:760px){table,tbody,tr,td{display:block;width:auto!important} thead{display:none} tr{border:1px solid var(--rule);border-radius:8px;margin-bottom:10px;padding:6px} td{border:none;padding:4px 8px} td.rec::before{content:"Recette : ";color:var(--mut);font-weight:600} td.role::before{content:"Pourquoi : ";font-weight:600}}
+@media (max-width:760px){table,tbody,tr,td{display:block;width:auto!important} thead{display:none} tr{border:1px solid var(--rule);border-radius:8px;margin-bottom:10px;padding:6px} td{border:none;padding:4px 8px} td.rec::before{content:attr(data-l) " : ";color:var(--mut);font-weight:600} td.role::before{content:attr(data-l) " : ";font-weight:600}}
 </style>
 <main>
 <h1 id="ttl"></h1>
@@ -37,7 +37,7 @@ tr.done td.name::before{content:"";display:inline-block;width:8px;height:8px;bor
 <select id="flt" aria-label="Filtrer"><option value="all">Toutes les lignes</option><option value="todo">Sans réponse</option><option value="yes">Oui</option><option value="no">Non</option><option value="mod">À modifier</option></select>
 <button id="undo">Annuler le dernier changement</button><button id="reset" class="danger">Tout réinitialiser</button><button id="copy">Copier mes réponses</button></div>
 <textarea id="out" hidden readonly aria-label="Texte à copier"></textarea>
-<table><thead><tr><th>Proposition</th><th>Recette ou principe</th><th>Pourquoi</th><th>Votre réponse</th></tr></thead><tbody id="rows"></tbody></table>
+<table><thead><tr id="thr"></tr></thead><tbody id="rows"></tbody></table>
 </main>
 <script>
 const DATA=@DATA@;
@@ -46,8 +46,11 @@ let ans={},hist=[],tab=DATA.tabs[0].id,filter='all';
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')ans=s}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ans))}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const LAB={yes:'Oui',no:'Non',mod:'À modifier'};
+const COLS=DATA.cols||['Proposition','Recette ou principe','Pourquoi','Votre réponse'];
+const LAB=DATA.btns?{yes:DATA.btns[0],no:DATA.btns[1],mod:DATA.btns[2]}:{yes:'Oui',no:'Non',mod:'À modifier'};
 const $=id=>document.getElementById(id);
+$('thr').innerHTML=COLS.map(c=>`<th>${esc(c)}</th>`).join('');
+$('flt').innerHTML=`<option value="all">Toutes les lignes</option><option value="todo">Sans réponse</option><option value="yes">${LAB.yes}</option><option value="no">${LAB.no}</option><option value="mod">${LAB.mod}</option>`;
 $('ttl').textContent=DATA.title;$('intro').textContent=DATA.intro;
 function snapshot(){hist.push(JSON.stringify(ans));if(hist.length>60)hist.shift()}
 function counts(){const all=DATA.rows.length,done=DATA.rows.filter(r=>ans[r.id]&&ans[r.id].v).length;return{all,done}}
@@ -55,7 +58,7 @@ function render(){
  $('tabs').innerHTML=DATA.tabs.map(t=>{const rs=DATA.rows.filter(r=>r.tab===t.id),d=rs.filter(r=>ans[r.id]&&ans[r.id].v).length;return`<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${t.id===tab}">${esc(t.label)}<span class="n">${d}/${rs.length}</span></button>`}).join('');
  const rows=DATA.rows.filter(r=>r.tab===tab).filter(r=>{const a=ans[r.id]||{};return filter==='all'||(filter==='todo'?!a.v:a.v===filter)});
  $('rows').innerHTML=rows.map(r=>{const a=ans[r.id]||{};
-  return`<tr data-id="${r.id}" class="${a.v?'done':''}"><td class="name">${esc(r.name)}<br><span class="chip ${r.effort==='mécanique'?'meca':''}">${r.effort==='mécanique'?'Mécanique':'Objet'}</span></td><td class="rec">${esc(r.recipe)}</td><td class="role">${esc(r.role)}</td>
+  return`<tr data-id="${r.id}" class="${a.v?'done':''}"><td class="name">${esc(r.name)}${(r.tag||r.effort)?`<br><span class="chip ${r.effort==='mécanique'?'meca':''}">${esc(r.tag||(r.effort==='mécanique'?'Mécanique':'Objet'))}</span>`:''}</td><td class="rec" data-l="${esc(COLS[1])}">${esc(r.recipe)}</td><td class="role" data-l="${esc(COLS[2])}">${esc(r.role)}</td>
   <td class="ans"><div class="btns">${['yes','no','mod'].map(v=>`<button class="${v}" data-v="${v}" aria-pressed="${a.v===v}">${LAB[v]}</button>`).join('')}</div><textarea class="note" placeholder="Commentaire (facultatif)" aria-label="Commentaire">${esc(a.c||'')}</textarea></td></tr>`}).join('')||'<tr><td colspan="4">Aucune ligne pour ce filtre.</td></tr>';
  const c=counts();$('cnt').textContent=`${c.done} réponse${c.done>1?'s':''} sur ${c.all}`;$('undo').disabled=!hist.length}
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b){tab=b.dataset.tab;render()}});
