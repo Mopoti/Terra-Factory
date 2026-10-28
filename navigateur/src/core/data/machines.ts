@@ -80,6 +80,8 @@ export interface MachineDef {
   /** Poteau : portée du fil vers un autre poteau (m) et vers une machine (m, bord de la machine). */
   wireReachM?: number;
   linkReachM?: number;
+  /** Poteau : nombre de prises (une machine électrique en prend une). */
+  sockets?: number;
   /** Pollution émise (points par seconde) quand la machine travaille. */
   pollution?: number;
   /** Fumées (air : se répandent, les arbres les absorbent) ou pollution du sol (reste sur place). */
@@ -220,7 +222,6 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'conveyor' ||
     type === 'splitter' ||
     type === 'merger' ||
-    type === 'pole' ||
     type === 'pipe' ||
     type === 'pump' ||
     type === 'pumpjack' ||

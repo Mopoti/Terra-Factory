@@ -146,6 +146,8 @@ export function mountMachineWindow(
     counts: Map<SlotName, HTMLElement>;
     chest: HTMLElement[];
     ingredients: Map<string, HTMLElement>;
+    /** Compteur d'un poteau : se redessine à chaque mise à jour douce. */
+    meter?: () => void;
   } = { counts: new Map(), chest: [], ingredients: new Map() };
   /** Ce qui, s'il change, oblige à redessiner la fenêtre (sac, présence d'objets dans les cases). */
   let lastShape = '';
@@ -464,6 +466,61 @@ export function mountMachineWindow(
   }
 
   /** Balise : un nom (« Balise » par défaut) et une couleur, vus de loin et sur la carte. */
+  /**
+   * Compteur d'un poteau : prises utilisées, production et demande du réseau, puis chaque machine raccordée avec sa
+   * puissance nominale (− consommée, + produite) et son état. Se met à jour en continu.
+   */
+  function poleMeter(m: Machine): HTMLElement {
+    const box = el('div', 'pole-meter');
+    const fill = (): void => {
+      const sockets = factory.sockets(m);
+      const g = factory.gridInfo(m);
+      const kids: HTMLElement[] = [
+        el(
+          'div',
+          'mach-info',
+          t('meter.sockets', { used: String(sockets.used), max: String(sockets.max) }),
+        ),
+      ];
+      if (!g) kids.push(el('div', 'mach-info warn', t('factory.power.unlinked')));
+      else {
+        if (g.blackout) kids.push(el('div', 'mach-info warn', t('factory.power.blackout')));
+        else if (g.overloadS > 0)
+          kids.push(
+            el(
+              'div',
+              'mach-info warn',
+              t('factory.power.overload', { s: String(Math.round(g.overloadS)) }),
+            ),
+          );
+        kids.push(
+          el(
+            'div',
+            'mach-info',
+            t('meter.power', {
+              cap: String(Math.round(g.capacityKw)),
+              demand: String(Math.round(g.demandKw)),
+              pct: String(Math.round(g.satisfaction * 100)),
+            }),
+          ),
+        );
+        const members = factory.gridMembers(m);
+        if (members.length === 0) kids.push(el('div', 'mach-info', t('meter.empty')));
+        for (const { machine, kw } of members) {
+          const name = itemName(machineDef(machine.type).item);
+          const status = t(`factory.status.${factory.status(machine)}` as TranslationKey);
+          kids.push(
+            el('div', 'mach-info', `${name} · ${kw > 0 ? '+' : '−'}${Math.abs(kw)} kW · ${status}`),
+          );
+        }
+      }
+      box.replaceChildren(...kids);
+    };
+    fill();
+    live.meter = fill;
+    return box;
+  }
+
   function waypointRows(m: Machine): HTMLElement[] {
     const tint = m.tint ?? WAYPOINT_COLORS[0];
     const apply = (label: string, color: string): void => {
@@ -893,6 +950,7 @@ export function mountMachineWindow(
       live.status.textContent = t(`factory.status.${status}` as TranslationKey);
     }
     setCycleBar(live.cycle, factory.cycleFraction(m));
+    live.meter?.();
     if (live.fuel) live.fuel.textContent = fuelText(m);
     setCycleBar(live.fuelBar, fuelFill01(m));
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
@@ -1019,6 +1077,7 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
+    if (m.type === 'pole') rows.append(poleMeter(m));
     if (m.type === 'waypoint') rows.append(...waypointRows(m));
     if (isCargoWindow(m.id)) rows.append(...cargoRows(m));
     if (

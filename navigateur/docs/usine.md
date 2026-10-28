@@ -41,6 +41,7 @@ Première couche de l'automatisation (voir `docs/architecture.md`). Données dan
 ## Tour 37 — électricité
 
 - Générateur (300 kW, brûle du combustible proportionnellement à la charge), poteau (fil 8 m entre poteaux, raccord machine à 4 m), foreuse électrique (90 kW, 1,5 minerai/s, ralentit si le réseau est insuffisant).
+- **Prises (tour 269, énergie lot 1)** : un poteau (bois) a **3 prises** ; chaque machine électrique (consommatrice ou génératrice) en prend une sur le poteau le plus proche à portée qui en a encore (les plus anciennes machines gardent leur prise). Une machine à portée de poteaux tous pleins n'est pas raccordée : survol « Aucune prise libre sur les poteaux à portée ». Les poteaux se relient entre eux (fil de 8 m) et partagent le réseau, donc plus de poteaux = plus de prises. **Compteur** : un clic sur un poteau ouvre sa fenêtre : prises utilisées, production, demande et part satisfaite du réseau, blackout / surcharge, et chaque machine raccordée (puissance nominale − consommée / + produite, état). À venir : poteaux haute et très haute tension, transformateur, éolienne, solaire, accumulateurs (voir la discussion énergie).
 - Satisfaction du réseau = capacité / demande. Le panneau affiche consommation, production, charge, état du raccordement.
 - Vérifié : tests unitaires (réseaux, générateur, foreuse), lint, tsc, build. Non vérifié à l'œil en navigateur.
 

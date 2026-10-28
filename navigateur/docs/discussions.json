@@ -1,5 +1,5 @@
 {
- "key": "discussions7",
+ "key": "discussions8",
  "title": "Discussions : suite (4)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
  "cols": [
@@ -15,6 +15,10 @@
  ],
  "tabs": [
   {
+   "id": "n",
+   "label": "Énergie lot 1"
+  },
+  {
    "id": "a",
    "label": "À essayer ou vérifier"
   },
@@ -24,6 +28,38 @@
   }
  ],
  "rows": [
+  {
+   "id": "n1",
+   "tab": "n",
+   "name": "Poteau à 3 prises",
+   "tag": "n1",
+   "recipe": "Fait : un poteau bois a 3 prises, chaque machine électrique (consommatrice ou génératrice) en prend une sur le poteau le plus proche qui en a encore ; les plus anciennes machines gardent leur prise. Les poteaux reliés entre eux (8 m) partagent le réseau. Une machine qui n'a plus de prise libre le dit au survol.",
+   "role": "Un générateur compte-t-il bien pour une prise ? (un petit réseau « générateur + 2 machines » tient donc sur un seul poteau)"
+  },
+  {
+   "id": "n2",
+   "tab": "n",
+   "name": "Compteur au clic",
+   "tag": "n2",
+   "recipe": "Fait : un clic sur un poteau ouvre une fenêtre : prises utilisées, production, demande, part satisfaite, blackout ou surcharge, et la liste des machines raccordées avec leur puissance et leur état, mise à jour en direct.",
+   "role": "Que veux-tu y voir en plus (historique de consommation, courbe, coupure d'une machine) ?"
+  },
+  {
+   "id": "n3",
+   "tab": "n",
+   "name": "Pas de limite de puissance par poteau",
+   "tag": "n3",
+   "recipe": "Pour l'instant un poteau ne limite que le nombre de prises, pas la puissance qui passe. Le lot 2 apporte les poteaux haute et très haute tension (4 et 5 prises, portée 20 et 40 m) et le transformateur.",
+   "role": "Je fais le lot 2 ensuite ?"
+  },
+  {
+   "id": "n4",
+   "tab": "n",
+   "name": "Démo = V1 complète : pas d'accord",
+   "tag": "n4",
+   "recipe": "Noté : je ne prépare pas la liste d'équilibrage pour l'instant.",
+   "role": "Dis-moi quand tu veux en parler, et ce que tu mets derrière « démo »."
+  },
   {
    "id": "a1",
    "tab": "a",

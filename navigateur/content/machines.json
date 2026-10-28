@@ -162,7 +162,8 @@
       "height": 3.5,
       "fuel": false,
       "wireReachM": 8,
-      "linkReachM": 4
+      "linkReachM": 4,
+      "sockets": 3
     },
     {
       "id": "drill_electric",

@@ -1570,7 +1570,7 @@ export function startGameView(
         `<div><b>${t('mp.kw', { n: String(r.consumeKw) })}</b> ${
           g
             ? t('mp.grid', { pct: String(Math.round(g.satisfaction * 100)) })
-            : `<span class="warn">${t('mp.noGrid')}</span>`
+            : `<span class="warn">${t(factory.lacksSocket(m) ? 'factory.power.noSocket' : 'mp.noGrid')}</span>`
         }</div>`,
       );
     }
@@ -1789,6 +1789,9 @@ export function startGameView(
         rows.push(
           `<div class="warn">${t('factory.power.overload', { s: String(Math.round(g.overloadS)) })}</div>`,
         );
+      rows.push(
+        `<div>${t('meter.sockets', { used: String(factory.sockets(m).used), max: String(factory.sockets(m).max) })}</div>`,
+      );
       rows.push(
         g && g.machines > 0
           ? `<div>${t('factory.power.pole', { n: String(g.machines), cap: String(Math.round(g.capacityKw)), demand: String(Math.round(g.demandKw)) })}</div>`

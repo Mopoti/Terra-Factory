@@ -865,22 +865,25 @@ export class Factory {
       }
     }
     const members = new Map<number, number>();
-    for (const m of this.machines) {
+    const sockets = machineDef('pole').sockets ?? 3;
+    this.socketsUsed.clear();
+    this.noSocket.clear();
+    // Les machines les plus anciennes gardent leur prise : chacune prend une prise du poteau le plus proche qui en a encore.
+    for (const m of [...this.machines].sort((a, b) => a.id - b.id)) {
       const def = machineDef(m.type);
       if (m.type === 'pole' || (!def.consumesKw && !def.producesKw)) continue;
       const c = centerOf(m);
       const reach = link + (Math.max(...Object.values(dims(m.type, m.rot))) * CELL_SIZE_M) / 2;
-      let best: Machine | null = null;
-      let bestD = Infinity;
-      for (const p of poles) {
-        const pc = centerOf(p);
-        const dist = Math.hypot(pc.x - c.x, pc.z - c.z);
-        if (dist <= reach && dist < bestD) {
-          best = p;
-          bestD = dist;
-        }
+      const near = poles
+        .map((p) => ({ p, d: Math.hypot(centerOf(p).x - c.x, centerOf(p).z - c.z) }))
+        .filter((x) => x.d <= reach)
+        .sort((a, b) => a.d - b.d);
+      const best = near.find((x) => (this.socketsUsed.get(x.p.id) ?? 0) < sockets)?.p ?? null;
+      if (!best) {
+        if (near.length > 0) this.noSocket.add(m.id);
+        continue;
       }
-      if (!best) continue;
+      this.socketsUsed.set(best.id, (this.socketsUsed.get(best.id) ?? 0) + 1);
       const grid = find(best.id);
       this.gridOf.set(m.id, grid);
       this.wires.push({ from: best, to: m });
@@ -901,6 +904,34 @@ export class Factory {
         },
       ]),
     );
+  }
+
+  /** Prises prises par poteau (identifiant du poteau → nombre de machines qui y sont raccordées). */
+  private readonly socketsUsed = new Map<number, number>();
+  /** Machines à portée d'un poteau, mais dont tous les poteaux à portée n'ont plus de prise libre. */
+  private readonly noSocket = new Set<number>();
+
+  /** Prises d'un poteau : utilisées et totales. */
+  sockets(pole: Machine): { used: number; max: number } {
+    return { used: this.socketsUsed.get(pole.id) ?? 0, max: machineDef('pole').sockets ?? 3 };
+  }
+
+  /** Cette machine est-elle privée de courant faute de prise libre (et non faute de poteau) ? */
+  lacksSocket(m: Machine): boolean {
+    return this.noSocket.has(m.id);
+  }
+
+  /** Machines raccordées au réseau de ce poteau, avec leur puissance nominale (kW : − consommée, + produite). */
+  gridMembers(pole: Machine): { machine: Machine; kw: number }[] {
+    const id = this.gridOf.get(pole.id);
+    if (id === undefined) return [];
+    return this.machines
+      .filter((m) => m.type !== 'pole' && this.gridOf.get(m.id) === id)
+      .map((m) => {
+        const def = machineDef(m.type);
+        return { machine: m, kw: (def.producesKw ?? 0) - (def.consumesKw ?? 0) };
+      })
+      .sort((a, b) => a.machine.id - b.machine.id);
   }
 
   /** Le réseau de cette machine (ou null si elle n'est reliée à aucun poteau). */

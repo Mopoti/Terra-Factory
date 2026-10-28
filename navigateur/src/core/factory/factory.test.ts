@@ -252,6 +252,26 @@ describe('électricité', () => {
       new Factory([far, emptyMachine(8, 'pole', 0, 0, 0)], makeWorld().world).gridInfo(far),
     ).toBeNull();
   });
+  it('un poteau a 3 prises : la quatrième machine n’est pas raccordée, un second poteau la reprend', () => {
+    const { world } = makeWorld(50);
+    const pole = emptyMachine(1, 'pole', 6, 6, 0);
+    const drills = [2, 3, 4, 5].map((id, k) =>
+      emptyMachine(id, 'drill_electric', 4 + 4 * (k % 2), 2 + 4 * Math.floor(k / 2), 0),
+    );
+    const f = new Factory([pole, ...drills], world);
+    expect(f.sockets(pole)).toEqual({ used: 3, max: 3 });
+    // Les plus anciennes gardent leur prise ; la dernière n'a plus de prise libre.
+    expect(drills.slice(0, 3).every((d) => f.gridInfo(d) !== null)).toBe(true);
+    expect(f.gridInfo(drills[3])).toBeNull();
+    expect(f.lacksSocket(drills[3])).toBe(true);
+    expect(f.gridMembers(pole).map((x) => x.machine.id)).toEqual([2, 3, 4]);
+    // Un second poteau à portée donne une prise de plus.
+    const second = emptyMachine(9, 'pole', 8, 8, 0);
+    const g = new Factory([pole, second, ...drills], world);
+    expect(drills.every((d) => g.gridInfo(d) !== null)).toBe(true);
+    expect(g.lacksSocket(drills[3])).toBe(false);
+  });
+
   it('le générateur alimente la foreuse électrique, qui mine plus vite', () => {
     const { f, gen, drill } = setup();
     run(f, 4);
@@ -290,7 +310,8 @@ describe('électricité', () => {
       emptyMachine(5, 'drill_electric', 3, 3, 0),
       emptyMachine(6, 'drill_electric', 0, -3, 0),
     ];
-    const f = new Factory([gen, pole, ...drills], rich);
+    const spare = emptyMachine(20, 'pole', 6, 1, 0); // 3 prises par poteau : le générateur et 4 foreuses en demandent 5
+    const f = new Factory([gen, pole, spare, ...drills], rich);
     run(f, 1.9); // avant le délai de blackout (surcharge de plus de 10 % : 2 s)
     const g = f.gridInfo(drills[0])!;
     expect(g.demandKw).toBe(360);
@@ -316,7 +337,8 @@ describe('électricité', () => {
       emptyMachine(5, 'drill_electric', 3, 3, 0),
       emptyMachine(6, 'drill_electric', 0, -3, 0),
     ];
-    const f = new Factory([gen, pole, crank, ...drills], rich);
+    const spare = emptyMachine(20, 'pole', 6, 1, 0);
+    const f = new Factory([gen, pole, spare, crank, ...drills], rich);
     run(f, 3);
     const g = f.gridInfo(drills[0])!;
     expect(g.blackout).toBe(true);
@@ -1837,7 +1859,8 @@ describe('raffinerie et plastique (7c)', () => {
       const r = emptyMachine(2, 'refinery', 9, z, 1);
       const gen = emptyMachine(90, 'generator', 15, 3, 0);
       gen.fuel = { item: 'coal', count: 20 };
-      list.push(r, gen, emptyMachine(91, 'pole', 13, 5, 0));
+      // 3 prises par poteau : poteaux de réserve au même endroit
+      list.push(r, gen, emptyMachine(91, 'pole', 13, 5, 0), emptyMachine(93, 'pole', 13, 5, 0));
       return { f: new Factory(list, world), r };
     };
     const weak = build(1);
@@ -1950,7 +1973,14 @@ describe('fission (11a)', () => {
     r.input = { item: 'uranium_rod', count: 3 };
     const gen = emptyMachine(90, 'generator', 16, 0, 0);
     gen.fuel = { item: 'coal', count: 20 };
-    list.push(r, gen, emptyMachine(91, 'pole', 13, 4, 0), emptyMachine(92, 'pole', 13, 12, 0));
+    list.push(
+      r,
+      gen,
+      emptyMachine(91, 'pole', 13, 4, 0),
+      emptyMachine(92, 'pole', 13, 12, 0),
+      emptyMachine(93, 'pole', 13, 4, 0),
+      emptyMachine(94, 'pole', 13, 12, 0),
+    );
     return { f: new Factory(list, water()), r };
   };
 
@@ -2055,7 +2085,15 @@ describe('fusion (11c)', () => {
       { item: 'nuclear_waste', count: fuel },
       { item: 'contaminated_glass', count: fuel },
     );
-    list.push(r, emptyMachine(91, 'pole', 27, 21, 0), emptyMachine(92, 'pole', 17, 18, 0));
+    list.push(
+      r,
+      emptyMachine(91, 'pole', 27, 21, 0),
+      emptyMachine(92, 'pole', 17, 18, 0),
+      emptyMachine(93, 'pole', 27, 21, 0),
+      emptyMachine(94, 'pole', 17, 18, 0),
+      emptyMachine(95, 'pole', 27, 21, 0),
+      emptyMachine(96, 'pole', 17, 18, 0),
+    );
     return { f: new Factory(list, makeWorld().world), r, acc };
   };
 
