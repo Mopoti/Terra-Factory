@@ -130,7 +130,7 @@ describe('patron de voie : une pièce par clic', () => {
     // Curseur de côté, plus loin : un virage de 45°, du côté visé.
     const e2 = portsOf(state.changes.rails[1])[1];
     const left = { x: e2.dz, z: -e2.dx };
-    click(e2.x + e2.dx * 8 + left.x * 4, e2.z + e2.dz * 8 + left.z * 4);
+    click(e2.x + e2.dx * 1 + left.x * 2.2, e2.z + e2.dz * 1 + left.z * 2.2);
     const turn = state.changes.rails[2];
     expect(turn.kind).toMatch(/^curve_/);
     const tail = portsOf(turn)[1];
@@ -160,6 +160,34 @@ describe('patron de voie : une pièce par clic', () => {
     click(mid.x, mid.z - 1);
     expect(state.changes.rails).toHaveLength(before);
     expect(msgs.at(-1)).toContain('chevauche');
+  });
+
+  it('le patron ne se colle que de près : loin du bout, il reste sur la grille', () => {
+    const { state, click } = bench();
+    click(50, 50);
+    const first = state.changes.rails[0];
+    const end = portsOf(first)[1];
+    click(end.x + end.dx * 9, end.z + end.dz * 9);
+    expect(state.changes.rails).toHaveLength(2);
+    // La seconde pièce n'est pas raccordée au bout de la première : elle est posée à l'endroit visé.
+    const g = state.railGraph();
+    expect(g.neighbour(first.id, 1)).toBeNull();
+  });
+
+  it('au milieu d’une ligne, un virage posé sur un joint crée un Y', () => {
+    const { state, click, hover, view } = bench();
+    placeLine(state, 8, 20, 40);
+    const line = state.changes.rails.map((p) => p.id);
+    const joint = portsOf(state.changes.rails[3]).find((p) => p.dz === -1)!;
+    // Curseur près du joint, du côté droit de la ligne (x croissant = à droite quand on va vers −z).
+    hover(joint.x + 1.8, joint.z - 0.6);
+    expect(ghostOf(view).visible).toBe(true);
+    click(joint.x + 1.8, joint.z - 0.6);
+    expect(state.changes.rails).toHaveLength(9);
+    const curve = state.changes.rails[8];
+    expect(curve.kind).toBe('curve_r');
+    const g = state.railGraph();
+    expect(g.linksAt(line[3], 1).map((l) => l.piece)).toEqual([line[4], curve.id]);
   });
 
   it('un embranchement : un virage posé au bout d’une voie qui a déjà une suite', () => {

@@ -88,7 +88,7 @@ export function pickCandidate(
   const right = cands.find((c) => c.kind === 'curve_r');
   // Un curseur près de l'axe, ou presque entièrement devant le bout, veut le droit ; ailleurs, le virage de son côté.
   const side = Math.abs(lateral);
-  if (side < 1.6 || side < 0.3 * Math.max(along, 0)) return straight ?? cands[0];
+  if (straight && (side < 1.6 || side < 0.3 * Math.max(along, 0))) return straight;
   return (lateral > 0 ? left : right) ?? straight ?? cands[0];
 }
 

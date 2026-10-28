@@ -28,7 +28,7 @@ import {
   RAIL_TOP_M,
   boundsOf,
   centerOf,
-  freePorts,
+  railPorts,
   lengthOfPiece,
   headingOf,
   poseOn,
@@ -83,10 +83,8 @@ const REACH_M = 4;
 const CAR_HEIGHT_M = 3.8;
 /** Hauteur des tampons et des attelages au-dessus du rail (m), comme dans `ferroviaire.py` (2,1 unités). */
 const CAR_COUPLER_Y_M = 1.05;
-/** Distance (m) à laquelle un bout de voie libre attire le départ : le curseur sur sa tuile ou la suivante. */
-const SNAP_M = 1.9;
-/** Portée d'un bout de voie : le curseur peut être bien plus loin s'il est devant lui (le tracé le rejoint). */
-const PORT_REACH_M = 30;
+/** Distance (m) à laquelle un bout de voie ou un joint attire le patron : il ne se colle que de près (une pièce droite). */
+const SNAP_M = 2.6;
 /** Écart maximal (m) entre la visée et la voie pour poser un véhicule. */
 const CAR_AIM_M = 2.2;
 
@@ -1261,48 +1259,42 @@ export class TrainView {
     this.host.message(t(key));
   }
 
-  /** Le point visé est-il sur la voie existante, ou à moins de `margin` m d'elle ? */
-  private onTrack(aim: { x: number; z: number }, margin: number): boolean {
-    for (const piece of this.host.state.changes.rails) {
-      const c = centerOf(piece);
-      // Une pièce tient dans un bloc d'au plus 7 tuiles : trop loin, inutile de la regarder de près.
-      if (Math.hypot(c.x - aim.x, c.z - aim.z) > 7 * TILE_M) continue;
-      const len = lengthOfPiece(piece);
-      for (let u = 0; u <= len + 1e-6; u += 0.8) {
-        const q = poseOn(piece, Math.min(u, len));
-        if (Math.hypot(q.x - aim.x, q.z - aim.z) <= margin) return true;
-      }
-    }
-    return false;
-  }
+  private portCache: { graph: TrackGraph; ports: ReturnType<typeof railPorts> } | null = null;
 
   /**
-   * Bout de voie libre où le tracé s'accroche : celui dont le curseur est tout près (une tuile), ou, sur un terrain sans
-   * voie, celui devant lequel le curseur se trouve même loin. Au milieu de la voie, le départ est la tuile visée.
+   * Port de la voie le plus proche du curseur, à moins de `SNAP_M` : le patron ne s'y colle que de près. Un port libre
+   * (bout de voie) accepte un droit ou un virage ; un port déjà raccordé (joint au milieu d'une ligne) n'accepte qu'un
+   * virage, qui s'écarte de la voie : c'est ainsi qu'on crée un Y.
    */
-  private nearestFreePort(aim: { x: number; z: number }): Port | null {
-    let best: { port: Port; d: number } | null = null;
-    let onTrack: boolean | null = null;
-    for (const p of freePorts(this.host.state.changes.rails)) {
+  private nearestPort(aim: { x: number; z: number }): { port: Port; free: boolean } | null {
+    const graph = this.host.state.railGraph();
+    if (this.portCache?.graph !== graph) this.portCache = { graph, ports: railPorts(graph) };
+    let best: { port: Port; free: boolean; d: number; along: number } | null = null;
+    for (const p of this.portCache.ports) {
       const d = Math.hypot(p.at.x - aim.x, p.at.z - aim.z);
-      // Devant le bout de voie (pas derrière lui) : le plus proche du curseur, même loin.
+      if (d > SNAP_M) continue;
+      // À égalité (les deux ports d'un joint sont au même point), celui dont le curseur est du côté ouvert.
       const along = (aim.x - p.at.x) * p.at.dx + (aim.z - p.at.z) * p.at.dz;
-      let near = d <= SNAP_M;
-      if (!near && along > -3 * TILE_M && d <= PORT_REACH_M) {
-        onTrack ??= this.onTrack(aim, 2.2);
-        near = !onTrack;
-      }
-      if (near && (!best || d < best.d)) best = { port: p.at, d };
+      if (!best || d < best.d - 0.05 || (d <= best.d + 0.05 && along > best.along))
+        best = { port: p.at, free: p.free, d, along };
     }
-    return best?.port ?? null;
+    return best ? { port: best.port, free: best.free } : null;
   }
 
   /** Pièce que montre le patron au curseur : près d'un bout de voie libre elle s'y colle, ailleurs c'est un droit sur la grille. */
   private patronAt(aim: { x: number; z: number }): { cand: RailCandidate | null; free: boolean } {
-    const port = this.nearestFreePort(aim);
-    return port
-      ? { cand: pickCandidate(candidatesFrom(port, this.tilt), port, aim), free: false }
-      : { cand: freeCandidate(aim, this.railTurn, 0), free: true };
+    const near = this.nearestPort(aim);
+    if (!near) return { cand: freeCandidate(aim, this.railTurn, 0), free: true };
+    // Un joint déjà raccordé ne propose que des virages, et seulement si le curseur est d'un côté de la ligne : juste
+    // dessus, c'est une voie posée par-dessus (patron rouge), pas un embranchement.
+    if (!near.free) {
+      const side = (aim.x - near.port.x) * near.port.dz - (aim.z - near.port.z) * near.port.dx;
+      if (Math.abs(side) < 1) return { cand: freeCandidate(aim, this.railTurn, 0), free: true };
+    }
+    const options = candidatesFrom(near.port, near.free ? this.tilt : 0).filter(
+      (c) => near.free || c.kind !== 'straight',
+    );
+    return { cand: pickCandidate(options, near.port, aim), free: false };
   }
 
   /**

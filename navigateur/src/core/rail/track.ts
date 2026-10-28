@@ -444,6 +444,19 @@ export function freePorts(
   return out;
 }
 
+/** Tous les ports de la voie (raccordés ou non) : un port raccordé peut encore servir de départ à un embranchement. */
+export function railPorts(
+  graph: TrackGraph,
+): { piece: number; port: 0 | 1; at: Port; free: boolean }[] {
+  const out: { piece: number; port: 0 | 1; at: Port; free: boolean }[] = [];
+  for (const p of graph.byId.values()) {
+    const ports = portsOf(p);
+    for (const i of [0, 1] as const)
+      out.push({ piece: p.id, port: i, at: ports[i], free: !graph.neighbour(p.id, i) });
+  }
+  return out;
+}
+
 /**
  * Cases (gx, gz) couvertes par la voie d'une pièce : celles dont le centre est à moins de `HALF_WIDTH_M` de la voie.
  * Deux voies parallèles à une tuile d'écart n'ont aucune case en commun.
