@@ -1,5 +1,5 @@
 {
- "key": "discussions3",
+ "key": "discussions4",
  "title": "Discussions : suite (2)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui reste, surtout des choix de conception avant de coder la batterie portable, l'assembleur avancé, les portails et le terrain en voxels.",
  "cols": [
@@ -33,6 +33,10 @@
   {
    "id": "e",
    "label": "Rails et Unreal"
+  },
+  {
+   "id": "f",
+   "label": "Rails : ce que montre la vidéo"
   }
  ],
  "rows": [
@@ -137,8 +141,8 @@
    "tab": "e",
    "name": "Rails à refaire",
    "tag": "e1",
-   "recipe": "Tu préfères en discuter avec une vidéo : j'attends. Pendant ce temps je ne touche plus aux rails ni au bug de la branche marron (retiré de la liste).",
-   "role": "Envoie-moi la vidéo quand tu veux ; décris aussi ce que tu fais au clavier."
+   "recipe": "Vidéo reçue et regardée (80 s, c'est Factorio : le HUD parle de « tronçon » et de « santé »). Je ne touche plus aux rails tant que tu n'as pas validé la page « Rails : ce que montre la vidéo ». Images de référence : `navigateur/docs/rails-reference/`.",
+   "role": "Voir l'onglet « Rails : ce que montre la vidéo »."
   },
   {
    "id": "e2",
@@ -147,6 +151,70 @@
    "tag": "e2",
    "recipe": "Fait : j'ai écrit le brouillon des prérequis dans `unreal/prerequis.md` (matériel, décisions de projet, plugins à étudier, configuration de l'éditeur, premier essai). Aucun projet n'est créé.",
    "role": "Relis-le : qu'est-ce qui manque dans la liste ?"
+  },
+  {
+   "id": "f1",
+   "tab": "f",
+   "name": "Fantôme vert qui suit le curseur",
+   "tag": "f1",
+   "recipe": "Ce que je vois : la pièce choisie apparaît en vert transparent sous le curseur, avec le nombre de rails restants. Un clic la pose. Quand la pose est impossible le fantôme est remplacé par une croix rouge (par exemple une pièce posée par-dessus une autre, ou trop loin).",
+   "role": "Je garde ça : fantôme vert pour valide, croix rouge pour impossible, avec une phrase qui dit pourquoi (en survol)."
+  },
+  {
+   "id": "f2",
+   "tab": "f",
+   "name": "Peu de pièces, toutes de même taille",
+   "tag": "f2",
+   "recipe": "Ce que je vois : un rail droit de 2 cases de long, un virage de 45° de rayon fixe (8 virages font un cercle complet, on le voit sur la vidéo), et des droits en diagonale pour continuer après un virage. Pas de longueur libre, pas de virage serré, moyen ou grand.",
+   "role": "Je remplace nos trois tailles de virages (bleu, violet, marron) par UN virage de 45°. Le droit existe en 8 orientations. Ok ?"
+  },
+  {
+   "id": "f3",
+   "tab": "f",
+   "name": "Accrochage automatique au bout d'un rail",
+   "tag": "f3",
+   "recipe": "Ce que je vois : le fantôme se colle tout seul sur le bout libre d'un rail et prend l'orientation qui prolonge la voie (virage dans le prolongement du droit, puis le cercle se referme pièce après pièce). Loin d'un rail, il suit la grille libre (cases de 2).",
+   "role": "Même principe chez nous : bout libre le plus proche du curseur dans un rayon de 3 cases, sinon grille libre. Une touche (R) fait tourner le fantôme (ou choisit droite / gauche)."
+  },
+  {
+   "id": "f4",
+   "tab": "f",
+   "name": "Embranchement SANS pièce d'aiguillage",
+   "tag": "f4",
+   "recipe": "Ce que je vois : à la fin d'un rail droit, on pose un virage qui part de ce même bout : le droit continue et le virage s'écarte, ce qui forme un Y. Aucune pièce spéciale : un bout de rail peut avoir plusieurs suites. Le train choisira la branche selon sa destination.",
+   "role": "C'est ce que tu veux. Nous avons aujourd'hui des aiguillages en pièce : je les retire. Règle du train à un embranchement : il va vers sa prochaine station ; sinon tout droit."
+  },
+  {
+   "id": "f5",
+   "tab": "f",
+   "name": "Croix rouge : causes",
+   "tag": "f5",
+   "recipe": "Ce que je vois : croix rouge quand la pièce chevauche une autre voie (essai de prolonger tout droit sur une voie déjà posée), ou quand elle ne se raccorde à rien de valide.",
+   "role": "Causes que je gérerais : chevauche une voie, trop loin du joueur, obstacle (machine, mur, arbre), pente trop forte (avec le terrain en voxels), raccord non aligné."
+  },
+  {
+   "id": "f6",
+   "tab": "f",
+   "name": "Sélection et retrait",
+   "tag": "f6",
+   "recipe": "Ce que je vois : en survolant un rail, des crochets jaunes l'entourent et un panneau donne « Trains dans le tronçon » et « Santé 200/200 ». Un clic de la pioche retire la pièce.",
+   "role": "Même chose : survol = crochets + infos (nombre de trains, santé), retrait avec la pioche ; le rail retiré rend l'objet."
+  },
+  {
+   "id": "f7",
+   "tab": "f",
+   "name": "Sauvegardes existantes",
+   "tag": "f7",
+   "recipe": "Les anciens rails ne sont pas dans la logique des pièces fixes (virages de 3 tailles, aiguillages).",
+   "role": "Option A : on supprime les rails des anciennes parties et on les rend dans le sac. Option B : conversion automatique en pièces fixes (risque d'erreurs de raccord). Je recommande A."
+  },
+  {
+   "id": "f8",
+   "tab": "f",
+   "name": "Ce que je ne vois pas dans la vidéo",
+   "tag": "f8",
+   "recipe": "Pas de signaux, pas de gares, pas de train en marche, pas de passage à niveau, pas de pont.",
+   "role": "Veux-tu aussi le comportement de Factorio pour les signaux et les trains, ou on garde nos règles (stations et programmes) ?"
   }
  ]
 }
