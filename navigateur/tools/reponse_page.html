@@ -7,7 +7,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--rule:#34352f;--ok:#58c88b;--no:#ff7a68;--mod:#f0a840;--acc:#6fa0ea;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#171815;--panel:#22231f;--fg:#ebe8e0;--mut:#a29d92;--rule:#34352f;--ok:#58c88b;--no:#ff7a68;--mod:#f0a840;--acc:#6fa0ea;color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-main{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+main{max-width:1500px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 h1{font-size:1.5rem;margin:0;font-weight:600} p{margin:0;color:var(--mut);line-height:1.5;max-width:80ch}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--rule)}
 .tab{font:600 13px var(--sans);padding:8px 14px;border:1px solid var(--rule);border-bottom:none;border-radius:8px 8px 0 0;background:transparent;color:var(--mut);cursor:pointer}
@@ -25,6 +25,8 @@ td.name{width:22%;font-weight:600} td.rec{width:27%} td.role{width:23%;color:var
 .btns{display:flex;gap:5px;flex-wrap:wrap} .btns button{padding:5px 9px}
 .btns button[aria-pressed="true"].yes{background:var(--ok);border-color:var(--ok);color:#fff} .btns button[aria-pressed="true"].no{background:var(--no);border-color:var(--no);color:#fff} .btns button[aria-pressed="true"].mod{background:var(--mod);border-color:var(--mod);color:#fff}
 .note{width:100%;min-height:34px;margin-top:6px;resize:vertical}
+tr.sec td{background:var(--bg);font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--fg);padding:14px 10px 6px;border-bottom:2px solid var(--fg)}
+td{padding:8px 10px}
 tr.done td.name::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px}
 #out{width:100%;min-height:140px;font:400 12px var(--mono)}
 @media (max-width:760px){table,tbody,tr,td{display:block;width:auto!important} thead{display:none} tr{border:1px solid var(--rule);border-radius:8px;margin-bottom:10px;padding:6px} td{border:none;padding:4px 8px} td.rec::before{content:attr(data-l) " : ";color:var(--mut);font-weight:600} td.role::before{content:attr(data-l) " : ";font-weight:600}}
@@ -42,8 +44,9 @@ tr.done td.name::before{content:"";display:inline-block;width:8px;height:8px;bor
 <script>
 const DATA=@DATA@;
 const KEY='terra-reponse-'+DATA.key;
-let ans={},hist=[],tab=DATA.tabs[0].id,filter='all';
+let ans={},hist=[],tab='*',filter='all';
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')ans=s}catch(e){}
+DATA.rows.forEach(r=>{if(r.v&&!ans[r.id])ans[r.id]={v:r.v,c:r.c||''}});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ans))}catch(e){}};
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const COLS=DATA.cols||['Proposition','Recette ou principe','Pourquoi','Votre réponse'];
@@ -55,10 +58,12 @@ $('ttl').textContent=DATA.title;$('intro').textContent=DATA.intro;
 function snapshot(){hist.push(JSON.stringify(ans));if(hist.length>60)hist.shift()}
 function counts(){const all=DATA.rows.length,done=DATA.rows.filter(r=>ans[r.id]&&ans[r.id].v).length;return{all,done}}
 function render(){
- $('tabs').innerHTML=DATA.tabs.map(t=>{const rs=DATA.rows.filter(r=>r.tab===t.id),d=rs.filter(r=>ans[r.id]&&ans[r.id].v).length;return`<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${t.id===tab}">${esc(t.label)}<span class="n">${d}/${rs.length}</span></button>`}).join('');
- const rows=DATA.rows.filter(r=>r.tab===tab).filter(r=>{const a=ans[r.id]||{};return filter==='all'||(filter==='todo'?!a.v:a.v===filter)});
+ $('tabs').innerHTML=[{id:'*',label:'Tout'},...DATA.tabs].map(t=>{const rs=DATA.rows.filter(r=>t.id==='*'||r.tab===t.id),d=rs.filter(r=>ans[r.id]&&ans[r.id].v).length;return`<button class="tab" role="tab" data-tab="${t.id}" aria-selected="${t.id===tab}">${esc(t.label)}<span class="n">${d}/${rs.length}</span></button>`}).join('');
+ const rows=DATA.rows.filter(r=>tab==='*'||r.tab===tab).filter(r=>{const a=ans[r.id]||{};return filter==='all'||(filter==='todo'?!a.v:a.v===filter)});
+ let lastTab='';
  $('rows').innerHTML=rows.map(r=>{const a=ans[r.id]||{};
-  return`<tr data-id="${r.id}" class="${a.v?'done':''}"><td class="name">${esc(r.name)}${(r.tag||r.effort)?`<br><span class="chip ${r.effort==='mécanique'?'meca':''}">${esc(r.tag||(r.effort==='mécanique'?'Mécanique':'Objet'))}</span>`:''}</td><td class="rec" data-l="${esc(COLS[1])}">${esc(r.recipe)}</td><td class="role" data-l="${esc(COLS[2])}">${esc(r.role)}</td>
+  const sec=(tab==='*'&&r.tab!==lastTab)?`<tr class="sec"><td colspan="4">${esc((DATA.tabs.find(t=>t.id===r.tab)||{}).label||r.tab)}</td></tr>`:'';lastTab=r.tab;
+  return sec+`<tr data-id="${r.id}" class="${a.v?'done':''}"><td class="name">${esc(r.name)}${(r.tag||r.effort)?`<br><span class="chip ${r.effort==='mécanique'?'meca':''}">${esc(r.tag||(r.effort==='mécanique'?'Mécanique':'Objet'))}</span>`:''}</td><td class="rec" data-l="${esc(COLS[1])}">${esc(r.recipe)}</td><td class="role" data-l="${esc(COLS[2])}">${esc(r.role)}</td>
   <td class="ans"><div class="btns">${['yes','no','mod'].map(v=>`<button class="${v}" data-v="${v}" aria-pressed="${a.v===v}">${LAB[v]}</button>`).join('')}</div><textarea class="note" placeholder="Commentaire (facultatif)" aria-label="Commentaire">${esc(a.c||'')}</textarea></td></tr>`}).join('')||'<tr><td colspan="4">Aucune ligne pour ce filtre.</td></tr>';
  const c=counts();$('cnt').textContent=`${c.done} réponse${c.done>1?'s':''} sur ${c.all}`;$('undo').disabled=!hist.length}
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('.tab');if(b){tab=b.dataset.tab;render()}});

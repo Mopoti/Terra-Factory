@@ -24,6 +24,7 @@ export type SfxId =
   | 'placeStone'
   | 'placeStairs'
   | 'demolish'
+  | 'wrench'
   | 'pipeBurst'
   | 'craft'
   | 'doorOpen'
@@ -280,6 +281,21 @@ const RECIPES: Record<SfxId, Recipe> = {
     ],
     tones: [{ dur: 0.2, vol: 0.3, freq: 120, freqEnd: 60 }],
     minGap: 0.08,
+  },
+  // Clé à cliquet : une série de petits « crrk » métalliques.
+  wrench: {
+    noise: [
+      { dur: 0.025, vol: 0.4, filter: 'bandpass', freq: 3200 },
+      { at: 0.07, dur: 0.025, vol: 0.4, filter: 'bandpass', freq: 3600 },
+      { at: 0.14, dur: 0.025, vol: 0.4, filter: 'bandpass', freq: 3000 },
+      { at: 0.21, dur: 0.05, vol: 0.45, filter: 'bandpass', freq: 4200 },
+    ],
+    tones: [
+      { dur: 0.03, vol: 0.2, freq: 900, freqEnd: 600 },
+      { at: 0.07, dur: 0.03, vol: 0.2, freq: 1000, freqEnd: 650 },
+      { at: 0.14, dur: 0.03, vol: 0.2, freq: 850, freqEnd: 560 },
+    ],
+    minGap: 0.1,
   },
   craft: {
     noise: [{ dur: 0.04, vol: 0.25, filter: 'highpass', freq: 3000 }],

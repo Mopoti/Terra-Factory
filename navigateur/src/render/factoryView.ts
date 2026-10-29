@@ -323,6 +323,11 @@ export class FactoryView {
   private readonly burstAt = new Map<number, number>();
   /** Balises : faisceau coloré et nom flottant, refaits à chaque `rebuild`. */
   private readonly flags = new THREE.Group();
+  /** Barres de vie au-dessus des machines abîmées (identifiant de la machine → barre). */
+  private readonly healthBars = new Map<
+    number,
+    { group: THREE.Group; fill: THREE.Mesh; fillMat: THREE.MeshBasicMaterial }
+  >();
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -348,8 +353,57 @@ export class FactoryView {
       this.parts,
       this.flags,
     );
+    this.root.add(this.healthRoot);
     scene.add(this.root, this.ghost);
     this.rebuild();
+  }
+
+  private readonly healthRoot = new THREE.Group();
+  private readonly barBack = new THREE.MeshBasicMaterial({
+    color: 0x1a1a1f,
+    depthTest: false,
+    transparent: true,
+    opacity: 0.85,
+  });
+  private readonly barGeo = new THREE.PlaneGeometry(1, 1);
+
+  /** Barre de vie flottante au-dessus de chaque machine abîmée, tournée vers la caméra. */
+  updateHealthBars(camera: THREE.Camera): void {
+    for (const [id, bar] of this.healthBars) {
+      if (this.factory.health.has(id) && this.factory.machines.some((m) => m.id === id)) continue;
+      this.healthRoot.remove(bar.group);
+      bar.fillMat.dispose();
+      this.healthBars.delete(id);
+    }
+    for (const m of this.factory.machines) {
+      if (!this.factory.health.has(m.id)) continue;
+      let bar = this.healthBars.get(m.id);
+      if (!bar) {
+        const group = new THREE.Group();
+        const back = new THREE.Mesh(this.barGeo, this.barBack);
+        back.scale.set(1.3, 0.16, 1);
+        back.renderOrder = 20;
+        const fillMat = new THREE.MeshBasicMaterial({ color: 0x4cc46a, depthTest: false });
+        const fill = new THREE.Mesh(this.barGeo, fillMat);
+        fill.renderOrder = 21;
+        group.add(back, fill);
+        this.healthRoot.add(group);
+        bar = { group, fill, fillMat };
+        this.healthBars.set(m.id, bar);
+      }
+      const { w, d } = dims(m.type, m.rot);
+      const frac = this.factory.healthFraction(m);
+      const full = 1.2;
+      bar.fill.scale.set(Math.max(0.01, full * frac), 0.1, 1);
+      bar.fill.position.set(-full / 2 + (full * frac) / 2, 0, 0.001);
+      bar.fillMat.color.set(frac > 0.5 ? 0x4cc46a : frac > 0.25 ? 0xe0a23a : 0xd9473a);
+      bar.group.position.set(
+        (m.gx + w / 2) * CELL_SIZE_M,
+        visualHeight(m.type) + levelY(m.lift) + 0.5,
+        (m.gz + d / 2) * CELL_SIZE_M,
+      );
+      bar.group.quaternion.copy(camera.quaternion);
+    }
   }
 
   /** Refait les corps des machines (à appeler quand on en pose ou en retire). */

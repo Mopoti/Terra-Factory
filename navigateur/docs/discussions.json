@@ -1,7 +1,7 @@
 {
- "key": "discussions14",
+ "key": "discussions-cumul",
  "title": "Discussions : suite (4)",
- "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
+ "intro": "Tous les sujets récents sont sur la même page (onglet « Tout ») ; tes réponses précédentes sont préremplies. Les sujets à traiter sont en premier.",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -15,34 +15,170 @@
  ],
  "tabs": [
   {
-   "id": "e",
-   "label": "Kit de réparation"
+   "id": "k",
+   "label": "Kit de réparation et barre de vie (à traiter)"
+  },
+  {
+   "id": "e3",
+   "label": "Énergie lot 3"
+  },
+  {
+   "id": "e2",
+   "label": "Énergie lot 2 : disjoncteur, lampadaire, transformateur"
+  },
+  {
+   "id": "e1",
+   "label": "Énergie lot 2 : niveaux de réseau"
+  },
+  {
+   "id": "p",
+   "label": "Énergie : puissance max des poteaux"
   }
  ],
  "rows": [
   {
    "id": "k1",
-   "tab": "e",
-   "name": "Kit de réparation (5 charges × 25 %)",
+   "tab": "k",
+   "name": "Utilisation du kit de réparation",
    "tag": "k1",
-   "recipe": "Fait : objet T1 (4 plaques de fer, 4 fils de cuivre, 1 engrenage). Dans la fenêtre d'une machine abîmée par les ennemis, un bouton « Réparer » rend 25 % de la vie par charge ; 5 charges par kit. Pour éviter les données par objet, le kit entamé est mémorisé une seule fois dans la partie : on n'en ouvre qu'un à la fois.",
-   "role": "Ça te va ? Les kits entamés ne se retrouvent donc pas dans le sac avec leur jauge ; si tu veux une jauge par kit, il faudra les données par objet."
+   "recipe": "Fait : on prend le kit en main (depuis l'inventaire, ou dans la barre de raccourcis avec sa touche), puis un clic gauche sur la machine abîmée consomme une charge du kit (+25 % de vie) avec un bruit de clé à cliquet. Le bouton « Réparer » reste aussi dans la fenêtre de la machine (F).",
+   "role": "Je comprends « consommer 1 du kit » comme consommer 1 charge sur 5. Est-ce bien ça, ou 1 kit entier par clic ?"
   },
   {
    "id": "k2",
-   "tab": "e",
-   "name": "Limite actuelle : la vie des machines",
+   "tab": "k",
+   "name": "Barre de vie des machines",
    "tag": "k2",
-   "recipe": "Aujourd'hui la vie des machines n'est ni enregistrée dans la sauvegarde, ni affichée au survol. Je propose d'ajouter une barre de vie au survol et l'enregistrement dans la sauvegarde.",
-   "role": "On le fait avec les barrières et portails (qui auront aussi de la vie et de l'usure) ?"
+   "recipe": "Fait : une barre de vie flottante (verte, orange, rouge) s'affiche au-dessus de chaque machine abîmée, tournée vers la caméra, sans survol. Je l'ai placée au-dessus de la machine elle-même, pas sur l'icône du sac.",
+   "role": "Tu parlais bien de la machine dans le monde, ou de l'icône de l'objet dans l'inventaire / la barre de raccourcis (jauge sur l'icône, comme pour la batterie) ? La vie n'est toujours pas enregistrée dans la sauvegarde : on la garde ?"
   },
   {
    "id": "k3",
-   "tab": "e",
-   "name": "Idée : emplacement d’amélioration",
+   "tab": "k",
+   "name": "Emplacement d’amélioration",
    "tag": "k3",
-   "recipe": "Noté pour plus tard : un emplacement d'amélioration sur les producteurs (panneau solaire qui suit le soleil, éolienne à grandes pales).",
-   "role": "Rien à faire pour l'instant."
+   "recipe": "Noté. Pistes : un emplacement où l'on place un objet d'amélioration (consommation, production, vitesse, rendement), ou une montée de niveau payée en ressources (tu aimes moins). Je ne code rien.",
+   "role": "Quand on le fera, quels producteurs et machines en auront un en premier (panneau solaire, éolienne, foreuse, fourneau) ? Un seul emplacement par machine ou plusieurs ?"
+  },
+  {
+   "id": "l1",
+   "tab": "e3",
+   "name": "Éolienne, solaire, accumulateur de base, éclairage",
+   "tag": "l1",
+   "recipe": "Faits : éolienne T2 (40 kW, vent variable 15 à 100 %), panneau solaire T3 (60 kW le jour), accumulateur de base T3 (200 MJ, 400 kW), lampadaires qui éclairent la nuit (les 6 plus proches).",
+   "role": "Valides-tu les puissances ?",
+   "v": "mod",
+   "c": "On valide comme ça. Peut-être ajouter un emplacement d'amélioration (panneau solaire qui suit le soleil, éolienne à plus grandes pales), mais on verra plus tard."
+  },
+  {
+   "id": "l2",
+   "tab": "e3",
+   "name": "Borne de charge → kit de réparation",
+   "tag": "l2",
+   "recipe": "Remplacée par un objet fabriqué à 5 charges qui répare 25 % par charge.",
+   "role": "Équilibrage à voir.",
+   "v": "yes",
+   "c": "Créer un objet qui se craft et qui permet de réparer les objets endommagés, 5 charges, chaque charge répare 25 %, à voir pour l'équilibrage."
+  },
+  {
+   "id": "d1",
+   "tab": "e2",
+   "name": "Disjoncteur",
+   "tag": "d1",
+   "recipe": "Relie deux poteaux de même niveau ; saute sur surcharge (tous les disjoncteurs fermés du réseau) au lieu du blackout.",
+   "role": "Variante possible : seul le plus proche saute.",
+   "v": "mod",
+   "c": "On peut essayer comme ça."
+  },
+  {
+   "id": "d2",
+   "tab": "e2",
+   "name": "Lampadaire",
+   "tag": "d2",
+   "recipe": "5 kW, une prise, éclaire la nuit.",
+   "role": "Éclairage + lot 3.",
+   "v": "yes",
+   "c": "On fait l'éclairage et le lot 3."
+  },
+  {
+   "id": "d3",
+   "tab": "e2",
+   "name": "Transformateur en T2",
+   "tag": "d3",
+   "recipe": "Transformateur avancé en T2, recette au verre au lieu de l'isolant plastique.",
+   "role": "",
+   "v": "yes",
+   "c": ""
+  },
+  {
+   "id": "n1",
+   "tab": "e1",
+   "name": "Trois niveaux de poteaux + transformateur",
+   "tag": "n1",
+   "recipe": "Bois 500 kW (3 prises, 8 m), haute tension 10 MW (4 prises, 20 m), très haute tension 600 MW (5 prises, 40 m) ; courant descendant par le transformateur.",
+   "role": "",
+   "v": "yes",
+   "c": ""
+  },
+  {
+   "id": "n2",
+   "tab": "e1",
+   "name": "Le bois plafonne à 500 kW",
+   "tag": "n2",
+   "recipe": "Un réseau bois ne dépasse jamais 500 kW.",
+   "role": "",
+   "v": "yes",
+   "c": ""
+  },
+  {
+   "id": "p1",
+   "tab": "p",
+   "name": "Ce que tu veux obtenir",
+   "tag": "p1",
+   "recipe": "Hiérarchie gros poteau → moyens → petits.",
+   "role": "",
+   "v": "yes",
+   "c": ""
+  },
+  {
+   "id": "p2",
+   "tab": "p",
+   "name": "Option A : le poteau le plus faible limite le réseau",
+   "tag": "p2",
+   "recipe": "Capacité limitée par le plus faible poteau.",
+   "role": "",
+   "v": "no",
+   "c": ""
+  },
+  {
+   "id": "p3",
+   "tab": "p",
+   "name": "Option B : le courant descend par des transformateurs",
+   "tag": "p3",
+   "recipe": "Trois niveaux séparés reliés par transformateurs (retenue).",
+   "role": "",
+   "v": "yes",
+   "c": ""
+  },
+  {
+   "id": "p4",
+   "tab": "p",
+   "name": "Option C : limite sur la somme des machines raccordées",
+   "tag": "p4",
+   "recipe": "Disjoncteur par poteau.",
+   "role": "",
+   "v": "no",
+   "c": ""
+  },
+  {
+   "id": "p5",
+   "tab": "p",
+   "name": "Mon avis",
+   "tag": "p5",
+   "recipe": "Option B, avec les puissances 500 kW / 10 MW / 600 MW.",
+   "role": "",
+   "v": "yes",
+   "c": ""
   }
  ]
 }

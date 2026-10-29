@@ -4371,6 +4371,7 @@ export function startGameView(
       for (const d of threat.deaths.splice(0))
         options.state.dropLoot('carapace', d.mutant ? 2 : 1 + (d.id % 2), d.x, d.z);
     else threat.deaths.length = 0;
+    factoryView.updateHealthBars(camera);
     factoryView.updateSmoke(now / 1000);
     factoryView.updateMovers(now / 1000);
     factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
@@ -4414,6 +4415,23 @@ export function startGameView(
       else updateAimedMachine();
       refreshMachinePanel();
     }
+    // Kit de réparation en main : un clic sur une machine abîmée use une charge (bruit de clé à cliquet).
+    if (
+      !paused &&
+      !uiOpen &&
+      !building &&
+      !guest &&
+      aimedMachine &&
+      options.state.selectedItem() === 'repair_kit' &&
+      pressed('interact')
+    ) {
+      const result = options.state.repairMachine(factory, aimedMachine.id);
+      if (result === 'ok') playSfx('wrench');
+      else {
+        playSfx('deny');
+        options.onMessage?.(t(`machine.repairKit.${result}` as TranslationKey));
+      }
+    }
     if (!paused && !uiOpen && pressed('use') && aimedMachine && hasWindow(aimedMachine.type))
       options.onOpenMachine?.(aimedMachine.id);
     if (!input.isActionActive('secondary')) demolishChain = false;
@@ -4427,6 +4445,7 @@ export function startGameView(
         !building &&
         !clickStartedBuilding &&
         options.state.selectedItem() !== 'pistol' &&
+        options.state.selectedItem() !== 'repair_kit' &&
         !creativeResourceOf(options.state.selectedItem()) &&
         input.isActionActive('interact'),
       activate: !paused && !uiOpen && !building && input.isActionActive('activate'),
