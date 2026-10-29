@@ -95,6 +95,8 @@ export function fluidPorts(type: MachineType, rot: number, lift = 0): FluidPort[
       return [{ side: (rot + 2) % 4, mode: 'in', fluid: 'dirty' }];
     case 'vitrifier':
       return [{ side: (rot + 1) % 4, mode: 'in', fluid: 'dirty' }];
+    case 'electrolyzer':
+      return [{ side: (rot + 1) % 4, mode: 'in', fluid: 'water' }];
     case 'plastic_press':
       return [{ side: (rot + 1) % 4, mode: 'in', fluid: 'polymer' }];
     case 'pumpjack':

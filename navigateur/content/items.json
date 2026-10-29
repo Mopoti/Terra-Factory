@@ -723,6 +723,150 @@
       }
     },
     {
+      "id": "machine_air_compressor",
+      "stack": 10,
+      "category": "industrial",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#7c8f9c",
+      "recipe": {
+        "chassis_steel": 2,
+        "motor_heavy": 1,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "machine_electrolyzer",
+      "stack": 10,
+      "category": "industrial",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#8ca39a",
+      "recipe": {
+        "chassis_steel": 2,
+        "microcontroller": 1,
+        "graphite": 4
+      }
+    },
+    {
+      "id": "machine_fuel_cell",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#7aa88a",
+      "recipe": {
+        "chassis_composite": 1,
+        "graphite": 4,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "machine_air_purifier",
+      "stack": 10,
+      "category": "industrial",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#9db5a6",
+      "recipe": {
+        "graphite_filter": 2,
+        "chassis_steel": 1,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "machine_drill_plasma",
+      "stack": 10,
+      "category": "extraction",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#b68ad6",
+      "recipe": {
+        "motor_heavy": 2,
+        "chassis_composite": 1,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "machine_arm_industrial",
+      "stack": 10,
+      "category": "logistics",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#c7792a",
+      "recipe": {
+        "chassis_composite": 1,
+        "motor_heavy": 1,
+        "circuit_advanced": 1
+      }
+    },
+    {
+      "id": "machine_fabricator",
+      "stack": 10,
+      "category": "industrial",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#3f6fa8",
+      "recipe": {
+        "microcontroller": 4,
+        "supra_magnet": 1,
+        "chassis_composite": 1
+      }
+    },
+    {
+      "id": "machine_quantum_chest",
+      "stack": 10,
+      "category": "logistics",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#7a4fc2",
+      "recipe": {
+        "quantum_crystal": 1,
+        "microcontroller": 1,
+        "chassis_composite": 1
+      }
+    },
+    {
+      "id": "machine_turret_rail",
+      "stack": 10,
+      "category": "armor",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#566170",
+      "recipe": {
+        "supra_magnet": 1,
+        "chassis_composite": 1,
+        "battery_lithium": 1
+      }
+    },
+    {
+      "id": "machine_hologram_projector",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#47d6e8",
+      "recipe": {
+        "microcontroller": 1,
+        "glass": 4,
+        "battery_lithium": 1
+      }
+    },
+    {
+      "id": "machine_hologram_gate",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 60,
+      "volumeL": 80,
+      "color": "#47d6e8",
+      "recipe": {
+        "microcontroller": 1,
+        "glass": 6,
+        "battery_lithium": 1,
+        "motor": 1
+      }
+    },
+    {
       "id": "battery_portable",
       "stack": 5,
       "category": "equipment",
@@ -2588,7 +2732,8 @@
       "category": "resources",
       "weightKg": 2,
       "volumeL": 1,
-      "color": "#6fa0ea"
+      "color": "#6fa0ea",
+      "energyMJ": 500
     },
     {
       "id": "tritium",
@@ -2596,7 +2741,8 @@
       "category": "resources",
       "weightKg": 2,
       "volumeL": 1,
-      "color": "#8fd0c0"
+      "color": "#8fd0c0",
+      "energyMJ": 500
     },
     {
       "id": "liquid_nitrogen",

@@ -1502,6 +1502,17 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   solar_panel: 1.3,
   accumulator_basic: 1.1,
   charger: 1.9,
+  air_compressor: 1.6,
+  electrolyzer: 1.6,
+  fuel_cell: 1.5,
+  air_purifier: 1.9,
+  drill_plasma: 2.6,
+  arm_industrial: 1.3,
+  fabricator: 2.1,
+  quantum_chest: 1.0,
+  turret_rail: 1.5,
+  hologram_projector: 1.6,
+  hologram_gate: 2.6,
   crank: 1.0,
   splitter: 0.4,
   merger: 0.4,
@@ -1578,6 +1589,16 @@ function addBarrierBody(
     );
   };
   const dark = shade(color, 0.6);
+  if (def.holo) {
+    // Projecteur holographique : deux émetteurs au bout et un voile de lumière (plus mince et plus bas quand le portail est ouvert).
+    for (const at of [-long / 2 + 0.12, long / 2 - 0.12])
+      put(at, 0.24, 0, 0.5, 0.24, shade(color, 0.45));
+    const span = long - 0.5;
+    const leaf = open ? span / 6 : span;
+    const at = open ? -long / 2 + 0.25 + leaf / 2 : 0;
+    put(at, leaf, 0.5, def.height - 0.5, 0.04, color);
+    return;
+  }
   const wood = type === 'fence_wood' || type === 'gate_wood';
   const posts = def.gate ? 2 : Math.max(2, Math.round(long / 0.75) + 1);
   const h = def.height;
@@ -1820,7 +1841,7 @@ function addMachineBody(
         hexToRgb('#3d3a38'),
         true,
       );
-    if (type === 'turret_laser' || type === 'turret_plasma')
+    if (type === 'turret_laser' || type === 'turret_plasma' || type === 'turret_rail')
       mb.box(
         x + fx * 0.62,
         0.5,

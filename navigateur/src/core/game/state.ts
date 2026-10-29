@@ -2241,7 +2241,13 @@ export class GameState {
   ): number {
     // Soute d'une locomotive (fenêtre à identifiant spécial) : 50 pièces ; sinon la capacité de la machine.
     const max = isLocoWindow(m.id) ? SOUTE_MAX : slotCap(machineDef(m.type), slot);
-    if (slot === 'fuel' && ((!machineDef(m.type).fuel && m.id >= 0) || !itemById(item).energyMJ))
+    const only = machineDef(m.type).fuelOnly;
+    if (
+      slot === 'fuel' &&
+      ((!machineDef(m.type).fuel && m.id >= 0) ||
+        !itemById(item).energyMJ ||
+        (only && !only.includes(item)))
+    )
       return 0;
     if (
       slot === 'input' &&

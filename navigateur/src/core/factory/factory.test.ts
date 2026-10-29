@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { itemById } from '../data/items';
-import { machineDef } from '../data/machines';
+import { assemblerMaxTypes, machineDef } from '../data/machines';
 import { GameState } from '../game/state';
 import { MOULD_CYCLES, RECIPES } from '../data/recipes';
 import {
@@ -2414,5 +2414,57 @@ describe('toutes les machines du contenu se rechargent depuis une sauvegarde', (
         1,
     ).map((def) => def.id);
     expect(lost).toEqual([]);
+  });
+});
+
+describe('machines de fin de partie', () => {
+  const hvPole = emptyMachine(2, 'pole_hv', 0, 0, 0);
+  const fuelCell = (): Machine => {
+    const cell = emptyMachine(1, 'fuel_cell', 4, 0, 0);
+    cell.fuel = { item: 'deuterium', count: 3 };
+    return cell;
+  };
+
+  it('la pile à combustible ne brûle que du deutérium ou du tritium et donne 2 MW', () => {
+    const cell = fuelCell();
+    const f = new Factory([cell, hvPole], makeWorld().world);
+    run(f, 0.5);
+    expect(f.gridInfo(cell)!.capacityKw).toBe(2000);
+    const feeder = emptyMachine(9, 'conveyor', 0, 8, 0);
+    expect(f['canAccept'](cell, feeder, 'coal', 0)).toBe(false);
+    expect(f['canAccept'](cell, feeder, 'deuterium', 0)).toBe(true);
+  });
+
+  it('le compresseur d’air fabrique de l’azote liquide sans ingrédient', () => {
+    const comp = emptyMachine(3, 'air_compressor', 4, 4, 0);
+    comp.recipe = 'liquid_nitrogen_air';
+    const f = new Factory([fuelCell(), hvPole, comp], makeWorld().world);
+    run(f, 20);
+    expect(comp.stock?.item).toBe('liquid_nitrogen');
+    expect(comp.stock!.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it('le mur holographique ne barre le passage que s’il est alimenté', () => {
+    const wall = emptyMachine(3, 'hologram_projector', 4, 4, 0);
+    const f = new Factory([hvPole, wall], makeWorld().world);
+    run(f, 0.5);
+    expect(f.barrierAt(2.25, 2.25)).toBeNull(); // pas de courant
+    f.machines.push(fuelCell());
+    f.reindex();
+    run(f, 0.5);
+    expect(f.barrierAt(2.25, 2.25)).toBe(wall);
+  });
+
+  it('le fabricateur universel accepte quatre types d’ingrédients et fabrique plus vite que l’assembleur', () => {
+    expect(assemblerMaxTypes('fabricator')).toBe(4);
+    expect(machineDef('fabricator').craftSeconds!).toBeLessThan(
+      machineDef('assembler').craftSeconds!,
+    );
+  });
+
+  it('la foreuse à plasma extrait bien plus vite que la foreuse écologique', () => {
+    expect(machineDef('drill_plasma').mineSeconds!).toBeLessThan(
+      machineDef('drill_eco').mineSeconds!,
+    );
   });
 });

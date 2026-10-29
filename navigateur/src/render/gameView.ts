@@ -2162,6 +2162,7 @@ export function startGameView(
     if (m === null) return false;
     // Un portail ouvert se traverse.
     if (factory.gateOpen(m)) return false;
+    if (machineDef(m.type).holo && factory.powerFactor(m) <= 0) return false;
     // Un poteau ne bloque que près de son mât.
     if (isPole(m.type)) {
       const c = centerOf(m);

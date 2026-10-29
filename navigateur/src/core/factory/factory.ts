@@ -21,6 +21,7 @@ import {
   isLab,
   isPole,
   isAccumulator,
+  isGenerator,
   isTurret,
   turretSpec,
   isLinear,
@@ -400,11 +401,15 @@ export function ports(
     case 'plastic_press':
     case 'heavy_press':
     case 'washer':
+    case 'air_compressor':
+    case 'electrolyzer':
       return { ins: [into(back)], outs: [out(rot)] };
     case 'drill_electric':
     case 'drill_eco':
+    case 'drill_plasma':
       return { ins: [], outs: [out(rot)] };
     case 'generator':
+    case 'fuel_cell':
       return { ins: [into(rot)], outs: [] };
     case 'splitter':
     case 'sorter':
@@ -412,15 +417,18 @@ export function ports(
     case 'merger':
     case 'arm':
     case 'arm_electric':
+    case 'arm_industrial':
     case 'arm_filter':
     case 'assembler':
     case 'assembler_advanced':
+    case 'fabricator':
       return { ins: [into(back), into(left), into(right)], outs: [out(rot)] };
     case 'lab':
     case 'turret':
     case 'turret_heavy':
     case 'turret_laser':
     case 'turret_plasma':
+    case 'turret_rail':
       return { ins: [into(back), into(left), into(right), into(rot)], outs: [] };
     case 'boiler':
     case 'fusion_reactor':
@@ -667,6 +675,17 @@ const MACHINE_TYPES: MachineType[] = [
   'gate_concrete',
   'gate_reinforced',
   'charger',
+  'air_compressor',
+  'electrolyzer',
+  'fuel_cell',
+  'air_purifier',
+  'drill_plasma',
+  'arm_industrial',
+  'fabricator',
+  'quantum_chest',
+  'turret_rail',
+  'hologram_projector',
+  'hologram_gate',
   'crank',
   'splitter',
   'sorter',
@@ -1508,7 +1527,7 @@ export class Factory {
     const max = def.stockMax ?? 100;
     if (isPole(m.type)) return (this.gridInfo(m)?.machines ?? 0) > 0 ? 'running' : 'idle';
     if (m.type === 'waterwheel') return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
-    if (m.type === 'generator') {
+    if (isGenerator(m.type)) {
       if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
       return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
     }
@@ -1566,7 +1585,7 @@ export class Factory {
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
-      else if (m.type === 'generator') this.tickGenerator(m, dt);
+      else if (isGenerator(m.type)) this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
         if (isDrill(m.type)) this.tickDrill(m, dt);
@@ -1583,6 +1602,7 @@ export class Factory {
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
     if (m.type === 'relay' || m.type === 'antenna' || m.type === 'lamp') return true;
     if (m.type === 'charger') return this.chargerBusy.has(m.id);
+    if (m.type === 'air_purifier' || machineDef(m.type).holo) return true;
     if (m.type === 'refinery') return this.refineryReady(m);
     if (m.type === 'pumpjack')
       return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
@@ -1845,6 +1865,7 @@ export class Factory {
     const m = this.machineAt(Math.floor(x / CELL_SIZE_M), Math.floor(z / CELL_SIZE_M));
     if (!m) return null;
     const def = machineDef(m.type);
+    if (def.holo && this.powerFactor(m) <= 0) return null;
     return def.barrier && !(def.gate && m.wear === 1) ? m : null;
   }
 
@@ -2102,7 +2123,7 @@ export class Factory {
       return !(last && last.pos < GAP);
     }
     // Combustible : par n'importe quelle face sauf la sortie (le carré clair marque l'entrée conseillée).
-    if (target.type === 'generator') return this.fuelRoom(target, item);
+    if (isGenerator(target.type)) return this.fuelRoom(target, item);
     if (isSmith(target.type)) return this.smithSlot(target, item, dir) !== null;
     // Chaudière : combustible uniquement par l'arrière (face à la sortie de vapeur).
     if (target.type === 'boiler') return dir === target.rot && this.fuelRoom(target, item);
@@ -2163,7 +2184,7 @@ export class Factory {
       if (!itemById(item).energyMJ) return recipeOf(target) ? 'notIngredient' : 'noRecipe';
       return dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
     }
-    if (target.type === 'generator' || isDrill(target.type)) {
+    if (isGenerator(target.type) || isDrill(target.type)) {
       if (!machineDef(target.type).fuel || !itemById(item).energyMJ) return 'notUsable';
       return isDrill(target.type) && dir === (target.rot + 2) % 4 ? 'outputFace' : 'fuelFull';
     }
@@ -2532,7 +2553,9 @@ export class Factory {
   }
 
   private fuelRoom(target: Machine, item: string): boolean {
-    if (!machineDef(target.type).fuel || !itemById(item).energyMJ) return false;
+    const only = machineDef(target.type).fuelOnly;
+    if (!machineDef(target.type).fuel || !itemById(item).energyMJ || (only && !only.includes(item)))
+      return false;
     const max = slotCap(machineDef(target.type), 'fuel');
     return !target.fuel || (target.fuel.item === item && target.fuel.count < max);
   }

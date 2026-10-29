@@ -37,6 +37,17 @@ export type MachineType =
   | 'gate_concrete'
   | 'gate_reinforced'
   | 'charger'
+  | 'air_compressor'
+  | 'electrolyzer'
+  | 'fuel_cell'
+  | 'air_purifier'
+  | 'drill_plasma'
+  | 'arm_industrial'
+  | 'fabricator'
+  | 'quantum_chest'
+  | 'turret_rail'
+  | 'hologram_projector'
+  | 'hologram_gate'
   | 'crank'
   | 'splitter'
   | 'sorter'
@@ -106,6 +117,12 @@ export interface MachineDef {
   /** Portail à moteur : s'ouvre seul quand un joueur approche. */
   autoGate?: boolean;
   maxHp?: number;
+  /** Combustible : seuls ces objets sont acceptés (pile à combustible). */
+  fuelOnly?: string[];
+  /** Purificateur d'air : pollution retirée par seconde (points). */
+  purifyPerS?: number;
+  /** Mur ou portail holographique : ne barre le passage que s'il est alimenté. */
+  holo?: boolean;
   /** Transformateur : puissance maximale transmise du niveau supérieur au niveau inférieur (kW). */
   transformKw?: number;
   /** Pollution émise (points par seconde) quand la machine travaille. */
@@ -151,6 +168,10 @@ export interface MachineDef {
   capacity?: number;
 }
 
+/** Groupe électrogène : le générateur à combustible et la pile à combustible. */
+export const isGenerator = (type: MachineType): boolean =>
+  type === 'generator' || type === 'fuel_cell';
+
 /** Accumulateur, quelle que soit sa capacité. */
 export const isAccumulator = (type: MachineType): boolean =>
   type === 'accumulator' || type === 'accumulator_basic';
@@ -159,7 +180,7 @@ export const isAccumulator = (type: MachineType): boolean =>
 export const isPole = (type: MachineType): boolean => machineDef(type).poleLevel !== undefined;
 
 export const isDrill = (type: MachineType): boolean =>
-  type === 'drill' || type === 'drill_electric' || type === 'drill_eco';
+  type === 'drill' || type === 'drill_electric' || type === 'drill_eco' || type === 'drill_plasma';
 
 /** A une case de sortie (pousse son stock devant elle). */
 export const hasOutput = (type: MachineType): boolean =>
@@ -179,15 +200,17 @@ export const isSmith = (type: MachineType): boolean =>
   type === 'centrifuge' ||
   type === 'vitrifier' ||
   type === 'heavy_press' ||
-  type === 'washer';
+  type === 'washer' ||
+  type === 'air_compressor' ||
+  type === 'electrolyzer';
 
 /** Assembleur : fabrique un objet à partir d'ingrédients amenés par tapis ou bras. */
 export const isAssembler = (type: MachineType): boolean =>
-  type === 'assembler' || type === 'assembler_advanced';
+  type === 'assembler' || type === 'assembler_advanced' || type === 'fabricator';
 
 /** Types d'ingrédients au plus d'une recette qu'un assembleur sait fabriquer : 3 pour le simple, 4 pour l'avancé. */
 export const assemblerMaxTypes = (type: MachineType): number =>
-  type === 'assembler_advanced' ? 4 : 3;
+  type === 'assembler_advanced' || type === 'fabricator' ? 4 : 3;
 
 /** Séparateur (1 entrée, 3 sorties) ou groupeur (3 entrées, 1 sortie) : aiguille les objets d'un tapis à l'autre. */
 export const isRouter = (type: MachineType): boolean =>
@@ -199,7 +222,7 @@ export const filterCount = (type: MachineType): number =>
 
 /** Bras robotique (à combustible ou électrique). */
 export const isArm = (type: MachineType): boolean =>
-  type === 'arm' || type === 'arm_electric' || type === 'arm_filter';
+  type === 'arm' || type === 'arm_electric' || type === 'arm_filter' || type === 'arm_industrial';
 
 /** Laboratoire : consomme des paquets de science pour étudier la technologie choisie. */
 export const isLab = (type: MachineType): boolean => type === 'lab';
@@ -218,6 +241,7 @@ export const TURRETS: Partial<Record<MachineType, TurretSpec>> = {
   turret_heavy: { ammo: 'rifle_magazine', rounds: 30, range: 28, damage: 15, every: 0.25 },
   turret_laser: { ammo: null, rounds: 0, range: 34, damage: 24, every: 0.4 },
   turret_plasma: { ammo: null, rounds: 0, range: 42, damage: 60, every: 0.5 },
+  turret_rail: { ammo: null, rounds: 0, range: 70, damage: 220, every: 1.6 },
 };
 /** Tourelle automatique : tire sur les ennemis proches. */
 export const isTurret = (type: MachineType): boolean => type in TURRETS;
@@ -244,6 +268,7 @@ export const isFluid = (type: MachineType): boolean =>
   type === 'booster' ||
   type === 'cooling_tower' ||
   type === 'builder' ||
+  type === 'electrolyzer' ||
   type === 'furnace_electric';
 
 /** Élément qu'on pose en traçant un chemin (tapis, tuyau). */
@@ -281,7 +306,7 @@ export const visualHeight = (type: MachineType): number =>
   type === 'conveyor' ? machineDef(type).height : machineDef(type).height + GROW_M;
 
 export const isChest = (type: MachineType): boolean =>
-  type === 'chest_wood' || type === 'chest_iron';
+  type === 'chest_wood' || type === 'chest_iron' || type === 'quantum_chest';
 
 export const MACHINES: MachineDef[] = raw.machines as MachineDef[];
 

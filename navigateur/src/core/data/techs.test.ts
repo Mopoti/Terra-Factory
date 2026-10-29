@@ -76,7 +76,7 @@ describe('onglets de fabrication', () => {
           : c === 'armor'
             ? 24
             : c === 'industrial' || c === 'buildings'
-              ? 20
+              ? 24
               : c === 'energy'
                 ? 24
                 : 16,

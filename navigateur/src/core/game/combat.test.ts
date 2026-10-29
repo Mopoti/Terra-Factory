@@ -99,8 +99,9 @@ describe('armes et tourelles', () => {
     expect(s.ammoOf('pistol')).toBe(0);
   });
 
-  it('quatre tourelles : légère et lourde à munitions, laser et plasma électriques', () => {
-    expect(Object.keys(TURRETS)).toHaveLength(4);
+  it('cinq tourelles : légère et lourde à munitions, laser, plasma et rail électriques', () => {
+    expect(Object.keys(TURRETS)).toHaveLength(5);
+    expect(turretSpec('turret_rail').damage).toBeGreaterThan(turretSpec('turret_plasma').damage);
     expect(turretSpec('turret').ammo).toBe('magazine');
     expect(turretSpec('turret_heavy').ammo).toBe('rifle_magazine');
     expect(turretSpec('turret_laser').ammo).toBeNull();

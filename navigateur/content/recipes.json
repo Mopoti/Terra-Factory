@@ -591,6 +591,28 @@
         "liquid_nitrogen": 1
       },
       "seconds": 8
+    },
+    {
+      "id": "liquid_nitrogen_air",
+      "machine": "air_compressor",
+      "in": {},
+      "out": {
+        "liquid_nitrogen": 1
+      },
+      "seconds": 8
+    },
+    {
+      "id": "deuterium_electrolysis",
+      "machine": "electrolyzer",
+      "in": {},
+      "out": {
+        "deuterium": 1
+      },
+      "seconds": 12,
+      "fluid": {
+        "kind": "water",
+        "amount": 50
+      }
     }
   ]
 }

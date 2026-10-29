@@ -14,7 +14,9 @@ export type SmithType =
   | 'centrifuge'
   | 'vitrifier'
   | 'heavy_press'
-  | 'washer';
+  | 'washer'
+  | 'air_compressor'
+  | 'electrolyzer';
 
 export interface Recipe {
   id: string;

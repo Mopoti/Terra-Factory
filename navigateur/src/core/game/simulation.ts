@@ -95,6 +95,11 @@ export class WorldSimulation {
     factory.labLevel = labResearchLevel(state.changes.unlocked);
     factory.tick(dt);
     stepChargers(state, factory, players, dt);
+    for (const m of factory.machines) {
+      if (m.type !== 'air_purifier') continue;
+      const c = centerOf(m);
+      threat.absorb(c.x, c.z, (machineDef(m.type).purifyPerS ?? 0) * factory.powerFactor(m) * dt);
+    }
     state.addStudy(factory.takeLabPacks());
     for (const [item, n] of factory.takeSold()) state.creditSale(item, n);
     for (const [item, n] of factory.takeProduced()) {

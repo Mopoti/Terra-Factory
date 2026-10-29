@@ -181,6 +181,31 @@ export class Threat {
     map[k] = (map[k] ?? 0) + amount;
   }
 
+  /** Retire de la pollution (air et sol) autour du point (x, z) en mètres : `amount` est réparti sur la cellule et ses voisines. */
+  absorb(x: number, z: number, amount: number): void {
+    if (amount <= 0) return;
+    const pcx = cellOf(x);
+    const pcz = cellOf(z);
+    for (const map of [this.pollution, this.ground]) {
+      let left = amount;
+      for (const [dx, dz] of [
+        [0, 0],
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const k = key(pcx + dx, pcz + dz);
+        const p = map[k] ?? 0;
+        const take = Math.min(p, left);
+        if (take <= 0) continue;
+        left -= take;
+        if (p - take < 0.05) delete map[k];
+        else map[k] = p - take;
+      }
+    }
+  }
+
   groundAt(pcx: number, pcz: number): number {
     return this.ground[key(pcx, pcz)] ?? 0;
   }
