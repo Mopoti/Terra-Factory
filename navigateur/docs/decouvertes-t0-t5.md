@@ -59,9 +59,9 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Quad** | Quad | Châssis simple, Laboratoire, Paquet de science T1, Moteur simple | 100 × Paquet de science T1 |
 | **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Laboratoire, Paquet de science T1, Tuyau | 100 × Paquet de science T1 |
 | **Turbine à vapeur** | Turbine à vapeur | Engrenage, Kit circuit, Châssis simple, Laboratoire, Paquet de science T1, Chaudière | 100 × Paquet de science T1 |
+| **Clôtures et portails de bois** | Clôture en bois, Portail en bois | Engrenage, Tige de fer, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Kit de réparation** | Kit de réparation | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Lampadaire électrique** | Lampadaire électrique | Vitre, Kit circuit, Châssis simple, Électricité, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
-| **Clôture en bois** | Clôture en bois | Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
 | **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Armure 1** | Casque renforcé, Plastron renforcé, Jambières renforcées, Bottes renforcées | Plaques de fer et de cuivre, Laboratoire, Paquet de science T1, Pistolet, Textile, Vêtements | 100 × Paquet de science T1 + 10 × Paquet de combat |
 | **Tourelle** | Tourelle légère | Engrenage, Kit circuit, Châssis simple, Laboratoire, Paquet de science T1, Chargeur de pistolet, Tapis roulant | 100 × Paquet de science T1 + 10 × Paquet de combat |
@@ -70,6 +70,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
+| **Barrières et portails en béton** | Barrière en béton, Portail en béton | Engrenage, Tige de fer, Laboratoire, Paquet de science T1, Paquet de science T2, Bétonnière, Constructions en béton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Convertisseur Bessemer** | Convertisseur Bessemer, Lingot d'acier, Scorie | Fonte, Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Plaque d'acier** | Plaque d'acier | Estampeuse, Moule de plaque, Laboratoire, Paquet de science T1, Paquet de science T2, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Tige d'acier** | Tige en acier | Estampeuse, Laboratoire, Paquet de science T1, Paquet de science T2, Convertisseur Bessemer | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
@@ -91,7 +92,6 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Poteau haute tension** | Poteau haute tension | Vitre, Kit circuit, Laboratoire, Paquet de science T1, Paquet de science T2, Châssis renforcé | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Disjoncteur** | Disjoncteur | Vitre, Kit circuit, Laboratoire, Paquet de science T1, Paquet de science T2, Châssis renforcé, Poteau haute tension | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Éolienne** | Éolienne | Kit circuit, Laboratoire, Paquet de science T1, Moteur simple, Paquet de science T2, Châssis renforcé | 150 × Paquet de science T2 + 150 × Paquet de science T1 |
-| **Barrière en béton** | Barrière en béton | Tige de fer, Laboratoire, Paquet de science T1, Clôture en bois, Paquet de science T2, Bétonnière, Constructions en béton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Couchage de confort** | Lit | Laboratoire, Paquet de science T1, Textile, Couchage de survie, Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Recherche II** | (effet : paquets plus rapides) | Laboratoire, Paquet de science T1, Recherche I (paquets plus vite), Paquet de science T2 | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 | **Fusil** | Fusil automatique | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1, Pistolet, Paquet de science T2, Plaque d'acier | 100 × Paquet de science T2 + 100 × Paquet de science T1 + 20 × Paquet de combat |
@@ -105,6 +105,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 
 | Découverte | Débloque | Prérequis | Coût |
 | --- | --- | --- | --- |
+| **Béton armé et portail motorisé** | Barrière en béton armé, Portail en béton armé (moteur) | Laboratoire, Moteur simple, Paquet de science T2, Barrières et portails en béton, Tige d'acier, Bétonnière, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Assembleur avancé** | Assembleur avancé (T3) | Laboratoire, Moteur simple, Paquet de science T2, Châssis renforcé, Assembleur, Paquet de science T3, Circuit avancé | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Presse lourde** | Presse hydraulique lourde (T3) | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T2, Plaque d'acier, Tige d'acier, Constructions en béton, Constructeur, Paquet de science T3 | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Tuyau T3** | Tuyau d'acier (T3) | Laboratoire, Paquet de science T2, Convertisseur Bessemer, Paquet de science T3, Presse lourde | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
@@ -135,7 +136,6 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Cellule photovoltaïque** | Cellule photovoltaïque | Fil de cuivre, Vitre, Laboratoire, Paquet de science T2, Paquet de science T3, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Panneau solaire** | Panneau solaire | Vitre, Laboratoire, Paquet de science T2, Paquet de science T3, Châssis léger, Cellule photovoltaïque | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Graphite** | Graphite | Laboratoire, Paquet de science T2, Paquet de science T3, Four électrique, Raffinerie | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
-| **Barrière en béton armé** | Barrière en béton armé | Laboratoire, Paquet de science T2, Tige d'acier, Bétonnière, Barrière en béton, Paquet de science T3 | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Armure 3** | Casque composite, Plastron composite, Jambières composites, Bottes composites | Laboratoire, Textile, Paquet de science T2, Armure 2, Paquet de science T3, Isolant plastique, Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 + 30 × Paquet de combat |
 | **Exosquelette** | Exosquelette | Laboratoire, Moteur simple, Paquet de science T2, Paquet de science T3, Microcontrôleur, Châssis léger | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Porte de garage** | Porte de garage en aluminium | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T2, Paquet de science T3, Moteur renforcé, Plaque d'aluminium, Constructions en aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |

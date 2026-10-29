@@ -2369,3 +2369,38 @@ describe('éolienne, panneau solaire, accumulateur de base', () => {
     expect(acc.fuelLeft).toBeLessThan(600);
   });
 });
+
+describe('barrières et portails', () => {
+  const world = makeWorld().world;
+  it('une barrière ferme le passage ; un portail ouvert le laisse', () => {
+    const fence = emptyMachine(1, 'fence_wood', 0, 0, 0); // 1,5 m × 0,5 m
+    const gate = emptyMachine(2, 'gate_wood', 0, 4, 0); // 3 m × 0,5 m
+    const f = new Factory([fence, gate], world);
+    expect(f.barrierAt(0.5, 0.25)).toBe(fence);
+    expect(f.barrierAt(0.5, 2.25)).toBe(gate);
+    f.toggleGate(gate);
+    expect(f.gateOpen(gate)).toBe(true);
+    expect(f.barrierAt(0.5, 2.25)).toBeNull();
+    f.toggleGate(gate);
+    expect(f.barrierAt(0.5, 2.25)).toBe(gate);
+    f.toggleGate(fence); // pas un portail
+    expect(f.gateOpen(fence)).toBe(false);
+  });
+
+  it('le portail motorisé s’ouvre à l’approche d’un joueur et se referme', () => {
+    const gate = emptyMachine(1, 'gate_reinforced', 0, 0, 0);
+    const f = new Factory([gate], world);
+    f.tickGates([{ x: 1.5, z: 1 }]);
+    expect(f.gateOpen(gate)).toBe(true);
+    f.tickGates([{ x: 30, z: 30 }]);
+    expect(f.gateOpen(gate)).toBe(false);
+  });
+
+  it('chaque palier a plus de points de vie', () => {
+    expect(Factory.maxHealth('fence_wood')).toBeLessThan(Factory.maxHealth('barrier_concrete'));
+    expect(Factory.maxHealth('barrier_concrete')).toBeLessThan(
+      Factory.maxHealth('barrier_reinforced'),
+    );
+    expect(Factory.maxHealth('furnace')).toBe(Factory.MACHINE_HEALTH);
+  });
+});

@@ -789,8 +789,9 @@ export class GameState {
    */
   repairMachine(factory: Factory, id: number): 'ok' | 'full' | 'noKit' | 'missing' {
     if (!factory.machines.some((m) => m.id === id)) return 'missing';
-    const hp = factory.health.get(id) ?? Factory.MACHINE_HEALTH;
-    if (hp >= Factory.MACHINE_HEALTH) return 'full';
+    const max = Factory.maxHealth(factory.machines.find((m) => m.id === id)!.type);
+    const hp = factory.health.get(id) ?? max;
+    if (hp >= max) return 'full';
     if (this.changes.kitCharges <= 0) {
       if ((this.inventory.repair_kit ?? 0) < 1) return 'noKit';
       this.takeUnits('repair_kit', 1);
@@ -798,8 +799,8 @@ export class GameState {
       this.emit({ type: 'inventory' });
     }
     this.changes.kitCharges -= 1;
-    const next = hp + Factory.MACHINE_HEALTH * REPAIR_KIT_STEP;
-    if (next >= Factory.MACHINE_HEALTH) factory.health.delete(id);
+    const next = hp + max * REPAIR_KIT_STEP;
+    if (next >= max) factory.health.delete(id);
     else factory.health.set(id, next);
     return 'ok';
   }

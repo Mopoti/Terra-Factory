@@ -229,7 +229,11 @@ describe('icônes des machines', () => {
     const { hasModelPlanned } = await import('./models');
     const missing = ITEMS.flatMap((i) => {
       const m = machineForItem(i.id);
-      return m && m.id !== 'conveyor' && m.id !== 'pipe' && !hasModelPlanned(m.id as never)
+      return m &&
+        m.id !== 'conveyor' &&
+        m.id !== 'pipe' &&
+        !m.barrier &&
+        !hasModelPlanned(m.id as never)
         ? [m.id]
         : [];
     });

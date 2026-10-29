@@ -151,6 +151,12 @@ export class Threat {
     this.nextId = saved.reduce((m, e) => Math.max(m, e.id), 0) + 1;
   }
 
+  /**
+   * Barrière ou portail fermé qui barre le point (x, z) : renvoie la cible `machine:ID` à attaquer. Les ennemis ne le
+   * contournent ni ne l'ouvrent : ils le détruisent. Fixé par la simulation.
+   */
+  barrierAt: ((x: number, z: number) => string | null) | null = null;
+
   /** Tours d'évaporation en marche (positions en mètres) : les nids proches donnent des mutants. */
   toxicSources: { x: number; z: number }[] = [];
 
@@ -462,8 +468,15 @@ export class Threat {
           damage.push({ target: raid.id, amount: GUARD_MACHINE_DPS * dt });
         } else if (d > (chase || raid ? REACH_M : 1.5)) {
           const step = Math.min(d, speed * dt);
-          e.x += (dx / d) * step;
-          e.z += (dz / d) * step;
+          const wall = this.barrierAt?.(
+            e.x + (dx / d) * (step + 0.4),
+            e.z + (dz / d) * (step + 0.4),
+          );
+          if (wall) damage.push({ target: wall, amount: GUARD_MACHINE_DPS * dt });
+          else {
+            e.x += (dx / d) * step;
+            e.z += (dz / d) * step;
+          }
         }
         continue;
       }
@@ -492,8 +505,12 @@ export class Threat {
       const d = Math.hypot(dx, dz);
       if (d > REACH_M) {
         const step = Math.min(d - REACH_M * 0.9, speed * dt);
-        e.x += (dx / d) * step;
-        e.z += (dz / d) * step;
+        const wall = this.barrierAt?.(e.x + (dx / d) * (step + 0.4), e.z + (dz / d) * (step + 0.4));
+        if (wall) damage.push({ target: wall, amount: MACHINE_DPS * dt });
+        else {
+          e.x += (dx / d) * step;
+          e.z += (dz / d) * step;
+        }
       } else if (best.id === 'player') {
         if (e.cooldown <= 0) {
           damage.push({ target: 'player', amount: PLAYER_HIT });

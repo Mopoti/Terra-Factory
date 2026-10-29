@@ -385,6 +385,7 @@ export class FactoryView {
     for (const m of this.factory.machines) {
       const level = this.damageLevel(m);
       if (level > 0) sig += `${m.id}:${level},`;
+      if (this.factory.gateOpen(m)) sig += `g${m.id},`;
     }
     if (sig === this.damageSeen) return;
     this.damageSeen = sig;
@@ -446,6 +447,7 @@ export class FactoryView {
             m.lift,
             tint,
             !!parts,
+            this.factory.gateOpen(m),
           );
         const worn = this.damageLevel(m);
         if (worn > 0) burn(mb, start, worn);
@@ -1546,6 +1548,68 @@ function growBody(mb: MeshBuilder, start: number, m: Machine): void {
 /** Quarts de tour à donner à un modèle du kit selon l'orientation de la machine. */
 const MODEL_TURNS = [0, 1, 2, 3] as const;
 
+/** Barrière ou portail : poteaux, lisses ou pleins de béton ; un portail ouvert pousse son vantail sur le côté. */
+function addBarrierBody(
+  mb: MeshBuilder,
+  type: MachineType,
+  x: number,
+  z: number,
+  sx: number,
+  sz: number,
+  color: Rgb,
+  open: boolean,
+): void {
+  const def = machineDef(type);
+  const long = Math.max(sx, sz);
+  const alongX = sx >= sz;
+  const thick = 0.22;
+  // Pose un bloc de dimensions (a le long de l'axe, h, t en travers) à la position `at` le long de l'axe.
+  const put = (at: number, a: number, y0: number, h: number, t: number, c: Rgb = color): void => {
+    mb.box(
+      alongX ? x + at : x,
+      y0,
+      alongX ? z : z + at,
+      alongX ? a : t,
+      h,
+      alongX ? t : a,
+      c,
+      true,
+    );
+  };
+  const dark = shade(color, 0.6);
+  const wood = type === 'fence_wood' || type === 'gate_wood';
+  const posts = def.gate ? 2 : Math.max(2, Math.round(long / 0.75) + 1);
+  const h = def.height;
+  for (let i = 0; i < posts; i++) {
+    const at = -long / 2 + 0.1 + (i * (long - 0.2)) / (posts - 1);
+    put(at, 0.16, 0, def.gate ? h : h, 0.16, wood ? dark : color);
+  }
+  if (def.gate) {
+    // Vantail : plein sur toute la largeur (fermé), ou replié sur un tiers du côté (ouvert).
+    const span = long - 0.4;
+    const leaf = open ? span / 3 : span;
+    const at = open ? -long / 2 + 0.2 + leaf / 2 : 0;
+    if (wood) {
+      for (const y0 of [0.3, 0.9, 1.5]) put(at, leaf, y0, 0.14, 0.1);
+      put(at, leaf, 0.3, 1.34, 0.06, shade(color, 0.85));
+    } else {
+      put(at, leaf, 0.2, h - 0.35, thick * 0.6);
+      if (type === 'gate_reinforced') put(at, leaf, 0.2, 0.12, thick * 0.9, dark);
+    }
+    return;
+  }
+  if (wood) {
+    for (const y0 of [0.35, 0.85, 1.3]) put(0, long - 0.1, y0, 0.12, 0.1);
+  } else {
+    put(0, long - 0.1, 0, h * 0.8, thick, color);
+    put(0, long - 0.1, h * 0.8, h * 0.2, thick * 0.7, dark);
+    if (type === 'barrier_reinforced') {
+      for (let i = 0; i < 4; i++)
+        put(-long / 2 + (i + 0.5) * (long / 4), 0.05, 0, h, thick * 1.05, dark);
+    }
+  }
+}
+
 function addMachineBody(
   mb: MeshBuilder,
   type: MachineType,
@@ -1556,6 +1620,7 @@ function addMachineBody(
   lift = 0,
   tint?: string,
   staticOnly = false,
+  open = false,
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -1565,6 +1630,10 @@ function addMachineBody(
   const sz = d * CELL_SIZE_M - 0.06;
   const color = hexToRgb(tint ?? def.color);
   const [fx, fz] = RISE_DIR[rot];
+  if (def.barrier) {
+    addBarrierBody(mb, type, x, z, sx, sz, color, open);
+    return;
+  }
   const model = modelFor(type);
   if (model) {
     // Modèle 3D du kit : ajusté à l'emprise et à la hauteur de la machine, face tournée vers la sortie.

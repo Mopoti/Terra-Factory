@@ -113,9 +113,11 @@ D={
  'quad':('Quad',1,['vehicle_quad'],['motor'],P(1,100)),
  'boiler':('Chaudière',1,['machine_boiler'],['pipe'],P(1,100)),
  'turbine':('Turbine à vapeur',1,['machine_turbine'],['boiler'],P(1,100)),
+ 'fence':('Clôtures et portails de bois',1,['machine_fence_wood','machine_gate_wood'],['rods','gears'],P(1,100)),
+ 'barrier':('Barrières et portails en béton',2,['machine_barrier_concrete','machine_gate_concrete'],['concrete','rods'],P(2,100)),
+ 'barrier_reinforced':('Béton armé et portail motorisé',3,['machine_barrier_reinforced','machine_gate_reinforced'],['barrier','steel_rod','motor'],P(3,150)),
  'repair':('Kit de réparation',1,['repair_kit'],['plates','wires','gears'],P(1,100)),
  'lamp':('Lampadaire électrique',1,['machine_lamp'],['electricity'],P(1,100)),
- 'fence':('Clôture en bois',1,['piece_fence_wood'],[],P(1,50)),
  'pack_2':('Paquet de science T2',1,[S2],['gears','wires'],P(1,100)),
  'armor_1':('Armure 1',1,['armor1_head','armor1_torso','armor1_legs','armor1_feet'],['pistol','clothing'],P(1,100,10)),
  'turret':('Tourelle',1,['machine_turret'],['conveyor','magazine'],P(1,100,10)),
@@ -142,7 +144,6 @@ D={
  'pole_hv':('Poteau haute tension',2,['machine_pole_hv'],['chassis_steel'],P(2,100)),
  'breaker':('Disjoncteur',2,['machine_breaker'],['pole_hv'],P(2,100)),
  'wind':('Éolienne',2,['machine_wind_turbine'],['motor','chassis_steel','kit_circuit'],P(2,150)),
- 'barrier_concrete':('Barrière en béton',2,['piece_barrier_concrete'],['concrete','rods','fence'],P(2,100)),
  'bedding_2':('Couchage de confort',2,['bed'],['bedding_1'],P(2,100)),
  'research_2':('Recherche II',2,[],['research_1'],P(2,100)),
  'rifle':('Fusil',2,['rifle'],['pistol','steel_plate'],P(2,100,20)),
@@ -181,7 +182,6 @@ D={
  'solar_cell':('Cellule photovoltaïque',3,['solar_cell'],['silicon_raw'],P(3,100)),
  'solar_panel':('Panneau solaire',3,['machine_solar_panel'],['solar_cell','chassis_alu'],P(3,150)),
  'graphite':('Graphite',3,['graphite'],['refinery','electric_furnace'],P(3,100)),
- 'barrier_reinforced':('Barrière en béton armé',3,['piece_barrier_reinforced'],['barrier_concrete','steel_rod'],P(3,100)),
  'armor_3':('Armure 3',3,['armor3_head','armor3_torso','armor3_legs','armor3_feet'],['armor_2','aluminium_plate','plastic'],P(3,150,30)),
  'exoskeleton':('Exosquelette',3,['exoskeleton'],['chassis_alu','motor','microcontroller'],P(3,150)),
  'garage':('Porte de garage',3,['piece_garage_aluminium'],['aluminium','engine_heavy'],P(3,150)),
@@ -330,7 +330,7 @@ print(len(D),'découvertes')
 EN={'cast_iron':'Cast iron','stamper':'Stamper','mould_plate':'Plate mould','plates':'Iron and copper plates','mould_gear':'Gear mould','gears':'Gear','mould_wire':'Wire mould','wires':'Copper wire','rods':'Iron rod','crusher':'Crusher','electricity':'Electricity','crank':'Priming crank','laboratory':'Laboratory','pack_1':'Science pack T1','iron_tool':'Iron tool','waterwheel':'Water wheel','pistol':'Pistol','magazine':'Pistol magazine','research_1':'Research I (faster packs)','conveyor':'Conveyor belt','arm':'Robotic arm','splitter':'Splitter','merger':'Merger','chest_iron':'Iron chest','waypoint':'Waypoint','textile':'Textile','clothing':'Clothing','backpack':'Backpack','bedding_1':'Survival bedding','navigation':'Navigation','pipe':'Pipe','motor':'Simple motor','pump':'Water pump','buggy':'Buggy','quad':'Quad','boiler':'Boiler','turbine':'Steam turbine','pack_2':'Science pack T2','armor_1':'Armor 1','turret':'Turret','bessemer':'Bessemer converter','steel_plate':'Steel plate','steel_rod':'Steel rod','mixer':'Concrete mixer','concrete':'Concrete buildings','washer':'Washing station','washed_ores':'Washed ores','zinc':'Zinc ingot','builder':'Builder','pipe_2':'Brass pipe','booster':'Booster pump','cooling':'Cooling tower','conveyor_2':'Fast conveyor','arm_electric':'Electric robotic arm','assembler':'Assembler','generator':'Fuel generator','drill_electric':'Electric drill','bedding_2':'Comfort bedding','research_2':'Research II','rifle':'Rifle','rifle_magazine':'Rifle magazine','armor_2':'Armor 2','turret_heavy':'Heavy turret','pack_3':'Science pack T3','heavy_press':'Heavy press','pipe_3':'T3 pipe','electric_furnace':'Electric furnace','silicon_raw':'Raw silicon','silicon_chip':'Silicon chip','barreler':'Barrel filler','pumpjack':'Pumpjack','barrel_oil':'Oil barrel','refinery':'Refinery','plastic_press':'Plastic press','plastic':'Plastic insulator','insulated_cable':'Insulated cable','rubber':'Rubber','engine_heavy':'Reinforced motor','tank':'Tank','van':'Dump truck','railway':'Railway','aluminium_ingot':'Aluminium ingot','aluminium_plate':'Aluminium plate','aluminium':'Aluminium buildings','garage':'Garage door','conveyor_3':'T3 conveyor','arm_filter':'Filter arm','sorting':'Sorter','drill_eco':'Eco drill','pack_4':'Science pack T4','research_3':'Research III','sniper':'Sniper','sniper_magazine':'Sniper magazine','turret_laser':'Laser turret','centrifuge':'Centrifuge','zamak':'Zamak','uranium_enriched':'Enriched uranium','uranium_depleted':'Depleted uranium','uranium_rod':'Uranium rod','reactor':'Fission reactor','pack_5':'Science pack T5','evaporation':'Evaporation tower','vitrifier':'Vitrifier','armor_4':'Armor 4','turret_plasma':'Plasma turret','storage':'Accumulator','research_4':'Research IV','fusion':'Fusion','beacon':'Quantum beacon'}
 EN.update({'assembler_advanced':'Advanced assembler','jetpack':'Jetpack','glass':'Glass pane','kit_circuit':'Circuit kit','chassis_simple':'Simple frame','chassis_steel':'Reinforced frame','circuit_advanced':'Advanced circuit','microcontroller':'Microcontroller','aluminium_rod':'Aluminium rod','chassis_alu':'Light frame','solar_cell':'Solar cell','graphite':'Graphite','lithium_salt':'Lithium salt','battery':'Lithium battery','carbon_fiber':'Carbon fibre','chassis_composite':'Composite frame','graphite_filter':'Graphite filter','armored_glass':'Armoured glass','deuterium':'Deuterium','tritium':'Tritium','air_compressor':'Air compressor','supra_magnet':'Superconducting magnet','fusion_capsule':'Fusion capsule','quantum_crystal':'Quantum crystal'})
 EN.update({'armored_buildings':'Armoured buildings','armor_3':'Armor 3','armor_5':'Armor 5','exoskeleton':'Exoskeleton'})
-EN.update({'repair':'Repair kit','wind':'Wind turbine','solar_cell':'Photovoltaic cell','solar_panel':'Solar panel','accumulator_basic':'Accumulator','breaker':'Circuit breaker','lamp':'Electric lamp post','pole_hv':'High-voltage pole','pole_uhv':'Ultra-high-voltage pole','transformer':'Transformer'})
+EN.update({'fence':'Wooden fences and gates','barrier':'Concrete barriers and gates','barrier_reinforced':'Reinforced concrete and motor gate','repair':'Repair kit','wind':'Wind turbine','solar_cell':'Photovoltaic cell','solar_panel':'Solar panel','accumulator_basic':'Accumulator','breaker':'Circuit breaker','lamp':'Electric lamp post','pole_hv':'High-voltage pole','pole_uhv':'Ultra-high-voltage pole','transformer':'Transformer'})
 if JEU:
     import re
     def direct_of(k):

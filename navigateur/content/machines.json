@@ -258,6 +258,76 @@
       "dischargeKw": 400
     },
     {
+      "id": "fence_wood",
+      "w": 3,
+      "d": 1,
+      "item": "machine_fence_wood",
+      "color": "#9a7448",
+      "height": 1.5,
+      "fuel": false,
+      "barrier": true,
+      "maxHp": 150
+    },
+    {
+      "id": "barrier_concrete",
+      "w": 3,
+      "d": 1,
+      "item": "machine_barrier_concrete",
+      "color": "#8b8f93",
+      "height": 1.5,
+      "fuel": false,
+      "barrier": true,
+      "maxHp": 500
+    },
+    {
+      "id": "barrier_reinforced",
+      "w": 3,
+      "d": 1,
+      "item": "machine_barrier_reinforced",
+      "color": "#5f6469",
+      "height": 1.5,
+      "fuel": false,
+      "barrier": true,
+      "maxHp": 1200
+    },
+    {
+      "id": "gate_wood",
+      "w": 6,
+      "d": 1,
+      "item": "machine_gate_wood",
+      "color": "#9a7448",
+      "height": 2.5,
+      "fuel": false,
+      "barrier": true,
+      "gate": true,
+      "maxHp": 200
+    },
+    {
+      "id": "gate_concrete",
+      "w": 6,
+      "d": 1,
+      "item": "machine_gate_concrete",
+      "color": "#8b8f93",
+      "height": 2.5,
+      "fuel": false,
+      "barrier": true,
+      "gate": true,
+      "maxHp": 600
+    },
+    {
+      "id": "gate_reinforced",
+      "w": 6,
+      "d": 1,
+      "item": "machine_gate_reinforced",
+      "color": "#5f6469",
+      "height": 2.5,
+      "fuel": false,
+      "barrier": true,
+      "gate": true,
+      "maxHp": 1400,
+      "autoGate": true
+    },
+    {
       "id": "drill_electric",
       "w": 4,
       "d": 5,

@@ -2160,6 +2160,8 @@ export function startGameView(
     const m = above ? null : factory.machineAt(gx, gz);
     if (m !== null && m.type === 'conveyor') return false;
     if (m === null) return false;
+    // Un portail ouvert se traverse.
+    if (factory.gateOpen(m)) return false;
     // Un poteau ne bloque que près de son mât.
     if (isPole(m.type)) {
       const c = centerOf(m);
@@ -4430,6 +4432,14 @@ export function startGameView(
       else {
         playSfx('deny');
         options.onMessage?.(t(`machine.repairKit.${result}` as TranslationKey));
+      }
+    }
+    // Portail à commande manuelle : la touche d'action l'ouvre ou le ferme.
+    if (!paused && !uiOpen && pressed('use') && aimedMachine) {
+      const def = machineDef(aimedMachine.type);
+      if (def.gate && !def.autoGate) {
+        factory.toggleGate(aimedMachine);
+        playSfx(factory.gateOpen(aimedMachine) ? 'doorOpen' : 'doorClose');
       }
     }
     if (!paused && !uiOpen && pressed('use') && aimedMachine && hasWindow(aimedMachine.type))

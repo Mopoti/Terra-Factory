@@ -30,6 +30,12 @@ export type MachineType =
   | 'wind_turbine'
   | 'solar_panel'
   | 'accumulator_basic'
+  | 'fence_wood'
+  | 'barrier_concrete'
+  | 'barrier_reinforced'
+  | 'gate_wood'
+  | 'gate_concrete'
+  | 'gate_reinforced'
   | 'crank'
   | 'splitter'
   | 'sorter'
@@ -93,6 +99,12 @@ export interface MachineDef {
   /** Poteau : niveau du réseau (0 bois, 1 haute tension, 2 très haute tension) et puissance maximale qu'il supporte (kW). */
   poleLevel?: number;
   maxKw?: number;
+  /** Barrière ou portail : bloque joueur et ennemis (le portail, s'il est ouvert, laisse passer) ; points de vie. */
+  barrier?: boolean;
+  gate?: boolean;
+  /** Portail à moteur : s'ouvre seul quand un joueur approche. */
+  autoGate?: boolean;
+  maxHp?: number;
   /** Transformateur : puissance maximale transmise du niveau supérieur au niveau inférieur (kW). */
   transformKw?: number;
   /** Pollution émise (points par seconde) quand la machine travaille. */
@@ -256,6 +268,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'antenna' ||
     type === 'transformer' ||
     type === 'lamp' ||
+    machineDef(type).barrier === true ||
     type === 'turbine'
   );
 

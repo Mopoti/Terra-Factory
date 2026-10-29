@@ -635,6 +635,81 @@
       }
     },
     {
+      "id": "machine_fence_wood",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 15,
+      "volumeL": 40,
+      "color": "#9a7448",
+      "recipe": {
+        "wood": 6,
+        "iron_rod": 2
+      }
+    },
+    {
+      "id": "machine_barrier_concrete",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 60,
+      "volumeL": 40,
+      "color": "#8b8f93",
+      "recipe": {
+        "concrete_block": 4,
+        "iron_rod": 2
+      }
+    },
+    {
+      "id": "machine_barrier_reinforced",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 90,
+      "volumeL": 40,
+      "color": "#5f6469",
+      "recipe": {
+        "concrete_block": 4,
+        "steel_rod": 4
+      }
+    },
+    {
+      "id": "machine_gate_wood",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 30,
+      "volumeL": 40,
+      "color": "#9a7448",
+      "recipe": {
+        "wood": 8,
+        "iron_gear": 2,
+        "iron_rod": 2
+      }
+    },
+    {
+      "id": "machine_gate_concrete",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 90,
+      "volumeL": 40,
+      "color": "#8b8f93",
+      "recipe": {
+        "concrete_block": 6,
+        "iron_gear": 2,
+        "iron_rod": 2
+      }
+    },
+    {
+      "id": "machine_gate_reinforced",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 120,
+      "volumeL": 40,
+      "color": "#5f6469",
+      "recipe": {
+        "concrete_block": 6,
+        "steel_rod": 4,
+        "motor": 1
+      }
+    },
+    {
       "id": "machine_drill_electric",
       "stack": 10,
       "category": "extraction",

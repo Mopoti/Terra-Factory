@@ -585,7 +585,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
         machine.type === 'fission_reactor' ||
         machine.type === 'fusion_reactor' ||
         machine.type === 'breaker');
-    if (isNum(m.hp) && m.hp > 0 && m.hp < Factory.MACHINE_HEALTH) machine.hp = m.hp;
+    if (isNum(m.hp) && m.hp > 0 && m.hp < Factory.maxHealth(machine.type)) machine.hp = m.hp;
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -1798,9 +1798,43 @@ export class Factory {
   };
   static readonly MACHINE_HEALTH = 120;
 
+  /** Points de vie maximaux d'une machine (barrières et portails en ont plus). */
+  static maxHealth(type: MachineType): number {
+    return machineDef(type).maxHp ?? Factory.MACHINE_HEALTH;
+  }
+
   /** Part de vie restante d'une machine (1 = intacte). */
   healthFraction(m: Machine): number {
-    return (m.hp ?? Factory.MACHINE_HEALTH) / Factory.MACHINE_HEALTH;
+    const max = Factory.maxHealth(m.type);
+    return (m.hp ?? max) / max;
+  }
+
+  /** Portail ouvert ? (`wear` = 1.) */
+  gateOpen(m: Machine): boolean {
+    return machineDef(m.type).gate === true && m.wear === 1;
+  }
+
+  /** Ouvre ou ferme un portail à la main (les portails motorisés se règlent seuls avec `tickGates`). */
+  toggleGate(m: Machine): void {
+    if (machineDef(m.type).gate) m.wear = m.wear === 1 ? 0 : 1;
+  }
+
+  /** Portails à moteur : ils s'ouvrent quand un joueur est à moins de `GATE_SENSE_M` de leur centre, et se referment sinon. */
+  tickGates(points: { x: number; z: number }[]): void {
+    for (const m of this.machines) {
+      if (!machineDef(m.type).autoGate) continue;
+      const c = centerOf(m);
+      m.wear = points.some((p) => Math.hypot(p.x - c.x, p.z - c.z) <= Factory.GATE_SENSE_M) ? 1 : 0;
+    }
+  }
+  static readonly GATE_SENSE_M = 4.5;
+
+  /** Barrière ou portail fermé qui barre le point (x, z) en mètres, ou null. */
+  barrierAt(x: number, z: number): Machine | null {
+    const m = this.machineAt(Math.floor(x / CELL_SIZE_M), Math.floor(z / CELL_SIZE_M));
+    if (!m) return null;
+    const def = machineDef(m.type);
+    return def.barrier && !(def.gate && m.wear === 1) ? m : null;
   }
 
   /** Luminosité du ciel (0 nuit noire, 1 plein jour) : fixée par la partie, fait tourner les panneaux solaires. */

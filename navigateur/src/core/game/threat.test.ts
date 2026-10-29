@@ -53,6 +53,19 @@ describe('nids et ennemis', () => {
     expect(t.enemies.length).toBeGreaterThan(0);
   });
 
+  it('une barrière ferme le chemin : l’ennemi ne la franchit pas et l’attaque', () => {
+    const t = new Threat({}, {}, world, { aggressive: false });
+    t.barrierAt = (x) => (x < 80 ? 'machine:5' : null);
+    t.enemies.push({ id: 1, x: 100, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });
+    const targets = [{ id: 'machine:7', x: 60, z: 0 }];
+    let onWall = 0;
+    for (let i = 0; i < 20 * 30; i++) {
+      for (const d of t.update(0.05, targets)) if (d.target === 'machine:5') onWall += d.amount;
+    }
+    expect(t.enemies[0].x).toBeGreaterThan(79);
+    expect(onWall).toBeGreaterThan(20);
+  });
+
   it('les ennemis vont vers l’installation polluante et la détruisent à coups de dégâts', () => {
     const t = new Threat({}, {}, world, { aggressive: false });
     t.enemies.push({ id: 1, x: 100, z: 0, hp: 25, cooldown: 0, idle: 0, target: null });

@@ -72,7 +72,7 @@ export class WorldSimulation {
 
   /** Un pas de simulation. */
   step(players: SimPlayer[], events: SimEvent[]): void {
-    const { state, factory } = this;
+    const { state, factory, threat } = this;
     const dt = SIM_STEP_S;
     // Un laboratoire qui a des paquets mais pas d'étude choisie lance la première technologie disponible.
     if (
@@ -82,6 +82,11 @@ export class WorldSimulation {
       const tech = state.autoStudy();
       if (tech) events.push({ type: 'autoStudy', tech });
     }
+    factory.tickGates(players.map((p) => ({ x: p.x, z: p.z })));
+    threat.barrierAt = (x, z) => {
+      const b = factory.barrierAt(x, z);
+      return b ? `machine:${b.id}` : null;
+    };
     factory.daylight = dayLight(state.changes.time, this.timeCfg).light;
     factory.tradeOpen = state.changes.beacon;
     factory.labDemand = state.studyRemaining();
@@ -152,7 +157,10 @@ export class WorldSimulation {
         }
       } else if (hit.target.startsWith('machine:')) {
         const id = Number(hit.target.slice(8));
-        const left = (factory.health.get(id) ?? MACHINE_HEALTH) - hit.amount;
+        const hit_m = factory.machines.find((x) => x.id === id);
+        const left =
+          (factory.health.get(id) ?? (hit_m ? Factory.maxHealth(hit_m.type) : MACHINE_HEALTH)) -
+          hit.amount;
         if (left <= 0) {
           factory.health.delete(id);
           if (state.destroyMachine(factory, id)) events.push({ type: 'machineLost', id });
