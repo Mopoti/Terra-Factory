@@ -1,5 +1,5 @@
 {
- "key": "discussions10",
+ "key": "discussions11",
  "title": "Discussions : suite (4)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
  "cols": [
@@ -16,33 +16,17 @@
  "tabs": [
   {
    "id": "e",
-   "label": "Énergie lot 2 : niveaux de réseau"
+   "label": "Énergie lot 2"
   }
  ],
  "rows": [
   {
-   "id": "e1",
+   "id": "f1",
    "tab": "e",
-   "name": "Fait : trois niveaux de poteaux + transformateur",
-   "tag": "e1",
-   "recipe": "Poteau bois 500 kW (3 prises, 8 m), haute tension 10 MW (4 prises, 20 m), très haute tension 600 MW (5 prises, 40 m). Réseaux séparés par niveau ; le courant ne descend que par un transformateur (3×3, jusqu'à 10 MW) posé à moins de 4 m d'un poteau de chaque niveau voisin. Une machine trop puissante pour le poteau n'est pas raccordée (réacteur → haute tension, fusion → très haute tension).",
-   "role": "Tu valides ces limites et ces portées ?"
-  },
-  {
-   "id": "e2",
-   "tab": "e",
-   "name": "Question : le bois plafonne à 500 kW",
-   "tag": "e2",
-   "recipe": "Un réseau bois ne peut jamais dépasser 500 kW, même avec 5 générateurs de 300 kW : il faut un deuxième réseau ou passer en haute tension. C'est la contrainte « gros puis diviser ». Les foreuses et machines courantes (≤ 100 kW) restent sur bois.",
-   "role": "Trop strict, ou c'est bien l'effet voulu ?"
-  },
-  {
-   "id": "e3",
-   "tab": "e",
-   "name": "Question : où placer le transformateur dans l’arbre",
-   "tag": "e3",
-   "recipe": "Le poteau haute tension est en T2, le très haute tension et le transformateur en T3. Mais en T2 le joueur peut poser une centrale (haute tension) sans transformateur : il devra raccorder ses machines directement au poteau haute tension (4 prises).",
-   "role": "On avance le transformateur en T2 ?"
+   "name": "Transformateur en T2",
+   "tag": "f1",
+   "recipe": "Fait : le transformateur est en T2 juste après le poteau haute tension. Comme l'isolant plastique est T3, sa recette devient chassis acier ×2, fil de cuivre ×24, verre ×4.",
+   "role": "Ça te va ? Sinon je pars sur le disjoncteur et le lampadaire."
   }
  ]
 }

@@ -96,7 +96,7 @@
     {"id": "chassis_alu", "tier": 3, "cost": {"science_pack_3": 100, "science_pack_2": 100}, "requires": ["aluminium_plate", "aluminium_rod"], "unlocks": ["chassis_alu"]},
     {"id": "aluminium", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["aluminium_plate"], "unlocks": ["piece_wall_aluminium", "piece_slab_aluminium", "piece_stairs_aluminium", "piece_door_aluminium", "piece_pillar_aluminium"]},
     {"id": "pole_uhv", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["pole_hv", "plastic", "microcontroller", "chassis_alu"], "unlocks": ["machine_pole_uhv"]},
-    {"id": "transformer", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["pole_hv", "plastic"], "unlocks": ["machine_transformer"]},
+    {"id": "transformer", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["chassis_steel", "pole_hv"], "unlocks": ["machine_transformer"]},
     {"id": "solar_cell", "tier": 3, "cost": {"science_pack_3": 100, "science_pack_2": 100}, "requires": ["silicon_raw"], "unlocks": ["solar_cell"]},
     {"id": "graphite", "tier": 3, "cost": {"science_pack_3": 100, "science_pack_2": 100}, "requires": ["electric_furnace", "refinery"], "unlocks": ["graphite"]},
     {"id": "armor_3", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150, "combat_pack": 30}, "requires": ["armor_2", "plastic", "aluminium_plate"], "unlocks": ["armor3_head", "armor3_torso", "armor3_legs", "armor3_feet"]},

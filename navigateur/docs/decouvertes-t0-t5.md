@@ -98,6 +98,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Armure 2** | Casque blindé, Plastron blindé, Jambières blindées, Bottes blindées | Laboratoire, Paquet de science T1, Paquet de science T2, Armure 1, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
 | **Tourelle lourde** | Tourelle lourde | Plaques de fer et de cuivre, Engrenage, Laboratoire, Paquet de science T1, Paquet de science T2, Tourelle, Plaque d'acier | 150 × Paquet de science T2 + 150 × Paquet de science T1 + 20 × Paquet de combat |
 | **Paquet de science T3** | Paquet de science T3 | Laboratoire, Paquet de science T1, Paquet de science T2, Plaque d'acier, Tuyau de laiton | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
+| **Transformateur** | Transformateur | Fil de cuivre, Vitre, Laboratoire, Paquet de science T1, Paquet de science T2, Châssis renforcé, Poteau haute tension | 100 × Paquet de science T2 + 100 × Paquet de science T1 |
 
 ## Palier 3 : paquets T3 + T2
 
@@ -129,7 +130,6 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Châssis léger** | Châssis léger | Laboratoire, Paquet de science T2, Paquet de science T3, Plaque d'aluminium, Tige d'aluminium | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Constructions en aluminium** | Mur en aluminium, Dalle en aluminium, Escalier en aluminium, Battant de porte en aluminium (2 par porte), Pilier en aluminium | Laboratoire, Paquet de science T2, Paquet de science T3, Plaque d'aluminium | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Poteau très haute tension** | Poteau très haute tension | Laboratoire, Paquet de science T2, Poteau haute tension, Paquet de science T3, Isolant plastique, Microcontrôleur, Châssis léger | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
-| **Transformateur** | Transformateur | Fil de cuivre, Laboratoire, Paquet de science T2, Châssis renforcé, Poteau haute tension, Paquet de science T3, Isolant plastique | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Accumulateur** | Accumulateur | Laboratoire, Paquet de science T2, Châssis renforcé, Paquet de science T3, Isolant plastique, Microcontrôleur | 150 × Paquet de science T3 + 150 × Paquet de science T2 |
 | **Cellule photovoltaïque** | Cellule photovoltaïque | Fil de cuivre, Vitre, Laboratoire, Paquet de science T2, Paquet de science T3, Silicium brut | 100 × Paquet de science T3 + 100 × Paquet de science T2 |
 | **Panneau solaire** | Panneau solaire | Vitre, Laboratoire, Paquet de science T2, Paquet de science T3, Châssis léger, Cellule photovoltaïque | 150 × Paquet de science T3 + 150 × Paquet de science T2 |

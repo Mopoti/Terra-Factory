@@ -566,7 +566,7 @@
       "recipe": {
         "chassis_steel": 2,
         "copper_wire": 24,
-        "plastic_insulator": 4
+        "glass": 4
       }
     },
     {
