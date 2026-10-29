@@ -513,6 +513,8 @@
   "mp.grid": "(réseau à {pct} %)",
   "meter.sockets": "Prises : {used} / {max} utilisées",
   "meter.power": "Production {cap} kW · demande {demand} kW · {pct} % satisfait",
+  "meter.chart": "Production et demande d'énergie du réseau",
+  "meter.legend": "Vert : production · Orange : demande · échelle jusqu'à {max} kW · {min} min",
   "meter.empty": "Aucune machine raccordée.",
   "factory.power.noSocket": "Aucune prise libre sur les poteaux à portée.",
   "mp.noGrid": "non relié à un poteau",

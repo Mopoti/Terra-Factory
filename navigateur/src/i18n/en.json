@@ -513,6 +513,8 @@
   "mp.grid": "(grid at {pct}%)",
   "meter.sockets": "Sockets: {used} / {max} used",
   "meter.power": "Output {cap} kW · demand {demand} kW · {pct}% met",
+  "meter.chart": "Grid energy production and demand",
+  "meter.legend": "Green: production · Orange: demand · scale up to {max} kW · {min} min",
   "meter.empty": "No machine connected.",
   "factory.power.noSocket": "No free socket on the poles in reach.",
   "mp.noGrid": "not linked to a pole",

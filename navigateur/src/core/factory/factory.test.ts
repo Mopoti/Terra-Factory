@@ -252,6 +252,22 @@ describe('électricité', () => {
       new Factory([far, emptyMachine(8, 'pole', 0, 0, 0)], makeWorld().world).gridInfo(far),
     ).toBeNull();
   });
+  it('le réseau garde la courbe de sa production et de sa demande, une valeur par seconde', () => {
+    const { f, drill } = setup();
+    run(f, 6);
+    const h = f.gridHistory(drill)!;
+    expect(h.cap.length).toBeGreaterThanOrEqual(5);
+    expect(h.cap.length).toBe(h.demand.length);
+    expect(h.cap.at(-1)).toBeCloseTo(300, 0); // le générateur
+    expect(Math.max(...h.demand)).toBeGreaterThan(0); // la foreuse a travaillé (puis sa sortie s'est remplie)
+    // L'identité du réseau est le plus petit identifiant de ses poteaux : elle ne change pas si on en ajoute un plus récent.
+    const id = f.gridInfo(drill)!.id;
+    expect(id).toBe(2);
+    const { world } = makeWorld(50);
+    const more = new Factory([...f.machines, emptyMachine(30, 'pole', 9, 1, 0)], world);
+    expect(more.gridInfo(drill)!.id).toBe(2);
+  });
+
   it('un poteau a 3 prises : la quatrième machine n’est pas raccordée, un second poteau la reprend', () => {
     const { world } = makeWorld(50);
     const pole = emptyMachine(1, 'pole', 6, 6, 0);

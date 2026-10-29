@@ -864,6 +864,13 @@ export class Factory {
         }
       }
     }
+    // Identifiant d'un réseau : le plus petit identifiant de ses poteaux (stable quand on ajoute un poteau plus récent).
+    const lowest = new Map<number, number>();
+    for (const p of poles) {
+      const root = find(p.id);
+      lowest.set(root, Math.min(lowest.get(root) ?? Infinity, p.id));
+    }
+    const gridId = (poleId: number): number => lowest.get(find(poleId)) as number;
     const members = new Map<number, number>();
     const sockets = machineDef('pole').sockets ?? 3;
     this.socketsUsed.clear();
@@ -884,12 +891,12 @@ export class Factory {
         continue;
       }
       this.socketsUsed.set(best.id, (this.socketsUsed.get(best.id) ?? 0) + 1);
-      const grid = find(best.id);
+      const grid = gridId(best.id);
       this.gridOf.set(m.id, grid);
       this.wires.push({ from: best, to: m });
       members.set(grid, (members.get(grid) ?? 0) + 1);
     }
-    for (const p of poles) this.gridOf.set(p.id, find(p.id));
+    for (const p of poles) this.gridOf.set(p.id, gridId(p.id));
     this.grids = new Map(
       [...new Set(this.gridOf.values())].map((id) => [
         id,
@@ -904,6 +911,40 @@ export class Factory {
         },
       ]),
     );
+  }
+
+  /** Historique de chaque réseau : production et demande moyennes par seconde (kW), les plus récentes à la fin. */
+  private readonly history = new Map<
+    number,
+    { cap: number[]; demand: number[]; accCap: number; accDemand: number; acc: number }
+  >();
+  static readonly HISTORY_S = 240;
+
+  /** Courbe de production et de demande du réseau de cette machine (une valeur par seconde), ou null. */
+  gridHistory(m: Machine): { cap: number[]; demand: number[] } | null {
+    const id = this.gridOf.get(m.id);
+    const h = id === undefined ? undefined : this.history.get(id);
+    return h ? { cap: h.cap, demand: h.demand } : null;
+  }
+
+  private record(g: GridInfo, dt: number): void {
+    let h = this.history.get(g.id);
+    if (!h) {
+      h = { cap: [], demand: [], accCap: 0, accDemand: 0, acc: 0 };
+      this.history.set(g.id, h);
+    }
+    h.accCap += g.capacityKw * dt;
+    h.accDemand += g.demandKw * dt;
+    h.acc += dt;
+    if (h.acc >= 1) {
+      h.cap.push(h.accCap / h.acc);
+      h.demand.push(h.accDemand / h.acc);
+      if (h.cap.length > Factory.HISTORY_S) {
+        h.cap.shift();
+        h.demand.shift();
+      }
+      h.accCap = h.accDemand = h.acc = 0;
+    }
   }
 
   /** Prises prises par poteau (identifiant du poteau → nombre de machines qui y sont raccordées). */
@@ -1624,7 +1665,9 @@ export class Factory {
       if (g.overloadS > 0) this.overloadOf.set(g.id, g.overloadS);
       else this.overloadOf.delete(g.id);
       if (g.blackout) g.satisfaction = 0;
+      this.record(g, dt);
     }
+    for (const id of [...this.history.keys()]) if (!this.grids.has(id)) this.history.delete(id);
   }
 
   /** Un générateur ne brûle que ce qu'il faut pour la demande du réseau. */

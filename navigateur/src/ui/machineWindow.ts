@@ -466,6 +466,50 @@ export function mountMachineWindow(
   }
 
   /** Balise : un nom (« Balise » par défaut) et une couleur, vus de loin et sur la carte. */
+  /** Courbe de la production (vert) et de la demande (orange) d'un réseau sur les dernières minutes. */
+  function powerChart(history: { cap: number[]; demand: number[] } | null): HTMLElement {
+    const box = el('div', 'power-chart');
+    const W = 280;
+    const H = 90;
+    const n = Math.max(history?.cap.length ?? 0, 2);
+    const max = Math.max(1, ...(history?.cap ?? []), ...(history?.demand ?? [])) * 1.1;
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'power-chart-svg');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', t('meter.chart'));
+    const frame = document.createElementNS(NS, 'rect');
+    frame.setAttribute('width', String(W));
+    frame.setAttribute('height', String(H));
+    frame.setAttribute('class', 'frame');
+    svg.append(frame);
+    const line = (values: number[], cls: string): void => {
+      if (values.length < 2) return;
+      const pts = values
+        .map((v, i) => `${((i / (n - 1)) * W).toFixed(1)},${(H - (v / max) * H).toFixed(1)}`)
+        .join(' ');
+      const poly = document.createElementNS(NS, 'polyline');
+      poly.setAttribute('points', pts);
+      poly.setAttribute('class', cls);
+      svg.append(poly);
+    };
+    line(history?.cap ?? [], 'cap');
+    line(history?.demand ?? [], 'demand');
+    box.append(
+      svg,
+      el(
+        'div',
+        'power-legend',
+        t('meter.legend', {
+          max: String(Math.round(max)),
+          min: String(Math.round((n / 60) * 10) / 10),
+        }),
+      ),
+    );
+    return box;
+  }
+
   /**
    * Compteur d'un poteau : prises utilisées, production et demande du réseau, puis chaque machine raccordée avec sa
    * puissance nominale (− consommée, + produite) et son état. Se met à jour en continu.
@@ -504,6 +548,7 @@ export function mountMachineWindow(
             }),
           ),
         );
+        kids.push(powerChart(factory.gridHistory(m)));
         const members = factory.gridMembers(m);
         if (members.length === 0) kids.push(el('div', 'mach-info', t('meter.empty')));
         for (const { machine, kw } of members) {

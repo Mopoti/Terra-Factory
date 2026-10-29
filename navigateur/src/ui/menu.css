@@ -3290,3 +3290,34 @@ input[type='range'] {
 .machine-panel .mp-details:empty {
   display: none;
 }
+
+.power-chart {
+  margin: 6px 0;
+}
+.power-chart-svg {
+  width: 100%;
+  max-width: none;
+  height: 90px;
+  display: block;
+  margin: 0;
+}
+.power-chart-svg .frame {
+  fill: rgba(15, 13, 10, 0.06);
+  stroke: #a19179;
+}
+.power-chart-svg .cap,
+.power-chart-svg .demand {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.power-chart-svg .cap {
+  stroke: #3aa655;
+}
+.power-chart-svg .demand {
+  stroke: #e08a1e;
+}
+.power-legend {
+  font-size: 11px;
+  opacity: 0.75;
+}
