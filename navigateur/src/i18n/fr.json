@@ -569,6 +569,8 @@
   "item.machine_turret_rail": "Tourelle à rail",
   "item.machine_hologram_projector": "Mur holographique",
   "item.machine_hologram_gate": "Portail holographique",
+  "recipe.liquid_nitrogen_air": "Azote liquide (air comprimé)",
+  "recipe.deuterium_electrolysis": "Deutérium (électrolyse de l’eau)",
   "factory.power.noSocket": "Aucune prise libre sur les poteaux à portée.",
   "mp.noGrid": "non relié à un poteau",
   "mp.produced": "produits",

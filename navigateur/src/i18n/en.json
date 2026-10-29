@@ -569,6 +569,8 @@
   "item.machine_turret_rail": "Rail turret",
   "item.machine_hologram_projector": "Holographic wall",
   "item.machine_hologram_gate": "Holographic gate",
+  "recipe.liquid_nitrogen_air": "Liquid nitrogen (compressed air)",
+  "recipe.deuterium_electrolysis": "Deuterium (water electrolysis)",
   "factory.power.noSocket": "No free socket on the poles in reach.",
   "mp.noGrid": "not linked to a pole",
   "mp.produced": "produced",

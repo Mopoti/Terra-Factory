@@ -1,27 +1,57 @@
-# Commande de modèles 3D (état du tour 279)
+# Commande de modèles 3D (état du tour 280)
 
-Liste faite par script sur le jeu en marche (`content/items.json`, `content/machines.json`, `dropModels.ts`, `models.ts`). **Règle : l'icône d'inventaire et le modèle au sol sont le même modèle** (l'icône est une vue isométrique du modèle au sol ; pour une machine, de sa miniature). Donc un seul modèle à fournir par objet pour les trois usages (sol, inventaire, et posé quand c'est une machine / construction / véhicule). Les fichiers vont dans `blender/` → `export/` → `public/models/terra` (voir `blender/scripts/`). Les faces magenta des formes d'objets prennent la couleur de l'objet.
+Liste faite sur le jeu en marche (`content/items.json`, `content/machines.json`, `dropModels.ts`, `models.ts`). **Règle : l'icône d'inventaire et le modèle au sol sont le même modèle** (l'icône est une vue isométrique du modèle au sol ; pour une machine, de sa miniature). Un seul modèle à fournir par objet pour les trois usages (sol, inventaire, posé quand c'est une machine / construction / véhicule). Les fichiers vont dans `blender/` → `export/` → `public/models/terra`. Les faces magenta des formes d'objets prennent la couleur de l'objet.
 
-## 1. Dans le jeu, avec un modèle provisoire (à remplacer)
+## 1. Dans le jeu avec un modèle provisoire ou dessiné par le code (à remplacer)
 
-### 1a. Machines et constructions posées (modèle réutilisé d'une autre machine)
+### 1a. Machines posées (modèle d'une autre machine réutilisé)
 
-| Objet | Modèle provisoire | Taille (cases de 50 cm) | Remarque |
+| Objet | Modèle provisoire | Emprise (cases de 50 cm) | Ce qu'il faut |
 | --- | --- | --- | --- |
-| Poteau haute tension (`machine_pole_hv`) | `poteau_electrique` | 2×2, haut. 6 m | Poteau haute tension : mât de 6 m, 3 bras, grands isolateurs |
-| Poteau très haute tension (`machine_pole_uhv`) | `poteau_electrique` | 2×2, haut. 10 m | Poteau très haute tension : pylône de 10 m, 3 bras larges |
-| Lampadaire électrique (`machine_lamp`) | `poteau_electrique` | 1×1, haut. 3 m | Lampadaire : mât 3 m avec une lampe qui s'allume la nuit (pièce lumineuse nommée `lueur`) |
-| Éolienne (`machine_wind_turbine`) | `poteau_electrique` | 2×2, haut. 6 m | Éolienne : mât 6 m et rotor à trois pales qui tourne (pièce animée) |
-| Transformateur (`machine_transformer`) | `accumulateur_t3` | 3×3, haut. 2.5 m | Transformateur : cuve, 3 isolateurs, ailettes |
-| Disjoncteur (`machine_breaker`) | `accumulateur_t3` | 2×2, haut. 1.5 m | Disjoncteur : coffret avec levier ; deux états (fermé / ouvert) si possible |
-| Panneau solaire (`machine_solar_panel`) | `accumulateur_t3` | 3×3, haut. 1.2 m | Panneau solaire : panneau incliné bleu sur pied |
-| Accumulateur (`machine_accumulator_basic`) | `accumulateur_t3` | 2×2, haut. 1.0 m | Accumulateur de base : plus petit et plus simple que l'accumulateur lithium T4 |
-| Assembleur avancé (T3) (`machine_assembler_advanced`) | `assembleur_t2` | 4×4, haut. 1.5 m | Assembleur avancé : variante visible de l'assembleur T2 (4 types) |
-| Mur blindé, porte blindée (`piece_wall_armored`, `piece_door_armored`) | modèles de l'aluminium | comme le mur / la porte | variante blindée (plaques rivetées) |
+| Poteau haute tension (`machine_pole_hv`) | `poteau_electrique` | 2×2, haut. 6 m | mât de 6 m, 3 bras, grands isolateurs |
+| Poteau très haute tension (`machine_pole_uhv`) | `poteau_electrique` | 2×2, haut. 10 m | pylône de 10 m, 3 bras larges |
+| Lampadaire électrique (`machine_lamp`) | `poteau_electrique` | 1×1, haut. 3 m | mât de 3 m, lampe qui s'allume la nuit (pièce `lueur`) |
+| Éolienne (`machine_wind_turbine`) | `poteau_electrique` | 2×2, haut. 6 m | mât de 6 m, rotor à trois pales qui tourne (pièce animée) |
+| Transformateur (`machine_transformer`) | `accumulateur_t3` | 3×3, haut. 2.5 m | cuve, 3 isolateurs, ailettes |
+| Disjoncteur (`machine_breaker`) | `accumulateur_t3` | 2×2, haut. 1.5 m | coffret à levier ; fermé / ouvert si possible |
+| Panneau solaire (`machine_solar_panel`) | `accumulateur_t3` | 3×3, haut. 1.2 m | panneau incliné bleu sur pied |
+| Accumulateur (`machine_accumulator_basic`) | `accumulateur_t3` | 2×2, haut. 1.0 m | plus petit et plus simple que l'accumulateur lithium T4 |
+| Borne de recharge (`machine_charger`) | `accumulateur_t3` | 3×3, haut. 1.8 m | borne avec câble et prise pour véhicule, voyant de charge |
+| Assembleur avancé (T3) (`machine_assembler_advanced`) | `assembleur_t2` | 4×4, haut. 1.5 m | variante visible de l'assembleur T2 |
+| Fabricateur universel (`machine_fabricator`) | `assembleur_t2` | 4×4, haut. 2.0 m | assembleur futuriste (T5), 4×4 |
+| Compresseur d’air (`machine_air_compressor`) | `centrifugeuse_t4` | 3×3, haut. 1.5 m | cuve horizontale et compresseur |
+| Électrolyseur (`machine_electrolyzer`) | `centrifugeuse_t4` | 3×3, haut. 1.5 m | cuves et électrodes, prise d'eau |
+| Purificateur d’air (`machine_air_purifier`) | `centrifugeuse_t4` | 3×3, haut. 1.8 m | tour à filtres, aérations |
+| Pile à combustible (`machine_fuel_cell`) | `generateur_combustible` | 3×3, haut. 1.4 m | empilement de cellules, réservoir de deutérium |
+| Foreuse à plasma (`machine_drill_plasma`) | `foreuse_eco_t3` | 6×6, haut. 2.5 m | grande foreuse 6×6, tête à plasma |
+| Bras industriel (`machine_arm_industrial`) | `bras_t3` | 2×3, haut. 1.2 m | bras robotique grand format et rapide |
+| Coffre quantique (`machine_quantum_chest`) | `coffre_fer` | 2×2, haut. 0.9 m | coffre violet lumineux, motif quantique |
+| Tourelle à rail (`machine_turret_rail`) | `tourelle_plasma` | 3×3, haut. 1.4 m | canon à rails long, rails visibles |
 
-### 1b. Objets (sac et sol) dont la forme est partagée ou provisoire
+### 1b. Barrières et portails (dessinés par le code : poteaux et lisses, aucun modèle)
 
-Forme actuelle → ce qu'il faudrait. Les objets marqués « provisoire » ont été ajoutés avec la forme d'un voisin.
+| Objet | Emprise | Ce qu'il faut |
+| --- | --- | --- |
+| Clôture en bois (`machine_fence_wood`) | 3×1, haut. 1.5 m | clôture à lattes, 1,5 m ; 3 états d'usure |
+| Barrière en béton (`machine_barrier_concrete`) | 3×1, haut. 1.5 m | mur bas en béton, 1,5 m ; fissures selon l'usure |
+| Barrière en béton armé (`machine_barrier_reinforced`) | 3×1, haut. 1.5 m | béton armé avec armatures apparentes ; usure |
+| Portail en bois (`machine_gate_wood`) | 6×1, haut. 2.5 m | portail à deux vantaux ou coulissant, 3 m ; fermé / ouvert |
+| Portail en béton (`machine_gate_concrete`) | 6×1, haut. 2.5 m | portail béton, 3 m ; fermé / ouvert |
+| Portail en béton armé (moteur) (`machine_gate_reinforced`) | 6×1, haut. 2.5 m | portail blindé à moteur visible, 3 m ; ouvre seul à l'approche |
+| Mur holographique (`machine_hologram_projector`) | 3×1, haut. 1.5 m | deux émetteurs et un voile de lumière, 1,5 m |
+| Portail holographique (`machine_hologram_gate`) | 6×1, haut. 2.5 m | émetteurs et voile de lumière, 3 m ; ouvert / fermé |
+Usure : les machines abîmées sont noircies par le code (suie par taches, fumée sous 50 %, étincelles sous 25 %) ; des modèles à états abîmés (3 niveaux) amélioreraient le rendu.
+
+### 1c. Véhicules et matériel roulant (modèle d'un autre véhicule réutilisé)
+
+| Objet | Modèle provisoire | Ce qu'il faut |
+| --- | --- | --- |
+| Quad électrique (`vehicle_quad_electric`) | `quad` | variante électrique : batterie visible, pas d'échappement |
+| Locomotive électrique (`train_locomotive_electric`) | `locomotive_vapeur` | loco électrique à batterie, sans cheminée |
+| Wagon plateforme (`train_wagon_flat`) | `wagon_fret` | plateau ouvert avec ridelles basses |
+| Mur blindé, porte blindée | modèles de l'aluminium | variante blindée (plaques rivetées) |
+
+### 1d. Objets (sac et sol) à forme partagée ou provisoire
 
 | Objet | Forme actuelle | Il faudrait |
 | --- | --- | --- |
@@ -37,6 +67,7 @@ Forme actuelle → ce qu'il faudrait. Les objets marqués « provisoire » ont �
 | Fibre de carbone (`carbon_fiber`) | forme `bobine` | rouleau de fibre noire tressée |
 | Kit circuit (`kit_circuit`) | forme `puce` | petite carte avec composants |
 | Kit de réparation (`repair_kit`) | forme `conteneur` | boîte à outils rouge-orange (clé, tournevis) |
+| Batterie portable (`battery_portable`) | forme `conteneur` | pile de poche ; prévoir la zone où la jauge s'affiche sous l'icône |
 | Circuit avancé (`circuit_advanced`) | forme `puce` | carte plus dense, dorée |
 | Microcontrôleur (`microcontroller`) | forme `puce` | puce carrée à broches |
 | Cellule photovoltaïque (`solar_cell`) | forme `plaque` | cellule bleue quadrillée |
@@ -49,59 +80,30 @@ Forme actuelle → ce qu'il faudrait. Les objets marqués « provisoire » ont �
 | Tritium (`tritium`) | forme `baril` | bonbonne de gaz (étiquette T) |
 | Azote liquide (`liquid_nitrogen`) | forme `baril` | bonbonne cryogénique givrée |
 
-### 1c. Objets qui partagent une forme sans être provisoires (à distinguer un jour)
+### 1e. Formes partagées sans être provisoires (à distinguer un jour)
 
 | Forme | Objets | Proposition |
 | --- | --- | --- |
-| lingot | fer, cuivre, zinc, fonte, acier, aluminium, zamak | différencier l'aluminium et le zamak (teinte, marquage) |
+| lingot | fer, cuivre, zinc, fonte, acier, aluminium, zamak | différencier l'aluminium et le zamak |
 | plaque / engrenage / bobine | moules de plaque, d'engrenage, de fil | un vrai **moule** (cadre creux) pour chacun |
 | bobine | fil de cuivre, câble isolé | gaine visible sur le câble isolé |
-| puce | puce de silicium, isolant plastique | l'isolant n'est pas une puce (manchon / plaque blanche) |
+| puce | puce de silicium, isolant plastique | l'isolant n'est pas une puce |
 | science | paquets T1 à T5 et de combat (6) | **un visuel par palier** (couleur et symbole) |
 | baril | vide, d'eau, de pétrole, pétrole brut | le contenu ou l'étiquette se voit |
 | conteneur | uranium enrichi, appauvri, barre d'uranium, déchets nucléaires | barre (tige jaune) et fût de déchets distincts |
-| bloc | béton, filtre en graphite | suffisant |
 
-### 1d. Équipement
+### 1f. Équipement
 
 - **Veste** (`jacket`) : tout (modèle d'objet et modèle porté ; garde la forme de caisse).
 - **Armures composite (3) et nano (5)** (casque, plastron, jambières, bottes) : modèles d'objet + portés ; elles prennent les formes des armures 2 et 4.
 - **Exosquelette** (forme du pantalon) et **propulseur dorsal** (`jetpack`, forme du sac à dos) : modèles propres.
 - **Modèles portés de tout l'équipement** (sac à dos, capuche, pantalon, bottes, gants, armures 1 à 5, veste) : sur le personnage ce sont encore des boîtes colorées (`refreshWorn` dans `gameView.ts`).
 
-### 1e. Rails (nouvelle géométrie du tour 255 et suivants)
+### 1g. Rails
 
-Le droit cardinal et la rampe ont leur modèle ; la **courbe 45° (rayon 8,75 m)**, le **droit en diagonale (3,54 m)** et le **croisement en diagonale** sont dessinés par une forme simple (`addProcedural`). À modéliser : rail courbe, rail diagonal, éventuellement aiguillage visuel.
+Le droit cardinal et la rampe ont leur modèle ; la **courbe 45° (rayon 8,75 m)**, le **droit en diagonale (3,54 m)** et le **croisement en diagonale** sont dessinés par une forme simple. À modéliser : rail courbe, rail diagonal, éventuellement aiguillage visuel.
 
-## 2. Pas encore dans le jeu (chantiers en cours ou prévus)
+## 2. Résumé
 
-Aucun design n'existe. Dimensions indicatives ; à confirmer avec le PO.
-
-| Objet | Genre | Ce qu'il faut | Notes |
-| --- | --- | --- | --- |
-| Clôture en bois | construction | modèle de pièce 1,5 m (non franchissable) | un par palier : bois, béton, béton armé |
-| Barrière en béton | construction | pièce 1,5 m | vie et usure : prévoir 3 états abîmés |
-| Barrière en béton armé | construction | pièce 1,5 m | idem |
-| Portails (bois, béton, béton armé) | construction | portail de 3 m, ouvert et fermé | mode automatique du béton armé : moteur visible |
-| Barrière holographique + portail holographique | construction | mur de lumière 1,5 m / 3 m (T5) + projecteur | énergie continue |
-| Projecteur de mur holographique | machine | modèle posé |  |
-| Quad électrique | véhicule | modèle posé (variante du quad) | batterie visible |
-| Locomotive électrique | véhicule | modèle posé (variante de la locomotive) | pantographe / batterie |
-| Wagon plateforme | véhicule | modèle posé | plat, pour charger un véhicule |
-| Batterie portable | objet | modèle au sol / icône | pile de poche ; jauge de charge sur l'icône (prévoir une barre en superposition) |
-| Borne de recharge | machine | modèle posé | place pour un véhicule / le propulseur |
-| Compresseur d'air | machine | modèle posé |  |
-| Purificateur d'air | machine | modèle posé |  |
-| Bras industriel | machine | modèle posé | bras robotique grand format |
-| Foreuse à plasma | machine | modèle posé | variante de la foreuse |
-| Électrolyseur | machine | modèle posé |  |
-| Fabricateur universel | machine | modèle posé | T5 |
-| Pile à combustible | machine | modèle posé |  |
-| Coffre quantique | machine | modèle posé | T5 |
-| Tourelle à rail | machine | modèle posé |  |
-
-## 3. Résumé
-
-- **Priorité (vu en jeu tout de suite)** : modèles portés de l'équipement, veste, paquets de science par palier, moules, nouveaux rails (courbe, diagonale).
-- **Provisoires à remplacer** : 9 machines / constructions (1a), 23 objets (1b), armures 3 et 5, exosquelette, propulseur.
-- **Nouveaux chantiers** : barrières et portails, véhicules et loco électriques, batterie portable, 11 machines.
+- **Priorité (vu en jeu tout de suite)** : modèles portés de l'équipement, veste, paquets de science par palier, moules, nouveaux rails (courbe, diagonale), barrières et portails.
+- **Tout le reste du contenu prévu est maintenant dans le jeu** avec un modèle provisoire (sections 1a à 1d) : il n'y a plus d'objet « prévu sans design » hors ces listes.
