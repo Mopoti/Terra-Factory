@@ -1,7 +1,7 @@
 {
- "key": "discussions-cumul",
+ "key": "discussions-cumul2",
  "title": "Discussions : suite (4)",
- "intro": "Tous les sujets récents sont sur la même page (onglet « Tout ») ; tes réponses précédentes sont préremplies. Les sujets à traiter sont en premier.",
+ "intro": "Seuls les sujets encore ouverts restent ici ; ce qui est tranché est dans passation.md et docs/usine.md.",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -16,23 +16,7 @@
  "tabs": [
   {
    "id": "k",
-   "label": "Kit de réparation et barre de vie (à traiter)"
-  },
-  {
-   "id": "e3",
-   "label": "Énergie lot 3"
-  },
-  {
-   "id": "e2",
-   "label": "Énergie lot 2 : disjoncteur, lampadaire, transformateur"
-  },
-  {
-   "id": "e1",
-   "label": "Énergie lot 2 : niveaux de réseau"
-  },
-  {
-   "id": "p",
-   "label": "Énergie : puissance max des poteaux"
+   "label": "Kit de réparation et usure (à traiter)"
   }
  ],
  "rows": [
@@ -42,9 +26,7 @@
    "name": "Utilisation du kit de réparation",
    "tag": "k1",
    "recipe": "Corrigé : le kit ne s'utilise plus depuis la fenêtre (F). Il s'utilise uniquement en main : on le prend (sac ou barre de raccourcis), puis clic gauche sur la machine abîmée = 1 charge (+25 %) avec le bruit de clé à cliquet.",
-   "role": "Comment veux-tu tester ? Aujourd'hui seuls les ennemis abîment les machines : veux-tu un moyen de test (mode Créatif : clic droit maintenu + touche pour abîmer une machine) ?",
-   "v": "mod",
-   "c": "Ne peut pas être utilisé en faisant F"
+   "role": "Comment veux-tu tester ? Aujourd'hui seuls les ennemis abîment les machines : veux-tu un moyen de test (mode Créatif : clic droit maintenu + touche pour abîmer une machine) ?"
   },
   {
    "id": "k2",
@@ -52,139 +34,7 @@
    "name": "Barre de vie des machines",
    "tag": "k2",
    "recipe": "Corrigé : plus de barre flottante. Les machines abîmées noircissent (suie par taches) selon l'usure : léger sous 75 % de vie, marqué sous 50 % (avec fumée noire), très marqué sous 25 % (avec étincelles). La vie en pourcentage est affichée dans le panneau de la machine (F).",
-   "role": "Les trois niveaux d'usure te conviennent ? Veux-tu aussi des fissures / pièces cassées quand les modèles 3D seront refaits ?",
-   "v": "mod",
-   "c": "Il n'y a pas de barre qui flotte au dessus de chaque machine, il faudrait un effet sur les modèles pour les rendre abîmés, sinon dans le panneau de la machine on voit sa vie."
-  },
-  {
-   "id": "k3",
-   "tab": "k",
-   "name": "Emplacement d’amélioration",
-   "tag": "k3",
-   "recipe": "Noté. Pistes : un emplacement où l'on place un objet d'amélioration (consommation, production, vitesse, rendement), ou une montée de niveau payée en ressources (tu aimes moins). Je ne code rien.",
-   "role": "Quand on le fera, quels producteurs et machines en auront un en premier (panneau solaire, éolienne, foreuse, fourneau) ? Un seul emplacement par machine ou plusieurs ?",
-   "v": "yes",
-   "c": "D'accord (amélioration de consommation, production, vitesse, rendement ; un objet à insérer plutôt que payer en ressources, à voir)."
-  },
-  {
-   "id": "l1",
-   "tab": "e3",
-   "name": "Éolienne, solaire, accumulateur de base, éclairage",
-   "tag": "l1",
-   "recipe": "Faits : éolienne T2 (40 kW, vent variable 15 à 100 %), panneau solaire T3 (60 kW le jour), accumulateur de base T3 (200 MJ, 400 kW), lampadaires qui éclairent la nuit (les 6 plus proches).",
-   "role": "Valides-tu les puissances ?",
-   "v": "mod",
-   "c": "On valide comme ça. Peut-être ajouter un emplacement d'amélioration (panneau solaire qui suit le soleil, éolienne à plus grandes pales), mais on verra plus tard."
-  },
-  {
-   "id": "l2",
-   "tab": "e3",
-   "name": "Borne de charge → kit de réparation",
-   "tag": "l2",
-   "recipe": "Remplacée par un objet fabriqué à 5 charges qui répare 25 % par charge.",
-   "role": "Équilibrage à voir.",
-   "v": "yes",
-   "c": "Créer un objet qui se craft et qui permet de réparer les objets endommagés, 5 charges, chaque charge répare 25 %, à voir pour l'équilibrage."
-  },
-  {
-   "id": "d1",
-   "tab": "e2",
-   "name": "Disjoncteur",
-   "tag": "d1",
-   "recipe": "Relie deux poteaux de même niveau ; saute sur surcharge (tous les disjoncteurs fermés du réseau) au lieu du blackout.",
-   "role": "Variante possible : seul le plus proche saute.",
-   "v": "mod",
-   "c": "On peut essayer comme ça."
-  },
-  {
-   "id": "d2",
-   "tab": "e2",
-   "name": "Lampadaire",
-   "tag": "d2",
-   "recipe": "5 kW, une prise, éclaire la nuit.",
-   "role": "Éclairage + lot 3.",
-   "v": "yes",
-   "c": "On fait l'éclairage et le lot 3."
-  },
-  {
-   "id": "d3",
-   "tab": "e2",
-   "name": "Transformateur en T2",
-   "tag": "d3",
-   "recipe": "Transformateur avancé en T2, recette au verre au lieu de l'isolant plastique.",
-   "role": "",
-   "v": "yes",
-   "c": ""
-  },
-  {
-   "id": "n1",
-   "tab": "e1",
-   "name": "Trois niveaux de poteaux + transformateur",
-   "tag": "n1",
-   "recipe": "Bois 500 kW (3 prises, 8 m), haute tension 10 MW (4 prises, 20 m), très haute tension 600 MW (5 prises, 40 m) ; courant descendant par le transformateur.",
-   "role": "",
-   "v": "yes",
-   "c": ""
-  },
-  {
-   "id": "n2",
-   "tab": "e1",
-   "name": "Le bois plafonne à 500 kW",
-   "tag": "n2",
-   "recipe": "Un réseau bois ne dépasse jamais 500 kW.",
-   "role": "",
-   "v": "yes",
-   "c": ""
-  },
-  {
-   "id": "p1",
-   "tab": "p",
-   "name": "Ce que tu veux obtenir",
-   "tag": "p1",
-   "recipe": "Hiérarchie gros poteau → moyens → petits.",
-   "role": "",
-   "v": "yes",
-   "c": ""
-  },
-  {
-   "id": "p2",
-   "tab": "p",
-   "name": "Option A : le poteau le plus faible limite le réseau",
-   "tag": "p2",
-   "recipe": "Capacité limitée par le plus faible poteau.",
-   "role": "",
-   "v": "no",
-   "c": ""
-  },
-  {
-   "id": "p3",
-   "tab": "p",
-   "name": "Option B : le courant descend par des transformateurs",
-   "tag": "p3",
-   "recipe": "Trois niveaux séparés reliés par transformateurs (retenue).",
-   "role": "",
-   "v": "yes",
-   "c": ""
-  },
-  {
-   "id": "p4",
-   "tab": "p",
-   "name": "Option C : limite sur la somme des machines raccordées",
-   "tag": "p4",
-   "recipe": "Disjoncteur par poteau.",
-   "role": "",
-   "v": "no",
-   "c": ""
-  },
-  {
-   "id": "p5",
-   "tab": "p",
-   "name": "Mon avis",
-   "tag": "p5",
-   "recipe": "Option B, avec les puissances 500 kW / 10 MW / 600 MW.",
-   "role": "",
-   "v": "yes",
-   "c": ""
+   "role": "Les trois niveaux d'usure te conviennent ? Veux-tu aussi des fissures / pièces cassées quand les modèles 3D seront refaits ?"
   }
  ]
 }
