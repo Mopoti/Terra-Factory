@@ -1,5 +1,5 @@
 {
- "key": "discussions13",
+ "key": "discussions14",
  "title": "Discussions : suite (4)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
  "cols": [
@@ -16,25 +16,33 @@
  "tabs": [
   {
    "id": "e",
-   "label": "Énergie lot 3"
+   "label": "Kit de réparation"
   }
  ],
  "rows": [
   {
-   "id": "h1",
+   "id": "k1",
    "tab": "e",
-   "name": "Éolienne, solaire, accumulateur de base, éclairage",
-   "tag": "h1",
-   "recipe": "Faits : éolienne T2 (40 kW max, vent variable 15 à 100 %), panneau solaire T3 (60 kW le jour, 0 la nuit), accumulateur de base T3 (200 MJ, 400 kW), lampadaires qui éclairent la nuit (les 6 plus proches du joueur). L'éclairage n'a pas été vérifié à l'écran.",
-   "role": "Les puissances te conviennent ? Faut-il un indicateur de vent / de luminosité quelque part (par exemple dans le compteur du poteau) ?"
+   "name": "Kit de réparation (5 charges × 25 %)",
+   "tag": "k1",
+   "recipe": "Fait : objet T1 (4 plaques de fer, 4 fils de cuivre, 1 engrenage). Dans la fenêtre d'une machine abîmée par les ennemis, un bouton « Réparer » rend 25 % de la vie par charge ; 5 charges par kit. Pour éviter les données par objet, le kit entamé est mémorisé une seule fois dans la partie : on n'en ouvre qu'un à la fois.",
+   "role": "Ça te va ? Les kits entamés ne se retrouvent donc pas dans le sac avec leur jauge ; si tu veux une jauge par kit, il faudra les données par objet."
   },
   {
-   "id": "h2",
+   "id": "k2",
    "tab": "e",
-   "name": "Borne de charge",
-   "tag": "h2",
-   "recipe": "Elle dépend des données par objet (charge, usure) que nous avons repoussées. Je propose de faire d'un coup : données par objet, batterie portable, jauge sur les icônes, borne de charge, usure des armures et des barrières.",
-   "role": "On lance ce gros chantier maintenant, ou on passe d'abord aux barrières / portails, aux véhicules électriques ou à autre chose ?"
+   "name": "Limite actuelle : la vie des machines",
+   "tag": "k2",
+   "recipe": "Aujourd'hui la vie des machines n'est ni enregistrée dans la sauvegarde, ni affichée au survol. Je propose d'ajouter une barre de vie au survol et l'enregistrement dans la sauvegarde.",
+   "role": "On le fait avec les barrières et portails (qui auront aussi de la vie et de l'usure) ?"
+  },
+  {
+   "id": "k3",
+   "tab": "e",
+   "name": "Idée : emplacement d’amélioration",
+   "tag": "k3",
+   "recipe": "Noté pour plus tard : un emplacement d'amélioration sur les producteurs (panneau solaire qui suit le soleil, éolienne à grandes pales).",
+   "role": "Rien à faire pour l'instant."
   }
  ]
 }

@@ -41,6 +41,7 @@
     {"id": "quad", "tier": 1, "cost": {"science_pack": 100}, "requires": ["laboratory", "motor"], "unlocks": ["vehicle_quad"]},
     {"id": "boiler", "tier": 1, "cost": {"science_pack": 100}, "requires": ["laboratory", "pipe"], "unlocks": ["machine_boiler"]},
     {"id": "turbine", "tier": 1, "cost": {"science_pack": 100}, "requires": ["gears", "boiler"], "unlocks": ["machine_turbine"]},
+    {"id": "repair", "tier": 1, "cost": {"science_pack": 100}, "requires": ["gears", "laboratory", "pack_1"], "unlocks": ["repair_kit"]},
     {"id": "lamp", "tier": 1, "cost": {"science_pack": 100}, "requires": ["glass", "kit_circuit", "chassis_simple", "electricity", "laboratory", "pack_1"], "unlocks": ["machine_lamp"]},
     {"id": "pack_2", "tier": 1, "cost": {"science_pack": 100}, "requires": ["gears", "laboratory", "pack_1"], "unlocks": ["science_pack_2"]},
     {"id": "armor_1", "tier": 1, "cost": {"science_pack": 100, "combat_pack": 10}, "requires": ["pistol", "textile", "clothing"], "unlocks": ["armor1_head", "armor1_torso", "armor1_legs", "armor1_feet"]},

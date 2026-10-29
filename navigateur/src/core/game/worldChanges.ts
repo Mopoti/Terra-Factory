@@ -170,6 +170,8 @@ export interface WorldChanges {
   tutorialSkipped: boolean;
   /** Balise hyperfréquence activée (fin de partie) et séquence finale déjà montrée. */
   beacon: boolean;
+  /** Charges restantes du kit de réparation entamé (0 à 4). */
+  kitCharges: number;
   /** Crédits galactiques gagnés au comptoir spatial. */
   credits: number;
   finaleShown: boolean;
@@ -262,6 +264,7 @@ export function emptyChanges(): WorldChanges {
     tutorialDone: [],
     tutorialSkipped: false,
     beacon: false,
+    kitCharges: 0,
     credits: 0,
     finaleShown: false,
     harvested: {},
@@ -446,6 +449,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.admin = r.admin === true;
   result.tutorialSkipped = r.tutorialSkipped === true;
   result.beacon = r.beacon === true;
+  if (isNum(r.kitCharges) && r.kitCharges > 0)
+    result.kitCharges = Math.min(4, Math.floor(r.kitCharges));
   if (isNum(r.credits) && r.credits > 0) result.credits = Math.floor(r.credits);
   result.finaleShown = r.finaleShown === true;
   if (Array.isArray(r.tutorialDone)) {

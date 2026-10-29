@@ -1780,6 +1780,15 @@ export class Factory {
     }
   }
 
+  /** Points de vie des machines abîmées par les ennemis (identifiant → points ; absent = intact). */
+  readonly health = new Map<number, number>();
+  static readonly MACHINE_HEALTH = 120;
+
+  /** Part de vie restante d'une machine (1 = intacte). */
+  healthFraction(m: Machine): number {
+    return (this.health.get(m.id) ?? Factory.MACHINE_HEALTH) / Factory.MACHINE_HEALTH;
+  }
+
   /** Luminosité du ciel (0 nuit noire, 1 plein jour) : fixée par la partie, fait tourner les panneaux solaires. */
   daylight = 1;
   private clock = 0;

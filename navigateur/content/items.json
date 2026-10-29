@@ -1459,6 +1459,19 @@
       }
     },
     {
+      "id": "repair_kit",
+      "stack": 20,
+      "category": "tools",
+      "weightKg": 1.5,
+      "volumeL": 2,
+      "color": "#d98a2b",
+      "recipe": {
+        "iron_plate": 4,
+        "copper_wire": 4,
+        "iron_gear": 1
+      }
+    },
+    {
       "id": "pistol",
       "stack": 1,
       "category": "tools",

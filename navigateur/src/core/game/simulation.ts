@@ -7,7 +7,7 @@
 import { CELL_SIZE_M } from '../constants';
 import { machineDef, isTurret, turretSpec } from '../data/machines';
 import { labResearchLevel } from '../data/techs';
-import { dims, type Factory, type Machine } from '../factory/factory';
+import { dims, Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
 import { dayLight, DEFAULT_TIME, type TimeSettings } from './seasons';
 import type { GameState } from './state';
@@ -16,7 +16,7 @@ import type { Threat, ThreatTarget } from './threat';
 /** Durée d'un pas de simulation (s) : fixe, pour que tous les joueurs voient la même chose. */
 export const SIM_STEP_S = 0.05;
 /** Points de vie d'une machine attaquée par des ennemis. */
-export const MACHINE_HEALTH = 120;
+export const MACHINE_HEALTH = Factory.MACHINE_HEALTH;
 
 export interface SimPlayer {
   id: string;
@@ -44,7 +44,6 @@ export class WorldSimulation {
   private targetClock = 0;
   private threatTargets: ThreatTarget[] = [];
   private acidTargets: ThreatTarget[] = [];
-  private readonly machineHealth = new Map<number, number>();
   private readonly brokenSeen: Set<number>;
   /** Durée du jour et de la nuit de la partie (les panneaux solaires suivent la luminosité du ciel). */
   timeCfg: TimeSettings = DEFAULT_TIME;
@@ -153,11 +152,11 @@ export class WorldSimulation {
         }
       } else if (hit.target.startsWith('machine:')) {
         const id = Number(hit.target.slice(8));
-        const left = (this.machineHealth.get(id) ?? MACHINE_HEALTH) - hit.amount;
+        const left = (factory.health.get(id) ?? MACHINE_HEALTH) - hit.amount;
         if (left <= 0) {
-          this.machineHealth.delete(id);
+          factory.health.delete(id);
           if (state.destroyMachine(factory, id)) events.push({ type: 'machineLost', id });
-        } else this.machineHealth.set(id, left);
+        } else factory.health.set(id, left);
       } else events.push({ type: 'playerHit', player: hit.target, amount: hit.amount });
     }
     // Les nids proches de chaque joueur gardent leurs gardiens.

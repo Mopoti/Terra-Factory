@@ -51,7 +51,7 @@ import {
   levelY,
   recipeOf,
   type Cell,
-  type Factory,
+  Factory,
   type Machine,
   type Stack,
 } from '../factory/factory';
@@ -189,6 +189,10 @@ export const CREATIVE_ORE_MAX = 3000;
 export const CREATIVE_DESTROY_SECONDS = 0.4;
 /** Mode Créatif : une construction se démolit en ce quotient du temps normal. */
 export const CREATIVE_DEMOLISH_FACTOR = 0.3;
+
+/** Charges d'un kit de réparation neuf, et part de la vie maximale rendue par charge. */
+export const REPAIR_KIT_CHARGES = 5;
+export const REPAIR_KIT_STEP = 0.25;
 
 export class GameState {
   inventory: Inventory;
@@ -779,6 +783,32 @@ export class GameState {
   }
 
   /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
+  /**
+   * Répare une machine abîmée avec un kit de réparation : chaque kit a 5 charges, chacune rend 25 % de la vie maximale.
+   * Le kit entamé reste en cours (`changes.kitCharges`) ; on en ouvre un neuf dans le sac quand il est vide.
+   */
+  repairMachine(factory: Factory, id: number): 'ok' | 'full' | 'noKit' | 'missing' {
+    if (!factory.machines.some((m) => m.id === id)) return 'missing';
+    const hp = factory.health.get(id) ?? Factory.MACHINE_HEALTH;
+    if (hp >= Factory.MACHINE_HEALTH) return 'full';
+    if (this.changes.kitCharges <= 0) {
+      if ((this.inventory.repair_kit ?? 0) < 1) return 'noKit';
+      this.takeUnits('repair_kit', 1);
+      this.changes.kitCharges = REPAIR_KIT_CHARGES;
+      this.emit({ type: 'inventory' });
+    }
+    this.changes.kitCharges -= 1;
+    const next = hp + Factory.MACHINE_HEALTH * REPAIR_KIT_STEP;
+    if (next >= Factory.MACHINE_HEALTH) factory.health.delete(id);
+    else factory.health.set(id, next);
+    return 'ok';
+  }
+
+  /** Charges de réparation disponibles : celles du kit entamé et celles des kits du sac. */
+  repairCharges(): number {
+    return this.changes.kitCharges + (this.inventory.repair_kit ?? 0) * REPAIR_KIT_CHARGES;
+  }
+
   armorPercent(): number {
     let total = 0;
     for (const id of Object.values(this.changes.equipment)) total += itemById(id).equip?.armor ?? 0;

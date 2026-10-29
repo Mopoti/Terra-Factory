@@ -59,6 +59,7 @@ Connu dès le départ, sans découverte : bois, pierre, fibre, minerais, charbon
 | **Quad** | Quad | Châssis simple, Laboratoire, Paquet de science T1, Moteur simple | 100 × Paquet de science T1 |
 | **Chaudière** | Chaudière | Plaques de fer et de cuivre, Tige de fer, Laboratoire, Paquet de science T1, Tuyau | 100 × Paquet de science T1 |
 | **Turbine à vapeur** | Turbine à vapeur | Engrenage, Kit circuit, Châssis simple, Laboratoire, Paquet de science T1, Chaudière | 100 × Paquet de science T1 |
+| **Kit de réparation** | Kit de réparation | Plaques de fer et de cuivre, Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Lampadaire électrique** | Lampadaire électrique | Vitre, Kit circuit, Châssis simple, Électricité, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
 | **Clôture en bois** | Clôture en bois | Laboratoire, Paquet de science T1 | 50 × Paquet de science T1 |
 | **Paquet de science T2** | Paquet de science T2 | Engrenage, Fil de cuivre, Laboratoire, Paquet de science T1 | 100 × Paquet de science T1 |
