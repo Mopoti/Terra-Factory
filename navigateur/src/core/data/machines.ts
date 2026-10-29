@@ -27,6 +27,9 @@ export type MachineType =
   | 'transformer'
   | 'breaker'
   | 'lamp'
+  | 'wind_turbine'
+  | 'solar_panel'
+  | 'accumulator_basic'
   | 'crank'
   | 'splitter'
   | 'sorter'
@@ -134,6 +137,10 @@ export interface MachineDef {
   tierColors?: string[];
   capacity?: number;
 }
+
+/** Accumulateur, quelle que soit sa capacité. */
+export const isAccumulator = (type: MachineType): boolean =>
+  type === 'accumulator' || type === 'accumulator_basic';
 
 /** Poteau, quel que soit son niveau. */
 export const isPole = (type: MachineType): boolean => machineDef(type).poleLevel !== undefined;
@@ -243,6 +250,9 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'booster' ||
     type === 'cooling_tower' ||
     type === 'accumulator' ||
+    type === 'accumulator_basic' ||
+    type === 'wind_turbine' ||
+    type === 'solar_panel' ||
     type === 'antenna' ||
     type === 'transformer' ||
     type === 'lamp' ||

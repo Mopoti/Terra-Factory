@@ -9,6 +9,7 @@ import { machineDef, isTurret, turretSpec } from '../data/machines';
 import { labResearchLevel } from '../data/techs';
 import { dims, type Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
+import { dayLight, DEFAULT_TIME, type TimeSettings } from './seasons';
 import type { GameState } from './state';
 import type { Threat, ThreatTarget } from './threat';
 
@@ -45,6 +46,8 @@ export class WorldSimulation {
   private acidTargets: ThreatTarget[] = [];
   private readonly machineHealth = new Map<number, number>();
   private readonly brokenSeen: Set<number>;
+  /** Durée du jour et de la nuit de la partie (les panneaux solaires suivent la luminosité du ciel). */
+  timeCfg: TimeSettings = DEFAULT_TIME;
 
   constructor(
     readonly state: GameState,
@@ -80,6 +83,7 @@ export class WorldSimulation {
       const tech = state.autoStudy();
       if (tech) events.push({ type: 'autoStudy', tech });
     }
+    factory.daylight = dayLight(state.changes.time, this.timeCfg).light;
     factory.tradeOpen = state.changes.beacon;
     factory.labDemand = state.studyRemaining();
     factory.labNeeds = state.studyNeeds();

@@ -66,6 +66,7 @@
     {"id": "drill_electric", "tier": 2, "cost": {"science_pack_2": 150, "science_pack": 150}, "requires": ["motor", "pack_2", "generator"], "unlocks": ["machine_drill_electric"]},
     {"id": "pole_hv", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["chassis_steel"], "unlocks": ["machine_pole_hv"]},
     {"id": "breaker", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["chassis_steel", "pole_hv"], "unlocks": ["machine_breaker"]},
+    {"id": "wind", "tier": 2, "cost": {"science_pack_2": 150, "science_pack": 150}, "requires": ["motor", "chassis_steel"], "unlocks": ["machine_wind_turbine"]},
     {"id": "bedding_2", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["textile", "bedding_1", "pack_2"], "unlocks": ["bed"]},
     {"id": "research_2", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["laboratory", "research_1", "pack_2"], "unlocks": []},
     {"id": "rifle", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100, "combat_pack": 20}, "requires": ["pistol", "steel_plate"], "unlocks": ["rifle"]},
@@ -99,7 +100,9 @@
     {"id": "aluminium", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["aluminium_plate"], "unlocks": ["piece_wall_aluminium", "piece_slab_aluminium", "piece_stairs_aluminium", "piece_door_aluminium", "piece_pillar_aluminium"]},
     {"id": "pole_uhv", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["pole_hv", "plastic", "microcontroller", "chassis_alu"], "unlocks": ["machine_pole_uhv"]},
     {"id": "transformer", "tier": 2, "cost": {"science_pack_2": 100, "science_pack": 100}, "requires": ["chassis_steel", "pole_hv"], "unlocks": ["machine_transformer"]},
+    {"id": "accumulator_basic", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["plastic", "microcontroller"], "unlocks": ["machine_accumulator_basic"]},
     {"id": "solar_cell", "tier": 3, "cost": {"science_pack_3": 100, "science_pack_2": 100}, "requires": ["silicon_raw"], "unlocks": ["solar_cell"]},
+    {"id": "solar_panel", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["chassis_alu", "solar_cell"], "unlocks": ["machine_solar_panel"]},
     {"id": "graphite", "tier": 3, "cost": {"science_pack_3": 100, "science_pack_2": 100}, "requires": ["electric_furnace", "refinery"], "unlocks": ["graphite"]},
     {"id": "armor_3", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150, "combat_pack": 30}, "requires": ["armor_2", "plastic", "aluminium_plate"], "unlocks": ["armor3_head", "armor3_torso", "armor3_legs", "armor3_feet"]},
     {"id": "exoskeleton", "tier": 3, "cost": {"science_pack_3": 150, "science_pack_2": 150}, "requires": ["microcontroller", "chassis_alu"], "unlocks": ["exoskeleton"]},
@@ -126,7 +129,7 @@
     {"id": "turret_plasma", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150, "combat_pack": 40}, "requires": ["silicon_chip", "engine_heavy", "pack_4", "turret_laser"], "unlocks": ["machine_turret_plasma"]},
     {"id": "lithium_salt", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["evaporation"], "unlocks": ["lithium_salt"]},
     {"id": "battery", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["graphite", "lithium_salt"], "unlocks": ["battery_lithium"]},
-    {"id": "storage", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["microcontroller", "battery"], "unlocks": ["machine_accumulator"]},
+    {"id": "storage", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["microcontroller", "accumulator_basic", "battery"], "unlocks": ["machine_accumulator"]},
     {"id": "carbon_fiber", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["graphite", "pack_4"], "unlocks": ["carbon_fiber"]},
     {"id": "chassis_composite", "tier": 4, "cost": {"science_pack_4": 150, "science_pack_3": 150}, "requires": ["aluminium_rod", "pack_4", "carbon_fiber"], "unlocks": ["chassis_composite"]},
     {"id": "graphite_filter", "tier": 4, "cost": {"science_pack_4": 100, "science_pack_3": 100}, "requires": ["graphite", "pack_4"], "unlocks": ["graphite_filter"]},
@@ -141,7 +144,7 @@
     {"id": "fusion_capsule", "tier": 5, "cost": {"science_pack_5": 250, "science_pack_4": 250}, "requires": ["pack_5", "chassis_composite", "deuterium", "tritium"], "unlocks": ["fusion_capsule"]},
     {"id": "quantum_crystal", "tier": 5, "cost": {"science_pack_5": 250, "science_pack_4": 250}, "requires": ["supra_magnet"], "unlocks": ["quantum_crystal"]},
     {"id": "armor_5", "tier": 5, "cost": {"science_pack_5": 250, "science_pack_4": 250, "combat_pack": 60}, "requires": ["microcontroller", "pack_5", "armor_4", "carbon_fiber"], "unlocks": ["armor5_head", "armor5_torso", "armor5_legs", "armor5_feet"]},
-    {"id": "fusion", "tier": 5, "cost": {"science_pack_5": 300, "science_pack_4": 300}, "requires": ["microcontroller", "pack_5", "vitrifier", "storage"], "unlocks": ["machine_fusion_reactor"]},
+    {"id": "fusion", "tier": 5, "cost": {"science_pack_5": 300, "science_pack_4": 300}, "requires": ["pack_5", "vitrifier", "storage"], "unlocks": ["machine_fusion_reactor"]},
     {"id": "beacon", "tier": 5, "cost": {"science_pack_5": 300, "science_pack_4": 300}, "requires": ["pack_5", "fusion"], "unlocks": ["machine_relay", "machine_antenna"]}
   ]
 }

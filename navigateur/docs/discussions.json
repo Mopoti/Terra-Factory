@@ -1,5 +1,5 @@
 {
- "key": "discussions12",
+ "key": "discussions13",
  "title": "Discussions : suite (4)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
  "cols": [
@@ -16,25 +16,25 @@
  "tabs": [
   {
    "id": "e",
-   "label": "Énergie lot 2 (fin)"
+   "label": "Énergie lot 3"
   }
  ],
  "rows": [
   {
-   "id": "g1",
+   "id": "h1",
    "tab": "e",
-   "name": "Disjoncteur",
-   "tag": "g1",
-   "recipe": "Fait : il relie deux poteaux de même niveau proches de lui ; fermé = un seul réseau, ouvert = deux réseaux (bouton dans sa fenêtre). Quand une surcharge allait causer un blackout, tous les disjoncteurs fermés du réseau sautent à la place et il faut les refermer à la main (aucun blackout tant qu'il en reste un à faire sauter).",
-   "role": "Est-ce le comportement voulu ? Variante : seul le disjoncteur le plus proche de la surcharge saute."
+   "name": "Éolienne, solaire, accumulateur de base, éclairage",
+   "tag": "h1",
+   "recipe": "Faits : éolienne T2 (40 kW max, vent variable 15 à 100 %), panneau solaire T3 (60 kW le jour, 0 la nuit), accumulateur de base T3 (200 MJ, 400 kW), lampadaires qui éclairent la nuit (les 6 plus proches du joueur). L'éclairage n'a pas été vérifié à l'écran.",
+   "role": "Les puissances te conviennent ? Faut-il un indicateur de vent / de luminosité quelque part (par exemple dans le compteur du poteau) ?"
   },
   {
-   "id": "g2",
+   "id": "h2",
    "tab": "e",
-   "name": "Lampadaire",
-   "tag": "g2",
-   "recipe": "Fait côté réseau : 5 kW, une prise. L'éclairage dans le jeu (lumière la nuit) et son modèle 3D ne sont pas faits.",
-   "role": "On fait l'éclairage de nuit maintenant, ou on passe au lot 3 (éolienne, solaire, accumulateurs, borne de charge) ?"
+   "name": "Borne de charge",
+   "tag": "h2",
+   "recipe": "Elle dépend des données par objet (charge, usure) que nous avons repoussées. Je propose de faire d'un coup : données par objet, batterie portable, jauge sur les icônes, borne de charge, usure des armures et des barrières.",
+   "role": "On lance ce gros chantier maintenant, ou on passe d'abord aux barrières / portails, aux véhicules électriques ou à autre chose ?"
   }
  ]
 }

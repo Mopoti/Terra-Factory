@@ -20,6 +20,7 @@ import {
   isFluid,
   isLab,
   isPole,
+  isAccumulator,
   isTurret,
   turretSpec,
   isLinear,
@@ -653,6 +654,9 @@ const MACHINE_TYPES: MachineType[] = [
   'transformer',
   'breaker',
   'lamp',
+  'wind_turbine',
+  'solar_panel',
+  'accumulator_basic',
   'crank',
   'splitter',
   'sorter',
@@ -1433,6 +1437,8 @@ export class Factory {
       if (m.broken) return 'broken';
       return this.fusionOn(m) ? 'plasma' : this.fusionPriming(m) ? 'priming' : 'idle';
     }
+    if (m.type === 'wind_turbine' || m.type === 'solar_panel')
+      return this.gridInfo(m) && this.renewableKw(m) > 0.5 ? 'running' : 'idle';
     if (m.type === 'evaporation_tower') return m.fluid.dirty > 0.5 ? 'running' : 'idle';
     if (m.type === 'fission_reactor') {
       if (m.broken) return 'broken';
@@ -1737,7 +1743,7 @@ export class Factory {
   private storeEnergy(dt: number): void {
     const byGrid = new Map<number, Machine[]>();
     for (const m of this.machines) {
-      if (m.type !== 'accumulator') continue;
+      if (!isAccumulator(m.type)) continue;
       const g = this.gridInfo(m);
       if (!g) continue;
       const list = byGrid.get(g.id) ?? [];
@@ -1747,13 +1753,11 @@ export class Factory {
     for (const [id, accs] of byGrid) {
       const g = this.grids.get(id);
       if (!g || g.blackout) continue;
-      const def = machineDef('accumulator');
-      const max = def.storageKJ ?? 0;
       if (g.demandKw > g.capacityKw) {
-        // Décharge : au plus la puissance de chaque accumulateur et ce qu'il lui reste.
-        let need = g.demandKw - g.capacityKw;
+        // Décharge : au plus la puissance de chaque accumulateur et ce qu'il lui reste ; jamais au-delà de la limite du niveau.
+        let need = Math.min(g.demandKw, g.maxKw) - g.capacityKw;
         for (const a of accs) {
-          const give = Math.min(need, def.dischargeKw ?? 0, a.fuelLeft / dt);
+          const give = Math.min(need, machineDef(a.type).dischargeKw ?? 0, a.fuelLeft / dt);
           if (give <= 0) continue;
           a.fuelLeft -= give * dt;
           g.capacityKw += give;
@@ -1762,7 +1766,12 @@ export class Factory {
       } else {
         let surplus = g.capacityKw - g.demandKw;
         for (const a of accs) {
-          const take = Math.min(surplus, def.chargeKw ?? 0, (max - a.fuelLeft) / dt);
+          const def = machineDef(a.type);
+          const take = Math.min(
+            surplus,
+            def.chargeKw ?? 0,
+            ((def.storageKJ ?? 0) - a.fuelLeft) / dt,
+          );
           if (take <= 0) continue;
           a.fuelLeft += take * dt;
           surplus -= take;
@@ -1771,7 +1780,26 @@ export class Factory {
     }
   }
 
+  /** Luminosité du ciel (0 nuit noire, 1 plein jour) : fixée par la partie, fait tourner les panneaux solaires. */
+  daylight = 1;
+  private clock = 0;
+
+  /** Part de sa puissance qu'une éolienne donne en ce moment (0,15 à 1 : le vent monte et retombe, chacune a son rythme). */
+  windFactor(m: Machine): number {
+    const t = this.clock;
+    const wave = Math.sin(t / 70 + m.id * 1.7) * 0.6 + Math.sin(t / 23 + m.id * 0.9) * 0.4;
+    return 0.15 + 0.85 * (0.5 + 0.5 * wave);
+  }
+
+  /** Puissance que produit cette machine en ce moment (kW), pour l'éolienne et le panneau solaire. */
+  renewableKw(m: Machine): number {
+    if (m.type === 'wind_turbine') return (machineDef(m.type).producesKw ?? 0) * this.windFactor(m);
+    if (m.type === 'solar_panel') return (machineDef(m.type).producesKw ?? 0) * this.daylight;
+    return 0;
+  }
+
   private updateGrids(dt: number): void {
+    this.clock += dt;
     for (const g of this.grids.values()) {
       g.capacityKw = 0;
       g.demandKw = 0;
@@ -1789,8 +1817,10 @@ export class Factory {
         continue;
       }
       if (def.consumesKw && this.wantsToWork(m)) g.demandKw += def.consumesKw;
-      if (m.type === 'accumulator') continue;
-      if (m.type === 'fission_reactor')
+      if (isAccumulator(m.type)) continue;
+      if (m.type === 'wind_turbine' || m.type === 'solar_panel')
+        g.capacityKw += this.renewableKw(m);
+      else if (m.type === 'fission_reactor')
         g.capacityKw += this.reactorRunning(m) ? (def.producesKw ?? 0) : 0;
       else if (m.type === 'turbine') g.capacityKw += this.turbineKw(m);
       else if (m.type === 'waterwheel') g.capacityKw += def.producesKw ?? 0;

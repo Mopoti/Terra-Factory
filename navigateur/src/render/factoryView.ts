@@ -29,6 +29,7 @@ import {
   isAssembler,
   isDrill,
   isPole,
+  isAccumulator,
   isTurret,
   GROW_M,
   beltSpeed,
@@ -817,7 +818,7 @@ export class FactoryView {
   private animating(m: Machine): boolean {
     if (m.type === 'crank') return this.opened === m.id;
     if (m.type === 'relay' || m.type === 'antenna') return this.factory.powerFactor(m) > 0;
-    if (m.type === 'accumulator') return this.factory.gridInfo(m) !== null;
+    if (isAccumulator(m.type)) return this.factory.gridInfo(m) !== null;
     // Tourelle : prête à tirer (munitions ou courant) = « idle » ; elle balaye alors l'horizon.
     if (isTurret(m.type)) return this.factory.status(m) === 'idle';
     const s = this.factory.status(m);
@@ -1435,6 +1436,9 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   transformer: 2.6,
   breaker: 1.6,
   lamp: 3.1,
+  wind_turbine: 6.1,
+  solar_panel: 1.3,
+  accumulator_basic: 1.1,
   crank: 1.0,
   splitter: 0.4,
   merger: 0.4,
@@ -1788,7 +1792,7 @@ function addMachineBody(
     mb.box(x, 1.35, z, sx - 0.3, 0.1, sz - 0.3, hexToRgb('#cfd8de'), true);
     return;
   }
-  if (type === 'accumulator') {
+  if (type === 'accumulator' || type === 'accumulator_basic') {
     // Accumulateur : bloc de cellules avec bandeau lumineux et bornes.
     mb.box(x, 0, z, sx, 0.2, sz, shade(color, 0.7), true);
     mb.box(x, 0.2, z, sx - 0.15, 0.85, sz - 0.15, color, true);

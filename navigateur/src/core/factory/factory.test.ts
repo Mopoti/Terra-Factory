@@ -2325,3 +2325,47 @@ describe('disjoncteur et lampadaire', () => {
     expect(f.gridInfo(lamp)!.demandKw).toBe(5);
   });
 });
+
+describe('éolienne, panneau solaire, accumulateur de base', () => {
+  const pole = emptyMachine(2, 'pole', 0, 0, 0);
+  it('le panneau solaire suit la luminosité du ciel', () => {
+    const panel = emptyMachine(1, 'solar_panel', 4, 0, 0);
+    const f = new Factory([panel, pole], makeWorld().world);
+    f.daylight = 1;
+    run(f, 0.5);
+    expect(f.gridInfo(panel)!.capacityKw).toBe(60);
+    f.daylight = 0;
+    run(f, 0.5);
+    expect(f.gridInfo(panel)!.capacityKw).toBe(0);
+    expect(f.status(panel)).toBe('idle');
+  });
+
+  it('l’éolienne produit entre 15 % et 100 % de ses 40 kW, selon le vent', () => {
+    const wind = emptyMachine(1, 'wind_turbine', 4, 0, 0);
+    const f = new Factory([wind, pole], makeWorld().world);
+    const seen: number[] = [];
+    for (let i = 0; i < 300; i++) {
+      run(f, 1);
+      seen.push(f.gridInfo(wind)!.capacityKw);
+    }
+    expect(Math.min(...seen)).toBeGreaterThanOrEqual(6 - 1e-9);
+    expect(Math.max(...seen)).toBeLessThanOrEqual(40 + 1e-9);
+    expect(Math.max(...seen) - Math.min(...seen)).toBeGreaterThan(10);
+  });
+
+  it('l’accumulateur de base charge avec le surplus puis rend son énergie, à 400 kW au plus', () => {
+    const panel = emptyMachine(1, 'solar_panel', 4, 0, 0);
+    const acc = emptyMachine(3, 'accumulator_basic', 0, 4, 0);
+    const f = new Factory([panel, acc, pole], makeWorld().world);
+    f.daylight = 1;
+    run(f, 10);
+    expect(acc.fuelLeft).toBeCloseTo(600, -1); // 60 kW pendant 10 s
+    f.daylight = 0;
+    const lamp = emptyMachine(4, 'lamp', 4, 4, 0);
+    f.machines.push(lamp);
+    f.reindex();
+    run(f, 1);
+    expect(f.gridInfo(lamp)!.satisfaction).toBe(1); // la lampe vit sur l’accumulateur
+    expect(acc.fuelLeft).toBeLessThan(600);
+  });
+});

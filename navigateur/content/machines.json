@@ -225,6 +225,39 @@
       "consumesKw": 5
     },
     {
+      "id": "wind_turbine",
+      "w": 2,
+      "d": 2,
+      "item": "machine_wind_turbine",
+      "color": "#d9e2ea",
+      "height": 6,
+      "fuel": false,
+      "producesKw": 40
+    },
+    {
+      "id": "solar_panel",
+      "w": 3,
+      "d": 3,
+      "item": "machine_solar_panel",
+      "color": "#27407a",
+      "height": 1.2,
+      "fuel": false,
+      "producesKw": 60
+    },
+    {
+      "id": "accumulator_basic",
+      "w": 2,
+      "d": 2,
+      "item": "machine_accumulator_basic",
+      "color": "#5a7a6a",
+      "height": 1.0,
+      "fuel": false,
+      "producesKw": 0.001,
+      "storageKJ": 200000,
+      "chargeKw": 400,
+      "dischargeKw": 400
+    },
+    {
       "id": "drill_electric",
       "w": 4,
       "d": 5,

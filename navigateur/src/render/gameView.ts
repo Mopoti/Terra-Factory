@@ -88,6 +88,7 @@ import {
   isLinear,
   isDrill,
   isPole,
+  isAccumulator,
   isSmith,
   isLab,
   isTurret,
@@ -1690,7 +1691,7 @@ export function startGameView(
         rows.push(`<div>${t('factory.fluid.polymer', { v: fmt(m.fluid.polymer) })}</div>`);
       if (m.fluid.oil >= 0.5)
         rows.push(`<div>${t('factory.fluid.oil', { v: fmt(m.fluid.oil) })}</div>`);
-      if (m.type === 'accumulator') {
+      if (isAccumulator(m.type)) {
         rows.push(
           `<div>${Math.round(m.fuelLeft / 1000).toLocaleString()} / ${Math.round((def.storageKJ ?? 0) / 1000)} MJ</div>`,
         );
@@ -2419,6 +2420,35 @@ export function startGameView(
     return { speed: dt > 0 ? moved / dt : 0, strafe: right / len };
   }
 
+  // --- Lampadaires : quelques lumières suivent les lampadaires allumés les plus proches du joueur ---------
+  const LAMP_LIGHTS = 6;
+  const lampLights = Array.from({ length: LAMP_LIGHTS }, () => {
+    const light = new THREE.PointLight(0xffe2a0, 0, 14, 1.6);
+    scene.add(light);
+    return light;
+  });
+  function updateLamps(darkness: number): void {
+    const lit = darkness > 0.05 ? factory.machines.filter((m) => m.type === 'lamp') : [];
+    const near = lit
+      .map((m) => {
+        const c = centerOf(m);
+        return { m, c, d: Math.hypot(c.x - playerX, c.z - playerZ), k: factory.powerFactor(m) };
+      })
+      .filter((x) => x.k > 0)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, LAMP_LIGHTS);
+    lampLights.forEach((light, i) => {
+      const x = near[i];
+      // Les lumières restent présentes (intensité 0) : en ajouter ou en retirer fait recompiler les ombrages.
+      if (!x) {
+        light.intensity = 0;
+        return;
+      }
+      light.position.set(x.c.x, levelY(x.m.lift) + 3, x.c.z);
+      light.intensity = 14 * darkness * x.k;
+    });
+  }
+
   // --- Saisons ---------------------------------------------------------------------------------
   const NIGHT_SKY = 0x0a1224;
   const timeCfg = game.options.time;
@@ -2432,6 +2462,7 @@ export function startGameView(
     setGroundTint(climate.ground, climate.snow);
     hemi.intensity = 1.1 * (0.3 + 0.7 * day.light);
     sun.intensity = 1.6 * day.light;
+    updateLamps(1 - day.light);
     const mix = Math.round(day.light * 100) * 1000 + climate.sky;
     if (mix === lastSkyMix) return;
     lastSkyMix = mix;
@@ -3411,6 +3442,7 @@ export function startGameView(
     options.state.changes.enemies,
   );
   const sim = new WorldSimulation(options.state, factory, threat);
+  sim.timeCfg = game.options.time;
   const guest = options.guest ?? null;
   guest?.attach(factory);
   let guestClock = 0;

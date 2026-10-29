@@ -596,6 +596,45 @@
       }
     },
     {
+      "id": "machine_wind_turbine",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 120,
+      "volumeL": 150,
+      "color": "#d9e2ea",
+      "recipe": {
+        "chassis_steel": 2,
+        "motor": 2,
+        "kit_circuit": 1
+      }
+    },
+    {
+      "id": "machine_solar_panel",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 30,
+      "volumeL": 60,
+      "color": "#27407a",
+      "recipe": {
+        "solar_cell": 4,
+        "chassis_alu": 1,
+        "glass": 1
+      }
+    },
+    {
+      "id": "machine_accumulator_basic",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 40,
+      "volumeL": 40,
+      "color": "#5a7a6a",
+      "recipe": {
+        "chassis_steel": 1,
+        "plastic_insulator": 2,
+        "microcontroller": 1
+      }
+    },
+    {
       "id": "machine_drill_electric",
       "stack": 10,
       "category": "extraction",
