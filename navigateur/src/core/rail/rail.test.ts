@@ -122,6 +122,17 @@ describe('trains : traction, freins, pente', () => {
     expect(c.head.piece).toBeGreaterThan(1);
   });
 
+  it('la locomotive électrique roule sur sa batterie et s’arrête quand elle est vide', () => {
+    const g = new TrackGraph(line(200));
+    const c = consist(1, [car(1, 'locomotive_electric', 0), car(2, 'wagon_flat')], 1, 0.5);
+    run(g, c, 3, { throttle: 1, brake: 0, parked: false });
+    expect(c.v).toBe(0); // batterie vide
+    c.cars[0].heatKJ = 5000;
+    run(g, c, 10, { throttle: 1, brake: 0, parked: false });
+    expect(c.v).toBeGreaterThan(2);
+    expect(c.cars[0].heatKJ).toBeLessThan(5000);
+  });
+
   it('plus de combustible, plus de traction ; le convoi lancé ralentit tout seul', () => {
     const g = new TrackGraph(line(200));
     const c = consist(1, [car(1, 'locomotive_steam', 0), car(2, 'wagon_freight')], 1, 0.5);

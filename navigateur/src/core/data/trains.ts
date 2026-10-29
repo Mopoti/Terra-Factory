@@ -4,7 +4,13 @@
  */
 import type { RailKind } from '../rail/track';
 
-export const CAR_KINDS = ['locomotive_steam', 'wagon_freight', 'wagon_tanker'] as const;
+export const CAR_KINDS = [
+  'locomotive_steam',
+  'locomotive_electric',
+  'wagon_freight',
+  'wagon_flat',
+  'wagon_tanker',
+] as const;
 export type CarKind = (typeof CAR_KINDS)[number];
 
 export interface LocoSpec {
@@ -17,6 +23,9 @@ export interface LocoSpec {
   /** Combustible brûlé à vide (pression maintenue) et à pleine puissance (kW). */
   idleBurnKw: number;
   fullBurnKw: number;
+  /** Locomotive à batterie : pas de chaudière ; la réserve (`heatKJ`, au plus `batteryKJ`) se recharge à une borne de recharge. */
+  electric?: boolean;
+  batteryKJ?: number;
 }
 
 export interface CarSpec {
@@ -80,6 +89,36 @@ export const CARS: Record<CarKind, CarSpec> = {
       idleBurnKw: 35,
       fullBurnKw: 650,
     },
+  },
+  // Électrique : plus nerveuse que la vapeur au démarrage, sans fumée ; batterie de 180 MJ (environ 7 minutes à pleine puissance).
+  locomotive_electric: {
+    item: 'train_locomotive_electric',
+    model: 'locomotive_vapeur',
+    lengthM: 7.5,
+    frontM: 3.6,
+    bodyM: { front: 3.6, rear: 2.85 },
+    halfBaseM: 1.5,
+    massKg: 20000,
+    loco: {
+      powerKw: 260,
+      startEffortN: 48000,
+      vMax: 14,
+      idleBurnKw: 0,
+      fullBurnKw: 450,
+      electric: true,
+      batteryKJ: 180000,
+    },
+  },
+  // Plateforme : un wagon ouvert pour le fret en vrac, avec le même coffre que le wagon de fret.
+  wagon_flat: {
+    item: 'train_wagon_flat',
+    model: 'wagon_fret',
+    lengthM: 6.6,
+    frontM: 3.3,
+    bodyM: { front: 2.55, rear: 2.55 },
+    halfBaseM: 1.7,
+    massKg: 7500,
+    cargo: { maxKg: 25000, maxL: 40000 },
   },
   wagon_freight: {
     item: 'train_wagon_freight',

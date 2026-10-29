@@ -98,6 +98,8 @@ const ADDED_AFTER_LEGACY = new Set([
   'repair_kit',
   'machine_fence_wood',
   'machine_charger',
+  'train_locomotive_electric',
+  'train_wagon_flat',
   'battery_portable',
   'vehicle_quad_electric',
   'machine_barrier_concrete',

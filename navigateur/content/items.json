@@ -1744,6 +1744,32 @@
       }
     },
     {
+      "id": "train_locomotive_electric",
+      "stack": 1,
+      "category": "rail",
+      "weightKg": 48,
+      "volumeL": 55,
+      "color": "#2e8fc9",
+      "recipe": {
+        "motor_heavy": 2,
+        "battery_lithium": 4,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "train_wagon_flat",
+      "stack": 1,
+      "category": "rail",
+      "weightKg": 40,
+      "volumeL": 50,
+      "color": "#6d7b86",
+      "recipe": {
+        "chassis_steel": 2,
+        "steel_plate": 6,
+        "iron_gear": 4
+      }
+    },
+    {
       "id": "train_wagon_freight",
       "stack": 1,
       "category": "rail",

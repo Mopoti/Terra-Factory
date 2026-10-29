@@ -1837,7 +1837,7 @@ export class GameState {
 
   /** Remplit la soute d'une locomotive avec du charbon ou du bois du sac (renvoie le nombre de pièces chargées). */
   refuelLocomotive(car: Car): number {
-    if (!CARS[car.kind].loco) return 0;
+    if (!CARS[car.kind].loco || CARS[car.kind].loco?.electric) return 0;
     for (const item of ['coal', 'wood']) {
       const have = this.inventory[item] ?? 0;
       if (have < 1 || (car.fuel && car.fuel.item !== item)) continue;

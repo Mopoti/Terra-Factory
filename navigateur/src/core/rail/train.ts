@@ -302,6 +302,8 @@ export function carPoses(graph: TrackGraph, c: Consist): CarPose[] {
 
 /** Chaleur à brûler : prend du combustible de la soute quand la chaudière est vide. Faux s'il n'y a plus rien. */
 function feedBoiler(car: Car): boolean {
+  // Locomotive électrique : la batterie fait office de réserve, rien à enfourner.
+  if (CARS[car.kind].loco?.electric) return car.heatKJ > 0;
   if (car.heatKJ > 0) return true;
   if (!car.fuel || car.fuel.count <= 0) return false;
   const kj = energyKJ(car.fuel.item);

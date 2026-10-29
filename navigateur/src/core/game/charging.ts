@@ -1,7 +1,9 @@
 /** Bornes de recharge : elles remplissent les batteries des véhicules électriques et les batteries portables du joueur qui sont à portée. */
 import { centerOf, type Factory } from '../factory/factory';
 import { machineDef } from '../data/machines';
+import { CARS } from '../data/trains';
 import { VEHICLES } from '../data/vehicles';
+import { carPoses } from '../rail/train';
 import type { GameState } from './state';
 
 /** Portée d'une borne (m), mesurée depuis son centre. */
@@ -41,6 +43,25 @@ export function stepChargers(
           v.fuel = Math.min(cap, v.fuel + (kw * step) / spec.burnKw);
         },
       });
+    }
+    // Locomotives électriques : la batterie (`heatKJ`) se remplit à la puissance de la borne.
+    if (state.changes.trains.length > 0) {
+      const graph = state.railGraph();
+      for (const consist of state.changes.trains) {
+        if (!consist.cars.some((car) => CARS[car.kind].loco?.electric)) continue;
+        for (const pose of carPoses(graph, consist)) {
+          const loco = CARS[pose.car.kind].loco;
+          if (!loco?.electric || !near(pose.x, pose.z, 3)) continue;
+          const car = pose.car;
+          const cap = loco.batteryKJ ?? 0;
+          targets.push({
+            needs: () => car.heatKJ < cap,
+            give: (kw, step) => {
+              car.heatKJ = Math.min(cap, car.heatKJ + kw * step);
+            },
+          });
+        }
+      }
     }
     if (players.some((p) => near(p.x, p.z))) {
       targets.push({
