@@ -1,5 +1,5 @@
 {
- "key": "discussions11",
+ "key": "discussions12",
  "title": "Discussions : suite (4)",
  "intro": "Tes réponses sont appliquées ou notées. Voici ce qui est prêt à essayer.",
  "cols": [
@@ -16,17 +16,25 @@
  "tabs": [
   {
    "id": "e",
-   "label": "Énergie lot 2"
+   "label": "Énergie lot 2 (fin)"
   }
  ],
  "rows": [
   {
-   "id": "f1",
+   "id": "g1",
    "tab": "e",
-   "name": "Transformateur en T2",
-   "tag": "f1",
-   "recipe": "Fait : le transformateur est en T2 juste après le poteau haute tension. Comme l'isolant plastique est T3, sa recette devient chassis acier ×2, fil de cuivre ×24, verre ×4.",
-   "role": "Ça te va ? Sinon je pars sur le disjoncteur et le lampadaire."
+   "name": "Disjoncteur",
+   "tag": "g1",
+   "recipe": "Fait : il relie deux poteaux de même niveau proches de lui ; fermé = un seul réseau, ouvert = deux réseaux (bouton dans sa fenêtre). Quand une surcharge allait causer un blackout, tous les disjoncteurs fermés du réseau sautent à la place et il faut les refermer à la main (aucun blackout tant qu'il en reste un à faire sauter).",
+   "role": "Est-ce le comportement voulu ? Variante : seul le disjoncteur le plus proche de la surcharge saute."
+  },
+  {
+   "id": "g2",
+   "tab": "e",
+   "name": "Lampadaire",
+   "tag": "g2",
+   "recipe": "Fait côté réseau : 5 kW, une prise. L'éclairage dans le jeu (lumière la nuit) et son modèle 3D ne sont pas faits.",
+   "role": "On fait l'éclairage de nuit maintenant, ou on passe au lot 3 (éolienne, solaire, accumulateurs, borne de charge) ?"
   }
  ]
 }

@@ -206,6 +206,25 @@
       "transformKw": 10000
     },
     {
+      "id": "breaker",
+      "w": 2,
+      "d": 2,
+      "item": "machine_breaker",
+      "color": "#a34a3a",
+      "height": 1.5,
+      "fuel": false
+    },
+    {
+      "id": "lamp",
+      "w": 1,
+      "d": 1,
+      "item": "machine_lamp",
+      "color": "#e9d27a",
+      "height": 3,
+      "fuel": false,
+      "consumesKw": 5
+    },
+    {
       "id": "drill_electric",
       "w": 4,
       "d": 5,

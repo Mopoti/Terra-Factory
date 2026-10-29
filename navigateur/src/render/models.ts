@@ -136,6 +136,8 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   pole_hv: 'poteau_electrique',
   pole_uhv: 'poteau_electrique',
   transformer: 'accumulateur_t3',
+  breaker: 'accumulateur_t3',
+  lamp: 'poteau_electrique',
   chest_wood: 'coffre_bois',
   chest_iron: 'coffre_fer',
   waterwheel: 'roue_a_aubes',

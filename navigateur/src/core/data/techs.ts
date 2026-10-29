@@ -93,6 +93,8 @@ const ADDED_AFTER_LEGACY = new Set([
   'machine_pole_hv',
   'machine_pole_uhv',
   'machine_transformer',
+  'machine_breaker',
+  'machine_lamp',
   'aluminium_rod',
   'glass',
   'graphite',

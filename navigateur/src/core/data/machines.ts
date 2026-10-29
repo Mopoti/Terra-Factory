@@ -25,6 +25,8 @@ export type MachineType =
   | 'pole_hv'
   | 'pole_uhv'
   | 'transformer'
+  | 'breaker'
+  | 'lamp'
   | 'crank'
   | 'splitter'
   | 'sorter'
@@ -243,6 +245,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'accumulator' ||
     type === 'antenna' ||
     type === 'transformer' ||
+    type === 'lamp' ||
     type === 'turbine'
   );
 

@@ -17,6 +17,7 @@ import {
   assemblerMaxTypes,
   isAssembler,
   isChest,
+  isPole,
   isDrill,
   isLab,
   isSmith,
@@ -1132,7 +1133,27 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
-    if (m.type === 'pole') rows.append(poleMeter(m));
+    if (m.type === 'breaker') {
+      const note = el('div', 'mach-info', t('machine.breaker.help'));
+      const out = el('div', 'mach-info');
+      const button = el('button', 'btn', '');
+      button.type = 'button';
+      const show = (): void => {
+        const state = factory.breakerState(m);
+        out.textContent = t(`machine.breaker.${state}` as TranslationKey);
+        button.textContent = t(
+          state === 'open' ? 'machine.breaker.close' : 'machine.breaker.open.button',
+        );
+        button.disabled = state === 'unlinked';
+      };
+      button.addEventListener('click', () => {
+        factory.toggleBreaker(m);
+        show();
+      });
+      show();
+      rows.append(note, button, out);
+    }
+    if (isPole(m.type)) rows.append(poleMeter(m));
     if (m.type === 'waypoint') rows.append(...waypointRows(m));
     if (isCargoWindow(m.id)) rows.append(...cargoRows(m));
     if (

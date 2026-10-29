@@ -580,7 +580,8 @@ export function normalizeMachines(raw: unknown): Machine[] {
       (machine.type === 'pipe' ||
         machine.type === 'conveyor' ||
         machine.type === 'fission_reactor' ||
-        machine.type === 'fusion_reactor');
+        machine.type === 'fusion_reactor' ||
+        machine.type === 'breaker');
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -650,6 +651,8 @@ const MACHINE_TYPES: MachineType[] = [
   'pole_hv',
   'pole_uhv',
   'transformer',
+  'breaker',
+  'lamp',
   'crank',
   'splitter',
   'sorter',
@@ -856,6 +859,8 @@ export class Factory {
     this.gridOf.clear();
     this.wires = [];
     this.transformers = [];
+    this.breakerOk.clear();
+    this.breakerGrid.clear();
     const poles = this.machines.filter((m) => isPole(m.type));
     const levelOf = (p: Machine): number => machineDef(p.type).poleLevel ?? 0;
     const parent = new Map<number, number>(poles.map((p) => [p.id, p.id]));
@@ -874,6 +879,24 @@ export class Factory {
           this.wires.push({ from: poles[i], to: poles[j] });
         }
       }
+    }
+    // Disjoncteur fermé : relie les deux poteaux de même niveau les plus proches (ouvert, il ne relie rien).
+    const breakerPoles: Array<{ machine: Machine; pole: Machine }> = [];
+    for (const m of this.machines) {
+      if (m.type !== 'breaker') continue;
+      const c = centerOf(m);
+      const near = poles
+        .map((p) => ({ p, d: Math.hypot(centerOf(p).x - c.x, centerOf(p).z - c.z) }))
+        .filter((x) => x.d <= (machineDef(x.p.type).linkReachM ?? 4) + 1)
+        .sort((a, b) => a.d - b.d);
+      const a = near[0]?.p;
+      const b = a ? near.find((x) => x.p !== a && levelOf(x.p) === levelOf(a))?.p : undefined;
+      if (!a || !b) continue;
+      this.breakerOk.add(m.id);
+      if (m.broken) continue;
+      parent.set(find(a.id), find(b.id));
+      this.wires.push({ from: a, to: m }, { from: m, to: b });
+      breakerPoles.push({ machine: m, pole: a });
     }
     // Identifiant d'un réseau : le plus petit identifiant de ses poteaux (stable quand on ajoute un poteau plus récent).
     const lowest = new Map<number, number>();
@@ -935,6 +958,7 @@ export class Factory {
       members.set(grid, (members.get(grid) ?? 0) + 1);
     }
     for (const p of poles) this.gridOf.set(p.id, gridId(p.id));
+    for (const { machine, pole } of breakerPoles) this.breakerGrid.set(machine.id, gridId(pole.id));
     const levelOfGrid = new Map<number, number>(poles.map((p) => [gridId(p.id), levelOf(p)]));
     this.grids = new Map(
       [...new Set(this.gridOf.values())].map((id) => {
@@ -968,6 +992,22 @@ export class Factory {
     flowKw?: number;
   }> = [];
   private readonly tooBig = new Set<number>();
+  /** Disjoncteurs à portée de deux poteaux de même niveau, et réseau des disjoncteurs fermés. */
+  private readonly breakerOk = new Set<number>();
+  private readonly breakerGrid = new Map<number, number>();
+
+  /** État d'un disjoncteur : fermé, ouvert (à la main ou déclenché par une surcharge) ou non relié. */
+  breakerState(m: Machine): 'closed' | 'open' | 'unlinked' {
+    if (!this.breakerOk.has(m.id)) return 'unlinked';
+    return m.broken ? 'open' : 'closed';
+  }
+
+  /** Ouvre ou ferme un disjoncteur : les réseaux qu'il relie se séparent ou se rejoignent. */
+  toggleBreaker(m: Machine): void {
+    if (m.type !== 'breaker') return;
+    m.broken = !m.broken;
+    this.buildGrids();
+  }
 
   /** Puissance qui traverse ce transformateur en ce moment (kW, du réseau haut vers le réseau bas), ou null s'il n'est pas relié. */
   transformerFlow(m: Machine): number | null {
@@ -1525,7 +1565,7 @@ export class Factory {
     if (isLab(m.type)) return this.labWorking(m);
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
-    if (m.type === 'relay' || m.type === 'antenna') return true;
+    if (m.type === 'relay' || m.type === 'antenna' || m.type === 'lamp') return true;
     if (m.type === 'refinery') return this.refineryReady(m);
     if (m.type === 'pumpjack')
       return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
@@ -1760,6 +1800,7 @@ export class Factory {
     }
     this.transfer();
     this.storeEnergy(dt);
+    const tripped: Machine[] = [];
     for (const g of this.grids.values()) {
       g.satisfaction = g.demandKw <= 0 ? 1 : Math.min(1, g.capacityKw / g.demandKw);
       const ratio = g.capacityKw > 0 ? g.demandKw / g.capacityKw : 0;
@@ -1769,14 +1810,27 @@ export class Factory {
           g.overloadS >= OVERLOAD_SOFT_S ||
           (ratio > OVERLOAD_HARD_RATIO && g.overloadS >= OVERLOAD_HARD_S)
         ) {
-          g.blackout = true;
-          this.blackedOut.add(g.id);
+          // Un disjoncteur fermé sur ce réseau saute avant le blackout : le réseau se coupe en morceaux.
+          const mine = this.machines.filter(
+            (b) => b.type === 'breaker' && this.breakerGrid.get(b.id) === g.id,
+          );
+          if (mine.length > 0) {
+            tripped.push(...mine);
+            g.overloadS = 0;
+          } else {
+            g.blackout = true;
+            this.blackedOut.add(g.id);
+          }
         }
       } else if (ratio <= 1) g.overloadS = 0;
       if (g.overloadS > 0) this.overloadOf.set(g.id, g.overloadS);
       else this.overloadOf.delete(g.id);
       if (g.blackout) g.satisfaction = 0;
       this.record(g, dt);
+    }
+    if (tripped.length > 0) {
+      for (const b of tripped) b.broken = true;
+      this.buildGrids();
     }
     for (const id of [...this.history.keys()]) if (!this.grids.has(id)) this.history.delete(id);
   }

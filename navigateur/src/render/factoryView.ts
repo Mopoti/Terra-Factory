@@ -1433,6 +1433,8 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   pole_hv: 6.1,
   pole_uhv: 10.1,
   transformer: 2.6,
+  breaker: 1.6,
+  lamp: 3.1,
   crank: 1.0,
   splitter: 0.4,
   merger: 0.4,

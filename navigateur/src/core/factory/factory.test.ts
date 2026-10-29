@@ -2262,3 +2262,66 @@ describe('niveaux de réseau : poteaux bois, haute et très haute tension, trans
     expect(f.powerFactor(drills[0])).toBeLessThan(0.01);
   });
 });
+
+describe('disjoncteur et lampadaire', () => {
+  const rich: FactoryWorld = {
+    oreAt: () => ({ id: 'iron_ore', item: 'iron_ore', amount: 9999 }),
+    mineOre: (_x, _z, n) => n,
+  };
+  const build = (): { f: Factory; breaker: Machine; drills: Machine[] } => {
+    const gen = emptyMachine(1, 'generator', -3, 0, 0);
+    gen.fuel = { item: 'coal', count: 50 };
+    const breaker = emptyMachine(4, 'breaker', 8, 0, 0);
+    const drills = [
+      emptyMachine(5, 'drill_electric', 22, 4, 0),
+      emptyMachine(6, 'drill_electric', 22, -7, 0),
+      emptyMachine(7, 'drill_electric', 22, -12, 0),
+      emptyMachine(8, 'drill_electric', 22, 9, 0),
+    ];
+    const f = new Factory(
+      [
+        gen,
+        emptyMachine(2, 'pole', 0, 0, 0),
+        emptyMachine(3, 'pole', 18, 0, 0),
+        emptyMachine(9, 'pole', 18, -12, 0),
+        emptyMachine(10, 'pole', 18, 9, 0),
+        breaker,
+        ...drills,
+      ],
+      rich,
+    );
+    return { f, breaker, drills };
+  };
+
+  it('un disjoncteur fermé relie deux poteaux éloignés ; ouvert, il les sépare', () => {
+    const { f, breaker, drills } = build();
+    expect(f.breakerState(breaker)).toBe('closed');
+    run(f, 0.5);
+    expect(f.powerFactor(drills[0])).toBeGreaterThan(0.5);
+    f.toggleBreaker(breaker);
+    expect(f.breakerState(breaker)).toBe('open');
+    run(f, 0.5);
+    expect(f.powerFactor(drills[0])).toBe(0);
+    f.toggleBreaker(breaker);
+    run(f, 0.5);
+    expect(f.powerFactor(drills[0])).toBeGreaterThan(0.5);
+  });
+
+  it('sur surcharge, le disjoncteur saute au lieu du blackout', () => {
+    const { f, breaker, drills } = build();
+    run(f, 6);
+    expect(f.breakerState(breaker)).toBe('open');
+    expect(f.gridInfo(f.machines[0])!.blackout).toBe(false);
+    expect(f.gridInfo(drills[0])).not.toBeNull();
+    expect(f.gridInfo(drills[0])!.blackout).toBe(false);
+  });
+
+  it('un lampadaire raccordé consomme 5 kW', () => {
+    const gen = emptyMachine(1, 'generator', 4, 0, 0);
+    gen.fuel = { item: 'coal', count: 5 };
+    const lamp = emptyMachine(3, 'lamp', 0, 4, 0);
+    const f = new Factory([gen, emptyMachine(2, 'pole', 0, 0, 0), lamp], makeWorld().world);
+    run(f, 0.5);
+    expect(f.gridInfo(lamp)!.demandKw).toBe(5);
+  });
+});

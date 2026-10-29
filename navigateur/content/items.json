@@ -570,6 +570,32 @@
       }
     },
     {
+      "id": "machine_breaker",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 15,
+      "volumeL": 20,
+      "color": "#a34a3a",
+      "recipe": {
+        "chassis_steel": 1,
+        "kit_circuit": 1,
+        "glass": 1
+      }
+    },
+    {
+      "id": "machine_lamp",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 6,
+      "volumeL": 10,
+      "color": "#e9d27a",
+      "recipe": {
+        "chassis_simple": 1,
+        "glass": 2,
+        "kit_circuit": 1
+      }
+    },
+    {
       "id": "machine_drill_electric",
       "stack": 10,
       "category": "extraction",
