@@ -1,4 +1,5 @@
 import { playSfx } from '../audio/sfx';
+import { itemGauge } from './gauge';
 import { itemIcon } from './itemIcon';
 import { itemById } from '../core/data/items';
 import type { GameState } from '../core/game/state';
@@ -44,6 +45,8 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
         qty.className = 'hot-count';
         qty.textContent = String(count);
         slot.append(itemIcon(item), qty);
+        const gauge = itemGauge(state, item);
+        if (gauge) slot.append(gauge);
         slot.title = t(`item.${item}` as TranslationKey);
       } else {
         slot.classList.add('empty');

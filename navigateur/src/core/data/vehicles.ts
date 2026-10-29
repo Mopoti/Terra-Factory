@@ -1,5 +1,5 @@
 /** Les véhicules que le joueur conduit : buggy, quad et char (modèles dans `blender/scripts/vehicules.py`), et la charrette à bras qu'il pousse. */
-export const VEHICLE_KINDS = ['buggy', 'quad', 'tank', 'van', 'cart'] as const;
+export const VEHICLE_KINDS = ['buggy', 'quad', 'quad_electric', 'tank', 'van', 'cart'] as const;
 export type VehicleKind = (typeof VEHICLE_KINDS)[number];
 
 export interface VehicleSpec {
@@ -20,6 +20,10 @@ export interface VehicleSpec {
   widthM: number;
   /** Véhicule qu'on pousse à pied devant soi (charrette) : sans carburant, sans siège, il suit le joueur. */
   pushed?: boolean;
+  /** Véhicule à batterie : pas de combustible ; sa réserve (`fuel`, en secondes de route) se recharge à une borne de recharge. */
+  electric?: boolean;
+  /** Batterie pleine : secondes de route. */
+  batterySeconds?: number;
 }
 
 export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
@@ -43,6 +47,19 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
     aimRadius: 1.0,
     aimHeight: 0.55,
     widthM: 1.25,
+  },
+  // Électrique : un peu plus rapide que le quad, silencieux, sobre ; il se recharge à une borne (400 kW : environ 4 minutes).
+  quad_electric: {
+    item: 'vehicle_quad_electric',
+    model: 'quad',
+    speedFactor: 3.3,
+    burnKw: 90,
+    runOver: { radius: 1.4, damage: 14 },
+    aimRadius: 1.0,
+    aimHeight: 0.55,
+    widthM: 1.25,
+    electric: true,
+    batterySeconds: 900,
   },
   // Lourd et gourmand : lent, mais il écrase tout sur son passage.
   tank: {

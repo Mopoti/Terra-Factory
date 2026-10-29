@@ -1501,6 +1501,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   wind_turbine: 6.1,
   solar_panel: 1.3,
   accumulator_basic: 1.1,
+  charger: 1.9,
   crank: 1.0,
   splitter: 0.4,
   merger: 0.4,

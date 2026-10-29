@@ -9,6 +9,7 @@ import { machineDef, isTurret, turretSpec } from '../data/machines';
 import { labResearchLevel } from '../data/techs';
 import { dims, Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
+import { stepChargers } from './charging';
 import { dayLight, DEFAULT_TIME, type TimeSettings } from './seasons';
 import type { GameState } from './state';
 import type { Threat, ThreatTarget } from './threat';
@@ -93,6 +94,7 @@ export class WorldSimulation {
     factory.labNeeds = state.studyNeeds();
     factory.labLevel = labResearchLevel(state.changes.unlocked);
     factory.tick(dt);
+    stepChargers(state, factory, players, dt);
     state.addStudy(factory.takeLabPacks());
     for (const [item, n] of factory.takeSold()) state.creditSale(item, n);
     for (const [item, n] of factory.takeProduced()) {

@@ -328,6 +328,17 @@
       "autoGate": true
     },
     {
+      "id": "charger",
+      "w": 3,
+      "d": 3,
+      "item": "machine_charger",
+      "color": "#3f7f6a",
+      "height": 1.8,
+      "fuel": false,
+      "consumesKw": 400,
+      "chargeKw": 400
+    },
+    {
       "id": "drill_electric",
       "w": 4,
       "d": 5,

@@ -36,6 +36,7 @@ export type MachineType =
   | 'gate_wood'
   | 'gate_concrete'
   | 'gate_reinforced'
+  | 'charger'
   | 'crank'
   | 'splitter'
   | 'sorter'

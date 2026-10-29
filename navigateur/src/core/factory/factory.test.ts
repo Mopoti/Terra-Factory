@@ -2404,3 +2404,15 @@ describe('barrières et portails', () => {
     expect(Factory.maxHealth('furnace')).toBe(Factory.MACHINE_HEALTH);
   });
 });
+
+describe('toutes les machines du contenu se rechargent depuis une sauvegarde', () => {
+  it('aucun type de machine n’est oublié par la normalisation', async () => {
+    const { MACHINES } = await import('../data/machines');
+    const lost = MACHINES.filter(
+      (def) =>
+        normalizeMachines(JSON.parse(JSON.stringify([emptyMachine(1, def.id, 0, 0, 0)]))).length !==
+        1,
+    ).map((def) => def.id);
+    expect(lost).toEqual([]);
+  });
+});

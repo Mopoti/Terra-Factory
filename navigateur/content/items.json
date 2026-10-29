@@ -710,6 +710,31 @@
       }
     },
     {
+      "id": "machine_charger",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 80,
+      "volumeL": 100,
+      "color": "#3f7f6a",
+      "recipe": {
+        "chassis_steel": 1,
+        "microcontroller": 1,
+        "plastic_insulator": 2
+      }
+    },
+    {
+      "id": "battery_portable",
+      "stack": 5,
+      "category": "equipment",
+      "weightKg": 4,
+      "volumeL": 4,
+      "color": "#4aa38a",
+      "recipe": {
+        "battery_lithium": 1,
+        "chassis_composite": 1
+      }
+    },
+    {
       "id": "machine_drill_electric",
       "stack": 10,
       "category": "extraction",
@@ -1639,6 +1664,19 @@
         "chassis_simple": 4,
         "wood": 3,
         "motor": 1
+      }
+    },
+    {
+      "id": "vehicle_quad_electric",
+      "stack": 1,
+      "category": "vehicles",
+      "weightKg": 25,
+      "volumeL": 30,
+      "color": "#3f9fb5",
+      "recipe": {
+        "chassis_alu": 1,
+        "motor": 1,
+        "battery_lithium": 2
       }
     },
     {

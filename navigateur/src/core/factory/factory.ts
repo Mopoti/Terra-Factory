@@ -660,6 +660,13 @@ const MACHINE_TYPES: MachineType[] = [
   'wind_turbine',
   'solar_panel',
   'accumulator_basic',
+  'fence_wood',
+  'barrier_concrete',
+  'barrier_reinforced',
+  'gate_wood',
+  'gate_concrete',
+  'gate_reinforced',
+  'charger',
   'crank',
   'splitter',
   'sorter',
@@ -1575,6 +1582,7 @@ export class Factory {
     if (m.type === 'pump')
       return this.pumpsOk.has(m.id) && m.fluid.water < (machineDef('pump').fluidCap ?? 100) - 1;
     if (m.type === 'relay' || m.type === 'antenna' || m.type === 'lamp') return true;
+    if (m.type === 'charger') return this.chargerBusy.has(m.id);
     if (m.type === 'refinery') return this.refineryReady(m);
     if (m.type === 'pumpjack')
       return this.oilCell(m) !== null && m.fluid.oil < (machineDef('pumpjack').fluidCap ?? 200) - 1;
@@ -1808,6 +1816,9 @@ export class Factory {
     const max = Factory.maxHealth(m.type);
     return (m.hp ?? max) / max;
   }
+
+  /** Bornes de recharge qui ont une cible à charger (fixé par la simulation, un pas avant le calcul du courant). */
+  readonly chargerBusy = new Set<number>();
 
   /** Portail ouvert ? (`wear` = 1.) */
   gateOpen(m: Machine): boolean {

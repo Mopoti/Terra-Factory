@@ -68,6 +68,7 @@ const PROVISIONAL_SHAPES: Record<string, DropShape> = {
   carbon_fiber: 'bobine',
   kit_circuit: 'puce',
   repair_kit: 'conteneur',
+  battery_portable: 'conteneur',
   circuit_advanced: 'puce',
   microcontroller: 'puce',
   solar_cell: 'plaque',

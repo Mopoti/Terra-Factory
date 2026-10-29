@@ -2368,7 +2368,10 @@ export function startGameView(
         options.state.refuelVehicle(mounted) > 0);
     // Sans carburant le buggy ne bouge plus (on le quitte avec la touche d'utilisation).
     if (mounted && !driving) {
-      if (!buggyWarned) options.onMessage?.(t('vehicle.noFuel'));
+      if (!buggyWarned)
+        options.onMessage?.(
+          t(VEHICLES[mounted.kind].electric ? 'vehicle.noBattery' : 'vehicle.noFuel'),
+        );
       buggyWarned = true;
       return { speed: 0, strafe: 0 };
     }
@@ -3016,7 +3019,7 @@ export function startGameView(
       playerX = v.x;
       playerZ = v.z;
       if (v.fuel <= 0 && options.state.refuelVehicle(v) <= 0)
-        options.onMessage?.(t('vehicle.noFuel'));
+        options.onMessage?.(t(VEHICLES[v.kind].electric ? 'vehicle.noBattery' : 'vehicle.noFuel'));
       return;
     }
     const step = Math.min(dist, BOARD_SPEED * dt);
@@ -4216,7 +4219,12 @@ export function startGameView(
       let speed = 0;
       let effort = 0;
       if (mounted && mounted.kind !== 'cart' && mounted.fuel > 0 && !paused) {
-        kind = mounted.kind === 'van' ? 'buggy' : mounted.kind;
+        kind =
+          mounted.kind === 'van'
+            ? 'buggy'
+            : mounted.kind === 'quad_electric'
+              ? 'quad'
+              : mounted.kind;
         speed = Math.min(1, motion.speed / (WALK_SPEED_M_S * VEHICLES[mounted.kind].speedFactor));
         effort = input.isActionActive('forward') || input.isActionActive('backward') ? 1 : 0;
       } else {

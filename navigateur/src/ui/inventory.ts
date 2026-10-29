@@ -9,6 +9,7 @@ import {
   itemById,
   type EquipSlot,
 } from '../core/data/items';
+import { itemGauge } from './gauge';
 import { itemIcon } from './itemIcon';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
@@ -364,6 +365,8 @@ export function mountInventory(
         cell.style.setProperty('--item', def.color);
         cell.classList.toggle('selected', slot.item === selected);
         cell.append(itemIcon(slot.item), el('span', 'slot-count', String(slot.count)));
+        const gauge = itemGauge(state, slot.item);
+        if (gauge) cell.append(gauge);
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
           e.dataTransfer?.setData(ITEM_DRAG_TYPE, slot.item);

@@ -1896,6 +1896,8 @@ export class GameState {
   /** Remplit le réservoir du buggy avec un combustible du sac (renvoie les secondes de route ajoutées, 0 s'il n'y en a pas). */
   refuelVehicle(v: Vehicle): number {
     const burn = VEHICLES[v.kind].burnKw;
+    // Un véhicule électrique n'a pas de réservoir : sa batterie se recharge à une borne.
+    if (VEHICLES[v.kind].electric) return 0;
     // D'abord la case de carburant, puis le coffre du buggy, puis le sac.
     const take = (): { seconds: number } | null => {
       const f = v.fuelStack;
@@ -1936,6 +1938,26 @@ export class GameState {
   /** Durée de poussée d'une batterie lithium. */
   static readonly JETPACK_BATTERY_S = 20;
 
+  /** Secondes de poussée qu'une batterie portable peut stocker. */
+  static readonly PORTABLE_BATTERY_S = 60;
+
+  /** Capacité des batteries portables du sac (secondes de poussée), et part pleine (0 à 1). */
+  batteryCapacityS(): number {
+    return (this.inventory.battery_portable ?? 0) * GameState.PORTABLE_BATTERY_S;
+  }
+  batteryFill(): number {
+    const cap = this.batteryCapacityS();
+    return cap > 0 ? Math.min(1, this.changes.batteryS / cap) : 0;
+  }
+
+  /** Ajoute de l'énergie aux batteries portables (renvoie ce qui a été stocké, en secondes de poussée). */
+  chargeBatteries(seconds: number): number {
+    const room = Math.max(0, this.batteryCapacityS() - this.changes.batteryS);
+    const put = Math.min(room, seconds);
+    this.changes.batteryS += put;
+    return put;
+  }
+
   /** Le propulseur dorsal est-il porté ? */
   wearsJetpack(): boolean {
     return this.changes.equipment.back === 'jetpack';
@@ -1945,6 +1967,12 @@ export class GameState {
   useJetpack(dt: number): boolean {
     if (!this.wearsJetpack()) return false;
     if (this.creative) return true;
+    this.changes.batteryS = Math.min(this.changes.batteryS, this.batteryCapacityS());
+    // Les batteries portables (rechargées à une borne) d'abord, puis les batteries lithium du sac.
+    if (this.changes.batteryS > 0) {
+      this.changes.batteryS = Math.max(0, this.changes.batteryS - dt);
+      return true;
+    }
     if (this.jetpackSeconds <= 0) {
       if ((this.inventory.battery_lithium ?? 0) < 1) return false;
       this.inventory = remove(this.inventory, 'battery_lithium', 1).inventory;

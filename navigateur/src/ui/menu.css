@@ -3321,3 +3321,28 @@ input[type='range'] {
   font-size: 11px;
   opacity: 0.75;
 }
+
+.slot-gauge {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  pointer-events: none;
+}
+.slot-gauge i {
+  display: block;
+  height: 100%;
+}
+.slot-gauge i.hi {
+  background: #4cc46a;
+}
+.slot-gauge i.mid {
+  background: #e0a23a;
+}
+.slot-gauge i.lo {
+  background: #d9473a;
+}
