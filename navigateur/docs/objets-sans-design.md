@@ -1,105 +1,107 @@
-# Objets sans design (état du tour 258)
+# Commande de modèles 3D (état du tour 279)
 
-Audit fait par script sur le jeu en marche (`content/items.json`, modèles de `public/models/terra`, `dropModels.ts`, `models.ts`) et sur les propositions de `tools/gen_decouvertes.py`. « Design » = icône 3D, modèle au sol, modèle posé (machine, construction, véhicule), modèle porté (équipement).
+Liste faite par script sur le jeu en marche (`content/items.json`, `content/machines.json`, `dropModels.ts`, `models.ts`). **Règle : l'icône d'inventaire et le modèle au sol sont le même modèle** (l'icône est une vue isométrique du modèle au sol ; pour une machine, de sa miniature). Donc un seul modèle à fournir par objet pour les trois usages (sol, inventaire, et posé quand c'est une machine / construction / véhicule). Les fichiers vont dans `blender/` → `export/` → `public/models/terra` (voir `blender/scripts/`). Les faces magenta des formes d'objets prennent la couleur de l'objet.
 
-## Dans le jeu aujourd'hui (161 objets)
+## 1. Dans le jeu, avec un modèle provisoire (à remplacer)
 
-Tous les objets en jeu ont une icône et un modèle, sauf deux écarts. Les machines (48) ont un modèle Terra propre ; les convoyeurs et tuyaux ont leurs modèles par tronçons.
+### 1a. Machines et constructions posées (modèle réutilisé d'une autre machine)
 
-| Objet | Ce qui manque |
-| --- | --- |
-| Veste (`jacket`) | tout : icône et modèle au sol (garde la caisse), modèle porté (seulement une boîte de couleur sur le torse) |
-| Tout l'équipement porté (sac à dos, capuche, pantalon, bottes, gants, armures 1, 2, 4) | **modèle porté** : sur le personnage ce sont des boîtes, sphères et cylindres colorés (`gameView.ts`, `refreshWorn`). Les objets au sol et les icônes existent. |
-| Pistolet, fusil, sniper, outils de pierre et de fer | icône et modèle tenu existent (`HELD_MODELS`) ; le modèle au sol n'est pas à part |
+| Objet | Modèle provisoire | Taille (cases de 50 cm) | Remarque |
+| --- | --- | --- | --- |
+| Poteau haute tension (`machine_pole_hv`) | `poteau_electrique` | 2×2, haut. 6 m | Poteau haute tension : mât de 6 m, 3 bras, grands isolateurs |
+| Poteau très haute tension (`machine_pole_uhv`) | `poteau_electrique` | 2×2, haut. 10 m | Poteau très haute tension : pylône de 10 m, 3 bras larges |
+| Lampadaire électrique (`machine_lamp`) | `poteau_electrique` | 1×1, haut. 3 m | Lampadaire : mât 3 m avec une lampe qui s'allume la nuit (pièce lumineuse nommée `lueur`) |
+| Éolienne (`machine_wind_turbine`) | `poteau_electrique` | 2×2, haut. 6 m | Éolienne : mât 6 m et rotor à trois pales qui tourne (pièce animée) |
+| Transformateur (`machine_transformer`) | `accumulateur_t3` | 3×3, haut. 2.5 m | Transformateur : cuve, 3 isolateurs, ailettes |
+| Disjoncteur (`machine_breaker`) | `accumulateur_t3` | 2×2, haut. 1.5 m | Disjoncteur : coffret avec levier ; deux états (fermé / ouvert) si possible |
+| Panneau solaire (`machine_solar_panel`) | `accumulateur_t3` | 3×3, haut. 1.2 m | Panneau solaire : panneau incliné bleu sur pied |
+| Accumulateur (`machine_accumulator_basic`) | `accumulateur_t3` | 2×2, haut. 1.0 m | Accumulateur de base : plus petit et plus simple que l'accumulateur lithium T4 |
+| Assembleur avancé (T3) (`machine_assembler_advanced`) | `assembleur_t2` | 4×4, haut. 1.5 m | Assembleur avancé : variante visible de l'assembleur T2 (4 types) |
+| Mur blindé, porte blindée (`piece_wall_armored`, `piece_door_armored`) | modèles de l'aluminium | comme le mur / la porte | variante blindée (plaques rivetées) |
 
-### Objets qui partagent une forme (pas de design propre, seulement la couleur change)
+### 1b. Objets (sac et sol) dont la forme est partagée ou provisoire
+
+Forme actuelle → ce qu'il faudrait. Les objets marqués « provisoire » ont été ajoutés avec la forme d'un voisin.
+
+| Objet | Forme actuelle | Il faudrait |
+| --- | --- | --- |
+| Tige d'aluminium (`aluminium_rod`) | forme `tige` | tige (aluminium, plus claire) |
+| Châssis simple (`chassis_simple`) | forme `moteur` | petit châssis soudé |
+| Châssis renforcé (`chassis_steel`) | forme `moteur` | châssis renforcé |
+| Châssis léger (`chassis_alu`) | forme `moteur` | châssis léger |
+| Châssis composite (`chassis_composite`) | forme `moteur` | châssis composite noir |
+| Vitre (`glass`) | forme `verre` | vitre (plaque transparente) |
+| Vitre blindée (`armored_glass`) | forme `verre` | vitre blindée (épaisse, croisillons) |
+| Graphite (`graphite`) | forme `caillou` | bloc de graphite noir brillant |
+| Sel de lithium (`lithium_salt`) | forme `sable` | tas de sel blanc-rosé |
+| Fibre de carbone (`carbon_fiber`) | forme `bobine` | rouleau de fibre noire tressée |
+| Kit circuit (`kit_circuit`) | forme `puce` | petite carte avec composants |
+| Kit de réparation (`repair_kit`) | forme `conteneur` | boîte à outils rouge-orange (clé, tournevis) |
+| Circuit avancé (`circuit_advanced`) | forme `puce` | carte plus dense, dorée |
+| Microcontrôleur (`microcontroller`) | forme `puce` | puce carrée à broches |
+| Cellule photovoltaïque (`solar_cell`) | forme `plaque` | cellule bleue quadrillée |
+| Filtre en graphite (`graphite_filter`) | forme `bloc` | filtre en nid d'abeille |
+| Batterie lithium (`battery_lithium`) | forme `conteneur` | pile cylindrique / bloc batterie |
+| Capsule de fusion (`fusion_capsule`) | forme `conteneur` | capsule sphérique brillante |
+| Aimant supraconducteur (`supra_magnet`) | forme `conteneur` | aimant en U / tore supraconducteur |
+| Cristal quantique (`quantum_crystal`) | forme `conteneur` | cristal violet facetté |
+| Deutérium (`deuterium`) | forme `baril` | bonbonne de gaz (étiquette D) |
+| Tritium (`tritium`) | forme `baril` | bonbonne de gaz (étiquette T) |
+| Azote liquide (`liquid_nitrogen`) | forme `baril` | bonbonne cryogénique givrée |
+
+### 1c. Objets qui partagent une forme sans être provisoires (à distinguer un jour)
 
 | Forme | Objets | Proposition |
 | --- | --- | --- |
-| lingot | fer, cuivre, zinc, fonte, acier, aluminium, zamak | différencier au moins l'aluminium et le zamak (teinte et marquage) |
-| plaque | plaque de fer, cuivre, moule de plaque, acier, aluminium | le moule de plaque devrait ressembler à un moule |
-| tige | tige de fer, tige d'acier | suffisant |
-| engrenage | engrenage, moule d'engrenage | le moule devrait ressembler à un moule |
-| bobine | fil de cuivre, moule de fil, câble isolé | moule de fil et câble isolé à distinguer |
-| paquets de science | paquets T1 à T5 et de combat (6) | **un visuel par palier** (couleur et symbole) |
-| puce | puce de silicium, isolant plastique | l'isolant n'est pas une puce |
-| baril | baril vide, d'eau, de pétrole | le contenu pourrait se voir |
-| minerai | fer, cuivre, zinc lavés | suffisant (teinte) |
-| conteneur | uranium enrichi, appauvri, barre d'uranium, déchets nucléaires | à distinguer (barre, déchets) |
-| caillou | pierre concassée, scories | suffisant |
+| lingot | fer, cuivre, zinc, fonte, acier, aluminium, zamak | différencier l'aluminium et le zamak (teinte, marquage) |
+| plaque / engrenage / bobine | moules de plaque, d'engrenage, de fil | un vrai **moule** (cadre creux) pour chacun |
+| bobine | fil de cuivre, câble isolé | gaine visible sur le câble isolé |
+| puce | puce de silicium, isolant plastique | l'isolant n'est pas une puce (manchon / plaque blanche) |
+| science | paquets T1 à T5 et de combat (6) | **un visuel par palier** (couleur et symbole) |
+| baril | vide, d'eau, de pétrole, pétrole brut | le contenu ou l'étiquette se voit |
+| conteneur | uranium enrichi, appauvri, barre d'uranium, déchets nucléaires | barre (tige jaune) et fût de déchets distincts |
+| bloc | béton, filtre en graphite | suffisant |
 
-## Ajoutés au jeu avec une forme provisoire (tour 259)
+### 1d. Équipement
 
-Ces 33 objets sont maintenant dans le jeu (recette, découverte, icône) mais **sans modèle propre** : 22 intermédiaires (formes partagées : tige, verre, caillou, sable, bobine, puce, plaque, bloc, conteneur, baril ; les quatre châssis prennent la forme du moteur), 8 pièces d'armures 3 et 5 (formes des armures 2 et 4), l'exosquelette (forme du pantalon), le mur et la porte blindés (modèles de l'aluminium).
+- **Veste** (`jacket`) : tout (modèle d'objet et modèle porté ; garde la forme de caisse).
+- **Armures composite (3) et nano (5)** (casque, plastron, jambières, bottes) : modèles d'objet + portés ; elles prennent les formes des armures 2 et 4.
+- **Exosquelette** (forme du pantalon) et **propulseur dorsal** (`jetpack`, forme du sac à dos) : modèles propres.
+- **Modèles portés de tout l'équipement** (sac à dos, capuche, pantalon, bottes, gants, armures 1 à 5, veste) : sur le personnage ce sont encore des boîtes colorées (`refreshWorn` dans `gameView.ts`).
 
-## Objets prévus mais pas encore dans le jeu (59)
+### 1e. Rails (nouvelle géométrie du tour 255 et suivants)
 
-Ils sortent des propositions (intermédiaires, paliers 3 à 5, énergie). Aucun n'a de design.
+Le droit cardinal et la rampe ont leur modèle ; la **courbe 45° (rayon 8,75 m)**, le **droit en diagonale (3,54 m)** et le **croisement en diagonale** sont dessinés par une forme simple (`addProcedural`). À modéliser : rail courbe, rail diagonal, éventuellement aiguillage visuel.
 
-| Objet | Genre | Ce qu'il faut | Forme existante réutilisable |
+## 2. Pas encore dans le jeu (chantiers en cours ou prévus)
+
+Aucun design n'existe. Dimensions indicatives ; à confirmer avec le PO.
+
+| Objet | Genre | Ce qu'il faut | Notes |
 | --- | --- | --- | --- |
-| Tige d'aluminium (`aluminium_rod`) | objet | icône 3D + modèle au sol | forme « tige » (couleur aluminium) |
-| Bottes composites (`armor3_feet`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Casque composite (`armor3_head`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Jambières composites (`armor3_legs`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Plastron composite (`armor3_torso`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Bottes nano (`armor5_feet`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Casque nano (`armor5_head`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Jambières nano (`armor5_legs`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Plastron nano (`armor5_torso`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Vitre blindée (`armored_glass`) | objet | icône 3D + modèle au sol | forme « verre » (variante) |
-| Batterie lithium (`battery_lithium`) | objet | icône 3D + modèle au sol | à créer (pile) |
-| Fibre de carbone (`carbon_fiber`) | objet | icône 3D + modèle au sol | forme « bobine » ou « plaque » (noir) |
-| Châssis léger (`chassis_alu`) | objet | icône 3D + modèle au sol | à créer (variante) |
-| Châssis composite (`chassis_composite`) | objet | icône 3D + modèle au sol | à créer (variante) |
-| Châssis simple (`chassis_simple`) | objet | icône 3D + modèle au sol | à créer (petit châssis) |
-| Châssis renforcé (`chassis_steel`) | objet | icône 3D + modèle au sol | à créer (variante du châssis simple) |
-| Circuit avancé (`circuit_advanced`) | objet | icône 3D + modèle au sol | forme « puce » (variante) |
-| Deutérium (`deuterium`) | objet | icône 3D + modèle au sol | forme « baril » ou bonbonne |
-| Exosquelette (`exoskeleton`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Capsule de fusion (`fusion_capsule`) | objet | icône 3D + modèle au sol | à créer (capsule) |
-| Vitre (`glass`) | objet | icône 3D + modèle au sol | forme « verre » existante |
-| Graphite (`graphite`) | objet | icône 3D + modèle au sol | forme « caillou » (noir) |
-| Filtre en graphite (`graphite_filter`) | objet | icône 3D + modèle au sol | forme « bloc » ou « plaque » |
-| Propulseur dorsal (`jetpack`) | équipement | modèle d'objet (icône) + modèle porté | — |
-| Kit circuit (`kit_circuit`) | objet | icône 3D + modèle au sol | forme « puce » ou à créer (carte) |
-| Azote liquide (`liquid_nitrogen`) | objet | icône 3D + modèle au sol | forme « baril » |
-| Sel de lithium (`lithium_salt`) | objet | icône 3D + modèle au sol | forme « sable » |
-| Accumulateur (`machine_accumulator_basic`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Compresseur d'air (`machine_air_compressor`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Purificateur d'air (`machine_air_purifier`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Bras industriel (`machine_arm_industrial`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Disjoncteur (`machine_breaker`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Borne de recharge (`machine_charger`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Foreuse à plasma (`machine_drill_plasma`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Électrolyseur (`machine_electrolyzer`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Fabricateur universel (`machine_fabricator`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Pile à combustible (`machine_fuel_cell`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Projecteur de mur holographique (`machine_hologram_projector`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Lampadaire électrique (`machine_lamp`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Poteau haute tension (`machine_pole_hv`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Poteau très haute tension (`machine_pole_uhv`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Coffre quantique (`machine_quantum_chest`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Panneau solaire (`machine_solar_panel`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Transformateur (`machine_transformer`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Tourelle à rail (`machine_turret_rail`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Éolienne (`machine_wind_turbine`) | machine | modèle posé (la miniature d'icône s'en déduit) + fenêtre machine | — |
-| Microcontrôleur (`microcontroller`) | objet | icône 3D + modèle au sol | forme « puce » (variante) |
-| Barrière en béton (`piece_barrier_concrete`) | construction | modèle de la pièce (+ icône) | — |
-| Barrière en béton armé (`piece_barrier_reinforced`) | construction | modèle de la pièce (+ icône) | — |
-| Porte blindée (`piece_door_armored`) | construction | modèle de la pièce (+ icône) | — |
-| Clôture en bois (`piece_fence_wood`) | construction | modèle de la pièce (+ icône) | — |
-| Mur blindé (`piece_wall_armored`) | construction | modèle de la pièce (+ icône) | — |
-| Cristal quantique (`quantum_crystal`) | objet | icône 3D + modèle au sol | à créer (cristal) |
-| Cellule photovoltaïque (`solar_cell`) | objet | icône 3D + modèle au sol | forme « plaque » (bleu) |
-| Aimant supraconducteur (`supra_magnet`) | objet | icône 3D + modèle au sol | à créer (aimant) |
-| Locomotive électrique (`train_locomotive_electric`) | véhicule | modèle posé (+ icône) | — |
-| Wagon plateforme (`train_wagon_flat`) | véhicule | modèle posé (+ icône) | — |
-| Tritium (`tritium`) | objet | icône 3D + modèle au sol | forme « baril » ou bonbonne |
-| Quad électrique (`vehicle_quad_electric`) | véhicule | modèle posé (+ icône) | — |
+| Clôture en bois | construction | modèle de pièce 1,5 m (non franchissable) | un par palier : bois, béton, béton armé |
+| Barrière en béton | construction | pièce 1,5 m | vie et usure : prévoir 3 états abîmés |
+| Barrière en béton armé | construction | pièce 1,5 m | idem |
+| Portails (bois, béton, béton armé) | construction | portail de 3 m, ouvert et fermé | mode automatique du béton armé : moteur visible |
+| Barrière holographique + portail holographique | construction | mur de lumière 1,5 m / 3 m (T5) + projecteur | énergie continue |
+| Projecteur de mur holographique | machine | modèle posé |  |
+| Quad électrique | véhicule | modèle posé (variante du quad) | batterie visible |
+| Locomotive électrique | véhicule | modèle posé (variante de la locomotive) | pantographe / batterie |
+| Wagon plateforme | véhicule | modèle posé | plat, pour charger un véhicule |
+| Batterie portable | objet | modèle au sol / icône | pile de poche ; jauge de charge sur l'icône (prévoir une barre en superposition) |
+| Borne de recharge | machine | modèle posé | place pour un véhicule / le propulseur |
+| Compresseur d'air | machine | modèle posé |  |
+| Purificateur d'air | machine | modèle posé |  |
+| Bras industriel | machine | modèle posé | bras robotique grand format |
+| Foreuse à plasma | machine | modèle posé | variante de la foreuse |
+| Électrolyseur | machine | modèle posé |  |
+| Fabricateur universel | machine | modèle posé | T5 |
+| Pile à combustible | machine | modèle posé |  |
+| Coffre quantique | machine | modèle posé | T5 |
+| Tourelle à rail | machine | modèle posé |  |
 
-## Résumé
+## 3. Résumé
 
-- **À faire en priorité** (vu en jeu) : modèles portés de l'équipement, visuels propres aux paquets de science par palier, moules (plaque, engrenage, fil), veste.
-- **À créer pour les paliers 3 à 5** : 22 objets, 19 machines, 5 constructions, 3 véhicules et trains, 10 équipements.
-- Les modèles 3D sont faits par la session Blender parallèle (`blender/`, `export/`, `public/models/terra`) : ce fichier sert de commande.
+- **Priorité (vu en jeu tout de suite)** : modèles portés de l'équipement, veste, paquets de science par palier, moules, nouveaux rails (courbe, diagonale).
+- **Provisoires à remplacer** : 9 machines / constructions (1a), 23 objets (1b), armures 3 et 5, exosquelette, propulseur.
+- **Nouveaux chantiers** : barrières et portails, véhicules et loco électriques, batterie portable, 11 machines.
