@@ -1,5 +1,5 @@
 {
- "key": "discussions-cumul2",
+ "key": "discussions-cumul3",
  "title": "Discussions : suite (4)",
  "intro": "Seuls les sujets encore ouverts restent ici ; ce qui est tranché est dans passation.md et docs/usine.md.",
  "cols": [
@@ -16,25 +16,17 @@
  "tabs": [
   {
    "id": "k",
-   "label": "Kit de réparation et usure (à traiter)"
+   "label": "Rien d'ouvert"
   }
  ],
  "rows": [
   {
-   "id": "k1",
+   "id": "z1",
    "tab": "k",
-   "name": "Utilisation du kit de réparation",
-   "tag": "k1",
-   "recipe": "Corrigé : le kit ne s'utilise plus depuis la fenêtre (F). Il s'utilise uniquement en main : on le prend (sac ou barre de raccourcis), puis clic gauche sur la machine abîmée = 1 charge (+25 %) avec le bruit de clé à cliquet.",
-   "role": "Comment veux-tu tester ? Aujourd'hui seuls les ennemis abîment les machines : veux-tu un moyen de test (mode Créatif : clic droit maintenu + touche pour abîmer une machine) ?"
-  },
-  {
-   "id": "k2",
-   "tab": "k",
-   "name": "Barre de vie des machines",
-   "tag": "k2",
-   "recipe": "Corrigé : plus de barre flottante. Les machines abîmées noircissent (suie par taches) selon l'usure : léger sous 75 % de vie, marqué sous 50 % (avec fumée noire), très marqué sous 25 % (avec étincelles). La vie en pourcentage est affichée dans le panneau de la machine (F).",
-   "role": "Les trois niveaux d'usure te conviennent ? Veux-tu aussi des fissures / pièces cassées quand les modèles 3D seront refaits ?"
+   "name": "Prochain chantier",
+   "tag": "z1",
+   "recipe": "Tout est tranché. Candidats : barrières et portails (1,5 m, portails 3 m, vie et usure, ennemis qui ne les ouvrent pas), véhicules électriques, batterie portable, retouche du reste des machines non faites.",
+   "role": "Dans quel ordre ? (Je pars sur les barrières et portails si tu ne dis rien.)"
   }
  ]
 }

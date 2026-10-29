@@ -104,6 +104,8 @@ export interface Machine {
   pressure: number;
   /** Tuyau rompu (pression trop forte) ou tapis / tuyau abîmé par l'acide : il ne laisse rien passer jusqu'à réparation. */
   broken: boolean;
+  /** Points de vie restants d'une machine abîmée par les ennemis (absent = intacte), enregistrés avec la partie. */
+  hp?: number;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
   /** Balise : nom affiché (« Balise » par défaut) et couleur (#rrggbb). */
@@ -583,6 +585,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
         machine.type === 'fission_reactor' ||
         machine.type === 'fusion_reactor' ||
         machine.type === 'breaker');
+    if (isNum(m.hp) && m.hp > 0 && m.hp < Factory.MACHINE_HEALTH) machine.hp = m.hp;
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&
@@ -1781,12 +1784,23 @@ export class Factory {
   }
 
   /** Points de vie des machines abîmées par les ennemis (identifiant → points ; absent = intact). */
-  readonly health = new Map<number, number>();
+  readonly health = {
+    get: (id: number): number | undefined => this.machines.find((m) => m.id === id)?.hp,
+    has: (id: number): boolean => this.machines.find((m) => m.id === id)?.hp !== undefined,
+    set: (id: number, hp: number): void => {
+      const m = this.machines.find((x) => x.id === id);
+      if (m) m.hp = hp;
+    },
+    delete: (id: number): void => {
+      const m = this.machines.find((x) => x.id === id);
+      if (m) delete m.hp;
+    },
+  };
   static readonly MACHINE_HEALTH = 120;
 
   /** Part de vie restante d'une machine (1 = intacte). */
   healthFraction(m: Machine): number {
-    return (this.health.get(m.id) ?? Factory.MACHINE_HEALTH) / Factory.MACHINE_HEALTH;
+    return (m.hp ?? Factory.MACHINE_HEALTH) / Factory.MACHINE_HEALTH;
   }
 
   /** Luminosité du ciel (0 nuit noire, 1 plein jour) : fixée par la partie, fait tourner les panneaux solaires. */
