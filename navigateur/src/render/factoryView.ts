@@ -287,6 +287,24 @@ export function beltEntry(
   return { ex: -dx, ez: -dz, curved: false };
 }
 
+/** Noircit les sommets ajoutés depuis `start` : suie par taches, de plus en plus marquée selon l'usure (1 à 3). */
+function burn(mb: MeshBuilder, start: number, level: number): void {
+  const k = [0, 0.25, 0.45, 0.65][level];
+  const colors = mb.colors;
+  for (let i = start; i + 2 < mb.positions.length; i += 3) {
+    const noise =
+      Math.abs(
+        Math.sin(
+          mb.positions[i] * 12.9898 + mb.positions[i + 1] * 78.233 + mb.positions[i + 2] * 37.719,
+        ) * 43758.5453,
+      ) % 1;
+    const t = Math.min(1, k * (0.4 + 1.2 * noise));
+    colors[i] = colors[i] * (1 - t) + 0.1 * t;
+    colors[i + 1] = colors[i + 1] * (1 - t) + 0.08 * t;
+    colors[i + 2] = colors[i + 2] * (1 - t) + 0.07 * t;
+  }
+}
+
 /** Dessine les machines et les tapis (corps fixes), les objets sur les tapis (dynamiques) et l'aperçu de pose. */
 export class FactoryView {
   private readonly root = new THREE.Group();
@@ -323,11 +341,6 @@ export class FactoryView {
   private readonly burstAt = new Map<number, number>();
   /** Balises : faisceau coloré et nom flottant, refaits à chaque `rebuild`. */
   private readonly flags = new THREE.Group();
-  /** Barres de vie au-dessus des machines abîmées (identifiant de la machine → barre). */
-  private readonly healthBars = new Map<
-    number,
-    { group: THREE.Group; fill: THREE.Mesh; fillMat: THREE.MeshBasicMaterial }
-  >();
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -353,57 +366,29 @@ export class FactoryView {
       this.parts,
       this.flags,
     );
-    this.root.add(this.healthRoot);
     scene.add(this.root, this.ghost);
     this.rebuild();
   }
 
-  private readonly healthRoot = new THREE.Group();
-  private readonly barBack = new THREE.MeshBasicMaterial({
-    color: 0x1a1a1f,
-    depthTest: false,
-    transparent: true,
-    opacity: 0.85,
-  });
-  private readonly barGeo = new THREE.PlaneGeometry(1, 1);
+  /** Niveau d'usure de chaque machine au dernier dessin (0 intacte, 1 à 3 de plus en plus abîmée). */
+  private damageSeen = '';
 
-  /** Barre de vie flottante au-dessus de chaque machine abîmée, tournée vers la caméra. */
-  updateHealthBars(camera: THREE.Camera): void {
-    for (const [id, bar] of this.healthBars) {
-      if (this.factory.health.has(id) && this.factory.machines.some((m) => m.id === id)) continue;
-      this.healthRoot.remove(bar.group);
-      bar.fillMat.dispose();
-      this.healthBars.delete(id);
-    }
+  /** Niveau d'usure d'une machine abîmée par les ennemis : 0 (intacte), 1 (moins de 75 %), 2 (moins de 50 %), 3 (moins de 25 %). */
+  private damageLevel(m: Machine): number {
+    const f = this.factory.healthFraction(m);
+    return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
+  }
+
+  /** Redessine les machines dont l'état d'usure a changé (elles noircissent à mesure qu'elles s'abîment). */
+  updateDamage(): void {
+    let sig = '';
     for (const m of this.factory.machines) {
-      if (!this.factory.health.has(m.id)) continue;
-      let bar = this.healthBars.get(m.id);
-      if (!bar) {
-        const group = new THREE.Group();
-        const back = new THREE.Mesh(this.barGeo, this.barBack);
-        back.scale.set(1.3, 0.16, 1);
-        back.renderOrder = 20;
-        const fillMat = new THREE.MeshBasicMaterial({ color: 0x4cc46a, depthTest: false });
-        const fill = new THREE.Mesh(this.barGeo, fillMat);
-        fill.renderOrder = 21;
-        group.add(back, fill);
-        this.healthRoot.add(group);
-        bar = { group, fill, fillMat };
-        this.healthBars.set(m.id, bar);
-      }
-      const { w, d } = dims(m.type, m.rot);
-      const frac = this.factory.healthFraction(m);
-      const full = 1.2;
-      bar.fill.scale.set(Math.max(0.01, full * frac), 0.1, 1);
-      bar.fill.position.set(-full / 2 + (full * frac) / 2, 0, 0.001);
-      bar.fillMat.color.set(frac > 0.5 ? 0x4cc46a : frac > 0.25 ? 0xe0a23a : 0xd9473a);
-      bar.group.position.set(
-        (m.gx + w / 2) * CELL_SIZE_M,
-        visualHeight(m.type) + levelY(m.lift) + 0.5,
-        (m.gz + d / 2) * CELL_SIZE_M,
-      );
-      bar.group.quaternion.copy(camera.quaternion);
+      const level = this.damageLevel(m);
+      if (level > 0) sig += `${m.id}:${level},`;
     }
+    if (sig === this.damageSeen) return;
+    this.damageSeen = sig;
+    this.rebuild();
   }
 
   /** Refait les corps des machines (à appeler quand on en pose ou en retire). */
@@ -462,6 +447,8 @@ export class FactoryView {
             tint,
             !!parts,
           );
+        const worn = this.damageLevel(m);
+        if (worn > 0) burn(mb, start, worn);
         if (parts) this.addMover(m, parts);
         this.addFlames(m);
         this.addParts(m);
@@ -977,6 +964,25 @@ export class FactoryView {
       }
     }
     for (const id of [...this.burstAt.keys()]) if (!live.has(id)) this.burstAt.delete(id);
+    // Machines très abîmées (moins de 50 %) : fumée noire, avec des étincelles sous 25 %.
+    for (const m of this.factory.machines) {
+      const level = this.damageLevel(m);
+      if (level < 2 || m.type === 'conveyor' || m.type === 'pipe') continue;
+      const { w, d } = dims(m.type, m.rot);
+      const cx = (m.gx + w / 2) * CELL_SIZE_M;
+      const cz = (m.gz + d / 2) * CELL_SIZE_M;
+      const base = visualHeight(m.type) + levelY(m.lift);
+      for (let i = 0; i < 4; i++) {
+        const t = (time * 0.5 + i / 4 + m.id * 0.37) % 1;
+        const a = i * 2.399 + m.id;
+        pos.push(cx + Math.cos(a) * 0.25 * t, base + t * 1.8, cz + Math.sin(a) * 0.25 * t);
+        if (level === 3 && i === 0 && t < 0.3) col.push(1, 0.6, 0.2);
+        else {
+          const g = 0.22 + 0.2 * t;
+          col.push(g, g, g);
+        }
+      }
+    }
     for (const m of this.factory.machines) {
       if (m.type !== 'turbine') continue;
       const power = this.factory.turbineEfficiency(m);

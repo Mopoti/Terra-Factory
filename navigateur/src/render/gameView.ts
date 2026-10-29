@@ -4371,7 +4371,7 @@ export function startGameView(
       for (const d of threat.deaths.splice(0))
         options.state.dropLoot('carapace', d.mutant ? 2 : 1 + (d.id % 2), d.x, d.z);
     else threat.deaths.length = 0;
-    factoryView.updateHealthBars(camera);
+    factoryView.updateDamage();
     factoryView.updateSmoke(now / 1000);
     factoryView.updateMovers(now / 1000);
     factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });

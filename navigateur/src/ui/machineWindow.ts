@@ -1133,26 +1133,15 @@ export function mountMachineWindow(
       });
       rows.append(note, button, out);
     }
-    if (factory.healthFraction(m) < 1) {
-      const hurt = el('div', 'mach-info warn');
-      const out = el('div', 'mach-info');
-      const button = el('button', 'btn', t('machine.repairKit.button', { n: '0' }));
-      button.type = 'button';
-      const show = (): void => {
-        const pct = Math.round(factory.healthFraction(m) * 100);
-        hurt.textContent = pct < 100 ? t('machine.health', { pct: String(pct) }) : '';
-        button.disabled = pct >= 100;
-        button.textContent = t('machine.repairKit.button', { n: String(state.repairCharges()) });
-      };
-      button.addEventListener('click', () => {
-        out.textContent = t(
-          `machine.repairKit.${state.repairMachine(factory, m.id)}` as TranslationKey,
-        );
-        show();
-      });
-      show();
-      rows.append(hurt, button, out);
-    }
+    // Vie de la machine (le kit de réparation s'utilise en main, un clic sur la machine, pas depuis cette fenêtre).
+    const hp = Math.round(factory.healthFraction(m) * 100);
+    rows.append(
+      el(
+        'div',
+        hp < 100 ? 'mach-info warn' : 'mach-info',
+        t('machine.health', { pct: String(hp) }),
+      ),
+    );
     if (m.type === 'breaker') {
       const note = el('div', 'mach-info', t('machine.breaker.help'));
       const out = el('div', 'mach-info');

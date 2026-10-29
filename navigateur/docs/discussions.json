@@ -41,16 +41,20 @@
    "tab": "k",
    "name": "Utilisation du kit de réparation",
    "tag": "k1",
-   "recipe": "Fait : on prend le kit en main (depuis l'inventaire, ou dans la barre de raccourcis avec sa touche), puis un clic gauche sur la machine abîmée consomme une charge du kit (+25 % de vie) avec un bruit de clé à cliquet. Le bouton « Réparer » reste aussi dans la fenêtre de la machine (F).",
-   "role": "Je comprends « consommer 1 du kit » comme consommer 1 charge sur 5. Est-ce bien ça, ou 1 kit entier par clic ?"
+   "recipe": "Corrigé : le kit ne s'utilise plus depuis la fenêtre (F). Il s'utilise uniquement en main : on le prend (sac ou barre de raccourcis), puis clic gauche sur la machine abîmée = 1 charge (+25 %) avec le bruit de clé à cliquet.",
+   "role": "Comment veux-tu tester ? Aujourd'hui seuls les ennemis abîment les machines : veux-tu un moyen de test (mode Créatif : clic droit maintenu + touche pour abîmer une machine) ?",
+   "v": "mod",
+   "c": "Ne peut pas être utilisé en faisant F"
   },
   {
    "id": "k2",
    "tab": "k",
    "name": "Barre de vie des machines",
    "tag": "k2",
-   "recipe": "Fait : une barre de vie flottante (verte, orange, rouge) s'affiche au-dessus de chaque machine abîmée, tournée vers la caméra, sans survol. Je l'ai placée au-dessus de la machine elle-même, pas sur l'icône du sac.",
-   "role": "Tu parlais bien de la machine dans le monde, ou de l'icône de l'objet dans l'inventaire / la barre de raccourcis (jauge sur l'icône, comme pour la batterie) ? La vie n'est toujours pas enregistrée dans la sauvegarde : on la garde ?"
+   "recipe": "Corrigé : plus de barre flottante. Les machines abîmées noircissent (suie par taches) selon l'usure : léger sous 75 % de vie, marqué sous 50 % (avec fumée noire), très marqué sous 25 % (avec étincelles). La vie en pourcentage est affichée dans le panneau de la machine (F).",
+   "role": "Les trois niveaux d'usure te conviennent ? Veux-tu aussi des fissures / pièces cassées quand les modèles 3D seront refaits ?",
+   "v": "mod",
+   "c": "Il n'y a pas de barre qui flotte au dessus de chaque machine, il faudrait un effet sur les modèles pour les rendre abîmés, sinon dans le panneau de la machine on voit sa vie."
   },
   {
    "id": "k3",
@@ -58,7 +62,9 @@
    "name": "Emplacement d’amélioration",
    "tag": "k3",
    "recipe": "Noté. Pistes : un emplacement où l'on place un objet d'amélioration (consommation, production, vitesse, rendement), ou une montée de niveau payée en ressources (tu aimes moins). Je ne code rien.",
-   "role": "Quand on le fera, quels producteurs et machines en auront un en premier (panneau solaire, éolienne, foreuse, fourneau) ? Un seul emplacement par machine ou plusieurs ?"
+   "role": "Quand on le fera, quels producteurs et machines en auront un en premier (panneau solaire, éolienne, foreuse, fourneau) ? Un seul emplacement par machine ou plusieurs ?",
+   "v": "yes",
+   "c": "D'accord (amélioration de consommation, production, vitesse, rendement ; un objet à insérer plutôt que payer en ressources, à voir)."
   },
   {
    "id": "l1",
