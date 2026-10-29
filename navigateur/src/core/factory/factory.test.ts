@@ -1992,10 +1992,10 @@ describe('fission (11a)', () => {
     list.push(
       r,
       gen,
-      emptyMachine(91, 'pole', 13, 4, 0),
-      emptyMachine(92, 'pole', 13, 12, 0),
-      emptyMachine(93, 'pole', 13, 4, 0),
-      emptyMachine(94, 'pole', 13, 12, 0),
+      emptyMachine(91, 'pole_hv', 13, 4, 0),
+      emptyMachine(92, 'pole_hv', 13, 12, 0),
+      emptyMachine(93, 'pole_hv', 13, 4, 0),
+      emptyMachine(94, 'pole_hv', 13, 12, 0),
     );
     return { f: new Factory(list, water()), r };
   };
@@ -2103,12 +2103,12 @@ describe('fusion (11c)', () => {
     );
     list.push(
       r,
-      emptyMachine(91, 'pole', 27, 21, 0),
-      emptyMachine(92, 'pole', 17, 18, 0),
-      emptyMachine(93, 'pole', 27, 21, 0),
-      emptyMachine(94, 'pole', 17, 18, 0),
-      emptyMachine(95, 'pole', 27, 21, 0),
-      emptyMachine(96, 'pole', 17, 18, 0),
+      emptyMachine(91, 'pole_uhv', 27, 21, 0),
+      emptyMachine(92, 'pole_uhv', 17, 18, 0),
+      emptyMachine(93, 'pole_uhv', 27, 21, 0),
+      emptyMachine(94, 'pole_uhv', 17, 18, 0),
+      emptyMachine(95, 'pole_uhv', 27, 21, 0),
+      emptyMachine(96, 'pole_uhv', 17, 18, 0),
     );
     return { f: new Factory(list, makeWorld().world), r, acc };
   };
@@ -2160,7 +2160,7 @@ describe('balise', () => {
     const antenna = emptyMachine(2, 'antenna', 6, 0, 0);
     const reactor = emptyMachine(3, 'fusion_reactor', 14, 0, 0);
     reactor.wear = 1;
-    const pole = emptyMachine(4, 'pole', 8, 3, 0);
+    const pole = emptyMachine(4, 'pole_uhv', 8, 3, 0);
     const f = new Factory([relay, antenna, reactor, pole], makeWorld().world);
     f.tick(0.05);
     const s = new GameState({ inventory: {} });
@@ -2175,5 +2175,90 @@ describe('balise', () => {
     expect(s.activateBeacon(f, relay)).toBe('ok');
     expect(s.changes.beacon).toBe(true);
     expect(s.activateBeacon(f, relay)).toBe('done');
+  });
+});
+
+describe('niveaux de réseau : poteaux bois, haute et très haute tension, transformateur', () => {
+  const rich: FactoryWorld = {
+    oreAt: () => ({ id: 'iron_ore', item: 'iron_ore', amount: 9999 }),
+    mineOre: (_x, _z, n) => n,
+  };
+  const gen = (id: number, x: number, z: number): Machine => {
+    const g = emptyMachine(id, 'generator', x, z, 0);
+    g.fuel = { item: 'coal', count: 20 };
+    return g;
+  };
+
+  it('une machine trop puissante pour un poteau bois (réacteur 10 MW) n’est pas raccordée', () => {
+    const reactor = emptyMachine(1, 'fission_reactor', 6, 0, 0);
+    const wood = new Factory([reactor, emptyMachine(2, 'pole', 0, 0, 0)], makeWorld().world);
+    expect(wood.gridInfo(reactor)).toBeNull();
+    expect(wood.lacksVoltage(reactor)).toBe(true);
+    const hv = new Factory([reactor, emptyMachine(2, 'pole_hv', 0, 0, 0)], makeWorld().world);
+    expect(hv.gridInfo(reactor)).not.toBeNull();
+    expect(hv.lacksVoltage(reactor)).toBe(false);
+  });
+
+  it('un réseau bois ne fournit jamais plus de 500 kW', () => {
+    const g1 = gen(1, 4, 0);
+    const g2 = gen(2, -5, 0);
+    const f = new Factory([g1, g2, emptyMachine(3, 'pole', 0, 0, 0)], makeWorld().world);
+    run(f, 1);
+    expect(f.gridInfo(g1)!.capacityKw).toBe(500);
+  });
+
+  it('le courant descend par un transformateur, jamais sans lui', () => {
+    const world = rich;
+    const build = (withTransformer: boolean): { f: Factory; drills: Machine[] } => {
+      const drills = [
+        emptyMachine(6, 'drill_electric', 8, 4, 0),
+        emptyMachine(7, 'drill_electric', 8, -7, 0),
+      ];
+      const list = [
+        gen(1, 0, 5),
+        gen(2, -5, 0),
+        emptyMachine(3, 'pole_hv', 0, 0, 0),
+        emptyMachine(4, 'pole', 8, 0, 0),
+        ...drills,
+      ];
+      if (withTransformer) list.push(emptyMachine(5, 'transformer', 4, 0, 0));
+      return { f: new Factory(list, world), drills };
+    };
+    const without = build(false);
+    run(without.f, 1);
+    expect(without.f.powerFactor(without.drills[0])).toBe(0);
+    const { f, drills } = build(true);
+    run(f, 1);
+    const low = f.gridInfo(drills[0])!;
+    expect(low.level).toBe(0);
+    expect(low.demandKw).toBe(180);
+    expect(low.capacityKw).toBe(180);
+    expect(f.powerFactor(drills[0])).toBe(1);
+    const high = f.gridInfo(f.machines.find((m) => m.type === 'pole_hv')!)!;
+    expect(high.level).toBe(1);
+    expect(high.demandKw).toBe(180); // le réseau haut paie ce que le bas consomme
+    const transformer = f.machines.find((m) => m.type === 'transformer')!;
+    expect(f.transformerFlow(transformer)).toBe(180);
+  });
+
+  it('le transformateur ne passe pas plus que ce que le réseau haut produit', () => {
+    const world = rich;
+    const drills = [
+      emptyMachine(6, 'drill_electric', 8, 4, 0),
+      emptyMachine(7, 'drill_electric', 8, -7, 0),
+    ];
+    const weak = emptyMachine(1, 'crank', 0, 5, 0);
+    const f = new Factory(
+      [
+        weak,
+        emptyMachine(3, 'pole_hv', 0, 0, 0),
+        emptyMachine(4, 'pole', 8, 0, 0),
+        emptyMachine(5, 'transformer', 4, 0, 0),
+        ...drills,
+      ],
+      world,
+    );
+    run(f, 0.5);
+    expect(f.powerFactor(drills[0])).toBeLessThan(0.01);
   });
 });

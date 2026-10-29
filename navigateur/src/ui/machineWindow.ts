@@ -528,6 +528,16 @@ export function mountMachineWindow(
       ];
       if (!g) kids.push(el('div', 'mach-info warn', t('factory.power.unlinked')));
       else {
+        kids.push(
+          el(
+            'div',
+            'mach-info',
+            t('meter.level', {
+              level: t(`meter.level.${g.level}` as TranslationKey),
+              max: g.maxKw >= 1000 ? `${g.maxKw / 1000} MW` : `${g.maxKw} kW`,
+            }),
+          ),
+        );
         if (g.blackout) kids.push(el('div', 'mach-info warn', t('factory.power.blackout')));
         else if (g.overloadS > 0)
           kids.push(

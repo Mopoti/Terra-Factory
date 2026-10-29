@@ -531,6 +531,45 @@
       }
     },
     {
+      "id": "machine_pole_hv",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 30,
+      "volumeL": 40,
+      "color": "#8d99a6",
+      "recipe": {
+        "chassis_steel": 1,
+        "glass": 4,
+        "kit_circuit": 1
+      }
+    },
+    {
+      "id": "machine_pole_uhv",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 80,
+      "volumeL": 80,
+      "color": "#b9c4cf",
+      "recipe": {
+        "chassis_alu": 2,
+        "plastic_insulator": 4,
+        "microcontroller": 1
+      }
+    },
+    {
+      "id": "machine_transformer",
+      "stack": 10,
+      "category": "energy",
+      "weightKg": 120,
+      "volumeL": 120,
+      "color": "#6f7d8c",
+      "recipe": {
+        "chassis_steel": 2,
+        "copper_wire": 24,
+        "plastic_insulator": 4
+      }
+    },
+    {
       "id": "machine_drill_electric",
       "stack": 10,
       "category": "extraction",

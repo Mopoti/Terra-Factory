@@ -22,6 +22,9 @@ export type MachineType =
   | 'generator'
   | 'waterwheel'
   | 'pole'
+  | 'pole_hv'
+  | 'pole_uhv'
+  | 'transformer'
   | 'crank'
   | 'splitter'
   | 'sorter'
@@ -82,6 +85,11 @@ export interface MachineDef {
   linkReachM?: number;
   /** Poteau : nombre de prises (une machine électrique en prend une). */
   sockets?: number;
+  /** Poteau : niveau du réseau (0 bois, 1 haute tension, 2 très haute tension) et puissance maximale qu'il supporte (kW). */
+  poleLevel?: number;
+  maxKw?: number;
+  /** Transformateur : puissance maximale transmise du niveau supérieur au niveau inférieur (kW). */
+  transformKw?: number;
   /** Pollution émise (points par seconde) quand la machine travaille. */
   pollution?: number;
   /** Fumées (air : se répandent, les arbres les absorbent) ou pollution du sol (reste sur place). */
@@ -124,6 +132,9 @@ export interface MachineDef {
   tierColors?: string[];
   capacity?: number;
 }
+
+/** Poteau, quel que soit son niveau. */
+export const isPole = (type: MachineType): boolean => machineDef(type).poleLevel !== undefined;
 
 export const isDrill = (type: MachineType): boolean =>
   type === 'drill' || type === 'drill_electric' || type === 'drill_eco';
@@ -231,6 +242,7 @@ export const hasWindow = (type: MachineType): boolean =>
     type === 'cooling_tower' ||
     type === 'accumulator' ||
     type === 'antenna' ||
+    type === 'transformer' ||
     type === 'turbine'
   );
 

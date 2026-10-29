@@ -90,6 +90,9 @@ export function expandLegacyIds(ids: readonly unknown[]): Set<unknown> {
 
 /** Objets ajoutés après les anciennes technologies : une ancienne sauvegarde ne les sait pas fabriquer. */
 const ADDED_AFTER_LEGACY = new Set([
+  'machine_pole_hv',
+  'machine_pole_uhv',
+  'machine_transformer',
   'aluminium_rod',
   'glass',
   'graphite',

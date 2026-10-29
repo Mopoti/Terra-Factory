@@ -87,11 +87,13 @@ import {
   isFluid,
   isLinear,
   isDrill,
+  isPole,
   isSmith,
   isLab,
   isTurret,
   isRouter,
   machineDef,
+  type MachineType,
   machineForItem,
   tierOfItem,
   itemOfTier,
@@ -990,7 +992,7 @@ export function startGameView(
     const h = visualHeight(m.type);
     const grow = m.type === 'conveyor' ? 0 : GROW_M;
     // Le poteau a une emprise de 2 × 2 cases mais un mât fin : sa boîte de visée l'est aussi.
-    const thin = m.type === 'pole';
+    const thin = isPole(m.type);
     return {
       x: (m.gx + w / 2) * CELL_SIZE_M,
       y: h / 2 + (m.type === 'conveyor' ? 0 : levelY(m.lift)),
@@ -1169,20 +1171,20 @@ export function startGameView(
   };
   const bus = options.guest ? new GuestBus(busContext, options.guest) : new CommandBus(busContext);
 
-  function extendPoleLine(down: boolean): void {
+  function extendPoleLine(down: boolean, type: MachineType): void {
     if (!down || !poleChain || !factory.machines.includes(poleChain)) {
       poleChain = null;
       return;
     }
-    const reach = machineDef('pole').wireReachM ?? 8;
+    const reach = machineDef(type).wireReachM ?? 8;
     const from = centerOf(poleChain);
     const dist = Math.hypot(playerX - from.x, playerZ - from.z);
     // Le joueur dépasse la portée du câble de ~1 m : le poteau se pose à la limite, derrière lui.
-    if (dist < reach + 0.9 || (options.state.inventory[machineDef('pole').item] ?? 0) < 1) return;
+    if (dist < reach + 0.9 || (options.state.inventory[machineDef(type).item] ?? 0) < 1) return;
     const k = (reach - 0.3) / dist;
     const px = from.x + (playerX - from.x) * k;
     const pz = from.z + (playerZ - from.z) * k;
-    const { w, d } = dims('pole', 0);
+    const { w, d } = dims(type, 0);
     const gx = Math.floor(px / CELL_SIZE_M) - Math.floor(w / 2);
     const gz = Math.floor(pz / CELL_SIZE_M) - Math.floor(d / 2);
     // Un peu de marge si la case est prise : on cherche autour.
@@ -1203,7 +1205,7 @@ export function startGameView(
       if (
         bus.dispatch<'placeMachine'>({
           type: 'placeMachine',
-          machine: 'pole',
+          machine: type,
           gx: c.gx,
           gz: c.gz,
           rot: 0,
@@ -1287,7 +1289,7 @@ export function startGameView(
             tier: 1,
           }) === 'ok'
         ) {
-          if (def.id === 'pole') poleChain = factory.machines[factory.machines.length - 1];
+          if (isPole(def.id)) poleChain = factory.machines[factory.machines.length - 1];
           playSfx('placeStone');
           buildMessage = '';
         } else {
@@ -1297,7 +1299,7 @@ export function startGameView(
         renderBuildHud();
       }
       // Poteaux : en gardant le clic et en marchant, un nouveau se pose à la limite du câble.
-      if (def.id === 'pole') extendPoleLine(down);
+      if (isPole(def.id)) extendPoleLine(down, def.id);
       machineWasDown = down;
       return;
     }
@@ -1570,7 +1572,7 @@ export function startGameView(
         `<div><b>${t('mp.kw', { n: String(r.consumeKw) })}</b> ${
           g
             ? t('mp.grid', { pct: String(Math.round(g.satisfaction * 100)) })
-            : `<span class="warn">${t(factory.lacksSocket(m) ? 'factory.power.noSocket' : 'mp.noGrid')}</span>`
+            : `<span class="warn">${t(factory.lacksVoltage(m) ? 'factory.power.tooBig' : factory.lacksSocket(m) ? 'factory.power.noSocket' : 'mp.noGrid')}</span>`
         }</div>`,
       );
     }
@@ -1782,7 +1784,16 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.router.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
       );
-    } else if (m.type === 'pole') {
+    } else if (m.type === 'transformer') {
+      const flow = factory.transformerFlow(m);
+      rows.push(
+        `<div class="${flow === null ? 'warn' : 'sub'}">${
+          flow === null
+            ? t('factory.power.transformerOff')
+            : t('factory.power.transformerFlow', { kw: String(Math.round(flow)) })
+        }</div>`,
+      );
+    } else if (isPole(m.type)) {
       const g = factory.gridInfo(m);
       if (g?.blackout) rows.push(`<div class="warn">${t('factory.power.blackout')}</div>`);
       else if (g && g.overloadS > 0)
@@ -2149,7 +2160,7 @@ export function startGameView(
     if (m !== null && m.type === 'conveyor') return false;
     if (m === null) return false;
     // Un poteau ne bloque que près de son mât.
-    if (m.type === 'pole') {
+    if (isPole(m.type)) {
       const c = centerOf(m);
       return Math.hypot(xM - c.x, zM - c.z) <= POLE_HIT_M + 0.05;
     }

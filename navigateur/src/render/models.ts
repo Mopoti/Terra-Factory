@@ -132,6 +132,10 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   refinery: 'raffinerie_t3',
   centrifuge: 'centrifugeuse_t4',
   pole: 'poteau_electrique',
+  // Provisoires : les modèles des niveaux supérieurs et du transformateur ne sont pas encore dessinés.
+  pole_hv: 'poteau_electrique',
+  pole_uhv: 'poteau_electrique',
+  transformer: 'accumulateur_t3',
   chest_wood: 'coffre_bois',
   chest_iron: 'coffre_fer',
   waterwheel: 'roue_a_aubes',

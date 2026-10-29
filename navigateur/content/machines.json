@@ -163,7 +163,47 @@
       "fuel": false,
       "wireReachM": 8,
       "linkReachM": 4,
-      "sockets": 3
+      "sockets": 3,
+      "poleLevel": 0,
+      "maxKw": 500
+    },
+    {
+      "id": "pole_hv",
+      "w": 2,
+      "d": 2,
+      "item": "machine_pole_hv",
+      "color": "#8d99a6",
+      "height": 6,
+      "fuel": false,
+      "wireReachM": 20,
+      "linkReachM": 4,
+      "sockets": 4,
+      "poleLevel": 1,
+      "maxKw": 10000
+    },
+    {
+      "id": "pole_uhv",
+      "w": 2,
+      "d": 2,
+      "item": "machine_pole_uhv",
+      "color": "#b9c4cf",
+      "height": 10,
+      "fuel": false,
+      "wireReachM": 40,
+      "linkReachM": 4,
+      "sockets": 5,
+      "poleLevel": 2,
+      "maxKw": 600000
+    },
+    {
+      "id": "transformer",
+      "w": 3,
+      "d": 3,
+      "item": "machine_transformer",
+      "color": "#6f7d8c",
+      "height": 2.5,
+      "fuel": false,
+      "transformKw": 10000
     },
     {
       "id": "drill_electric",

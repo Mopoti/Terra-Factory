@@ -19,6 +19,7 @@ import {
   isDrill,
   isFluid,
   isLab,
+  isPole,
   isTurret,
   turretSpec,
   isLinear,
@@ -242,6 +243,9 @@ export type MachineStatus =
 /** État d'un réseau électrique (poteaux reliés entre eux et machines raccordées). */
 export interface GridInfo {
   id: number;
+  /** Niveau du réseau (0 bois, 1 haute tension, 2 très haute tension) et puissance maximale de ses poteaux (kW). */
+  level: number;
+  maxKw: number;
   machines: number;
   /** Puissance que les générateurs en état de marche peuvent fournir (kW). */
   capacityKw: number;
@@ -643,6 +647,9 @@ const MACHINE_TYPES: MachineType[] = [
   'generator',
   'waterwheel',
   'pole',
+  'pole_hv',
+  'pole_uhv',
+  'transformer',
   'crank',
   'splitter',
   'sorter',
@@ -841,24 +848,28 @@ export class Factory {
     });
   }
 
-  /** Relie les poteaux entre eux (fil de 8 m) et les machines électriques au poteau le plus proche (4 m). */
+  /**
+   * Relie les poteaux de même niveau entre eux (fil), les machines électriques au poteau le plus proche qui a encore une prise et
+   * supporte leur puissance, et les transformateurs aux poteaux de deux niveaux voisins (le courant ne descend que par eux).
+   */
   private buildGrids(): void {
     this.gridOf.clear();
     this.wires = [];
-    const poles = this.machines.filter((m) => m.type === 'pole');
+    this.transformers = [];
+    const poles = this.machines.filter((m) => isPole(m.type));
+    const levelOf = (p: Machine): number => machineDef(p.type).poleLevel ?? 0;
     const parent = new Map<number, number>(poles.map((p) => [p.id, p.id]));
     const find = (id: number): number => {
       let r = id;
       while (parent.get(r) !== r) r = parent.get(r) as number;
       return r;
     };
-    const wire = machineDef('pole').wireReachM ?? 8;
-    const link = machineDef('pole').linkReachM ?? 4;
     for (let i = 0; i < poles.length; i++) {
       for (let j = i + 1; j < poles.length; j++) {
+        if (levelOf(poles[i]) !== levelOf(poles[j])) continue;
         const a = centerOf(poles[i]);
         const b = centerOf(poles[j]);
-        if (Math.hypot(a.x - b.x, a.z - b.z) <= wire) {
+        if (Math.hypot(a.x - b.x, a.z - b.z) <= (machineDef(poles[i].type).wireReachM ?? 8)) {
           parent.set(find(poles[i].id), find(poles[j].id));
           this.wires.push({ from: poles[i], to: poles[j] });
         }
@@ -872,45 +883,144 @@ export class Factory {
     }
     const gridId = (poleId: number): number => lowest.get(find(poleId)) as number;
     const members = new Map<number, number>();
-    const sockets = machineDef('pole').sockets ?? 3;
     this.socketsUsed.clear();
     this.noSocket.clear();
+    this.tooBig.clear();
+    const free = (p: Machine): boolean =>
+      (this.socketsUsed.get(p.id) ?? 0) < (machineDef(p.type).sockets ?? 3);
+    const take = (p: Machine): void => {
+      this.socketsUsed.set(p.id, (this.socketsUsed.get(p.id) ?? 0) + 1);
+    };
     // Les machines les plus anciennes gardent leur prise : chacune prend une prise du poteau le plus proche qui en a encore.
     for (const m of [...this.machines].sort((a, b) => a.id - b.id)) {
       const def = machineDef(m.type);
-      if (m.type === 'pole' || (!def.consumesKw && !def.producesKw)) continue;
+      if (isPole(m.type)) continue;
+      const isTransformer = m.type === 'transformer';
+      if (!isTransformer && !def.consumesKw && !def.producesKw) continue;
       const c = centerOf(m);
-      const reach = link + (Math.max(...Object.values(dims(m.type, m.rot))) * CELL_SIZE_M) / 2;
+      const half = (Math.max(...Object.values(dims(m.type, m.rot))) * CELL_SIZE_M) / 2;
       const near = poles
         .map((p) => ({ p, d: Math.hypot(centerOf(p).x - c.x, centerOf(p).z - c.z) }))
-        .filter((x) => x.d <= reach)
+        .filter((x) => x.d <= (machineDef(x.p.type).linkReachM ?? 4) + half)
         .sort((a, b) => a.d - b.d);
-      const best = near.find((x) => (this.socketsUsed.get(x.p.id) ?? 0) < sockets)?.p ?? null;
-      if (!best) {
-        if (near.length > 0) this.noSocket.add(m.id);
+      if (isTransformer) {
+        // Deux poteaux de niveaux voisins, chacun avec une prise libre : le plus bas des couples possibles.
+        const nearest = (level: number): Machine | undefined =>
+          near.find((x) => levelOf(x.p) === level && free(x.p))?.p;
+        for (const level of [0, 1]) {
+          const low = nearest(level);
+          const high = nearest(level + 1);
+          if (!low || !high) continue;
+          take(low);
+          take(high);
+          this.transformers.push({ machine: m, high: gridId(high.id), low: gridId(low.id) });
+          this.wires.push({ from: high, to: m }, { from: m, to: low });
+          break;
+        }
+        if (near.length > 0 && !this.transformers.some((l) => l.machine === m))
+          this.noSocket.add(m.id);
         continue;
       }
-      this.socketsUsed.set(best.id, (this.socketsUsed.get(best.id) ?? 0) + 1);
+      const need = Math.max(def.producesKw ?? 0, def.consumesKw ?? 0);
+      const fitting = near.filter((x) => (machineDef(x.p.type).maxKw ?? Infinity) >= need);
+      const best = fitting.find((x) => free(x.p))?.p ?? null;
+      if (!best) {
+        if (near.length > 0) (fitting.length === 0 ? this.tooBig : this.noSocket).add(m.id);
+        continue;
+      }
+      take(best);
       const grid = gridId(best.id);
       this.gridOf.set(m.id, grid);
       this.wires.push({ from: best, to: m });
       members.set(grid, (members.get(grid) ?? 0) + 1);
     }
     for (const p of poles) this.gridOf.set(p.id, gridId(p.id));
+    const levelOfGrid = new Map<number, number>(poles.map((p) => [gridId(p.id), levelOf(p)]));
     this.grids = new Map(
-      [...new Set(this.gridOf.values())].map((id) => [
-        id,
-        {
+      [...new Set(this.gridOf.values())].map((id) => {
+        const level = levelOfGrid.get(id) ?? 0;
+        const maxKw =
+          machineDef(['pole', 'pole_hv', 'pole_uhv'][level] as MachineType).maxKw ?? Infinity;
+        return [
           id,
-          machines: members.get(id) ?? 0,
-          capacityKw: 0,
-          demandKw: 0,
-          satisfaction: 1,
-          overloadS: this.overloadOf.get(id) ?? 0,
-          blackout: this.blackedOut.has(id),
-        },
-      ]),
+          {
+            id,
+            level,
+            maxKw,
+            machines: members.get(id) ?? 0,
+            capacityKw: 0,
+            demandKw: 0,
+            satisfaction: 1,
+            overloadS: this.overloadOf.get(id) ?? 0,
+            blackout: this.blackedOut.has(id),
+          },
+        ];
+      }),
     );
+  }
+
+  /** Transformateurs en service : réseau haute (source) et réseau basse (alimenté), puissance réellement transmise (kW). */
+  private transformers: Array<{
+    machine: Machine;
+    high: number;
+    low: number;
+    wantKw?: number;
+    flowKw?: number;
+  }> = [];
+  private readonly tooBig = new Set<number>();
+
+  /** Puissance qui traverse ce transformateur en ce moment (kW, du réseau haut vers le réseau bas), ou null s'il n'est pas relié. */
+  transformerFlow(m: Machine): number | null {
+    const l = this.transformers.find((x) => x.machine === m);
+    return l ? (l.flowKw ?? 0) : null;
+  }
+
+  /** Cette machine est-elle trop puissante pour tous les poteaux à sa portée ? */
+  lacksVoltage(m: Machine): boolean {
+    return this.tooBig.has(m.id);
+  }
+
+  /** Le courant descend d'un niveau à l'autre par les transformateurs, jamais au-delà de leur puissance ni de celle du poteau. */
+  private transfer(): void {
+    for (const g of this.grids.values()) g.capacityKw = Math.min(g.capacityKw, g.maxKw);
+    for (const l of this.transformers) l.wantKw = l.flowKw = 0;
+    // Du bas vers le haut : chaque réseau bas demande à son réseau haut ce qui lui manque.
+    for (const level of [0, 1]) {
+      for (const g of this.grids.values()) {
+        if (g.level !== level) continue;
+        const mine = this.transformers.filter((l) => l.low === g.id);
+        if (mine.length === 0) continue;
+        const rating = mine.length * (machineDef('transformer').transformKw ?? 0);
+        const want = Math.min(
+          Math.max(0, g.demandKw - g.capacityKw),
+          rating,
+          g.maxKw - g.capacityKw,
+        );
+        for (const l of mine) {
+          l.wantKw = want / mine.length;
+          const high = this.grids.get(l.high);
+          if (high) high.demandKw += l.wantKw;
+        }
+      }
+    }
+    // Du haut vers le bas : le réseau haut donne au prorata de ce qu'il peut fournir.
+    for (const level of [2, 1]) {
+      for (const high of this.grids.values()) {
+        if (high.level !== level) continue;
+        high.capacityKw = Math.min(high.capacityKw, high.maxKw);
+        const sat = high.blackout
+          ? 0
+          : high.demandKw <= 0
+            ? 1
+            : Math.min(1, high.capacityKw / high.demandKw);
+        for (const l of this.transformers) {
+          if (l.high !== high.id) continue;
+          l.flowKw = (l.wantKw ?? 0) * sat;
+          const low = this.grids.get(l.low);
+          if (low) low.capacityKw += l.flowKw;
+        }
+      }
+    }
   }
 
   /** Historique de chaque réseau : production et demande moyennes par seconde (kW), les plus récentes à la fin. */
@@ -954,7 +1064,7 @@ export class Factory {
 
   /** Prises d'un poteau : utilisées et totales. */
   sockets(pole: Machine): { used: number; max: number } {
-    return { used: this.socketsUsed.get(pole.id) ?? 0, max: machineDef('pole').sockets ?? 3 };
+    return { used: this.socketsUsed.get(pole.id) ?? 0, max: machineDef(pole.type).sockets ?? 3 };
   }
 
   /** Cette machine est-elle privée de courant faute de prise libre (et non faute de poteau) ? */
@@ -967,7 +1077,7 @@ export class Factory {
     const id = this.gridOf.get(pole.id);
     if (id === undefined) return [];
     return this.machines
-      .filter((m) => m.type !== 'pole' && this.gridOf.get(m.id) === id)
+      .filter((m) => !isPole(m.type) && this.gridOf.get(m.id) === id)
       .map((m) => {
         const def = machineDef(m.type);
         return { machine: m, kw: (def.producesKw ?? 0) - (def.consumesKw ?? 0) };
@@ -1340,7 +1450,7 @@ export class Factory {
           ? 'running'
           : 'idle';
     const max = def.stockMax ?? 100;
-    if (m.type === 'pole') return (this.gridInfo(m)?.machines ?? 0) > 0 ? 'running' : 'idle';
+    if (isPole(m.type)) return (this.gridInfo(m)?.machines ?? 0) > 0 ? 'running' : 'idle';
     if (m.type === 'waterwheel') return (this.gridInfo(m)?.demandKw ?? 0) > 0 ? 'running' : 'idle';
     if (m.type === 'generator') {
       if (this.fuelSecondsLeft(m) <= 0) return 'noFuel';
@@ -1648,6 +1758,7 @@ export class Factory {
         g.capacityKw += def.producesKw;
       }
     }
+    this.transfer();
     this.storeEnergy(dt);
     for (const g of this.grids.values()) {
       g.satisfaction = g.demandKw <= 0 ? 1 : Math.min(1, g.capacityKw / g.demandKw);
@@ -2511,7 +2622,7 @@ export function pickMachine(
               ? y >= floor - 0.15 && y <= floor + 0.3
               : y <= floor + 0.3;
         if (ok) {
-          if (two.type === 'pole') {
+          if (isPole(two.type)) {
             const c = centerOf(two);
             if (Math.hypot(px - c.x, pz - c.z) > POLE_HIT_M) continue;
           }
@@ -2528,7 +2639,7 @@ export function pickMachine(
           : 0;
     if (m && y <= top) {
       // Le poteau est fin : on ne le vise que près de son mât (au milieu de son emprise).
-      if (m.type === 'pole') {
+      if (isPole(m.type)) {
         const c = centerOf(m);
         if (Math.hypot(px - c.x, pz - c.z) > POLE_HIT_M) continue;
       }

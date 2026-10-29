@@ -28,6 +28,7 @@ import {
   isArm,
   isAssembler,
   isDrill,
+  isPole,
   isTurret,
   GROW_M,
   beltSpeed,
@@ -437,7 +438,7 @@ export class FactoryView {
           (m.gz + d / 2) * CELL_SIZE_M + p[2],
         ];
       }
-      const h = m.type === 'pole' ? visualHeight(m.type) - 0.3 : visualHeight(m.type);
+      const h = isPole(m.type) ? visualHeight(m.type) - 0.3 : visualHeight(m.type);
       return [(m.gx + w / 2) * CELL_SIZE_M, h + levelY(m.lift), (m.gz + d / 2) * CELL_SIZE_M];
     };
     for (const { from, to } of this.factory.wires) {
@@ -1429,6 +1430,9 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   chest_iron: 0.6,
   generator: 1.1,
   pole: 3.6,
+  pole_hv: 6.1,
+  pole_uhv: 10.1,
+  transformer: 2.6,
   crank: 1.0,
   splitter: 0.4,
   merger: 0.4,
@@ -2146,13 +2150,27 @@ function addMachineBody(
     mb.box(x, 1.78, z, 0.16, 0.16, 0.16, color, true);
     return;
   }
-  if (type === 'pole') {
-    // Poteau : mât, bras, deux isolateurs.
-    mb.box(x, 0, z, 0.12, 3.4, 0.12, color, true);
-    mb.box(x, 3.15, z, 0.7, 0.07, 0.1, shade(color, 0.8), true);
-    mb.box(x, 2.85, z, 0.5, 0.06, 0.08, shade(color, 0.8), true);
-    mb.box(x - 0.3, 3.22, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
-    mb.box(x + 0.3, 3.22, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+  if (type === 'pole' || type === 'pole_hv' || type === 'pole_uhv') {
+    // Poteau : mât, bras, isolateurs ; plus haut et plus large à chaque niveau.
+    const top = type === 'pole' ? 3.4 : type === 'pole_hv' ? 5.9 : 9.9;
+    const span = type === 'pole' ? 0.7 : type === 'pole_hv' ? 1.6 : 3.0;
+    const arms = type === 'pole' ? 2 : 3;
+    mb.box(x, 0, z, 0.06 * arms, top, 0.06 * arms, color, true);
+    for (let i = 0; i < arms; i++) {
+      const y = top - 0.25 - i * (type === 'pole' ? 0.3 : 0.7);
+      const w = span * (1 - i * 0.25);
+      mb.box(x, y, z, w, 0.07, 0.1, shade(color, 0.8), true);
+      mb.box(x - w / 2 + 0.05, y + 0.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+      mb.box(x + w / 2 - 0.05, y + 0.07, z, 0.07, 0.12, 0.07, hexToRgb('#d9dfe6'), true);
+    }
+    return;
+  }
+  if (type === 'transformer') {
+    // Transformateur : socle, cuve, trois isolateurs.
+    mb.box(x, 0, z, 1.4, 0.2, 1.4, shade(color, 0.6), true);
+    mb.box(x, 0.2, z, 1.1, 1.5, 1.1, color, true);
+    for (const dx of [-0.3, 0, 0.3])
+      mb.box(x + dx, 1.7, z, 0.12, 0.7, 0.12, hexToRgb('#d9dfe6'), true);
     return;
   }
   if (type === 'generator') {
