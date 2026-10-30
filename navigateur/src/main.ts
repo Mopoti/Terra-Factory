@@ -10,11 +10,14 @@ import { encodeLook } from './core/profile/appearance';
 import { getCharacter, getPseudo, loadCharacter } from './core/profile/store';
 import { SaveLibrary } from './core/save/library';
 import { LocalStorageStorage, openBestStorage } from './core/save/storage';
-import { initLocale, t, type TranslationKey } from './i18n';
+import { getLocale, initLocale, t, type TranslationKey } from './i18n';
 import { startGameView, type GameViewHandle } from './render/gameView';
 import { initKeyboardLayout } from './settings/controls';
 import { startApplyingSettings } from './settings/apply';
 import { getSettings, loadSettings } from './settings/store';
+import { CELL_SIZE_M } from './core/constants';
+import { compassOf } from './core/game/weather';
+import { formatTemperature } from './core/units';
 import { mountHotbar, type Hotbar } from './ui/hotbar';
 import { mountMachineWindow, type MachineWindow } from './ui/machineWindow';
 import { mountInventory, type InventoryWindow } from './ui/inventory';
@@ -363,6 +366,19 @@ function startGame(
     bus: view.bus,
     onOpenChange: syncPaused,
     resolve: (id) => view.vehicleMachine(id),
+    reading: (m) => {
+      const w = view.weatherAt((m.gx + 0.5) * CELL_SIZE_M, (m.gz + 0.5) * CELL_SIZE_M);
+      if (m.type === 'thermometer')
+        return t('machine.thermometer.reading', {
+          temp: formatTemperature(w.tempC, getSettings().display.units, getLocale()),
+        });
+      if (m.type === 'vane')
+        return t('machine.vane.reading', {
+          speed: String(Math.round(w.wind.speed * 60)),
+          dir: t(`compass.${compassOf(w.wind.dir)}` as TranslationKey),
+        });
+      return null;
+    },
   });
   s.tech = mountTech(techEl, state, { onOpenChange: syncPaused, bus: view.bus });
   s.map = mountMap(mapEl, {

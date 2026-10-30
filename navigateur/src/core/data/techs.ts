@@ -95,6 +95,8 @@ const ADDED_AFTER_LEGACY = new Set([
   'machine_transformer',
   'machine_breaker',
   'machine_lamp',
+  'machine_thermometer',
+  'machine_vane',
   'repair_kit',
   'machine_fence_wood',
   'machine_charger',

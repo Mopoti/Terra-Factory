@@ -22,6 +22,8 @@ export interface ItemDef {
     bonus: { slots: number; weightG: number; volumeMl: number };
     /** Protection (en %) : réduit les dégâts reçus (somme des pièces portées, plafonnée). */
     armor: number;
+    /** Chaleur contre le froid (points) : somme des pièces portées, voir `weather.ts`. */
+    warmth: number;
   } | null;
   /** Outil (case d'outils) : multiplicateur de vitesse de récolte et unités obtenues par coup. */
   tool: { speed: number; yield: number } | null;
@@ -60,6 +62,8 @@ interface RawItem {
     slot: EquipSlot;
     bag?: { slots?: number; weightKg?: number; volumeL?: number };
     armor?: number;
+    /** Chaleur apportée contre le froid (voir `weather.ts`). */
+    warmth?: number;
   };
 }
 
@@ -79,6 +83,7 @@ export const ITEMS: ItemDef[] = (raw.items as RawItem[]).map((i) => ({
     ? {
         slot: i.equip.slot,
         armor: i.equip.armor ?? 0,
+        warmth: i.equip.warmth ?? 0,
         bonus: {
           slots: i.equip.bag?.slots ?? 0,
           weightG: Math.round((i.equip.bag?.weightKg ?? 0) * 1000),
@@ -188,7 +193,11 @@ export function itemById(id: string): ItemDef {
         yield: 1,
         stack: 1,
         equip: base.equip
-          ? { ...base.equip, armor: (base.equip.armor * info.level) / info.steps }
+          ? {
+              ...base.equip,
+              armor: (base.equip.armor * info.level) / info.steps,
+              warmth: (base.equip.warmth * info.level) / info.steps,
+            }
           : null,
       };
       variants.set(id, def);

@@ -10,6 +10,7 @@ import { labResearchLevel } from '../data/techs';
 import { dims, Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
 import { stepChargers } from './charging';
+import { windAt } from './weather';
 import { dayLight, DEFAULT_TIME, type TimeSettings } from './seasons';
 import type { GameState } from './state';
 import type { Threat, ThreatTarget } from './threat';
@@ -48,6 +49,8 @@ export class WorldSimulation {
   private readonly brokenSeen: Set<number>;
   /** Durée du jour et de la nuit de la partie (les panneaux solaires suivent la luminosité du ciel). */
   timeCfg: TimeSettings = DEFAULT_TIME;
+  /** Seed de la partie : le vent en dépend (le même chez tous les joueurs). */
+  windSeed = 0;
 
   constructor(
     readonly state: GameState,
@@ -89,6 +92,7 @@ export class WorldSimulation {
       return b ? `machine:${b.id}` : null;
     };
     factory.daylight = dayLight(state.changes.time, this.timeCfg).light;
+    factory.windSpeed = windAt(this.windSeed, state.changes.time).speed;
     factory.tradeOpen = state.changes.beacon;
     factory.labDemand = state.studyRemaining();
     factory.labNeeds = state.studyNeeds();

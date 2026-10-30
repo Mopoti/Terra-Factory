@@ -18,18 +18,35 @@ export interface Season {
   sky: number;
   /** Part de l'absorption normale des arbres. */
   treeAbsorb: number;
+  /** Chaleur de la saison (0 glacial, 1 caniculaire) : décale la température du monde. */
+  warmth: number;
 }
 
 export const SEASONS: Season[] = [
-  { id: 'spring', ground: [0.95, 1.08, 0.95], snow: [0, 0, 0], sky: 0x9cc7e2, treeAbsorb: 1 },
-  { id: 'summer', ground: [1, 1, 1], snow: [0, 0, 0], sky: 0x8fb8d8, treeAbsorb: 1.2 },
-  { id: 'autumn', ground: [1.25, 0.95, 0.7], snow: [0, 0, 0], sky: 0xb7b3a6, treeAbsorb: 0.7 },
+  {
+    id: 'spring',
+    ground: [0.95, 1.08, 0.95],
+    snow: [0, 0, 0],
+    sky: 0x9cc7e2,
+    treeAbsorb: 1,
+    warmth: 0.5,
+  },
+  { id: 'summer', ground: [1, 1, 1], snow: [0, 0, 0], sky: 0x8fb8d8, treeAbsorb: 1.2, warmth: 1 },
+  {
+    id: 'autumn',
+    ground: [1.25, 0.95, 0.7],
+    snow: [0, 0, 0],
+    sky: 0xb7b3a6,
+    treeAbsorb: 0.7,
+    warmth: 0.45,
+  },
   {
     id: 'winter',
     ground: [0.6, 0.64, 0.7],
     snow: [0.5, 0.52, 0.56],
     sky: 0xc8d3dc,
     treeAbsorb: 0.35,
+    warmth: 0,
   },
 ];
 
@@ -110,6 +127,8 @@ export interface Climate {
   snow: [number, number, number];
   sky: number;
   treeAbsorb: number;
+  /** Chaleur interpolée de la saison (0 à 1). */
+  warmth: number;
 }
 
 /** Saison, jour, année et ambiance interpolée au temps `time` (s). */
@@ -156,6 +175,7 @@ export function climateAt(time: number, cfg: TimeSettings = DEFAULT_TIME): Clima
     snow: lerp3(A.snow, B.snow, f),
     sky: lerpColor(A.sky, B.sky, f),
     treeAbsorb: lerp(A.treeAbsorb, B.treeAbsorb, f),
+    warmth: lerp(A.warmth, B.warmth, f),
   };
 }
 

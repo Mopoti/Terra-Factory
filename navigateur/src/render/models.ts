@@ -138,6 +138,8 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   transformer: 'accumulateur_t3',
   breaker: 'accumulateur_t3',
   lamp: 'poteau_electrique',
+  thermometer: 'poteau_electrique',
+  vane: 'poteau_electrique',
   wind_turbine: 'poteau_electrique',
   solar_panel: 'accumulateur_t3',
   accumulator_basic: 'accumulateur_t3',

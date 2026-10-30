@@ -583,6 +583,31 @@
       }
     },
     {
+      "id": "machine_thermometer",
+      "stack": 10,
+      "category": "tools",
+      "weightKg": 1,
+      "volumeL": 2,
+      "color": "#c9d4dc",
+      "recipe": {
+        "glass": 1,
+        "copper_wire": 2,
+        "iron_plate": 1
+      }
+    },
+    {
+      "id": "machine_vane",
+      "stack": 10,
+      "category": "tools",
+      "weightKg": 2,
+      "volumeL": 4,
+      "color": "#d8cfa8",
+      "recipe": {
+        "iron_rod": 3,
+        "iron_gear": 1
+      }
+    },
+    {
       "id": "machine_lamp",
       "stack": 10,
       "category": "energy",
@@ -1071,7 +1096,8 @@
         "cloth": 6
       },
       "equip": {
-        "slot": "head"
+        "slot": "head",
+        "warmth": 1
       }
     },
     {
@@ -1085,7 +1111,8 @@
         "cloth": 10
       },
       "equip": {
-        "slot": "torso"
+        "slot": "torso",
+        "warmth": 3
       }
     },
     {
@@ -1099,7 +1126,8 @@
         "cloth": 8
       },
       "equip": {
-        "slot": "legs"
+        "slot": "legs",
+        "warmth": 2
       }
     },
     {
@@ -1114,7 +1142,8 @@
         "wood": 2
       },
       "equip": {
-        "slot": "feet"
+        "slot": "feet",
+        "warmth": 1
       }
     },
     {
@@ -1151,7 +1180,8 @@
         "cloth": 4
       },
       "equip": {
-        "slot": "hands"
+        "slot": "hands",
+        "warmth": 1
       }
     },
     {
@@ -2082,7 +2112,8 @@
       },
       "equip": {
         "slot": "head",
-        "armor": 4
+        "armor": 4,
+        "warmth": 1.0
       }
     },
     {
@@ -2099,7 +2130,8 @@
       },
       "equip": {
         "slot": "torso",
-        "armor": 8
+        "armor": 8,
+        "warmth": 2.0
       }
     },
     {
@@ -2116,7 +2148,8 @@
       },
       "equip": {
         "slot": "legs",
-        "armor": 6
+        "armor": 6,
+        "warmth": 1.5
       }
     },
     {
@@ -2133,7 +2166,8 @@
       },
       "equip": {
         "slot": "feet",
-        "armor": 4
+        "armor": 4,
+        "warmth": 1.0
       }
     },
     {
@@ -2149,7 +2183,8 @@
       },
       "equip": {
         "slot": "head",
-        "armor": 8
+        "armor": 8,
+        "warmth": 2.0
       }
     },
     {
@@ -2165,7 +2200,8 @@
       },
       "equip": {
         "slot": "torso",
-        "armor": 16
+        "armor": 16,
+        "warmth": 4.0
       }
     },
     {
@@ -2181,7 +2217,8 @@
       },
       "equip": {
         "slot": "legs",
-        "armor": 12
+        "armor": 12,
+        "warmth": 3.0
       }
     },
     {
@@ -2197,7 +2234,8 @@
       },
       "equip": {
         "slot": "feet",
-        "armor": 9
+        "armor": 9,
+        "warmth": 2.2
       }
     },
     {
@@ -2214,7 +2252,8 @@
       },
       "equip": {
         "slot": "head",
-        "armor": 13
+        "armor": 13,
+        "warmth": 3.2
       }
     },
     {
@@ -2231,7 +2270,8 @@
       },
       "equip": {
         "slot": "torso",
-        "armor": 26
+        "armor": 26,
+        "warmth": 6.5
       }
     },
     {
@@ -2248,7 +2288,8 @@
       },
       "equip": {
         "slot": "legs",
-        "armor": 19
+        "armor": 19,
+        "warmth": 4.8
       }
     },
     {
@@ -2265,7 +2306,8 @@
       },
       "equip": {
         "slot": "feet",
-        "armor": 14
+        "armor": 14,
+        "warmth": 3.5
       }
     },
     {
@@ -2766,7 +2808,8 @@
       },
       "equip": {
         "slot": "head",
-        "armor": 10
+        "armor": 10,
+        "warmth": 2.5
       }
     },
     {
@@ -2783,7 +2826,8 @@
       },
       "equip": {
         "slot": "torso",
-        "armor": 20
+        "armor": 20,
+        "warmth": 5.0
       }
     },
     {
@@ -2800,7 +2844,8 @@
       },
       "equip": {
         "slot": "legs",
-        "armor": 15
+        "armor": 15,
+        "warmth": 3.8
       }
     },
     {
@@ -2817,7 +2862,8 @@
       },
       "equip": {
         "slot": "feet",
-        "armor": 11
+        "armor": 11,
+        "warmth": 2.8
       }
     },
     {
@@ -2834,7 +2880,8 @@
       },
       "equip": {
         "slot": "head",
-        "armor": 16
+        "armor": 16,
+        "warmth": 4.0
       }
     },
     {
@@ -2851,7 +2898,8 @@
       },
       "equip": {
         "slot": "torso",
-        "armor": 32
+        "armor": 32,
+        "warmth": 8.0
       }
     },
     {
@@ -2868,7 +2916,8 @@
       },
       "equip": {
         "slot": "legs",
-        "armor": 23
+        "armor": 23,
+        "warmth": 5.8
       }
     },
     {
@@ -2885,7 +2934,8 @@
       },
       "equip": {
         "slot": "feet",
-        "armor": 17
+        "armor": 17,
+        "warmth": 4.2
       }
     },
     {

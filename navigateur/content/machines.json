@@ -215,6 +215,24 @@
       "fuel": false
     },
     {
+      "id": "thermometer",
+      "w": 1,
+      "d": 1,
+      "item": "machine_thermometer",
+      "color": "#c9d4dc",
+      "height": 1.2,
+      "fuel": false
+    },
+    {
+      "id": "vane",
+      "w": 1,
+      "d": 1,
+      "item": "machine_vane",
+      "color": "#d8cfa8",
+      "height": 2.5,
+      "fuel": false
+    },
+    {
       "id": "lamp",
       "w": 1,
       "d": 1,

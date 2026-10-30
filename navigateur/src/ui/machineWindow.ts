@@ -110,6 +110,8 @@ export function mountMachineWindow(
     bus: CommandBus;
     /** Machines qui ne sont pas dans l'usine (le coffre d'un buggy : identifiant négatif). */
     resolve?: (id: number) => Machine | null;
+    /** Mesure affichée par un thermomètre ou une girouette (texte), sinon null. */
+    reading?: (m: Machine) => string | null;
   },
 ): MachineWindow {
   let current: number | null = null;
@@ -140,6 +142,7 @@ export function mountMachineWindow(
   /** Éléments dont le texte change en continu (on les met à jour sans refaire la fenêtre). */
   let live: {
     status?: HTMLElement;
+    reading?: HTMLElement;
     cycle?: HTMLElement;
     fuel?: HTMLElement;
     fuelBar?: HTMLElement;
@@ -1012,6 +1015,7 @@ export function mountMachineWindow(
     setCycleBar(live.cycle, factory.cycleFraction(m));
     live.meter?.();
     if (live.fuel) live.fuel.textContent = fuelText(m);
+    if (live.reading) live.reading.textContent = actions.reading?.(m) ?? '';
     setCycleBar(live.fuelBar, fuelFill01(m));
     if (live.ore) live.ore.textContent = t('factory.ore', { n: String(factory.oreUnder(m).total) });
     m.slots.forEach((stack, i) => {
@@ -1136,6 +1140,10 @@ export function mountMachineWindow(
         );
       });
       rows.append(note, button, out);
+    }
+    if (actions.reading?.(m) != null) {
+      live.reading = el('div', 'mach-info', actions.reading(m) ?? '');
+      rows.append(live.reading);
     }
     // Vie de la machine (le kit de réparation s'utilise en main, un clic sur la machine, pas depuis cette fenêtre).
     const hp = Math.round(factory.healthFraction(m) * 100);

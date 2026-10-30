@@ -887,6 +887,14 @@ export class GameState {
     return Math.min(80, total);
   }
 
+  /** Chaleur apportée par les vêtements et armures portés (points, voir `weather.ts`). */
+  warmth(): number {
+    let total = 0;
+    for (const id of Object.values(this.changes.equipment))
+      total += itemById(id).equip?.warmth ?? 0;
+    return total;
+  }
+
   /** Dégâts réellement subis après l'armure. */
   mitigate(amount: number): number {
     if (this.creative) return amount;

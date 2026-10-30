@@ -15,6 +15,7 @@ A("## 1. Dans le jeu avec un modèle provisoire ou dessiné par le code (à remp
 A("### 1a. Machines posées (modèle d'une autre machine réutilisé)\n")
 A("| Objet | Modèle provisoire | Emprise (cases de 50 cm) | Ce qu'il faut |\n| --- | --- | --- | --- |")
 rows=[
+('thermometer','poteau_electrique','petit thermomètre à cadran sur pied, 1,3 m'),('vane','poteau_electrique','mât de 2,6 m, girouette qui tourne dans le sens du vent (pièce animée)'),
 ('pole_hv','poteau_electrique','mât de 6 m, 3 bras, grands isolateurs'),('pole_uhv','poteau_electrique','pylône de 10 m, 3 bras larges'),('lamp','poteau_electrique','mât de 3 m, lampe qui s\'allume la nuit (pièce `lueur`)'),
 ('wind_turbine','poteau_electrique','mât de 6 m, rotor à trois pales qui tourne (pièce animée)'),('transformer','accumulateur_t3','cuve, 3 isolateurs, ailettes'),('breaker','accumulateur_t3','coffret à levier ; fermé / ouvert si possible'),
 ('solar_panel','accumulateur_t3','panneau incliné bleu sur pied'),('accumulator_basic','accumulateur_t3','plus petit et plus simple que l\'accumulateur lithium T4'),('charger','accumulateur_t3','borne avec câble et prise pour véhicule, voyant de charge'),

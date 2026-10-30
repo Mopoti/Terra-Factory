@@ -243,7 +243,7 @@ Les **trains** sont décrits au §7.8.
 
 ## 5. Les objets
 
-Le jeu compte **251 objets**. Tout objet a un **identifiant texte stable** (ex. `iron_ingot`), un **poids**, un **volume**, éventuellement une **recette**, une **énergie de combustion**, un **emplacement d'équipement**, un **effet d'outil** et un **palier** (T0 à T5). Sources : `content/items.json` (données) et `docs/fiches-objets.html` (fiches générées, avec les paquets demandés).
+Le jeu compte **253 objets**. Tout objet a un **identifiant texte stable** (ex. `iron_ingot`), un **poids**, un **volume**, éventuellement une **recette**, une **énergie de combustion**, un **emplacement d'équipement**, un **effet d'outil** et un **palier** (T0 à T5). Sources : `content/items.json` (données) et `docs/fiches-objets.html` (fiches générées, avec les paquets demandés).
 
 ### 5.1 Familles et onglets de fabrication ✅
 
@@ -318,7 +318,7 @@ Les volumes clos sont détectés (pièces de ≤ 400 cases) ; ils servent au mas
 
 ### 7.1 Catalogue des machines ✅
 
-Le jeu compte **77 machines**. Les emprises sont en cases de 50 cm (largeur × profondeur, orientation 0) ; la rotation par pas de 90° les échange. Les machines **non linéaires** peuvent se poser **à l'étage** sur une dalle (PageUp). Le coût est celui de la fabrication (`content/items.json`, tableau généré). Les chiffres d'énergie sont des **valeurs de départ** à équilibrer (§14).
+Le jeu compte **79 machines**. Les emprises sont en cases de 50 cm (largeur × profondeur, orientation 0) ; la rotation par pas de 90° les échange. Les machines **non linéaires** peuvent se poser **à l'étage** sur une dalle (PageUp). Le coût est celui de la fabrication (`content/items.json`, tableau généré). Les chiffres d'énergie sont des **valeurs de départ** à équilibrer (§14).
 
 **Extraction et fonderie**
 
@@ -391,6 +391,8 @@ Le jeu compte **77 machines**. Les emprises sont en cases de 50 cm (largeur × p
 | Transformateur               | 3×3             | 2,5 m   | 2 × Châssis renforcé + 24 × Fil de cuivre + 4 × Vitre                                       | —                                    |
 | Disjoncteur                  | 2×2             | 1,5 m   | 1 × Châssis renforcé + 1 × Kit circuit + 1 × Vitre                                          | —                                    |
 | Lampadaire électrique        | 1×1             | 3 m     | 1 × Châssis simple + 2 × Vitre + 1 × Kit circuit                                            | consomme 5 kW                        |
+| Thermomètre                  | 1×1             | 1,2 m   | 1 × Vitre + 2 × Fil de cuivre + 1 × Plaque de fer                                           | affiche la température (fenêtre F)   |
+| Girouette                    | 1×1             | 2,5 m   | 3 × Tige de fer + 1 × Engrenage de fer                                                      | affiche le vent (fenêtre F)          |
 | Borne de recharge            | 3×3             | 1,8 m   | 1 × Châssis renforcé + 1 × Microcontrôleur + 2 × Isolant en plastique                       | consomme 400 kW                      |
 
 **Fluides**
@@ -533,7 +535,7 @@ Une machine se pose en **un clic**, la touche R la tourne ; **même case = range
 
 ### 8.1 Principe ✅
 
-On ne recherche pas des « technologies » : on **découvre des recettes**. Une **découverte** débloque la fabrication d'un ou plusieurs objets (machines, constructions, intermédiaires, véhicules…). Elle exige d'avoir **découvert d'autres recettes** en amont (**prérequis**) : on peut partir d'un produit final et voir **tout ce qu'il faut avoir découvert avant**. Le jeu compte **163 découvertes** réparties sur six paliers (T0 : 22, T1 : 24, T2 : 30, T3 : 43, T4 : 32, T5 : 12). Un objet qui n'appartient à aucune découverte est disponible dès le départ.
+On ne recherche pas des « technologies » : on **découvre des recettes**. Une **découverte** débloque la fabrication d'un ou plusieurs objets (machines, constructions, intermédiaires, véhicules…). Elle exige d'avoir **découvert d'autres recettes** en amont (**prérequis**) : on peut partir d'un produit final et voir **tout ce qu'il faut avoir découvert avant**. Le jeu compte **164 découvertes** réparties sur six paliers (T0 : 22, T1 : 24, T2 : 30, T3 : 43, T4 : 32, T5 : 12). Un objet qui n'appartient à aucune découverte est disponible dès le départ.
 
 ### 8.2 Coûts et modes ✅
 
@@ -612,15 +614,14 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Jour/nuit** : luminosité lissée (aube et crépuscule d'au plus 1 min), la partie **commence en plein jour**. Éclairage hémisphérique + soleil dont l'intensité suit la lumière du jour ; ciel et brouillard suivent. Le soleil ne se déplace pas dans le ciel 🔶.
 - Le **temps de jeu** (secondes) est enregistré avec la partie.
 
-### 10.3 Climat : température et vent ⏳ (décidé avec le PO, pas encore codé)
+### 10.3 Climat : température et vent 🔶 (tour 290 : première version codée)
 
-- **Température** : le monde a une température locale qui dépend du **biome**, de la **saison** et de l'**heure** (plus froid la nuit et en hiver). Elle sert au gameplay (chauffage des abris, combustible d'hiver, effets des vêtements : voir §15). Les bruits de température et d'humidité qui donnent déjà les biomes (§3.2) en sont la base.
-- **Voir la température** n'est pas gratuit : une **découverte** donne le **thermomètre**, un objet **posable contre un mur** qui affiche la température de l'endroit (dans une pièce close, celle de l'abri). Sans lui, le joueur ne perçoit la température que par ses effets. Unité au choix dans les paramètres (°C, °F, K).
-- **Vent** : il doit **ressembler au vent réel** : une **direction** et une **force** qui évoluent lentement et de façon cohérente dans la durée (rafales, calmes, changements de direction progressifs), et non plus une simple oscillation propre à chaque éolienne comme aujourd'hui (🔶 §7.3). Le même vent s'applique à toutes les éoliennes d'une zone ; leur production suit la force du vent.
-- **Voir le vent** : un objet qui **se pose sur une dalle** (la **manche à air** ou girouette, nom à trancher) montre la **direction** et la **force** du vent ; il suit la même découverte que le thermomètre ou une découverte voisine.
-- **Effet du froid** : un joueur exposé à un froid trop fort avec **trop peu de vêtements ou d'armure** subit des **dégâts** ; l'isolation des vêtements et armures compte donc (valeurs à équilibrer, §14). Les autres effets (chauffage des abris, combustible d'hiver, cultures) restent à concevoir.
-- **Noms** : **thermomètre** et **girouette**.
-- Le vent pourra plus tard orienter la fumée, la pollution ou les nuages ; non décidé.
+- **Température** ✅ : elle dépend du **biome** (de −5 °C à 30 °C), de la **saison** (±10 °C : l'hiver est le plus froid, l'été le plus chaud, transition progressive) et de l'**heure** (jusqu'à −8 °C en pleine nuit). Les valeurs sont à équilibrer (§14).
+- **Froid** ✅ : chaque vêtement et pièce d'armure apporte des **points de chaleur** (veste 3, pantalon 2, capuche, bottes et gants 1 ; armure : un quart de sa protection, qui baisse avec l'usure). En dessous de **12 °C − 1,3 °C par point de chaleur**, le joueur perd **0,1 PV/s par °C** manquant (l'armure ne réduit pas ces dégâts ; rien en mode Créatif). Exemple : en pleine toundra l'hiver, la nuit, il faut une armure complète.
+- **Thermomètre** ✅ : découverte **Station météo** (T1). Machine 1×1 qui, dans sa fenêtre (touche F), affiche la température de son emplacement (°C, °F ou K selon les paramètres). ⏳ _Posé contre un mur_ : pour l'instant il se pose comme n'importe quelle machine.
+- **Vent** ✅ : une **direction** qui dérive lentement (plusieurs minutes) et une **force** qui alterne calmes et rafales, **les mêmes pour toutes les éoliennes** et tous les joueurs d'une partie (fonction de la seed et du temps). L'éolienne produit de 15 % à 100 % de sa puissance selon la force.
+- **Girouette** ✅ : même découverte ; sa fenêtre affiche la **force** (km/h) et la **direction** (point cardinal vers lequel souffle le vent). ⏳ _Posée sur une dalle_ et modèle 3D animé : provisoire (voir `docs/objets-sans-design.md`).
+- ⏳ Reste à concevoir : chauffage des abris, combustible d'hiver, cultures ; le vent pourra plus tard orienter la fumée, la pollution ou les nuages.
 
 ---
 
@@ -782,24 +783,25 @@ Voir §9.1. Rythme d'apparition des ennemis : coût 12 (agressif 8) de pollution
 ### 15.1 Réalisé (par chantier)
 
 - Socle, menu, paramètres (dont le préréglage graphique), monde infini par seed, caméras, éditeur de partie, sauvegardes, récolte et inventaire ✅
-- Construction (pièces, étages), machines, tapis, électricité à trois niveaux (transformateur, disjoncteur, énergies renouvelables, accumulateurs), fluides et vapeur, pétrole, nucléaire, laboratoire et **arbre de 163 découvertes (T0 à T5)**, assembleur avancé ✅
+- Construction (pièces, étages), machines, tapis, électricité à trois niveaux (transformateur, disjoncteur, énergies renouvelables, accumulateurs), fluides et vapeur, pétrole, nucléaire, laboratoire et **arbre de 164 découvertes (T0 à T5)**, assembleur avancé ✅
 - Pollution, ennemis, tourelles (cinq), **barrières et portails**, **santé et réparation des machines**, équipement, armures avec usure, **données par objet**, véhicules (dont électriques et recharge), **voies ferrées et trains** (refonte des rails), stations et pilote automatique ✅
 - Jour / nuit / saisons, éclairage des lampadaires, mort et réapparition, mode Créatif (un exemplaire suffit), **multijoueur** (jusqu'à 5, coffre quantique par joueur), rapport de bug avec mesure de fluidité ✅
 
 ### 15.2 Prévu / à décider
 
-| Sujet                                                                                                                                                     | Statut                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| **Vrais modèles 3D** pour les objets, machines et véhicules récents, modèles portés de l'équipement (liste : `docs/objets-sans-design.md`)                | ⏳ faits dans la conversation des modèles |
-| **Équilibrage** global (coûts, puissances, vie, vitesses) : toutes les valeurs sont des points de départ                                                  | ⏳ après la version complète du jeu       |
-| **Emplacements d'amélioration** sur les machines (consommation, production, vitesse, rendement ; un objet inséré)                                         | ⏳ idée validée, à concevoir              |
-| **Réparer une armure** avec un kit, **usure des armes**, portails ouverts aux véhicules, chargement d'un véhicule sur un wagon plateforme                 | ⏳                                        |
-| **Signaux et cantons** pour les trains, rails électrifiés (la locomotive électrique ne se recharge toujours qu'à la borne)                                | ⏳                                        |
-| **Effets des vêtements**, **température** (thermomètre posé contre un mur), **vent réaliste** (girouette posée sur une dalle), météo, chauffage des abris | ⏳ conception décidée (§10.3)             |
-| **Succès** (désactivés en mode admin), structure de réapparition                                                                                          | ⏳                                        |
-| **Terrain creusable** (voxels : gisements qui descendent, renforts sous les foreuses, terrain aplani par le joueur)                                       | ⏳ prévu avec la version Unreal           |
-| **Version Unreal** : après une version navigateur équilibrée (la démo = la version 1 complète)                                                            | ⏳                                        |
-| **Mods / données externes**, **mode photo**                                                                                                               | ⏳ / ❌                                   |
+| Sujet                                                                                                                                      | Statut                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| **Vrais modèles 3D** pour les objets, machines et véhicules récents, modèles portés de l'équipement (liste : `docs/objets-sans-design.md`) | ⏳ faits dans la conversation des modèles |
+| **Équilibrage** global (coûts, puissances, vie, vitesses) : toutes les valeurs sont des points de départ                                   | ⏳ après la version complète du jeu       |
+| **Emplacements d'amélioration** sur les machines (consommation, production, vitesse, rendement ; un objet inséré)                          | ⏳ idée validée, à concevoir              |
+| **Réparer une armure** avec un kit, **usure des armes**, portails ouverts aux véhicules, chargement d'un véhicule sur un wagon plateforme  | ⏳                                        |
+| **Signaux et cantons** pour les trains, rails électrifiés (la locomotive électrique ne se recharge toujours qu'à la borne)                 | ⏳                                        |
+| Température, froid (dégâts sans vêtements ni armure), vent réaliste, thermomètre et girouette (§10.3)                                      | ✅ première version                       |
+| **Chauffage des abris**, combustible d'hiver, pose du thermomètre contre un mur et de la girouette sur une dalle                           | ⏳                                        |
+| **Succès** (désactivés en mode admin), structure de réapparition                                                                           | ⏳                                        |
+| **Terrain creusable** (voxels : gisements qui descendent, renforts sous les foreuses, terrain aplani par le joueur)                        | ⏳ prévu avec la version Unreal           |
+| **Version Unreal** : après une version navigateur équilibrée (la démo = la version 1 complète)                                             | ⏳                                        |
+| **Mods / données externes**, **mode photo**                                                                                                | ⏳ / ❌                                   |
 
 ### 15.3 Risques
 

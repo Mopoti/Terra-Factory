@@ -2340,17 +2340,18 @@ describe('éolienne, panneau solaire, accumulateur de base', () => {
     expect(f.status(panel)).toBe('idle');
   });
 
-  it('l’éolienne produit entre 15 % et 100 % de ses 40 kW, selon le vent', () => {
+  it('l’éolienne produit entre 15 % et 100 % de ses 40 kW, selon la force du vent', () => {
     const wind = emptyMachine(1, 'wind_turbine', 4, 0, 0);
     const f = new Factory([wind, pole], makeWorld().world);
     const seen: number[] = [];
-    for (let i = 0; i < 300; i++) {
-      run(f, 1);
+    for (const speed of [0, 0.5, 1]) {
+      f.windSpeed = speed;
+      run(f, 0.5);
       seen.push(f.gridInfo(wind)!.capacityKw);
     }
-    expect(Math.min(...seen)).toBeGreaterThanOrEqual(6 - 1e-9);
-    expect(Math.max(...seen)).toBeLessThanOrEqual(40 + 1e-9);
-    expect(Math.max(...seen) - Math.min(...seen)).toBeGreaterThan(10);
+    expect(seen[0]).toBeCloseTo(6, 6);
+    expect(seen[1]).toBeCloseTo(23, 6);
+    expect(seen[2]).toBeCloseTo(40, 6);
   });
 
   it('l’accumulateur de base charge avec le surplus puis rend son énergie, à 400 kW au plus', () => {

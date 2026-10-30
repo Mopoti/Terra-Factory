@@ -8,6 +8,8 @@ Liste faite sur le jeu en marche (`content/items.json`, `content/machines.json`,
 
 | Objet | Modèle provisoire | Emprise (cases de 50 cm) | Ce qu'il faut |
 | --- | --- | --- | --- |
+| Thermomètre (`machine_thermometer`) | `poteau_electrique` | 1×1, haut. 1.2 m | petit thermomètre à cadran sur pied, 1,3 m |
+| Girouette (`machine_vane`) | `poteau_electrique` | 1×1, haut. 2.5 m | mât de 2,6 m, girouette qui tourne dans le sens du vent (pièce animée) |
 | Poteau haute tension (`machine_pole_hv`) | `poteau_electrique` | 2×2, haut. 6 m | mât de 6 m, 3 bras, grands isolateurs |
 | Poteau très haute tension (`machine_pole_uhv`) | `poteau_electrique` | 2×2, haut. 10 m | pylône de 10 m, 3 bras larges |
 | Lampadaire électrique (`machine_lamp`) | `poteau_electrique` | 1×1, haut. 3 m | mât de 3 m, lampe qui s'allume la nuit (pièce `lueur`) |

@@ -58,6 +58,7 @@ import { getSettings, lowerAdapted, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
+import { coldDamagePerS, temperatureAt, windAt, type Wind } from '../core/game/weather';
 import {
   buildChunkMesh,
   startChunkMesh,
@@ -264,6 +265,8 @@ export interface GameViewHandle {
   blockedFor: CommandContext['blockedFor'];
   /** Branche (ou, avec null, débranche) la session d'hôte : la simulation et les envois aux invités la suivent. */
   setHost(session: HostSession | null): void;
+  /** Température (°C) et vent à cet endroit, maintenant (thermomètre et girouette). */
+  weatherAt(x: number, z: number): { tempC: number; wind: Wind };
   /** Le coffre d'un buggy vu comme une machine (identifiant négatif = −identifiant du buggy), ou null. */
   vehicleMachine(id: number): Machine | null;
   /** Identifiant (négatif, pour la fenêtre) du buggy que conduit le joueur, ou null. */
@@ -3529,6 +3532,7 @@ export function startGameView(
   );
   const sim = new WorldSimulation(options.state, factory, threat);
   sim.timeCfg = game.options.time;
+  sim.windSeed = generator.seed;
   const guest = options.guest ?? null;
   guest?.attach(factory);
   let guestClock = 0;
@@ -3897,6 +3901,17 @@ export function startGameView(
       if (result) {
         attackCooldown = 0.45;
         playSfx(result === 'kill' ? 'rockBreak' : 'woodChop');
+      }
+    }
+    // Froid : trop peu de vêtements ou d'armure pour la température d'ici, on perd de la santé (l'armure n'y change rien).
+    if (!options.state.creative) {
+      const cold = coldDamagePerS(
+        temperatureAt(generator.seed, playerX, playerZ, options.state.changes.time, timeCfg),
+        options.state.warmth(),
+      );
+      if (cold > 0) {
+        playerHealth -= cold * dt;
+        sinceHurt = 0;
       }
     }
     // Santé : elle revient doucement ; à zéro, on se réveille au point de départ.
@@ -4708,6 +4723,10 @@ export function startGameView(
         ? guest.client.players.filter((p) => p.id !== guest.client.you.id)
         : (hostSession?.players().filter((p) => p.id !== HOST_ID) ?? []),
     vehicleMachine,
+    weatherAt: (x, z) => ({
+      tempC: temperatureAt(generator.seed, x, z, options.state.changes.time, timeCfg),
+      wind: windAt(generator.seed, options.state.changes.time),
+    }),
     mountedMachineId: () => (mounted ? -mounted.id : trains.mountedWindowId()),
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.

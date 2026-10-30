@@ -670,6 +670,8 @@ const MACHINE_TYPES: MachineType[] = [
   'transformer',
   'breaker',
   'lamp',
+  'thermometer',
+  'vane',
   'wind_turbine',
   'solar_panel',
   'accumulator_basic',
@@ -1930,24 +1932,23 @@ export class Factory {
 
   /** Luminosité du ciel (0 nuit noire, 1 plein jour) : fixée par la partie, fait tourner les panneaux solaires. */
   daylight = 1;
-  private clock = 0;
 
-  /** Part de sa puissance qu'une éolienne donne en ce moment (0,15 à 1 : le vent monte et retombe, chacune a son rythme). */
-  windFactor(m: Machine): number {
-    const t = this.clock;
-    const wave = Math.sin(t / 70 + m.id * 1.7) * 0.6 + Math.sin(t / 23 + m.id * 0.9) * 0.4;
-    return 0.15 + 0.85 * (0.5 + 0.5 * wave);
+  /** Force du vent (0 à 1), commune à toutes les éoliennes : fixée par la partie (voir `windAt`). */
+  windSpeed = 0.5;
+
+  /** Part de sa puissance qu'une éolienne donne en ce moment (0,15 à 1 : suit la force du vent). */
+  windFactor(): number {
+    return 0.15 + 0.85 * this.windSpeed;
   }
 
   /** Puissance que produit cette machine en ce moment (kW), pour l'éolienne et le panneau solaire. */
   renewableKw(m: Machine): number {
-    if (m.type === 'wind_turbine') return (machineDef(m.type).producesKw ?? 0) * this.windFactor(m);
+    if (m.type === 'wind_turbine') return (machineDef(m.type).producesKw ?? 0) * this.windFactor();
     if (m.type === 'solar_panel') return (machineDef(m.type).producesKw ?? 0) * this.daylight;
     return 0;
   }
 
   private updateGrids(dt: number): void {
-    this.clock += dt;
     for (const g of this.grids.values()) {
       g.capacityKw = 0;
       g.demandKw = 0;
