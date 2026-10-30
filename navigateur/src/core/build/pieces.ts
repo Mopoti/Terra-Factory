@@ -232,3 +232,17 @@ export function slabAt(pieces: Pieces, face: number, gx: number, gz: number): st
   }
   return null;
 }
+
+/** Une pièce de bord (mur, porte…) touche-t-elle un côté de cette case, à n'importe quelle hauteur de l'étage ? */
+export function wallBeside(pieces: Pieces, level: number, gx: number, gz: number): boolean {
+  const sides: Array<{ gx: number; gz: number; axis: 'x' | 'z' }> = [
+    { gx, gz, axis: 'x' },
+    { gx, gz: gz + 1, axis: 'x' },
+    { gx, gz, axis: 'z' },
+    { gx: gx + 1, gz, axis: 'z' },
+  ];
+  for (const side of sides)
+    for (let layer = 0; layer < LAYERS_PER_STOREY; layer++)
+      if (pieces[pieceKey({ slot: 'edge', level, ...side, layer })]) return true;
+  return false;
+}

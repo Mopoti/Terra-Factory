@@ -17,7 +17,14 @@ import {
   type PlanItem,
   type WallCoord,
 } from '../core/build/plan';
-import { edgeKeysToRemove, parseKey, slabAt, slabFace, type PiecePos } from '../core/build/pieces';
+import {
+  edgeKeysToRemove,
+  parseKey,
+  slabAt,
+  slabFace,
+  wallBeside,
+  type PiecePos,
+} from '../core/build/pieces';
 import {
   BUILD_REACH_M,
   GARAGE_KIND,
@@ -59,7 +66,14 @@ import { getSettings, lowerAdapted, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
-import { coldDamagePerS, compassOf, temperatureAt, windAt, type Wind } from '../core/game/weather';
+import {
+  COLD_HURT_PER_S,
+  coldDamagePerS,
+  compassOf,
+  temperatureAt,
+  windAt,
+  type Wind,
+} from '../core/game/weather';
 import {
   buildChunkMesh,
   startChunkMesh,
@@ -1177,18 +1191,34 @@ export function startGameView(
       ([dx, dz]) => dx === Math.sign(to.gx - from.gx) && dz === Math.sign(to.gz - from.gz),
     );
 
+  /**
+   * Machines qui se fixent : le thermomètre se pose contre un mur, la girouette sur une dalle. Renvoie la case
+   * interdite quand la condition n'est pas remplie, ou null pour les autres machines.
+   */
+  function mountRule(type: MachineType, level: number): ((c: Cell) => boolean) | null {
+    const pieces = options.state.changes.pieces;
+    if (type === 'thermometer') return (c) => !wallBeside(pieces, level, c.gx, c.gz);
+    if (type === 'vane' && level === 0) return (c) => !slabAt(pieces, 0, c.gx, c.gz);
+    return null;
+  }
+
   /** Bus de commandes : les actions qui changent le monde passent par lui (voir core/game/commands.ts). */
   const busContext: CommandContext = {
     state: options.state,
     factory,
     blockedFor: (type, level) => {
-      if (!isLinear(type) && level === UPPER_LEVEL) {
-        const pieces = options.state.changes.pieces;
-        return (cell) =>
-          !slabAt(pieces, Math.round(levelY(UPPER_LEVEL) / LAYER_HEIGHT_M), cell.gx, cell.gz);
-      }
-      if (type === 'pump') return (cell) => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz);
-      return machineBlocked;
+      const base = ((): ((c: Cell) => boolean) => {
+        if (!isLinear(type) && level === UPPER_LEVEL) {
+          const pieces = options.state.changes.pieces;
+          return (cell) =>
+            !slabAt(pieces, Math.round(levelY(UPPER_LEVEL) / LAYER_HEIGHT_M), cell.gx, cell.gz);
+        }
+        if (type === 'pump')
+          return (cell) => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz);
+        return machineBlocked;
+      })();
+      const extra = mountRule(type, level);
+      return extra ? (cell) => base(cell) || extra(cell) : base;
     },
   };
   const bus = options.guest ? new GuestBus(busContext, options.guest) : new CommandBus(busContext);
@@ -1276,13 +1306,17 @@ export function startGameView(
           ? (cell: Cell): boolean => machineBlocked(cell) && !waterCellAt(cell.gx, cell.gz)
           : machineBlocked;
       const level = upper ? UPPER_LEVEL : 0;
+      const mount = mountRule(def.id, level);
+      const blockedMounted = mount
+        ? (cell: Cell): boolean => blockedHere(cell) || mount(cell)
+        : blockedHere;
       const { w, d } = dims(def.id, baseRot);
       const gx = c.gx - Math.floor(w / 2);
       const gz = c.gz - Math.floor(d / 2);
       let ok =
         stock > 0 &&
         within({ gx: gx + Math.floor(w / 2), gz: gz + Math.floor(d / 2) }) &&
-        factory.canPlace(def.id, gx, gz, baseRot, blockedHere, level);
+        factory.canPlace(def.id, gx, gz, baseRot, blockedMounted, level);
       let why = stock > 0 ? '' : t('build.missing');
       if (ok && upper && isDrill(def.id)) {
         ok = false;
@@ -4008,7 +4042,8 @@ export function startGameView(
       );
       if (cold > 0) {
         playerHealth -= cold * dt;
-        sinceHurt = 0;
+        // Un froid léger n'empêche pas la santé de remonter ; un vrai froid, si.
+        if (cold >= COLD_HURT_PER_S) sinceHurt = 0;
       }
     }
     // Santé : elle revient doucement ; à zéro, on se réveille au point de départ.

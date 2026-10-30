@@ -58,11 +58,13 @@ export function windAt(seed: number, time: number): Wind {
 }
 
 /** Points de chaleur (vêtements et armure) portés : voir `warmth` des pièces d'équipement. */
-export const COMFORT_BASE_C = 12;
+export const COMFORT_BASE_C = 6;
 /** Chaque point de chaleur abaisse de ce nombre de °C la température à partir de laquelle on a froid. */
-export const COMFORT_PER_WARMTH_C = 1.3;
+export const COMFORT_PER_WARMTH_C = 1;
 /** Dégâts par seconde et par °C sous le seuil de confort. */
-export const COLD_DAMAGE_PER_C = 0.1;
+export const COLD_DAMAGE_PER_C = 0.05;
+/** Sous ce seuil de dégâts (PV/s), le froid est léger : la santé continue de remonter. */
+export const COLD_HURT_PER_S = 0.15;
 
 /** Température (°C) en dessous de laquelle le joueur souffre du froid, selon la chaleur de son équipement. */
 export function comfortLimitC(warmth: number): number {
