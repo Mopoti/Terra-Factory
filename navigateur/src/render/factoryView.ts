@@ -370,31 +370,36 @@ export class FactoryView {
     this.rebuild();
   }
 
-  /** Niveau d'usure de chaque machine au dernier dessin (0 intacte, 1 à 3 de plus en plus abîmée). */
-  private damageSeen = '';
+  /** Version de l'aspect des machines au dernier dessin, et machines abîmées à cette version. */
+  private visualSeen = -1;
+  private damaged: Machine[] = [];
+  /** Tuyaux et turbines (fumées), repérés au dernier dessin pour ne pas parcourir toutes les machines à chaque image. */
+  private pipes: Machine[] = [];
+  private turbines: Machine[] = [];
+  /** Lampadaires, repérés au dernier dessin. */
+  lamps: Machine[] = [];
 
   /** Niveau d'usure d'une machine abîmée par les ennemis : 0 (intacte), 1 (moins de 75 %), 2 (moins de 50 %), 3 (moins de 25 %). */
   private damageLevel(m: Machine): number {
+    if (m.hp === undefined) return 0;
     const f = this.factory.healthFraction(m);
     return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
   }
 
-  /** Redessine les machines dont l'état d'usure a changé (elles noircissent à mesure qu'elles s'abîment). */
+  /** Redessine les machines dont l'aspect a changé (elles noircissent à mesure qu'elles s'abîment ; les portails s'ouvrent). */
   updateDamage(): void {
-    let sig = '';
-    for (const m of this.factory.machines) {
-      const level = this.damageLevel(m);
-      if (level > 0) sig += `${m.id}:${level},`;
-      if (this.factory.gateOpen(m)) sig += `g${m.id},`;
-    }
-    if (sig === this.damageSeen) return;
-    this.damageSeen = sig;
+    if (this.factory.visualVersion === this.visualSeen) return;
+    this.visualSeen = this.factory.visualVersion;
+    this.damaged = this.factory.machines.filter((m) => m.hp !== undefined);
     this.rebuild();
   }
 
   /** Refait les corps des machines (à appeler quand on en pose ou en retire). */
   rebuild(): void {
     this.factory.reindex();
+    this.pipes = this.factory.machines.filter((m) => m.type === 'pipe');
+    this.turbines = this.factory.machines.filter((m) => m.type === 'turbine');
+    this.lamps = this.factory.machines.filter((m) => m.type === 'lamp');
     const mb = new MeshBuilder();
     const bands = new BandBuilder();
     this.entries.clear();
@@ -941,8 +946,8 @@ export class FactoryView {
     const col: number[] = [];
     // Tuyaux rompus : explosion de vapeur au début (gerbe rapide), puis jet continu qui siffle par la fissure.
     const live = new Set<number>();
-    for (const m of this.factory.machines) {
-      if (m.type !== 'pipe' || !m.broken) continue;
+    for (const m of this.pipes) {
+      if (!m.broken) continue;
       live.add(m.id);
       const since = time - (this.burstAt.get(m.id) ?? (this.burstAt.set(m.id, time), time));
       const cx = (m.gx + 1) * CELL_SIZE_M;
@@ -967,7 +972,7 @@ export class FactoryView {
     }
     for (const id of [...this.burstAt.keys()]) if (!live.has(id)) this.burstAt.delete(id);
     // Machines très abîmées (moins de 50 %) : fumée noire, avec des étincelles sous 25 %.
-    for (const m of this.factory.machines) {
+    for (const m of this.damaged) {
       const level = this.damageLevel(m);
       if (level < 2 || m.type === 'conveyor' || m.type === 'pipe') continue;
       const { w, d } = dims(m.type, m.rot);
@@ -985,8 +990,7 @@ export class FactoryView {
         }
       }
     }
-    for (const m of this.factory.machines) {
-      if (m.type !== 'turbine') continue;
+    for (const m of this.turbines) {
       const power = this.factory.turbineEfficiency(m);
       if (power <= 0 || (this.factory.gridInfo(m)?.demandKw ?? 0) <= 0) continue;
       const { w, d } = dims(m.type, m.rot);

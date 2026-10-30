@@ -2428,14 +2428,20 @@ export function startGameView(
   }
 
   // --- Lampadaires : quelques lumières suivent les lampadaires allumés les plus proches du joueur ---------
-  const LAMP_LIGHTS = 6;
+  const LAMP_LIGHTS = 4;
   const lampLights = Array.from({ length: LAMP_LIGHTS }, () => {
     const light = new THREE.PointLight(0xffe2a0, 0, 14, 1.6);
+    // Éteintes (donc hors des ombrages) tant qu'il fait jour ou qu'il n'y a aucun lampadaire : chaque lumière allumée coûte
+    // à chaque pixel de la scène.
+    light.visible = false;
     scene.add(light);
     return light;
   });
   function updateLamps(darkness: number): void {
-    const lit = darkness > 0.05 ? factory.machines.filter((m) => m.type === 'lamp') : [];
+    const night = darkness > 0.05 && factoryView.lamps.length > 0;
+    for (const light of lampLights) if (light.visible !== night) light.visible = night;
+    if (!night) return;
+    const lit = factoryView.lamps;
     const near = lit
       .map((m) => {
         const c = centerOf(m);
@@ -2446,7 +2452,8 @@ export function startGameView(
       .slice(0, LAMP_LIGHTS);
     lampLights.forEach((light, i) => {
       const x = near[i];
-      // Les lumières restent présentes (intensité 0) : en ajouter ou en retirer fait recompiler les ombrages.
+      // Pas assez de lampadaires allumés : cette lumière reste dans la scène à l'intensité 0 (le nombre de lumières ne change
+      // qu'à la tombée de la nuit, pour ne pas recompiler les ombrages en marchant).
       if (!x) {
         light.intensity = 0;
         return;

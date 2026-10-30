@@ -1,5 +1,5 @@
 {
- "key": "discussions-d1",
+ "key": "discussions-e1",
  "title": "Discussions : suite (4)",
  "intro": "Quatre chantiers lancés en parallèle. Réponds surtout aux questions de chaque ligne.",
  "cols": [
@@ -16,49 +16,41 @@
  "tabs": [
   {
    "id": "n",
-   "label": "Retours sur les quatre chantiers"
+   "label": "Créatif, optimisation, multijoueur"
   }
  ],
  "rows": [
   {
-   "id": "d1",
+   "id": "e1",
    "tab": "n",
-   "name": "Touche des portails",
-   "tag": "d1",
-   "recipe": "Corrigé : les portails manuels s'ouvrent et se ferment avec E (touche d'activation), plus avec F.",
-   "role": "C'est bon ?"
+   "name": "Créatif : un exemplaire suffit",
+   "tag": "e1",
+   "recipe": "Fait : en Créatif, avoir un exemplaire d'un objet permet d'en poser autant qu'on veut (machines, pièces, rails, véhicules, stations…) ; casser un objet le rend. Les objets du sac ne baissent plus.",
+   "role": "Le sac créatif doit-il aussi se remplir d'un exemplaire de chaque objet au départ, ou on les fabrique gratuitement comme aujourd'hui ?"
   },
   {
-   "id": "d2",
+   "id": "e2",
    "tab": "n",
-   "name": "Locomotive électrique",
-   "tag": "d2",
-   "recipe": "Compris : elle ne se recharge pas en roulant, même sur rails électrifiés. Elle se recharge seulement à la borne de recharge. Rien à changer.",
-   "role": "Rien à répondre."
+   "name": "Optimisation",
+   "tag": "e2",
+   "recipe": "Passe faite (sans toucher aux modèles) : recherches d'objets et de machines par tables, construction du réseau électrique 7 fois plus rapide (c'était ce qui coûtait à chaque pose dans une grosse usine), usure et fumées recalculées seulement quand elles changent, lumières des lampadaires éteintes le jour. Mesures sur 4 400 machines : 1,3 → 0,6 ms par pas de simulation, 224 → 32 ms pour (re)construire l'usine.",
+   "role": "Je n'ai pas pu mesurer le rendu GPU ici. Peux-tu me dire sur quelle machine ça ramait (grosse usine, nuit, beaucoup d'ennemis, vue de dessus) pour que je cible la suite ?"
   },
   {
-   "id": "d3",
-   "tab": "n",
-   "name": "Données par objet",
-   "tag": "d3",
-   "recipe": "Fait : un objet suivi existe en plusieurs niveaux (batterie portable en 10 niveaux, kit de réparation en 5, armures en 10 niveaux d'usure). Chaque batterie a sa propre charge et sa jauge sous l'icône ; les piles, coffres, sols et sauvegardes les gardent. Les armures s'usent à chaque coup reçu et se brisent à zéro. Le kit reste en main d'une charge à l'autre.",
-   "role": "Une batterie ou une armure usée se mélange-t-elle avec les neuves ? (Non pour l'instant : seulement à égal niveau.) On ajoute ensuite la réparation d'une armure avec un kit, et l'usure des armes ?"
-  },
-  {
-   "id": "d4",
+   "id": "e3",
    "tab": "n",
    "name": "Coffre quantique par joueur",
-   "tag": "d4",
-   "recipe": "Noté : chaque joueur voit son propre contenu dans le même coffre. Le jeu n'a pas encore d'identité de joueur dans l'état partagé : je le ferai avec le multijoueur. En solo, c'est un coffre de 64 cases.",
-   "role": "D'accord pour reporter ?"
+   "tag": "e3",
+   "recipe": "Fait avec le multijoueur existant : chacun voit son contenu dans le même coffre ; celui qui l'a posé voit aussi ce qu'y met sa chaîne de production. Démolir le coffre rend tout au démolisseur.",
+   "role": "D'accord pour que la chaîne de production alimente le contenu du propriétaire ?"
   },
   {
-   "id": "d5",
+   "id": "e4",
    "tab": "n",
-   "name": "Le reste des quatre chantiers",
-   "tag": "d5",
-   "recipe": "Barrières, portails holographiques, bornes, 11 machines : voir la page précédente, rien d'autre de changé. Purificateur d'air : toujours sans filtre consommé.",
-   "role": "Dis-moi si tu veux que le purificateur consomme des filtres en graphite."
+   "name": "Kit et locomotive : règles gardées",
+   "tag": "e4",
+   "recipe": "Notées dans la doc : le kit de réparation s'use mais ne se recharge ni ne se répare ; la locomotive électrique ne se recharge pas en roulant.",
+   "role": "Rien à répondre."
   }
  ]
 }

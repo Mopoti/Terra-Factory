@@ -168,9 +168,10 @@ export function withPartnersBeside<T extends { id: string }>(list: readonly T[])
 export const REACH_M: number = raw.reachM;
 
 const variants = new Map<string, ItemDef>();
+const ITEM_BY_ID = new Map<string, ItemDef>(ITEMS.map((i) => [i.id, i]));
 
 export function itemById(id: string): ItemDef {
-  const found = ITEMS.find((i) => i.id === id);
+  const found = ITEM_BY_ID.get(id);
   if (found) return found;
   // Niveau d'un objet suivi (voir `itemData.ts`) : l'objet de base, qui ne s'empile pas et ne se fabrique pas.
   const info = id.includes('~') ? levelInfo(id) : null;

@@ -1059,7 +1059,7 @@ export class GameState {
    */
   /** Cet objet peut-il être fabriqué (sa technologie est-elle recherchée) ? */
   isUnlocked(item: string): boolean {
-    if (!this.creative && ITEMS.find((i) => i.id === item)?.creativeOnly) return false;
+    if (!this.creative && ITEMS.some((i) => i.id === item && i.creativeOnly)) return false;
     const tech = techFor(item);
     const discovery = discoveryFor(item);
     return (

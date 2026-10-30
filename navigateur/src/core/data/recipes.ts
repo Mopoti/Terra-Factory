@@ -41,8 +41,10 @@ export const RECIPES: Recipe[] = raw.recipes as unknown as Recipe[];
 /** Nombre de cycles qu'un moule supporte avant de se briser. */
 export const MOULD_CYCLES: number = raw.mouldCycles;
 
+const RECIPE_BY_ID = new Map<string, Recipe>(RECIPES.map((r) => [r.id, r]));
+
 export const recipeById = (id: string | null | undefined): Recipe | null =>
-  RECIPES.find((r) => r.id === id) ?? null;
+  (id ? RECIPE_BY_ID.get(id) : undefined) ?? null;
 
 export const recipesFor = (machine: string): Recipe[] =>
   RECIPES.filter((r) => r.machine === machine);

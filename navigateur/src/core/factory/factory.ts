@@ -919,6 +919,32 @@ export class Factory {
     this.breakerGrid.clear();
     const poles = this.machines.filter((m) => isPole(m.type));
     const levelOf = (p: Machine): number => machineDef(p.type).poleLevel ?? 0;
+    // Poteaux rangés par cases de 8 m : chercher les voisins d'un point ne parcourt plus tous les poteaux.
+    const BUCKET_M = 8;
+    const poleAt = new Map<number, { x: number; z: number }>();
+    const buckets = new Map<string, number[]>();
+    poles.forEach((p, i) => {
+      const c = centerOf(p);
+      poleAt.set(p.id, c);
+      const k = `${Math.floor(c.x / BUCKET_M)},${Math.floor(c.z / BUCKET_M)}`;
+      const list = buckets.get(k);
+      if (list) list.push(i);
+      else buckets.set(k, [i]);
+    });
+    /** Indices des poteaux à au plus `r` mètres du point (x, z), dans l'ordre. */
+    const polesWithin = (x: number, z: number, r: number): number[] => {
+      const out: number[] = [];
+      for (let bx = Math.floor((x - r) / BUCKET_M); bx <= Math.floor((x + r) / BUCKET_M); bx++)
+        for (let bz = Math.floor((z - r) / BUCKET_M); bz <= Math.floor((z + r) / BUCKET_M); bz++) {
+          const list = buckets.get(`${bx},${bz}`);
+          if (!list) continue;
+          for (const i of list) {
+            const c = poleAt.get(poles[i].id) as { x: number; z: number };
+            if (Math.hypot(c.x - x, c.z - z) <= r) out.push(i);
+          }
+        }
+      return out.sort((a, b) => a - b);
+    };
     const parent = new Map<number, number>(poles.map((p) => [p.id, p.id]));
     const find = (id: number): number => {
       let r = id;
@@ -926,14 +952,12 @@ export class Factory {
       return r;
     };
     for (let i = 0; i < poles.length; i++) {
-      for (let j = i + 1; j < poles.length; j++) {
-        if (levelOf(poles[i]) !== levelOf(poles[j])) continue;
-        const a = centerOf(poles[i]);
-        const b = centerOf(poles[j]);
-        if (Math.hypot(a.x - b.x, a.z - b.z) <= (machineDef(poles[i].type).wireReachM ?? 8)) {
-          parent.set(find(poles[i].id), find(poles[j].id));
-          this.wires.push({ from: poles[i], to: poles[j] });
-        }
+      const a = poleAt.get(poles[i].id) as { x: number; z: number };
+      const reach = machineDef(poles[i].type).wireReachM ?? 8;
+      for (const j of polesWithin(a.x, a.z, reach)) {
+        if (j <= i || levelOf(poles[i]) !== levelOf(poles[j])) continue;
+        parent.set(find(poles[i].id), find(poles[j].id));
+        this.wires.push({ from: poles[i], to: poles[j] });
       }
     }
     // Disjoncteur fermé : relie les deux poteaux de même niveau les plus proches (ouvert, il ne relie rien).
@@ -941,8 +965,11 @@ export class Factory {
     for (const m of this.machines) {
       if (m.type !== 'breaker') continue;
       const c = centerOf(m);
-      const near = poles
-        .map((p) => ({ p, d: Math.hypot(centerOf(p).x - c.x, centerOf(p).z - c.z) }))
+      const near = polesWithin(c.x, c.z, 5)
+        .map((i) => ({
+          p: poles[i],
+          d: Math.hypot(poleAt.get(poles[i].id)!.x - c.x, poleAt.get(poles[i].id)!.z - c.z),
+        }))
         .filter((x) => x.d <= (machineDef(x.p.type).linkReachM ?? 4) + 1)
         .sort((a, b) => a.d - b.d);
       const a = near[0]?.p;
@@ -971,15 +998,20 @@ export class Factory {
       this.socketsUsed.set(p.id, (this.socketsUsed.get(p.id) ?? 0) + 1);
     };
     // Les machines les plus anciennes gardent leur prise : chacune prend une prise du poteau le plus proche qui en a encore.
-    for (const m of [...this.machines].sort((a, b) => a.id - b.id)) {
+    const electric = this.machines.filter((m) => {
+      const d = machineDef(m.type);
+      return !isPole(m.type) && (m.type === 'transformer' || d.consumesKw || d.producesKw);
+    });
+    for (const m of electric.sort((a, b) => a.id - b.id)) {
       const def = machineDef(m.type);
-      if (isPole(m.type)) continue;
       const isTransformer = m.type === 'transformer';
-      if (!isTransformer && !def.consumesKw && !def.producesKw) continue;
       const c = centerOf(m);
       const half = (Math.max(...Object.values(dims(m.type, m.rot))) * CELL_SIZE_M) / 2;
-      const near = poles
-        .map((p) => ({ p, d: Math.hypot(centerOf(p).x - c.x, centerOf(p).z - c.z) }))
+      const near = polesWithin(c.x, c.z, 4 + half)
+        .map((i) => {
+          const pc = poleAt.get(poles[i].id) as { x: number; z: number };
+          return { p: poles[i], d: Math.hypot(pc.x - c.x, pc.z - c.z) };
+        })
         .filter((x) => x.d <= (machineDef(x.p.type).linkReachM ?? 4) + half)
         .sort((a, b) => a.d - b.d);
       if (isTransformer) {
@@ -1840,13 +1872,22 @@ export class Factory {
     has: (id: number): boolean => this.machines.find((m) => m.id === id)?.hp !== undefined,
     set: (id: number, hp: number): void => {
       const m = this.machines.find((x) => x.id === id);
-      if (m) m.hp = hp;
+      if (m) {
+        m.hp = hp;
+        this.visualVersion++;
+      }
     },
     delete: (id: number): void => {
       const m = this.machines.find((x) => x.id === id);
-      if (m) delete m.hp;
+      if (m) {
+        delete m.hp;
+        this.visualVersion++;
+      }
     },
   };
+
+  /** Augmente quand l'aspect de machines change (usure, portail ouvert ou fermé) : l'affichage ne se met à jour qu'alors. */
+  visualVersion = 0;
   static readonly MACHINE_HEALTH = 120;
 
   /** Points de vie maximaux d'une machine (barrières et portails en ont plus). */
@@ -1870,7 +1911,10 @@ export class Factory {
 
   /** Ouvre ou ferme un portail à la main (les portails motorisés se règlent seuls avec `tickGates`). */
   toggleGate(m: Machine): void {
-    if (machineDef(m.type).gate) m.wear = m.wear === 1 ? 0 : 1;
+    if (machineDef(m.type).gate) {
+      m.wear = m.wear === 1 ? 0 : 1;
+      this.visualVersion++;
+    }
   }
 
   /** Portails à moteur : ils s'ouvrent quand un joueur est à moins de `GATE_SENSE_M` de leur centre, et se referment sinon. */
@@ -1878,7 +1922,11 @@ export class Factory {
     for (const m of this.machines) {
       if (!machineDef(m.type).autoGate) continue;
       const c = centerOf(m);
-      m.wear = points.some((p) => Math.hypot(p.x - c.x, p.z - c.z) <= Factory.GATE_SENSE_M) ? 1 : 0;
+      const wear = points.some((p) => Math.hypot(p.x - c.x, p.z - c.z) <= Factory.GATE_SENSE_M)
+        ? 1
+        : 0;
+      if (wear !== m.wear) this.visualVersion++;
+      m.wear = wear;
     }
   }
   static readonly GATE_SENSE_M = 4.5;

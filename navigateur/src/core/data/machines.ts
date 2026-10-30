@@ -310,15 +310,20 @@ export const isChest = (type: MachineType): boolean =>
 
 export const MACHINES: MachineDef[] = raw.machines as MachineDef[];
 
+const MACHINE_BY_ID = new Map<string, MachineDef>(MACHINES.map((m) => [m.id, m]));
+
 export function machineDef(type: MachineType): MachineDef {
-  const def = MACHINES.find((m) => m.id === type);
+  const def = MACHINE_BY_ID.get(type);
   if (!def) throw new Error(`Machine inconnue : ${type}`);
   return def;
 }
 
 /** Quelle machine correspond à cet objet du sac, s'il en est une. */
+const MACHINE_BY_ITEM = new Map<string, MachineDef>(
+  MACHINES.flatMap((m) => [m.item, ...(m.tierItems ?? [])].map((i) => [i, m] as const)),
+);
 export const machineForItem = (item: string | null): MachineDef | null =>
-  MACHINES.find((m) => m.item === item || (!!item && !!m.tierItems?.includes(item))) ?? null;
+  (item ? MACHINE_BY_ITEM.get(item) : undefined) ?? null;
 
 /** Palier (1 à 3) d'un objet-machine : les tapis ont un objet par palier, les autres machines un seul. */
 export const tierOfItem = (item: string | null): number => {
