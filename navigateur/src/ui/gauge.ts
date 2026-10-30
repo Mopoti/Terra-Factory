@@ -20,7 +20,9 @@ export function itemGauge(_state: GameState, item: string): HTMLElement | null {
   const bar = document.createElement('span');
   bar.className = 'slot-gauge';
   const inner = document.createElement('i');
-  inner.style.width = `${Math.max(4, Math.round(Math.max(0, Math.min(1, fill)) * 100))}%`;
+  // Une batterie vide montre une jauge vide : la largeur minimale ne vaut que pour une charge non nulle.
+  const pct = Math.round(Math.max(0, Math.min(1, fill)) * 100);
+  inner.style.width = `${fill > 0 ? Math.max(4, pct) : 0}%`;
   inner.className = fill > 0.5 ? 'hi' : fill > 0.2 ? 'mid' : 'lo';
   bar.append(inner);
   return bar;
