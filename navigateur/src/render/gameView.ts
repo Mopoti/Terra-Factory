@@ -1812,7 +1812,9 @@ export function startGameView(
         `<div class="${flow === null ? 'warn' : 'sub'}">${
           flow === null
             ? t('factory.power.transformerOff')
-            : t('factory.power.transformerFlow', { kw: String(Math.round(flow)) })
+            : flow < 0
+              ? t('factory.power.transformerUp', { kw: String(Math.round(-flow)) })
+              : t('factory.power.transformerFlow', { kw: String(Math.round(flow)) })
         }</div>`,
       );
     } else if (isPole(m.type)) {

@@ -1070,6 +1070,8 @@ export class Factory {
     low: number;
     wantKw?: number;
     flowKw?: number;
+    /** Puissance remontée du réseau bas vers le réseau haut (son surplus). */
+    upKw?: number;
   }> = [];
   private readonly tooBig = new Set<number>();
   /** Disjoncteurs à portée de deux poteaux de même niveau, et réseau des disjoncteurs fermés. */
@@ -1092,7 +1094,7 @@ export class Factory {
   /** Puissance qui traverse ce transformateur en ce moment (kW, du réseau haut vers le réseau bas), ou null s'il n'est pas relié. */
   transformerFlow(m: Machine): number | null {
     const l = this.transformers.find((x) => x.machine === m);
-    return l ? (l.flowKw ?? 0) : null;
+    return l ? (l.flowKw ?? 0) - (l.upKw ?? 0) : null;
   }
 
   /** Cette machine est-elle trop puissante pour tous les poteaux à sa portée ? */
@@ -1103,7 +1105,26 @@ export class Factory {
   /** Le courant descend d'un niveau à l'autre par les transformateurs, jamais au-delà de leur puissance ni de celle du poteau. */
   private transfer(): void {
     for (const g of this.grids.values()) g.capacityKw = Math.min(g.capacityKw, g.maxKw);
-    for (const l of this.transformers) l.wantKw = l.flowKw = 0;
+    for (const l of this.transformers) l.wantKw = l.flowKw = l.upKw = 0;
+    // Du bas vers le haut : le surplus d'un réseau bas (production non utilisée) remonte par ses transformateurs.
+    for (const level of [0, 1]) {
+      for (const g of this.grids.values()) {
+        if (g.level !== level || g.blackout) continue;
+        const mine = this.transformers.filter((l) => l.low === g.id);
+        if (mine.length === 0) continue;
+        const rating = mine.length * (machineDef('transformer').transformKw ?? 0);
+        const out = Math.min(Math.max(0, g.capacityKw - g.demandKw), rating);
+        if (out <= 0) continue;
+        for (const l of mine) {
+          const high = this.grids.get(l.high);
+          if (!high) continue;
+          const give = Math.min(out / mine.length, Math.max(0, high.maxKw - high.capacityKw));
+          l.upKw = give;
+          high.capacityKw += give;
+          g.capacityKw -= give;
+        }
+      }
+    }
     // Du bas vers le haut : chaque réseau bas demande à son réseau haut ce qui lui manque.
     for (const level of [0, 1]) {
       for (const g of this.grids.values()) {

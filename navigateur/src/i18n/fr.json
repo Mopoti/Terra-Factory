@@ -529,6 +529,7 @@
   "meter.level.1": "haute tension",
   "meter.level.2": "très haute tension",
   "factory.power.transformerOff": "Transformateur non relié : un poteau de deux niveaux voisins, chacun avec une prise libre, à moins de 4 m.",
+  "factory.power.transformerUp": "Remonte {kw} kW du réseau inférieur au réseau supérieur",
   "factory.power.transformerFlow": "Transmet {kw} kW du réseau supérieur au réseau inférieur",
   "machine.breaker.help": "Relie les deux poteaux de même niveau les plus proches (à moins de 5 m). Sur surcharge, il saute au lieu de laisser le réseau s’éteindre : le réseau se coupe en morceaux, à toi de le refermer.",
   "machine.breaker.closed": "Fermé : les deux réseaux n’en font qu’un.",

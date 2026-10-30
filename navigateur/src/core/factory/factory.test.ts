@@ -2469,3 +2469,32 @@ describe('machines de fin de partie', () => {
     );
   });
 });
+
+describe('transformateur dans les deux sens', () => {
+  it('le surplus d’un réseau bas alimente une machine du réseau haut', () => {
+    const wind = emptyMachine(1, 'wind_turbine', 0, 5, 0);
+    const charger = emptyMachine(2, 'charger', 8, 6, 0);
+    charger.slots.push({ item: 'battery_portable', count: 1 });
+    const f = new Factory(
+      [
+        wind,
+        emptyMachine(3, 'pole', 0, 0, 0),
+        emptyMachine(4, 'transformer', 4, 0, 0),
+        emptyMachine(5, 'pole_hv', 8, 0, 0),
+        charger,
+      ],
+      makeWorld().world,
+    );
+    f.windSpeed = 1;
+    f.chargerBusy.add(charger.id);
+    run(f, 1);
+    const low = f.gridInfo(wind)!;
+    const high = f.gridInfo(charger)!;
+    expect(low.level).toBe(0);
+    expect(high.level).toBe(1);
+    expect(high.capacityKw).toBeGreaterThan(30);
+    expect(f.powerFactor(charger)).toBeGreaterThan(0.05);
+    const transformer = f.machines.find((m) => m.type === 'transformer')!;
+    expect(f.transformerFlow(transformer)).toBeLessThan(0);
+  });
+});
