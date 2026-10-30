@@ -621,7 +621,9 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Thermomètre** ✅ : découverte **Station météo** (T1). Machine 1×1 qui, dans sa fenêtre (touche F), affiche la température de son emplacement (°C, °F ou K selon les paramètres). ⏳ _Posé contre un mur_ : pour l'instant il se pose comme n'importe quelle machine.
 - **Vent** ✅ : une **direction** qui dérive lentement (plusieurs minutes) et une **force** qui alterne calmes et rafales, **les mêmes pour toutes les éoliennes** et tous les joueurs d'une partie (fonction de la seed et du temps). L'éolienne produit de 15 % à 100 % de sa puissance selon la force.
 - **Girouette** ✅ : même découverte ; sa fenêtre affiche la **force** (km/h) et la **direction** (point cardinal vers lequel souffle le vent). ⏳ _Posée sur une dalle_ et modèle 3D animé : provisoire (voir `docs/objets-sans-design.md`).
-- **Pas d'affichage permanent** de la température ou du vent à l'écran. Seule l'**armure T5** pourra en ajouter, dans un **mode d'affichage en réalité augmentée** (températures, vent et autres informations : contenu à définir) ⏳.
+- **Pas d'affichage permanent** de la température ou du vent à l'écran par défaut. Les **armures T4 et T5** donnent un **affichage en réalité augmentée**, que la touche **H** (libre) fait passer par trois modes : **désactivé**, **simple** et **complet** ⏳. Le style doit rester **discret et beau** : pas de barre de vie flottante au-dessus des machines.
+  - **Simple** : la **température** locale et l'état (**vie**) des machines abîmées, montré par un effet discret sur la machine ou un petit repère.
+  - **Complet** : en plus, le **vent** (direction et force) et les **flux d'énergie** des réseaux (production, demande, sens). Contenu et énergie consommée éventuelle à confirmer.
 - ⏳ Reste à concevoir : chauffage des abris, combustible d'hiver, cultures ; le vent pourra plus tard orienter la fumée, la pollution ou les nuages.
 
 ---
