@@ -65,3 +65,23 @@ describe('réalité augmentée', () => {
     expect(s.arMode).toBe(0);
   });
 });
+
+describe('recherche avec prérequis (Créatif)', () => {
+  it('recherche tous les prérequis manquants puis la technologie', async () => {
+    const { techById } = await import('../data/techs');
+    const s = new GameState({ inventory: {} });
+    s.creative = true;
+    const target = 'wind';
+    expect(s.research(target)).toBe('locked');
+    expect(s.researchWithPrerequisites(target)).toBe('ok');
+    expect(s.changes.unlocked).toContain(target);
+    for (const r of techById(target).requires) expect(s.changes.unlocked).toContain(r);
+    expect(s.researchWithPrerequisites(target)).toBe('done');
+  });
+
+  it('hors Créatif, ne saute pas les prérequis', () => {
+    const s = new GameState({ inventory: {} });
+    expect(s.researchWithPrerequisites('wind')).not.toBe('ok');
+    expect(s.changes.unlocked).not.toContain('wind');
+  });
+});
