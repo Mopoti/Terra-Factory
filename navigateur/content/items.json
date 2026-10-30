@@ -610,7 +610,7 @@
     {
       "id": "machine_lamp",
       "stack": 10,
-      "category": "energy",
+      "category": "buildings",
       "weightKg": 6,
       "volumeL": 10,
       "color": "#e9d27a",
@@ -894,7 +894,7 @@
     {
       "id": "battery_portable",
       "stack": 5,
-      "category": "equipment",
+      "category": "energy",
       "weightKg": 4,
       "volumeL": 4,
       "color": "#4aa38a",
