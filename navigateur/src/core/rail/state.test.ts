@@ -19,6 +19,7 @@ describe('voies et trains dans la partie', () => {
       },
     });
     s.creative = true; // sac sans limite de poids : les véhicules sont lourds
+    s.creativeStock = false;
     return s;
   };
   const laidLine = (s: GameState, n: number): void => {
@@ -92,6 +93,7 @@ describe('voies et trains dans la partie', () => {
   it('la fenêtre de la locomotive charge la soute jusqu’à 50 pièces', () => {
     const s = start();
     s.creative = true;
+    s.creativeStock = false;
     s.inventory.coal = 80;
     const car = { id: 7, kind: 'locomotive_steam', rev: false, heatKJ: 0, fuel: null } as never as {
       fuel: { item: string; count: number } | null;
@@ -179,6 +181,7 @@ describe('embranchements et croisements dans la partie', () => {
   const start = (): GameState => {
     const s = new GameState({ inventory: { rail: 60, train_wagon_freight: 1 } });
     s.creative = true;
+    s.creativeStock = false;
     placeLine(s, 10);
     return s;
   };
@@ -266,6 +269,7 @@ describe('anciennes parties et sauvegarde des pièces', () => {
   it('les pièces se relisent au millimètre près et les caps restent entre 0 et 7', () => {
     const s = new GameState({ inventory: { rail: 50 } });
     s.creative = true;
+    s.creativeStock = false;
     s.placeRail('straight', 12.3456, -7.0004, 11, 0, () => false);
     const copy = new GameState(JSON.parse(JSON.stringify(s.snapshot())));
     expect(copy.changes.rails).toEqual([

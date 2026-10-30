@@ -19,6 +19,7 @@ function setup() {
     },
   });
   s.creative = true;
+  s.creativeStock = false;
   for (let k = 0; k < 6; k++) s.placeRail('straight', 0, -TILE_CELLS * k, 0, 0, free);
   const rails = s.changes.rails;
   const freight = s.placeCar('wagon_freight', { piece: rails[0].id, u: 1, dir: 1 })!.cars[0];

@@ -75,3 +75,21 @@ describe('vie des machines enregistrée', () => {
     expect(normalizeMachines(JSON.parse(JSON.stringify(f.machines)))[0].hp).toBeUndefined();
   });
 });
+
+describe('mode Créatif : un exemplaire suffit', () => {
+  it('on pose autant de fois qu’on veut avec un seul exemplaire, et casser rend l’objet', () => {
+    const s = new GameState({ inventory: { machine_chest_wood: 1 } });
+    s.creative = true;
+    const f = new Factory([], { oreAt: () => null, mineOre: () => 0 });
+    expect(s.placeMachine(f, 'chest_wood', 0, 0, 0, () => false)).toBe('ok');
+    expect(s.placeMachine(f, 'chest_wood', 10, 0, 0, () => false)).toBe('ok');
+    expect(s.inventory.machine_chest_wood).toBe(1);
+    expect(f.machines).toHaveLength(2);
+  });
+  it('en Survie, chaque pose consomme un exemplaire', () => {
+    const s = new GameState({ inventory: { machine_chest_wood: 1 } });
+    const f = new Factory([], { oreAt: () => null, mineOre: () => 0 });
+    expect(s.placeMachine(f, 'chest_wood', 0, 0, 0, () => false)).toBe('ok');
+    expect(s.placeMachine(f, 'chest_wood', 10, 0, 0, () => false)).toBe('missing');
+  });
+});

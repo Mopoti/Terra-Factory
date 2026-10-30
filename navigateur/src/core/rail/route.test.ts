@@ -15,6 +15,7 @@ function network(): { s: GameState; curveId: number; lineIds: number[]; branchId
     inventory: { rail: 300, train_locomotive: 1, train_wagon_freight: 2, coal: 30 },
   });
   s.creative = true;
+  s.creativeStock = false;
   placeLine(s, 12);
   const lineIds = s.changes.rails.map((p) => p.id);
   const joint = portsOf(s.changes.rails[2]).find((p) => p.dz === -1)!;

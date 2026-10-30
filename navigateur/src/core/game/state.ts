@@ -295,6 +295,18 @@ export class GameState {
     return guest;
   }
 
+  /**
+   * Consomme `n` unités d'un objet qu'on pose. En mode Créatif, un seul exemplaire suffit : on en pose autant qu'on veut
+   * (casser l'objet le rend, ce qui garde au moins ce que le joueur avait).
+   */
+  private spend(item: string, n: number): void {
+    if (this.creative && this.creativeStock && (this.inventory[item] ?? 0) >= 1) return;
+    this.inventory = remove(this.inventory, item, n).inventory;
+  }
+
+  /** Mode Créatif : un exemplaire suffit pour poser à l'infini (désactivé dans les tests qui comptent les objets). */
+  creativeStock = true;
+
   /** Mode Créatif : recherche et fabrication gratuites, sac sans limite de poids ni de volume. */
   creative = false;
   /** Multiplicateurs de difficulté de la partie (coûts des technologies et de la fabrication). */
@@ -941,7 +953,7 @@ export class GameState {
     if (!this.canAfford(kind)) return 'missing';
     // Pièce en hauteur sans appui à moins de 5 m : refusée (un mur ou un pilier doit la soutenir).
     if (!isSupported(this.changes.pieces, placed, pos)) return 'unsupported';
-    this.inventory = remove(this.inventory, def.item, 1).inventory;
+    this.spend(def.item, 1);
     this.changes.pieces[pieceKey(pos)] = placed;
     if (rotation % 4 !== 0) this.changes.rotations[pieceKey(pos)] = ((rotation % 4) + 4) % 4;
     this.roomCache = null;
@@ -962,7 +974,7 @@ export class GameState {
       if (!isFree(trial, GARAGE_KIND, pos) || !isSupported(trial, GARAGE_KIND, pos)) return 0;
       trial[pieceKey(pos)] = GARAGE_KIND;
     }
-    this.inventory = remove(this.inventory, def.item, 1).inventory;
+    this.spend(def.item, 1);
     for (const pos of positions) this.changes.pieces[pieceKey(pos)] = GARAGE_KIND;
     const group = garageGroup(this.changes.pieces, pieceKey(positions[0]));
     if (group) this.changes.garages[group.anchor] = { mode: 'manual', range: GARAGE_RANGES[0] };
@@ -1437,7 +1449,7 @@ export class GameState {
   placeSpawn(kind: 'bag' | 'bed', x: number, z: number): SpawnPoint | null {
     const item = kind === 'bag' ? 'sleeping_bag' : 'bed';
     if ((this.inventory[item] ?? 0) < 1) return null;
-    this.inventory = remove(this.inventory, item, 1).inventory;
+    this.spend(item, 1);
     const point: SpawnPoint = { id: this.changes.nextSpawnId++, x, z, kind };
     this.changes.spawns.push(point);
     this.emit({ type: 'inventory' });
@@ -1613,10 +1625,11 @@ export class GameState {
       level: mm(level),
     };
     const cost = RAIL_COST[kind];
-    if ((this.inventory[RAIL_ITEM] ?? 0) < cost) return 'missing';
+    if ((this.inventory[RAIL_ITEM] ?? 0) < (this.creative && this.creativeStock ? 1 : cost))
+      return 'missing';
     if (this.railAlready(kind, piece.x, piece.z, piece.h, piece.level)) return 'blocked';
     if (!this.railFits(piece, blocked)) return 'blocked';
-    this.inventory = remove(this.inventory, RAIL_ITEM, cost).inventory;
+    this.spend(RAIL_ITEM, cost);
     this.changes.rails.push(piece);
     this.railsChanged();
     return 'ok';
@@ -1690,7 +1703,7 @@ export class GameState {
       v: 0,
       cars: [{ id: this.newCarId(), kind, rev: false, heatKJ: 0, fuel: null }],
     };
-    this.inventory = remove(this.inventory, spec.item, 1).inventory;
+    this.spend(spec.item, 1);
     this.changes.trains.push(consist);
     this.railsChanged();
     return consist;
@@ -1808,7 +1821,7 @@ export class GameState {
       piece: pos.piece,
       u: pos.u,
     };
-    this.inventory = remove(this.inventory, STATION_ITEM, 1).inventory;
+    this.spend(STATION_ITEM, 1);
     this.changes.stations.push(station);
     this.railsChanged();
     return station;
@@ -2095,7 +2108,7 @@ export class GameState {
     const item = itemOfTier(def, tier);
     if ((this.inventory[item] ?? 0) < 1) return 'missing';
     if (!factory.canPlace(type, gx, gz, rot, blocked, lift, tier)) return 'blocked';
-    this.inventory = remove(this.inventory, item, 1).inventory;
+    this.spend(item, 1);
     // Remplacement d'un tapis (palier, sens, forme gardée) : l'ancien revient dans le sac, ses objets restent sur le nouveau.
     const target = factory.replaceTarget(type, gx, gz, lift, tier, rot);
     if (target) {

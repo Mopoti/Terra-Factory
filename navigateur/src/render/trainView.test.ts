@@ -23,6 +23,7 @@ function bench() {
   vi.stubGlobal('document', { createElement: fake });
   const state = new GameState({ inventory: { rail: 999 } });
   state.creative = true;
+  state.creativeStock = false;
   state.held = 'rail';
   const down = new Set<string>();
   let blockBelowGz = -1e9;
