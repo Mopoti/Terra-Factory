@@ -42,6 +42,25 @@ let loading: Promise<boolean> | null = null;
 
 export const avatarReady = (): boolean => sources.size === 2;
 
+/**
+ * Os du personnage homme dans sa pose de repos (repère du fichier, m) : l'équipement porté (`blender/scripts/porte.py`)
+ * est construit sur lui ; chaque pièce garde, par rapport à son os, la place qu'elle a sur l'homme (sur la femme, elle
+ * suit ses os à elle).
+ */
+let referenceRest: Map<string, THREE.Matrix4> | null = null;
+function wornReference(): Map<string, THREE.Matrix4> | null {
+  if (referenceRest) return referenceRest;
+  const source = sources.get('homme');
+  if (!source) return null;
+  const copy = cloneSkinned(source);
+  copy.updateMatrixWorld(true);
+  referenceRest = new Map();
+  copy.traverse((o) => {
+    if ((o as THREE.Bone).isBone) referenceRest!.set(o.name, o.matrixWorld.clone());
+  });
+  return referenceRest;
+}
+
 /** Formes de déformation du visage attendues dans le modèle (voir `docs/personnage.md`) : `<nom>` pousse dans un sens, `<nom>_moins` dans l'autre. */
 export const FACE_MORPHS: Record<FaceKey, string> = {
   noseSize: 'nez_taille',
@@ -329,6 +348,15 @@ export class Avatar {
   private readonly bodyMeshes: THREE.Object3D[] = [];
   private toolGrip: THREE.Object3D | null = null;
   private lastVy = 0;
+  /** Os dans la pose de repos, repère du fichier (m) : on y accroche l'équipement porté (`wear`). */
+  private readonly boneRest = new Map<string, THREE.Matrix4>();
+  /** Équipement porté, par emplacement : les pièces accrochées aux os. */
+  private readonly worn = new Map<string, THREE.Object3D[]>();
+  /** Coupe de cheveux choisie, et cheveux cachés (capuche, casque). */
+  private hairStyle: HairStyle = 'courte';
+  private hairHidden = false;
+  /** Matériaux des gants des vues extérieures et leur couleur d'origine (`setGloveColor`). */
+  private readonly gloveMats: { mat: THREE.MeshStandardMaterial; base: THREE.Color }[] = [];
 
   /**
    * `height` : taille (m) ; `color` : couleur de la combinaison ; `silhouette` : homme ou femme ; `appearance` : le
@@ -388,6 +416,7 @@ export class Avatar {
     if (stripe) stripe.color.setHex(color).offsetHSL(0.08, 0.1, 0.22);
 
     model.updateMatrixWorld(true);
+    for (const [name, bone] of bones) this.boneRest.set(name, bone.matrixWorld.clone());
     for (const name of [...ARM.g, ...ARM.d, ...LEG.g, ...LEG.d, ...TRUNK]) {
       const bone = bones.get(name);
       if (!bone) continue;
@@ -453,7 +482,67 @@ export class Avatar {
 
   /** Montre une seule coupe de cheveux (`none` : aucune). */
   private showHair(style: HairStyle): void {
-    for (const c of this.cuts) c.object.visible = c.style === style;
+    this.hairStyle = style;
+    for (const c of this.cuts) c.object.visible = !this.hairHidden && c.style === style;
+  }
+
+  /**
+   * Porte un équipement (`blender/scripts/porte.py`) : chaque maillage `<os>__<pièce>…` du modèle, construit dans le
+   * repère du personnage, est accroché à l'os `<os>` et le suit ; les faces magenta (`teinte`) prennent `color`.
+   * `source` null : retire ce qui était porté à cet emplacement. `hideHair` : cache les cheveux (capuche, casque).
+   */
+  wear(slot: string, source: THREE.Object3D | null, color = 0xffffff, hideHair = false): void {
+    for (const piece of this.worn.get(slot) ?? []) {
+      piece.removeFromParent();
+      piece.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) m.dispose();
+      });
+    }
+    this.worn.delete(slot);
+    if (slot === 'head') {
+      this.hairHidden = !!source && hideHair;
+      this.showHair(this.hairStyle);
+    }
+    if (!source) return;
+    source.updateMatrixWorld(true);
+    const reference = wornReference() ?? this.boneRest;
+    const planes = this.materials[0]?.clippingPlanes ?? null;
+    const pieces: THREE.Object3D[] = [];
+    const inverse = new THREE.Matrix4();
+    source.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const name = /^(.+?)__/.exec(mesh.name)?.[1] ?? /^(.+?)__/.exec(mesh.parent?.name ?? '')?.[1];
+      const bone = name ? this.bones.get(name) : undefined;
+      const rest = name ? reference.get(name) : undefined;
+      if (!bone || !rest) return;
+      const piece = new THREE.Mesh(mesh.geometry, mesh.material);
+      const own = (m: THREE.Material): THREE.Material => {
+        const c = (m as THREE.MeshStandardMaterial).clone();
+        if (m.name.replace(/\.\d+$/, '') === 'teinte') c.color.setHex(color);
+        c.roughness = 0.85;
+        c.clippingPlanes = planes;
+        return c;
+      };
+      piece.material = Array.isArray(mesh.material) ? mesh.material.map(own) : own(mesh.material);
+      piece.castShadow = !this.firstPerson;
+      piece.frustumCulled = false;
+      inverse.copy(rest).invert().multiply(mesh.matrixWorld);
+      inverse.decompose(piece.position, piece.quaternion, piece.scale);
+      bone.add(piece);
+      pieces.push(piece);
+    });
+    this.worn.set(slot, pieces);
+  }
+
+  /** Couleur des gants des vues extérieures (paire de gants portée), ou null pour leur couleur d'origine. */
+  setGloveColor(color: number | null): void {
+    for (const g of this.gloveMats) {
+      if (color === null) g.mat.color.copy(g.base);
+      else g.mat.color.setHex(color).multiplyScalar(g.mat.name === 'gant_sombre' ? 0.7 : 1);
+    }
   }
 
   /** Règle une forme de déformation de −1 à +1 (`<nom>` vers le plus, `<nom>_moins` vers le moins). */
@@ -587,6 +676,9 @@ export class Avatar {
         const same = this.named.get(name === 'peau_main' ? 'peau' : name);
         if (same) c.color.copy(same.color);
         c.clippingPlanes = planes;
+        c.name = name;
+        if (name === 'gant' || name === 'gant_sombre')
+          this.gloveMats.push({ mat: c as THREE.MeshStandardMaterial, base: c.color.clone() });
         return c;
       };
       mesh.material = Array.isArray(mesh.material)

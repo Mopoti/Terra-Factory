@@ -53,8 +53,7 @@ const MODEL_MATERIAL: Record<string, string> = {
   stone: 'pierre',
   concrete: 'beton',
   aluminium: 'aluminium',
-  // Provisoire : le mur et la porte blindés prennent les modèles de l'aluminium.
-  armored: 'aluminium',
+  armored: 'blinde',
 };
 
 /**

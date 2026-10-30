@@ -36,8 +36,9 @@ l'un vers l'autre et les véhicules restent à distance constante (voir `docs/tr
   tampons à l'avant (-3,6 m), attelage automatique à l'arrière (+3,9 m) : roues rouges à rayons, bielles et
   cylindres, chaudière, cheminée, dôme, caisses à eau, abri à deux vraies fenêtres frontales (le jeu y met une vitre)
   et deux à l'arrière, soute à charbon au fond de l'abri ;
-- `locomotive_electrique` : locomotive électrique moderne, 8 m (encore à l'ancienne échelle de voie : à reprendre quand
-  elle entrera dans le jeu, avec les caténaires) ;
+- `locomotive_electrique` : locomotive électrique moderne, caisse de 7,6 m, deux bogies (quatre essieux), attelages
+  automatiques aux deux bouts (9 m d'attelage à attelage), deux cabines à baie frontale ouverte (le jeu y pose une
+  vitre), deux pantographes (`pantographe_av` / `pantographe_ar`, pivot axe X : le jeu les lève vers la caténaire) ;
 - `wagon_fret` : wagon couvert à porte coulissante, caisse de 5 m, deux essieux à ±1,7 m, attelages automatiques
   aux deux bouts (points d'attelage à ±3,3 m : 6,6 m d'attelage à attelage) ;
 - `wagon_citerne` : citerne pour liquides et gaz, mêmes châssis et attelages ; sa bande et son dôme sont de la
@@ -379,6 +380,50 @@ def rail_rampe(coll, leger=True):
     T.poser_au_sol(coll, 1.0, 4.0)
 
 
+# --- Voie de la refonte (octobre 2026) : virage de 45° et droit en diagonale, repérés comme dans le jeu. -----------
+# Unités : 1 = 1,25 m dans le jeu (modèles agrandis de `RAIL_SCALE` = 2,5). Le jeu fait tourner ces modèles par pas de
+# 45° (`trainView.ts`) : ils n'ont pas à tenir dans une tuile.
+
+
+def rail_courbe(coll, leger=True):
+    """Virage de 45° (`curve_l`), rayon 7 unités (8,75 m). Origine = port 0, voie qui part vers -Y et tourne à gauche
+    (vers +X) de 45°. Le virage à droite est le même modèle retourné par le jeu (miroir en X).
+
+    Ballast en secteurs, traverses rayonnantes tous les ~50 cm, rails en segments (rayons 7 ± écartement)."""
+    lot = T.Lot(coll, 'rail')
+    R, A = 7.0, math.pi / 4
+
+    def p(r, t):
+        return Vector((R - r * math.cos(t), -r * math.sin(t), 0))
+    n = 12 if leger else 20
+    for k in range(n):
+        t0, t1 = A * k / n, A * (k + 1) / n
+        tm = (t0 + t1) / 2
+        lg = (R + 0.95) * (t1 - t0) + 0.02
+        lot.cube('ballast', (1.9, lg, Z_BALLAST), tuple(p(R, tm) + Vector((0, 0, Z_BALLAST / 2))), 0.0,
+                 Matrix.Rotation(tm, 3, 'Z'))
+        lg2 = (R + 1.0) * (t1 - t0) + 0.02
+        lot.cube('ballast_sombre', (2.0, lg2, Z_BALLAST * 0.5), tuple(p(R, tm) + Vector((0, 0, Z_BALLAST * 0.25))), 0,
+                 Matrix.Rotation(tm, 3, 'Z'))
+        for s in (-1, 1):
+            _rail_segment(lot, p(R + s * ECART, t0), p(R + s * ECART, t1))
+    nt = round(R * A / 0.5)
+    for k in range(nt):
+        t = A * (k + 0.5) / nt
+        lot.cube('traverse', (1.7, 0.2, Z_TRAVERSE - Z_BALLAST + 0.02),
+                 tuple(p(R, t) + Vector((0, 0, (Z_TRAVERSE + Z_BALLAST) / 2 - 0.01))), 0.01, Matrix.Rotation(t, 3, 'Z'))
+    lot.finir()
+
+
+def rail_diagonal(coll, leger=True):
+    """Droit en diagonale : la même voie que `rail_droit`, longue d'une diagonale de tuile (2 x racine de 2 unités,
+    3,54 m), le long de Y et centrée ; le jeu la tourne de 45°. Six traverses."""
+    lot = T.Lot(coll, 'rail')
+    L = math.sqrt(2)
+    _voie_droite(lot, (0, -L), (0, L))
+    lot.finir()
+
+
 # --- Trains -----------------------------------------------------------------------------------------------------------
 
 R_ROUE = 0.5
@@ -455,71 +500,6 @@ def _couleurs():
                  'moderne': '#d9dde2', 'moderne_bleu': '#1f5fa8', 'moderne_sombre': '#3a4048', 'fret': '#8a3b28',
                  'fret_sombre': '#5e2719', 'charbon': '#26262b'}.items():
         T.PALETTE.setdefault(k, v)
-
-
-def locomotive_electrique(coll, leger=True):
-    """Locomotive électrique moderne, 8 m : longue caisse lisse gris clair, bandeau bleu, deux cabines à nez incliné
-    (grand pare-brise sombre, face jaune, feux à diodes), jupes sur les bogies, grilles, deux pantographes à un bras
-    sur le toit. Deux bogies à deux essieux (`roues_av`, `roues_ar`). Siège `siege` (1,3 m) dans la cabine avant."""
-    _couleurs()
-    sg = 10 if leger else 16
-    L = 16.0
-    lot = T.Lot(coll, 'pieces')
-    _chassis(lot, L, sg, z=1.3, couleur='moderne_sombre', tampon='moderne_sombre')
-    for y, nom in ((-4.8, 'roues_av'), (4.8, 'roues_ar')):
-        _bogie(coll, lot, y, nom, sg, r=0.55, empattement=1.5, flasque='moderne_sombre')
-    zb, zh = 1.45, 4.7
-    lc = L - 2.4  # caisse entre les deux nez
-    lot.cube('moderne', (LARGE, lc, zh - zb), (0, 0, (zb + zh) / 2), 0.06)
-    lot.cube('moderne_sombre', (LARGE + 0.02, lc + 0.02, 0.45), (0, 0, zb + 0.2))  # jupe basse
-    lot.cube('moderne_bleu', (LARGE + 0.02, lc + 0.02, 0.35), (0, 0, 2.55))  # bandeau
-    _toit(lot, 'moderne', -lc / 2, lc / 2, zh, LARGE, 0.3, 5 if leger else 9)
-    for s in (-1, 1):
-        y = s * lc / 2
-        # Nez : bas vertical, haut incliné (pare-brise), face jaune.
-        lot.cube('moderne', (LARGE, 1.2, 1.4), (0, y + s * 0.6, zb + 0.7), 0.06)
-        lot.cube('jaune', (LARGE + 0.01, 0.06, 1.0), (0, y + s * 1.2, zb + 0.75))
-        lot.cube('moderne_bleu', (LARGE + 0.02, 1.22, 0.35), (0, y + s * 0.6, 2.55))
-        incl = Matrix.Rotation(s * 0.55, 3, 'X')
-        lot.cube('moderne', (LARGE, 0.9, 2.1), (0, y + s * 0.65, zb + 1.35 + 1.0), 0.06, incl)
-        # Pare-brise posé sur la face inclinée (centre de la face + 0,48 le long de sa normale).
-        _vitre(lot, (0, y + s * 1.06, 4.05), (LARGE - 0.3, 0.06, 1.3), incl)
-        for x in (-1.35, 1.35):  # feux à diodes
-            lot.cube('blanc', (0.5, 0.05, 0.12), (x, y + s * 1.22, 2.0))
-            lot.cube('rouge', (0.2, 0.05, 0.1), (x * 0.7, y + s * 1.22, 2.0))
-        lot.cube('acier_sombre', (LARGE - 0.6, 0.15, 0.55), (0, y + s * 1.3, 0.8), 0.02,
-                 Matrix.Rotation(-s * 0.3, 3, 'X'))  # chasse-obstacles
-        for sx in (-1, 1):  # vitre latérale et porte de cabine
-            xo = sx * (LARGE / 2 + 0.01)
-            _vitre(lot, (xo, y - s * 0.5, 3.75), (0.04, 0.9, 0.75))
-            lot.cube('moderne_sombre', (0.04, 0.75, 2.5), (xo, y - s * 1.5, 2.95), 0.0)
-            _vitre(lot, (xo + sx * 0.005, y - s * 1.5, 3.85), (0.04, 0.5, 0.55))
-            lot.cube('acier_sombre', (0.3, 0.6, 0.05), (sx * (LARGE / 2 + 0.08), y - s * 1.5, 1.0))  # marchepied
-    for sx in (-1, 1):
-        xo = sx * (LARGE / 2 + 0.01)
-        for k in range(3):  # grilles de ventilation (claires : elles ne doivent pas passer pour des fenêtres)
-            y = -2.6 + k * 2.6
-            lot.cube('gris_clair', (0.04, 1.6, 0.7), (xo, y, 3.8))
-            for j in range(4):
-                lot.cube('acier', (0.05, 1.55, 0.05), (xo, y, 3.56 + j * 0.16))
-        for y in (-4.8, 4.8):  # jupes de bogies
-            lot.cube('moderne_sombre', (0.08, 2.6, 0.5), (sx * (LARGE / 2 - 0.1), y, 1.25), 0.02)
-    # Pantographes à un bras et équipements de toit.
-    zt = zh + 0.3
-    for y, sens in ((-3.5, 1), (3.5, -1)):
-        lot.cube('moderne_sombre', (1.4, 1.0, 0.12), (0, y, zt + 0.05))
-        for x in (-0.5, 0.5):
-            lot.tube('blanc', (x, y, zt), (x, y, zt + 0.2), 0.07, 8)
-        lot.barre('acier', (0, y, zt + 0.15), (0, y + sens * 0.9, zt + 0.7), 0.05)
-        lot.barre('acier', (0, y + sens * 0.9, zt + 0.7), (0, y + sens * 0.1, zt + 1.3), 0.04)
-        lot.cube('acier', (1.5, 0.1, 0.05), (0, y + sens * 0.1, zt + 1.32))
-    lot.cube('moderne_sombre', (1.6, 3.0, 0.3), (0, 0, zt + 0.1), 0.03)
-    yc = -lc / 2
-    lot.cube('noir', (0.7, 0.6, 0.12), (0.8, yc + 0.9, 2.54), 0.03)
-    lot.cube('panneau', (LARGE - 0.4, 0.5, 0.45), (0, yc + 0.2, 2.8), 0.02, Matrix.Rotation(-0.4, 3, 'X'))
-    T.reperer(coll, 'siege', (0.8, yc + 0.9, 2.6))  # à gauche (+X : la gauche du conducteur qui regarde vers -Y)
-    lot.finir()
-    _fini(coll)
 
 
 # --- Matériel à l'échelle de la voie posée dans le jeu --------------------------------------------------------------
@@ -616,6 +596,137 @@ def _chassis_wagon(coll, lot, L, sg, couleur='acier_sombre'):
         _attelage(coll, lot, s * L / 2, s * (L / 2 + 1.6), 'attelage_av' if s < 0 else 'attelage_ar', sg,
                   traverse=couleur)
     lot.cube(couleur, (4.2, L, 0.2), (0, 0, 2.1))  # plancher (dessous)
+
+
+def locomotive_electrique(coll, leger=True):
+    """Locomotive électrique moderne, à l'échelle de la voie posée : caisse de 7,6 m (traverses de tête à ±3,7 m),
+    attelage automatique de 0,8 m aux deux bouts (points d'attelage à ±4,5 m : 9 m d'attelage à attelage), deux bogies
+    à deux essieux (centres à ±2,7 m, essieux à 1,2 m l'un de l'autre, roues de 1 m).
+
+    Caisse gris clair à bandeau bleu, deux cabines à nez jaune : grande baie frontale en deux vitres (vraies ouvertures,
+    comme l'abri de la vapeur : le jeu y pose une vitre translucide), vitres latérales sombres, portes, feux. Grilles de
+    ventilation, coffres sous la caisse, toit bombé avec deux pantographes à un bras (groupes `pantographe_av` /
+    `pantographe_ar`, pivot `pivot_pantographe_*` axe X à leur charnière : le jeu les lève vers la caténaire).
+    Pièces mobiles : quatre essieux (`roues_av`, `roues_av2`, `roues_ar2`, `roues_ar`, axe X), attelages
+    `attelage_av` / `attelage_ar`, pantographes. Feux `voyant_feux`. Siège `siege` dans la cabine avant, à gauche (+X).
+    """
+    _couleurs()
+    sg = 10 if leger else 16
+    lot = T.Lot(coll, 'pieces')
+    r = 1.0
+    yt = 7.4  # traverses de tête
+    yc = 7.2  # face avant des cabines
+    W = 2.6  # demi-largeur de la caisse
+    zb, zh = 2.6, 7.0  # bas et haut de la caisse
+    # Bogies : essieux (un groupe par essieu), longerons extérieurs, boîtes d'essieu, ressorts, traverse de bogie.
+    for yb, noms in ((-5.4, ('roues_av', 'roues_av2')), (5.4, ('roues_ar2', 'roues_ar'))):
+        for dy, nom in zip((-1.2, 1.2), noms):
+            _essieu(coll, yb + dy, nom, r, sg)
+        for sx in (-1, 1):
+            x = sx * (VOIE + 0.45)
+            lot.cube('moderne_sombre', (0.22, 3.6, 0.7), (x, yb, r + 0.1), 0.04)  # longeron de bogie
+            for dy in (-1.2, 1.2):
+                lot.cube('fonte', (0.3, 0.55, 0.5), (x + sx * 0.05, yb + dy, r), 0.03)  # boîte d'essieu
+                lot.tube('jaune', (x, yb + dy, r + 0.4), (x, yb + dy, r + 0.85), 0.16, sg)  # ressort
+            lot.cube('moderne_bleu', (0.1, 0.9, 0.35), (x + sx * 0.12, yb, r + 0.2), 0.02)  # amortisseur
+        lot.cube('moderne_sombre', (2 * (VOIE + 0.45), 0.8, 0.3), (0, yb, r + 0.95), 0.02)  # traverse de bogie
+    # Châssis : longerons, traverses et attelages automatiques aux deux bouts, coffres entre les bogies.
+    for sx in (-1, 1):
+        lot.cube('moderne_sombre', (0.24, 2 * yt, 0.6), (sx * (VOIE + 0.45), 0, 2.2), 0.02)
+    lot.cube('moderne_sombre', (2 * W, 2 * yt - 0.2, 0.25), (0, 0, zb - 0.12), 0.02)  # plancher
+    for s, nom in ((-1, 'attelage_av'), (1, 'attelage_ar')):
+        _attelage(coll, lot, s * yt, s * (yt + 1.6), nom, sg, traverse='moderne_sombre')
+        lot.cube('acier_sombre', (2 * W - 0.8, 0.25, 0.6), (0, s * (yt + 0.05), 1.0), 0.02,
+                 Matrix.Rotation(-s * 0.3, 3, 'X'))  # chasse-obstacles
+    lot.cube('moderne_sombre', (3.4, 4.6, 1.0), (0, 0, 1.95), 0.05)  # transformateur sous caisse
+    for sx in (-1, 1):
+        lot.cube('acier_sombre', (0.6, 1.4, 0.7), (sx * 2.0, -2.0, 2.05), 0.03)  # coffres
+        lot.cube('acier_sombre', (0.6, 1.4, 0.7), (sx * 2.0, 2.0, 2.05), 0.03)
+    # Caisse centrale (pleine) entre les deux cabines.
+    yi = 4.6
+    lot.cube('moderne', (2 * W, 2 * yi, zh - zb), (0, 0, (zb + zh) / 2), 0.06)
+    lot.cube('moderne_sombre', (2 * W + 0.02, 2 * yc, 0.4), (0, 0, zb + 0.2))  # jupe basse
+    lot.cube('moderne_bleu', (2 * W + 0.03, 2 * yc - 0.6, 0.45), (0, 0, 4.2))  # bandeau
+    for sx in (-1, 1):
+        xo = sx * (W + 0.01)
+        for k in range(3):  # grilles de ventilation (claires : elles ne doivent pas passer pour des fenêtres)
+            y = -2.9 + k * 2.9
+            lot.cube('gris_clair', (0.04, 2.0, 1.1), (xo, y, 5.6))
+            for jj in range(5):
+                lot.cube('acier', (0.05, 1.95, 0.06), (xo, y, 5.15 + jj * 0.22))
+        lot.barre('acier', (sx * (W + 0.08), -4.0, 4.8), (sx * (W + 0.08), 4.0, 4.8), 0.05)  # main courante
+    # Cabines aux deux bouts (creuses : on voit la voie depuis le siège).
+    zf, zw0, zw1 = 3.4, 4.9, 6.2  # plancher, bas et haut de la baie frontale
+    vo = T.Lot(coll, 'voyant_feux')
+    for s in (-1, 1):
+        y0, y1 = s * yi, s * yc
+        ym = (y0 + y1) / 2
+        lc = abs(y1 - y0)
+        lot.cube('acier_sombre', (2 * W - 0.2, lc, 0.1), (0, ym, zf), 0.0)  # plancher de cabine
+        lot.cube('moderne', (2 * W, lc, zf - zb), (0, ym, (zb + zf) / 2), 0.04)  # sous le plancher
+        for sx in (-1, 1):  # flancs : porte et vitre latérale
+            x = sx * (W - 0.06)
+            lot.cube('moderne', (0.12, lc, zh - zf), (x, ym, (zf + zh) / 2), 0.02)
+            _vitre(lot, (sx * (W + 0.005), y1 - s * 0.75, 5.5), (0.04, 0.9, 0.9))
+            lot.cube('moderne_sombre', (0.04, 0.8, 2.8), (sx * (W + 0.005), y1 - s * 1.85, 4.85), 0.0)  # porte
+            _vitre(lot, (sx * (W + 0.01), y1 - s * 1.85, 5.6), (0.04, 0.5, 0.6))
+            lot.cube('acier_sombre', (0.35, 0.7, 0.06), (sx * (W + 0.12), y1 - s * 1.85, 3.0))  # marchepied
+            lot.barre('acier', (sx * (W + 0.06), y1 - s * 1.4, 3.3), (sx * (W + 0.06), y1 - s * 1.4, 5.8), 0.05)
+        # Façade : nez jaune sous la baie, baie en deux vitres (ouvertures), montants, bandeau de toit.
+        fe = 0.14
+        lot.cube('moderne', (2 * W, 0.5, zw0 - zb), (0, y1 + s * 0.25 - s * 0.14, (zb + zw0) / 2), 0.08)
+        lot.cube('jaune', (2 * W - 0.2, 0.06, zw0 - zb - 0.4), (0, y1 + s * 0.38, (zb + zw0) / 2 - 0.05))
+        lot.cube('moderne_bleu', (2 * W + 0.02, 0.52, 0.45), (0, y1 + s * 0.11, 4.2))
+        lot.cube('moderne', (2 * W, fe, zh - zw1), (0, y1, (zw1 + zh) / 2), 0.03)
+        for x, w in ((0.0, 0.3), (-(W - 0.12), 0.24), (W - 0.12, 0.24)):
+            lot.cube('moderne_sombre', (w, fe + 0.04, zw1 - zw0), (x, y1, (zw0 + zw1) / 2), 0.02)
+        lot.cube('moderne_sombre', (2 * W, fe + 0.06, 0.1), (0, y1, zw1))
+        lot.cube('moderne_sombre', (2 * W, fe + 0.06, 0.1), (0, y1, zw0))
+        lot.cube('acier', (0.9, 0.06, 0.05), (1.2, y1 + s * 0.08, zw1 - 0.15))  # essuie-glace
+        lot.cube('acier', (0.9, 0.06, 0.05), (-1.2, y1 + s * 0.08, zw1 - 0.15))
+        for x in (-1.8, 1.8):  # feux
+            lot.cube('acier_sombre', (0.7, 0.08, 0.3), (x, y1 + s * 0.4, 3.3), 0.02)
+            vo.cube('blanc', (0.36, 0.04, 0.16), (x - 0.12 * (1 if x > 0 else -1), y1 + s * 0.44, 3.3))
+            lot.cube('rouge', (0.16, 0.04, 0.16), (x + 0.2 * (1 if x > 0 else -1), y1 + s * 0.44, 3.3))
+        vo.cube('blanc', (0.4, 0.04, 0.16), (0, y1 + s * 0.08, zh - 0.3))  # feu de toit
+        # Pupitre devant la baie, siège à gauche (cabine avant seulement).
+        lot.cube('panneau', (2 * W - 0.6, 0.6, 0.5), (0, y1 - s * 0.45, zw0 - 0.1), 0.02, Matrix.Rotation(s * 0.4, 3, 'X'))
+        lot.cube('moderne_sombre', (2 * W - 0.6, 0.6, zw0 - 0.4 - zf), (0, y1 - s * 0.45, (zf + zw0 - 0.4) / 2), 0.02)
+        if s < 0:
+            ys = y1 - s * 1.5
+            T.reperer(coll, 'siege', (1.3, ys, 4.4))
+            lot.cube('noir', (0.8, 0.7, 0.14), (1.3, ys, 4.33), 0.03)
+            lot.cube('noir', (0.8, 0.14, 0.9), (1.3, ys - s * 0.38, 4.85), 0.03)
+            lot.tube('acier_sombre', (1.3, ys, zf + 0.05), (1.3, ys, 4.26), 0.08, sg)
+    # Toit bombé, équipements, pantographes.
+    _toit(lot, 'moderne', -yc, yc, zh, 2 * W, 0.4, 5 if leger else 9)
+    for s in (-1, 1):  # pignons : ferment le toit bombé au-dessus des façades
+        for k, (w, dz) in enumerate(((2 * W - 0.1, 0.1), (2 * W * 0.78, 0.24), (2 * W * 0.45, 0.34))):
+            lot.cube('moderne', (w, 0.14, 0.16), (0, s * (yc - 0.02), zh + dz), 0.02)
+    zt = zh + 0.4
+    lot.cube('moderne_sombre', (2.0, 4.0, 0.35), (0, 0, zt + 0.12), 0.04)  # disjoncteur de toit
+    for k in range(3):
+        lot.tube('blanc', (-0.5 + 0.5 * k, 1.2, zt + 0.25), (-0.5 + 0.5 * k, 1.2, zt + 0.55), 0.09, 8)
+    for yp, sens, nom in ((-3.9, 1, 'pantographe_av'), (3.9, -1, 'pantographe_ar')):
+        lot.cube('moderne_sombre', (1.8, 1.4, 0.15), (0, yp, zt + 0.02))
+        for x in (-0.6, 0.6):
+            for dy in (-0.45, 0.45):
+                lot.tube('blanc', (x, yp + dy, zt), (x, yp + dy, zt + 0.35), 0.08, 8)  # isolateurs
+        lot.cube('acier', (1.6, 0.2, 0.1), (0, yp, zt + 0.4))
+        g = T.Lot(coll, nom)
+        h = (0, yp, zt + 0.45)
+        coude = (0, yp + sens * 1.6, zt + 0.95)
+        tete = (0, yp + sens * 0.2, zt + 1.5)
+        g.barre('acier', h, coude, 0.08)
+        g.barre('acier', coude, tete, 0.06)
+        g.barre('acier', (0, yp + sens * 0.25, zt + 0.5), (0, yp + sens * 1.2, zt + 0.8), 0.04)  # bielle
+        g.cube('acier_sombre', (2.0, 0.14, 0.08), tete, 0.02)  # archet
+        for x in (-1.0, 1.0):
+            g.barre('acier', (x, tete[1], tete[2]), (x * 1.15, tete[1], tete[2] - 0.2), 0.05)
+        g.finir()
+        T.pivot(coll, 'pivot_' + nom, h, (1, 0, 0))
+    lot.finir()
+    vo.finir()
 
 
 def locomotive_vapeur(coll, leger=True):
@@ -787,6 +898,38 @@ def wagon_fret(coll, leger=True):
     lot.finir()
 
 
+def wagon_plateforme(coll, leger=True):
+    """Wagon plateforme (pour charger un véhicule), 5 m : plancher en planches sur le châssis de wagon, bords d'acier
+    à poches de ranchers, quatre ranchers aux coins, rails de calage, cales jaunes et chaînes d'arrimage roulées,
+    attelages automatiques aux deux bouts. Pièces mobiles comme les autres wagons (`roues_av`, `roues_ar`, attelages)."""
+    _couleurs()
+    sg = 8 if leger else 14
+    L = 10.0
+    lot = T.Lot(coll, 'pieces')
+    _chassis_wagon(coll, lot, L, sg)
+    W, z = 5.2, 2.3
+    lot.cube('acier_sombre', (W, L, 0.2), (0, 0, z - 0.1), 0.02)
+    for k in range(13):  # planches
+        x = -W / 2 + 0.2 + k * (W - 0.4) / 12
+        lot.cube('traverse' if k % 3 else 'bois_sombre', ((W - 0.4) / 12 - 0.03, L - 0.3, 0.1), (x, 0, z + 0.05), 0.01)
+    for sx in (-1, 1):
+        lot.cube('acier_sombre', (0.18, L, 0.3), (sx * (W / 2 - 0.05), 0, z + 0.02), 0.02)  # bords
+        for k in range(6):  # poches de ranchers
+            lot.cube('acier', (0.24, 0.2, 0.26), (sx * (W / 2 + 0.06), -4.0 + 1.6 * k, z - 0.05), 0.01)
+        for y in (-4.6, 4.6):  # ranchers
+            lot.cube('acier_sombre', (0.14, 0.14, 1.4), (sx * (W / 2 + 0.06), y, z + 0.7), 0.02)
+        lot.cube('acier', (0.3, L - 1.0, 0.08), (sx * 1.4, 0, z + 0.14), 0.01)  # rails
+    for y in (-3.2, -1.8, 1.8, 3.2):  # cales jaunes
+        for sx in (-1, 1):
+            lot.cube('jaune', (0.45, 0.35, 0.25), (sx * 1.4, y, z + 0.3), 0.04)
+    for y in (-2.5, 2.5):  # chaînes roulées
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            lot.cube('acier', (0.12, 0.05, 0.05), (0.25 * math.cos(a) - 1.6, y + 0.25 * math.sin(a), z + 0.14), 0.01,
+                     Matrix.Rotation(a, 3, 'Z'))
+    lot.finir()
+
+
 def wagon_citerne(coll, leger=True):
     """Wagon-citerne pour liquides et gaz, caisse de 5 m, attelages automatiques aux deux bouts, deux essieux sur la voie : cuve blanche, bande et
     dôme de la teinte du fluide (`teinte`), berceaux, passerelle et garde-corps, échelle, vanne de vidange."""
@@ -886,6 +1029,8 @@ MODELES = {
     'rail_virage_grand': rail_virage_grand,
     'rail_virage_geant': rail_virage_geant,
     'rail_virage_45': rail_virage_45,
+    'rail_courbe': rail_courbe,
+    'rail_diagonal': rail_diagonal,
     'rail_virage_45_b': rail_virage_45_b,
     'rail_rampe': rail_rampe,
     'rail_aiguillage_d_droit': rail_aiguillage_d_droit,
@@ -896,6 +1041,7 @@ MODELES = {
     'locomotive_electrique': locomotive_electrique,
     'wagon_fret': wagon_fret,
     'wagon_citerne': wagon_citerne,
+    'wagon_plateforme': wagon_plateforme,
     'gare': gare,
 }
 

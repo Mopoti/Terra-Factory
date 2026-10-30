@@ -149,13 +149,20 @@ Faits : foreuses (foret, volant, poulies, gyrophare), chevalet (manivelle, balan
   - Arbres et buissons (`vegetation.py`) : boules de feuillage plus fines et un peu aplaties (`Lot.boule`, `FINESSE`), troncs et cônes à plus de côtés, ombrage lissé.
 
 ## Véhicules à l'échelle du personnage
-- `vehicules.py` : `buggy` (agrandi ×1,7 : 2,7 m × 1,7 m, arceau à 1,6 m, siège à 0,6 m), `quad` (2 m, selle à 0,85 m ; coques à pans, garde-boues enveloppants, suspension à amortisseurs, moteur à ailettes, porte-bagages, pneus ballon à chevrons), `tank` (4,6 m ; caisse à plaques inclinées, chenilles à patins autour de cinq galets doubles par côté, barbotin, roue tendeuse, jupes, tourelle à flancs inclinés, canon à évacuateur et frein de bouche, tourelleau du chef où se tient le pilote, panier arrière). Le conducteur est à gauche (+X). Chaque véhicule a un nœud vide `siege` (coussin du conducteur), lu par `bake` (`BakedModel.seat`) et `vehicleFromModel` (`VehicleMesh.seat`).
+- `vehicules.py` : `buggy` (agrandi ×1,7 : 2,7 m × 1,7 m, arceau à 1,6 m, siège à 0,6 m), `quad` (2 m, selle à 0,85 m ; coques à pans, garde-boues enveloppants, suspension à amortisseurs, moteur à ailettes, porte-bagages, pneus ballon à chevrons), `tank` (4,6 m ; caisse à plaques inclinées, chenilles à patins autour de cinq galets doubles par côté, barbotin, roue tendeuse, jupes, tourelle à flancs inclinés, canon à évacuateur et frein de bouche, tourelleau du chef où se tient le pilote, panier arrière). `quad_electrique` : même châssis que le quad, carrosserie blanche à liserés bleus, bloc batterie sous la selle avec bande lumineuse `quad_lueur`, moteur électrique sur l'essieu arrière et prise de recharge (pas de pot d'échappement). Le conducteur est à gauche (+X). Chaque véhicule a un nœud vide `siege` (coussin du conducteur), lu par `bake` (`BakedModel.seat`) et `vehicleFromModel` (`VehicleMesh.seat`).
 - **Au volant** (`gameView.ts`) : le personnage s'assied (`Avatar.seated` : cuisses à l'horizontale, genoux pliés, mains devant), ses hanches 8 cm au-dessus du coussin (`Avatar.hipOffset`) ; la caméra descend d'autant ; l'outil est rangé. On vise le buggy dans un rayon de 1,3 m.
 - **Dans le jeu** : quad (`vehicle_quad`, plus rapide, sobre) et char (`vehicle_tank`, lent, gourmand, écrase fort) sont des véhicules comme le buggy (`src/core/data/vehicles.ts` : vitesse, consommation, écrasement, visée ; `Vehicle.kind`). Seules les roues (`roue_*`) roulent : les galets du char (`roue_g1`… `roue_d5`) roulent aussi ; la bande des chenilles et la tourelle restent fixes pour l'instant.
 
 ## Voies ferrées et trains (dans le jeu : voir `docs/trains.md`)
 - `ferroviaire.py` : voie étroite industrielle, écartement 60 cm, dessus des rails à 12 cm. Pièces sans sens (un train roule dans les deux sens) : `rail_droit` (tuile 2 × 2 cases), `rail_virage` (tuile 6 × 6 cases, rayon 1,5 m, du milieu d'un bord au milieu du bord voisin ; le virage à gauche est le virage à droite tourné), `rail_rampe` (2 × 8 cases, monte d'un niveau de 1 m ; la descente est la même pièce tournée). Pas de tunnel.
-- Les voies sont agrandies ×2,5 dans le jeu (écartement 1,5 m). Trains dessinés à cette échelle (voie normale) : roues sur les rails à ±0,75 m, bas des roues à Z = 0 (posé sur le dessus des rails), tampons et attelages à 1,05 m, caisses de 2,6 m de large, origine au milieu des essieux, un groupe de roues par essieu ; attelages automatiques à mâchoire en groupes `attelage_av` / `attelage_ar` (pivot vertical sur la traverse de tête, le jeu les tourne vers le voisin). `locomotive_vapeur` (030T, tampons à l'avant à 3,6 m, attelage de 1,1 m à l'arrière jusqu'à 3,9 m, abri à deux vraies fenêtres frontales vitrées par le jeu et deux à l'arrière, soute au fond de l'abri, siège à gauche à 2,25 m), `wagon_fret` et `wagon_citerne` (caisse de 5 m, deux essieux, attelages de 0,8 m aux deux bouts : 6,6 m). `locomotive_electrique` est encore à l'ancienne échelle (à reprendre avec les caténaires).
+- Les voies sont agrandies ×2,5 dans le jeu (écartement 1,5 m). Trains dessinés à cette échelle (voie normale) : roues sur les rails à ±0,75 m, bas des roues à Z = 0 (posé sur le dessus des rails), tampons et attelages à 1,05 m, caisses de 2,6 m de large, origine au milieu des essieux, un groupe de roues par essieu ; attelages automatiques à mâchoire en groupes `attelage_av` / `attelage_ar` (pivot vertical sur la traverse de tête, le jeu les tourne vers le voisin). `locomotive_vapeur` (030T, tampons à l'avant à 3,6 m, attelage de 1,1 m à l'arrière jusqu'à 3,9 m, abri à deux vraies fenêtres frontales vitrées par le jeu et deux à l'arrière, soute au fond de l'abri, siège à gauche à 2,25 m), `wagon_fret` et `wagon_citerne` (caisse de 5 m, deux essieux, attelages de 0,8 m aux deux bouts : 6,6 m). `wagon_plateforme` : même châssis, plancher en bois à rails d'arrimage, ranchers aux coins et anneaux de sanglage, pour charger un véhicule. `locomotive_electrique` (30 octobre, à l'échelle de la voie posée, pas encore dans le jeu) : caisse de 7,6 m, deux
+bogies de deux essieux (centres à ±2,7 m ; groupes `roues_av`, `roues_av2`, `roues_ar2`, `roues_ar`), attelages
+automatiques `attelage_av` / `attelage_ar` (points d'attelage à ±4,5 m : 9 m), deux cabines creuses à baie frontale
+ouverte en deux vitres (repère pour `CAB_GLASS`, dans le repère du fichier en m : centres x = ±0,66, y = 2,78, face
+z = 3,59 pour la cabine avant (-3,59 pour l'arrière), 1,16 m de large, 0,65 m de haut), siège `siege` dans la cabine
+avant, feux `voyant_feux`, deux pantographes `pantographe_av` / `pantographe_ar` (pivots axe X à leur charnière, le jeu
+les lèvera vers la caténaire). Fiche à prévoir dans `trains.ts` : longueur 9 m, `frontM` 4,5, caisse ±3,8 m,
+`halfBaseM` 2,7.
 - Voies : `rail_croisement` (tuile de 2 × 2 cases, deux voies droites à angle droit : rails coupés par les ornières, cœurs en fonte, contre-rails, plaque d'acier au centre), `rail_virage` (3 × 3 tuiles, rayon 3 unités), `rail_virage_large` (5 × 5, rayon 5) et `rail_virage_tres_large` (7 × 7, rayon 7), `rail_virage_grand` (11 × 11, rayon 11), `rail_virage_geant` (15 × 15, rayon 15) et les demi-virages `rail_virage_45` / `rail_virage_45_b` (les deux moitiés du très large), tous tracés par `_virage` ; aiguillages `rail_aiguillage_<d|g>_<droit|devie>` (bloc de 3 × 3 tuiles, voie directe et voie déviée en virage serré, un modèle par côté et par position des lames, levier près de la pointe, du côté opposé à la branche : le jeu le manœuvre à cet endroit, `leverOf`).
 
 ## Tuyaux (octobre 2026)
@@ -193,3 +200,163 @@ Tous au style doux (`T.adoucir`, formes de `outils.py`).
   minerai du gisement, flaque d'eau).
 - **Icônes des outils** : la pioche-hache est montrée dressée en diagonale, tête en haut (`itemIcon.ts`).
 - `NO_MODEL_ITEMS` est vide : plus aucun objet ne garde la caisse.
+
+## Lot énergie au style doux (29 octobre)
+
+Quatre machines de l'énergie ont leur modèle (`blender/scripts/energie.py`, style doux : `outils.py` et `T.adoucir`) :
+
+- `poteau_haute_tension` (`pole_hv`) : mât d'acier de 6 m, trois bras en escalier, chaînes d'isolateurs en verre ;
+- `poteau_tres_haute_tension` (`pole_uhv`) : pylône en treillis de 10 m, trois bras larges, pointe et câble de garde ;
+- `lampadaire` (`lamp`) : mât vert de 3 m, crosse, globe `voyant_lampe_*` qui s'éclaire quand il est alimenté ;
+- `eolienne` (`wind_turbine`) : tour de 5 m, rotor de 3 m (groupe `rotor_`, `pivot_rotor`, tourne quand elle produit).
+
+Les câbles partent du repère `accroche_cable` (tête des poteaux). Ces modèles dépassent de leur emprise (bras, crosse,
+rotor) : le jeu les règle sur leur seule hauteur (`OVERHANG_MODELS` dans `src/render/factoryView.ts`).
+
+Deuxième lot (30 octobre), même fichier et même style :
+
+- `transformateur` (`transformer`) : cuve arrondie, radiateurs, conservateur d'huile, traversées haute et basse tension ;
+  voyants verts `voyant_flux_*` allumés quand de l'énergie le traverse ;
+- `disjoncteur` (`breaker`) : coffret gris, levier rouge (groupe `levier_`, `pivot_levier`, mouvement `open`) qui bascule
+  vers le bas quand le disjoncteur s'ouvre ; voyant ambre `voyant_etat_*` allumé quand il est ouvert ;
+- `panneau_solaire` (`solar_panel`) : panneau bleu incliné vers l'avant sur un pied, boîtier de raccordement ;
+- `accumulateur_base` (`accumulator_basic`) : trois cellules vertes sanglées, jauge `voyant_charge_*`.
+
+Troisième lot (30 octobre) :
+
+- `assembleur_avance` (`assembler_advanced`, `blender/scripts/transformation.py`) : même base que l'assembleur T2,
+  caisson bleu nuit, bras et moteur orange, bandeau lumineux cyan (`voyant_bandeau_*`) et quatre voyants de couleur pour
+  ses quatre types de recettes (`voyant_types_*`) ; mêmes pièces mobiles que l'assembleur T2 ;
+- `mur_blinde`, `porte_blinde`, `porte_blinde_battant` (`blender/scripts/construction.py`, matériau `blinde`) : plaques
+  d'acier rivetées, montants à bande de danger jaune et noire, battant à renforts en croix, hublot et volant de
+  verrouillage. Le blindé n'a ni dalle, ni escalier, ni pilier dans le jeu (`MUR_ET_PORTE`).
+
+## Paquets de science (30 octobre)
+
+Un flacon par palier (`blender/scripts/objets.py`, formes `objet_science_<palier>`) : le liquide prend la couleur de
+l'objet, la forme change à chaque palier. T1 : ballon dans un casier en bois ; T2 : fiole conique sur un trépied ;
+T3 : un grand tube à essai tenu par une pince sur un support ; T4 : fiole à six pans dans une armature de laiton ; T5 : capsule sphérique
+tenue par deux anneaux ; combat (`objet_science_combat`) : fiole en forme d'obus sur un étui à croix. `dropShape` choisit
+la forme d'après l'objet (`science_pack`, `science_pack_2` à `_5`, `combat_pack`) ; l'ancienne forme `science` reste en secours.
+
+## Moules (30 octobre)
+
+Trois formes propres (`objets.py`) : bloc d'acier bleuté (même couleur pour les trois), poignées et goupilles de centrage claires,
+empreinte sombre de la pièce produite. `objet_moule_plaque` (empreinte rectangulaire et canal de coulée),
+`objet_moule_engrenage` (empreinte de roue dentée), `objet_moule_fil` (filière : disque serti, trou conique, bout de fil
+de cuivre qui en sort).
+
+## Veste (30 octobre)
+
+`objet_veste` (`equipement.py`) : veste de la teinte sur un cintre, debout face au joueur (col et poignets sombres,
+fermeture éclair, deux poches à rabat, pied rond). Le modèle porté sur le personnage reste à faire.
+
+## Voie de la refonte : virage de 45° et diagonale (30 octobre)
+
+`ferroviaire.py` : `rail_courbe` (virage de 45°, rayon 7 unités = 8,75 m ; origine au port 0, part vers -Y et tourne à
+gauche vers +X) et `rail_diagonal` (droit de 2√2 unités = 3,54 m, centré, le long de Y). `trainView.ts` pose le virage
+par son port 0, tourné du cap de la pièce par pas de 45°, en miroir pour le virage à droite ; la diagonale par son
+milieu, tournée de 45°. Le dessin par le code (`addProcedural`) ne sert plus que tant que les modèles ne sont pas chargés.
+
+## Intermédiaires des paliers 3 à 5, lot 1 (30 octobre)
+
+Formes propres (`objets.py`, table `OWN_SHAPES` de `dropModels.ts`) : `objet_chassis_simple` (cadre soudé),
+`objet_chassis_renforce` (croix de renfort, goussets boulonnés), `objet_chassis_leger` (longerons percés),
+`objet_chassis_composite` (coque moulée à trame tissée), `objet_vitre` (plaque debout dans deux cales),
+`objet_vitre_blindee` (verre épais, cadre boulonné à croisillons), `objet_graphite` (pains noirs empilés),
+`objet_sel_lithium` (tas couvert de cristaux). La tige d'aluminium prend la forme des tiges (couleur plus claire).
+
+Lot 2 (30 octobre) : `objet_fibre_carbone` (rouleau tressé sur mandrin), `objet_kit_circuit` (petite carte, puce,
+condensateurs, broches), `objet_circuit_avance` (carte dense à liseré doré, processeur à radiateur), `objet_microcontroleur`
+(grosse puce à broches), `objet_cellule_solaire` (plaque bleue quadrillée), `objet_filtre_graphite` (cartouche à nid
+d'abeille), `objet_batterie_lithium` (bloc à deux bornes et jauge). Astuce : un grand dessus plat de la teinte se fait
+avec `lot.cube` (un `_rond` vertical très plat donnait un dessus trop clair en jeu).
+
+Lot 3 (30 octobre) : `objet_kit_reparation` (boîte à outils, clé et tournevis), `objet_capsule_fusion` (sphère lumineuse
+entre deux demi-coques), `objet_aimant_supra` (aimant en U, bobinages, givre), `objet_cristal_quantique` (cristaux facettés
+sur une pierre), `objet_deuterium` et `objet_tritium` (bonbonnes à étiquette D et T), `objet_azote_liquide` (bonbonne
+cryogénique givrée). Tous les intermédiaires ont maintenant leur forme ; la table des formes provisoires a disparu.
+
+## Armures 3 et 5, exosquelette, propulseur (30 octobre)
+
+`equipement.py` : les quatre pièces des armures 3 (composite : visière sombre, bandes orange, plaques en écailles) et 5
+(nano : visière bombée lumineuse, lignes lumineuses cyan), `objet_exosquelette` (deux jambes articulées, genoux à moteur
+vert, ceinture) et `objet_propulseur` (deux réservoirs, tuyères et petite flamme, bretelles). Plus aucune forme
+provisoire dans `dropModels.ts`.
+
+## Équipement porté sur le personnage (30 octobre)
+
+Nouvelle famille `blender/scripts/porte.py` (fichier `porte.blend`) : `porte_sac_a_dos`, `porte_capuche`, `porte_veste`,
+`porte_pantalon`, `porte_bottes`. Chaque modèle est construit dans le repère du personnage homme (m, Z en haut, avant
+vers -Y) et rangé par os : les objets `<os>__<pièce>_<teinte>` suivent l'os `<os>` (`poitrine`, `tete`, `bras_g`,
+`cuisse_d`, `pied_g`…). Dans le jeu, `Avatar.wear(emplacement, modèle, couleur, cacherCheveux)` accroche chaque pièce à
+son os en gardant sa place par rapport à l'os sur l'homme (sur la femme, elle suit ses os). Les faces `teinte` prennent
+la couleur de l'objet. La capuche cache les cheveux. Les gants n'ont pas de modèle porté : `Avatar.setGloveColor` teinte
+les mains gantées. Correspondance objet → modèle : `src/render/wornModels.ts`. Les vêtements recouvrent un peu les genoux
+et les coudes (calottes) pour que la combinaison ne se voie pas quand ils plient.
+
+Armures portées (30 octobre) : `porte_armure<palier>_casque`, `_plastron` (avec brassards sur les bras et avant-bras),
+`_jambieres`, `_bottes` pour les paliers 1 à 5, `porte_exosquelette` (barres le long des jambes, moteurs aux genoux) et
+`porte_propulseur` (réservoirs dans le dos, bretelles). Les armures sont dans `blender/scripts/porte_armures.py` : plaques
+superposées (`coquille`, part de manchon à section elliptique) sur une sous-couche sombre — gorgerin, plastron bombé à
+arête, ventre en lames, dossière en lames, épaulières à lames, canon de bras, cubitière, avant-bras, tassettes, cuissot,
+genouillère, grève, solerets en lames. Finitions par palier (`STYLE`) : 1 cuir et rivets, 2 acier à liserés clairs,
+3 composite à bandes orange, 4 blindage lourd (deux yeux ronds, grille de respiration, lumières bleues), 5 nano (deux
+fentes lumineuses, liserés cyan). Casques 1 à 3 ouverts sur le visage, 4 et 5 fermés. Les casques cachent les cheveux.
+
+## Formes qui étaient partagées (30 octobre)
+
+`objets.py` : `objet_lingot_alu`, `objet_lingot_zamak`, `objet_cable`, `objet_isolant`, `objet_baril_vide`,
+`objet_baril_eau`, `objet_baril_petrole`, `objet_petrole_brut`, `objet_barre_uranium`, `objet_dechets_nucleaires`
+(table `OWN_SHAPES` de `dropModels.ts`, vérifiée en premier par `dropShape`).
+
+Icônes des armures (30 octobre) : les formes `objet_armure<palier>_<pièce>` (`equipement.py`, `_armure_icone`) sont
+tirées des pièces portées (`porte_armures.py`) : même design, posées au sol (plastron sans brassards, casque relevé et
+tourné vers la caméra, jambières tournées pour qu'on voie les deux). Les casques ouverts ont un bord roulé autour du
+visage.
+
+## Clôtures, barrières et portails (30 octobre, pas encore dans le jeu)
+
+Nouvelle famille `blender/scripts/clotures.py` (`clotures.blend`). Dimensions proposées, à confirmer : tronçon de clôture
+d'une case (1,2 × 0,3 × 3 unités, 1,5 m de haut) ; portail de 3 m (6 × 0,4 × 3,4) entre deux piliers.
+`cloture_bois` ; `barriere_beton` et `barriere_beton_arme` avec `_abime1` (éclats) et `_abime2` (fissures, morceau
+tombé, fers visibles pour le béton armé) ; `portail_bois` et `portail_beton` (battants `battant_g_` / `battant_d_`,
+pivots verticaux aux gonds) ; `portail_beton_arme` (vantail coulissant `vantail_`, `pivot_vantail` axe -X, moteur et voyant
+`voyant_moteur`). Fichiers copiés dans `public/models/terra/` mais pas encore chargés par le jeu.
+Rangées de barrières (béton, béton armé, holographique) : les deux poteaux d'un tronçon sont des groupes à part,
+`poteau_g_` (-X) et `poteau_d_` (+X), centrés sur le bord de la case. Le jeu devra cacher le poteau d'un côté où touche
+un autre tronçon : une rangée n'a alors de poteaux qu'à ses deux bouts, le panneau (ou le mur de lumière) est continu.
+
+Holographique (palier 5, même famille) : `barriere_holographique` (rail et demi-poteaux émetteurs, nappe de lumière
+`holo_mur`), `portail_holographique` (piliers émetteurs, seuil à chevrons, nappe `holo_portail` que le jeu éteint pour
+ouvrir, voyant `voyant_portail`), `projecteur_mur_holographique` (machine d'une case, 1,65 m : socle, fût à ailettes,
+lentille `holo_noyau`, anneau de focalisation `anneau_` qui tourne autour de `pivot_anneau`, voyant `voyant_projecteur`).
+Les maillages `holo_*` sont faits pour être dessinés translucides et lumineux (matériau à prévoir dans le jeu).
+
+Batterie portable : `objet_batterie_portable` (`objets.py`), pile de poche de la teinte, face sombre à éclair et jauge de
+quatre barres, clip de ceinture ; la vraie jauge de charge sera une barre dessinée par-dessus l'icône.
+
+## Machines avancées (30 octobre, pas encore dans le jeu)
+
+Nouvelle famille `blender/scripts/avancees.py` (`avancees.blend`), pour les machines des nouveaux chantiers. Dimensions
+proposées, à confirmer : `borne_recharge` (1 x 1 case, 1,6 m ; écran `voyant_ecran`, anneau lumineux `voyant_charge`,
+pistolet et câble sur le flanc droit), `compresseur_air` (2 x 2, 0,9 m ; réservoir rouge couché, moteur bleu, bloc à
+ailettes, volant `volant_` qui tourne autour de `pivot_volant` (axe X), manomètre, voyant `voyant_compresseur`),
+`purificateur_air` (2 x 2, 1,75 m ; grille d'aspiration en façade, cartouches filtrantes à droite, pupitre `voyant_ecran`
+à gauche, deux ventilateurs `helice_g_` / `helice_d_` sur le toit (pivots verticaux), bandeau `voyant_air`).
+`bras_industriel` (2 x 2, robot orange à six axes, dépasse un peu de son emprise vers l'avant : chaîne de groupes
+`tourelle_` (`pivot_tourelle`, axe Z) > `epaule_` (`pivot_epaule`, axe X) > `coude_` (`pivot_coude`, axe X) > `poignet_`
+(`pivot_poignet`, axe de l'outil), colonne lumineuse `voyant_bras`), `foreuse_plasma` (4 x 4, 1,9 m, variante high-tech de
+la foreuse : tour à quatre pieds, générateur sur le plateau, lance à bobines de cuivre, dard lumineux `plasma_` dans
+l'ouverture, condensateurs violets, radiateur, goulotte devant, écran `voyant_ecran`), `electrolyseur` (3 x 3, 1,6 m :
+empilement de cellules couché devant avec fenêtre `voyant_electrolyse`, réservoirs d'hydrogène (blanc) et d'oxygène
+(bleu) derrière, arrivée d'eau à gauche).
+`fabricateur_universel` (3 x 3, 1,6 m : podium rond, chambre vitrée `vitre_chambre` (à dessiner translucide), plateau
+tournant `plateau_` (`pivot_plateau`, Z), objet en cours d'impression lumineux `voyant_impression`, tête d'impression,
+couronne à bandeau `voyant_fab`, trémies sur les côtés, trappe de sortie devant), `pile_combustible` (2 x 2, 1,4 m :
+armoire à quatre modules de cellules et leurs voyants `voyant_modules`, ventilateur `helice_pile_` sur le toit, bornes en
+cuivre avec `accroche_cable`, bouteilles d'hydrogène à droite, rejet d'eau à gauche), `coffre_quantique` (2 x 2 : caisson
+violet nuit, piliers d'angle et serrure lumineux `voyant_quantique`, couvercle `couvercle_` qui s'ouvre vers l'arrière
+(`pivot_couvercle`, comme les coffres), cristal flottant `cristal_` qui tourne (`pivot_cristal`)), `tourelle_rail` (3 x 2
+comme les autres tourelles : batteries de condensateurs, tourelle `tourelle_` (`pivot_tourelle`, Z) à deux rails, bobines
+d'accélération et rail lumineux `voyant_rail`).

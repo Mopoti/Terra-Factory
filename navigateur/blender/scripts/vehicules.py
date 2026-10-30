@@ -335,7 +335,7 @@ def _amortisseur(lot, a, b, sg):
         lot.tube('rouge', tuple(p - d.normalized() * 0.015), tuple(p + d.normalized() * 0.015), 0.085, sg)
 
 
-def quad(coll, leger=True):
+def quad(coll, leger=True, electrique=False):
     """Quad : 1,9 m de long, 1,2 m de large ; selle à 0,85 m (le pilote est à califourchon), poignées à 1,04 m.
 
     Carrosserie verte en coques à pans (carénage avant à phares, garde-boues enveloppants, réservoir, coque arrière),
@@ -361,15 +361,29 @@ def quad(coll, leger=True):
     for y in (-1.3, -0.45, 0.5, 1.3):
         lot.barre('acier_sombre', (-0.28, y, 0.85), (0.28, y, 0.85), 0.06)
     lot.cube('acier_sombre', (0.6, 0.9, 0.05), (0, -0.05, 0.6), 0.01)  # sabot de protection
-    # Moteur à ailettes (monocylindre), carter, échappement vers l'arrière à droite (−X), silencieux.
-    lot.cube('acier', (0.42, 0.55, 0.3), (0, -0.05, 0.78), 0.04)  # carter
-    for k in range(6):
-        lot.cube('acier', (0.36 - k * 0.02, 0.36, 0.035), (0, -0.15, 0.97 + k * 0.06), 0.008)  # ailettes du cylindre
-    lot.tube('acier_sombre', (0, -0.15, 0.92), (0, -0.15, 1.3), 0.12, sg)
-    lot.tube('acier', (-0.1, -0.35, 1.05), (-0.42, -0.2, 0.95), 0.05, sg)  # collecteur
-    lot.tube('acier', (-0.42, -0.2, 0.95), (-0.42, 1.0, 1.05), 0.05, sg)
-    lot.tube('fonte', (-0.42, 1.0, 1.05), (-0.42, 1.55, 1.2), 0.11, sg)  # silencieux
-    lot.tube('acier', (-0.42, 1.55, 1.2), (-0.42, 1.62, 1.22), 0.06, sg)
+    if not electrique:
+        # Moteur à ailettes (monocylindre), carter, échappement vers l'arrière à droite (−X), silencieux.
+        lot.cube('acier', (0.42, 0.55, 0.3), (0, -0.05, 0.78), 0.04)  # carter
+        for k in range(6):
+            lot.cube('acier', (0.36 - k * 0.02, 0.36, 0.035), (0, -0.15, 0.97 + k * 0.06), 0.008)  # ailettes du cylindre
+        lot.tube('acier_sombre', (0, -0.15, 0.92), (0, -0.15, 1.3), 0.12, sg)
+        lot.tube('acier', (-0.1, -0.35, 1.05), (-0.42, -0.2, 0.95), 0.05, sg)  # collecteur
+        lot.tube('acier', (-0.42, -0.2, 0.95), (-0.42, 1.0, 1.05), 0.05, sg)
+        lot.tube('fonte', (-0.42, 1.0, 1.05), (-0.42, 1.55, 1.2), 0.11, sg)  # silencieux
+        lot.tube('acier', (-0.42, 1.55, 1.2), (-0.42, 1.62, 1.22), 0.06, sg)
+    else:
+        # Électrique : bloc batterie sous la selle (bandeau lumineux de charge), moteur-roue arrière, prise de charge.
+        T.PALETTE.setdefault('quad_batterie', '#3a3f47')
+        T.PALETTE.setdefault('quad_lueur', '#4fe0e8')
+        lot.cube('quad_batterie', (0.5, 0.95, 0.42), (0, -0.05, 0.86), 0.05)
+        for k in range(4):
+            lot.cube('acier_sombre', (0.52, 0.04, 0.38), (0, -0.4 + k * 0.23, 0.86), 0.01)  # ailettes de refroidissement
+        for sx in (-1, 1):
+            lot.cube('quad_lueur', (0.012, 0.7, 0.05), (sx * 0.256, -0.05, 0.98), 0.004)
+        lot.tube('acier_sombre', (-0.36, 1.3, 0.6), (0.36, 1.3, 0.6), 0.16, sg)  # moteur sur l'essieu arrière
+        lot.tube('quad_lueur', (-0.37, 1.3, 0.6), (-0.39, 1.3, 0.6), 0.06, sg)
+        lot.cube('acier_sombre', (0.04, 0.14, 0.12), (0.56, 0.4, 1.12), 0.01)  # trappe de la prise
+        lot.cube('quad_lueur', (0.02, 0.06, 0.06), (0.585, 0.4, 1.12), 0.005)
     # Carénage avant : capot à pans coupés, nez qui plonge, deux phares encastrés.
     _tronc(lot, 'vert', [(-0.55, -1.75), (0.55, -1.75), (0.6, -0.75), (-0.6, -0.75)], 1.05,
            [(-0.42, -1.6), (0.42, -1.6), (0.48, -0.85), (-0.48, -0.85)], 1.45)
@@ -456,6 +470,19 @@ def quad(coll, leger=True):
     T.reperer(coll, 'siege', (0, 0.35, 1.7))
     lot.finir()
     _au_sol(coll)
+    if electrique:
+        # Carrosserie blanche et bleue au lieu du vert.
+        T.PALETTE.setdefault('quad_blanc', '#e2e8ee')
+        T.PALETTE.setdefault('quad_bleu', '#2f73b0')
+        for o in coll.objects:
+            if o.type == 'MESH':
+                for i, m in enumerate(o.data.materials):
+                    nom = m.name.split('.')[0]
+                    if nom in ('vert', 'vert_clair'):
+                        o.data.materials[i] = T.material('quad_blanc')
+                    elif nom == 'vert_fonce':
+                        o.data.materials[i] = T.material('quad_bleu')
+
 
 
 def tank(coll, leger=True):
@@ -773,6 +800,7 @@ def charrette(coll, leger=True):
 
 
 MODELES = {
+    'quad_electrique': lambda c, leger=True: quad(c, leger, electrique=True),
     'buggy': buggy,
     'quad': quad,
     'tank': tank,

@@ -199,6 +199,10 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
   // Manivelle de réamorçage : tourne pendant qu'on l'actionne (sa fenêtre est ouverte).
   crank: { manivelle: spin(4) },
   turbine: { arbre: spin(40) },
+  // Éolienne : le rotor tourne quand elle produit.
+  wind_turbine: { rotor: spin(1.8) },
+  // Disjoncteur : le levier rouge bascule vers le bas quand il s'ouvre (surcharge ou à la main).
+  breaker: { levier: { kind: 'open', angle: 2.5 } },
   generator: { volant: spin(6), ventilateur: spin(14) },
   lab: { carrousel: spin(1.5) },
   // Relais : la parabole balaye doucement ; antenne : anneaux qui tournent en sens contraires.
@@ -217,6 +221,20 @@ export const MOTIONS: Partial<Record<MachineType, GroupMotions>> = {
   turret_plasma: { tourelle: { kind: 'swing', angle: 0.6, period: 8 } },
   arm_electric: { tourelle: { kind: 'swing', angle: 0.9, period: 2.85 } },
   arm_filter: { tourelle: { kind: 'swing', angle: 0.9, period: 2.85 } },
+  // Machines avancées (`blender/scripts/avancees.py`).
+  // Bras industriel : chaîne tourelle > épaule > coude > poignet, chaque articulation suit la précédente.
+  arm_industrial: {
+    tourelle: { kind: 'swing', angle: 0.9, period: 2.2 },
+    epaule: { kind: 'swing', angle: 0.22, period: 2.2, offset: 0.25, parent: 'tourelle' },
+    coude: { kind: 'swing', angle: 0.3, period: 2.2, offset: 0.5, parent: 'epaule' },
+    poignet: { kind: 'swing', angle: 1.2, period: 1.1, parent: 'coude' },
+  },
+  air_compressor: { volant: spin(10) },
+  air_purifier: { helice_g: spin(14), helice_d: spin(-14) },
+  fuel_cell: { helice_pile: spin(16) },
+  fabricator: { plateau: spin(1.2) },
+  quantum_chest: { couvercle: { kind: 'open', angle: 1.9 }, cristal: spin(1.5) },
+  turret_rail: { tourelle: { kind: 'swing', angle: 0.6, period: 8 } },
 };
 
 /**

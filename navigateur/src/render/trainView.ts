@@ -28,6 +28,7 @@ import {
   RAIL_TOP_M,
   boundsOf,
   centerOf,
+  isCurve,
   railPorts,
   lengthOfPiece,
   headingOf,
@@ -61,15 +62,28 @@ import { AUTO_SPEED, autoControl as autoThrottle, findRoute, type Route } from '
 import { bakedModel } from './models';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 
-/** Modèles des pièces qui en ont un (le droit le long d'un axe et la rampe) ; les autres sont dessinées par le code. */
-const RAIL_MODEL: Partial<Record<RailPiece['kind'], string>> = {
+/**
+ * Modèles des pièces de voie (`blender/scripts/ferroviaire.py`). Le virage de 45° est un seul modèle (à gauche, retourné
+ * en miroir pour la droite) ; le droit en diagonale a le sien. Sans modèle chargé, la pièce est dessinée par le code.
+ */
+const RAIL_MODEL: Record<RailPiece['kind'], string> = {
   straight: 'rail_droit',
   ramp: 'rail_rampe',
+  curve_l: 'rail_courbe',
+  curve_r: 'rail_courbe',
 };
-/** Modèle d'une pièce de voie, ou undefined si elle est dessinée par le code (droit en diagonale, virage). */
-export function railModelName(p: RailPiece): string | undefined {
-  return p.kind === 'straight' && p.h % 2 !== 0 ? undefined : RAIL_MODEL[p.kind];
+/** Modèle d'une pièce de voie. */
+export function railModelName(p: RailPiece): string {
+  return p.kind === 'straight' && p.h % 2 !== 0 ? 'rail_diagonal' : RAIL_MODEL[p.kind];
 }
+/** Noms des modèles de voie : le dessin des rails est refait quand l'un d'eux arrive. */
+const RAIL_MODEL_NAMES = [
+  'rail_droit',
+  'rail_rampe',
+  'rail_croisement',
+  'rail_courbe',
+  'rail_diagonal',
+];
 /** Distance (m) jusqu'à laquelle on regarde, devant la locomotive, l'embranchement à prendre (touches gauche / droite). */
 const SWITCH_AHEAD_M = 60;
 /** Nombre maximal de patrons d'une chaîne (clic maintenu). */
@@ -99,6 +113,13 @@ const CAB_GLASS: Partial<
   locomotive_steam: [
     { x: -0.9, y: 3.1, z: -0.985, w: 0.55, h: 0.6 },
     { x: 0.9, y: 3.1, z: -0.985, w: 0.55, h: 0.6 },
+  ],
+  // Baie frontale de chaque cabine (deux vitres de part et d'autre du montant central).
+  locomotive_electric: [
+    { x: -0.66, y: 2.78, z: 3.6, w: 1.16, h: 0.65 },
+    { x: 0.66, y: 2.78, z: 3.6, w: 1.16, h: 0.65 },
+    { x: -0.66, y: 2.78, z: -3.6, w: 1.16, h: 0.65 },
+    { x: 0.66, y: 2.78, z: -3.6, w: 1.16, h: 0.65 },
   ],
 };
 const glassMaterial = new THREE.MeshStandardMaterial({
@@ -414,16 +435,39 @@ export class TrainView {
 
   // --- Dessin ------------------------------------------------------------------------------------
 
-  /** Le modèle d'une pièce, recentré sur le milieu de sa voie (et non sur sa boîte englobante). */
+  /**
+   * Le modèle d'une pièce, posé par l'origine de son fichier (et non par le centre de sa boîte englobante) : le milieu
+   * de la voie pour le droit et la rampe, le port 0 pour le virage.
+   */
   private railModel(p: RailPiece): ReturnType<typeof bakedModel> {
-    const name = railModelName(p);
-    const m = name ? bakedModel(name) : null;
+    const m = bakedModel(railModelName(p));
     if (!m) return null;
     return { ...m, min: { x: -m.size.x / 2, y: m.min.y, z: -m.size.z / 2 } };
   }
 
   private addPiece(mb: MeshBuilder, p: RailPiece, tint?: Rgb): void {
     const model = this.railModel(p);
+    if (model && isCurve(p.kind)) {
+      // Virage : origine du modèle au port 0, tourné du cap de la pièce (pas de 45°), miroir pour le virage à droite.
+      mb.model(
+        model,
+        p.x,
+        p.level,
+        p.z,
+        p.h / 2,
+        RAIL_SCALE,
+        tint,
+        tint ? 0.55 : 0,
+        p.kind === 'curve_r',
+      );
+      return;
+    }
+    if (model && p.kind === 'straight' && p.h % 2 !== 0) {
+      // Droit en diagonale : centré sur le milieu de la voie, tourné de 45° (3 × 45°…).
+      const c = centerOf(p);
+      mb.model(model, c.x, p.level, c.z, p.h / 2, RAIL_SCALE, tint, tint ? 0.55 : 0);
+      return;
+    }
     if (model) {
       const c = centerOf(p);
       // Quarts de tour du modèle : un droit le long de z (cap 0 ou 4) n'est pas tourné ; une rampe monte vers −z au cap 4.
@@ -837,9 +881,7 @@ export class TrainView {
     this.lastGraph = graph;
     // Le dessin des rails est refait quand la voie change (nouveau graphe) ou quand un modèle arrive.
     // Le dessin est refait quand un modèle de voie arrive (chargés après la partie).
-    const key = ['rail_droit', 'rail_virage', 'rail_rampe', 'rail_croisement', 'rail_virage_45']
-      .map((n) => (bakedModel(n) ? 1 : 0))
-      .join('');
+    const key = RAIL_MODEL_NAMES.map((n) => (bakedModel(n) ? 1 : 0)).join('');
     if (graph !== this.builtFor || key !== this.railsKey) {
       this.builtFor = graph;
       this.railsKey = key;

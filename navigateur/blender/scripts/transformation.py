@@ -1700,9 +1700,56 @@ def presse_plastique_t2(coll, leger=True):
     T.poser_au_sol(coll, 1.5)
 
 
+T.PALETTE.setdefault('assembleur_t3', '#34507a')
+T.PALETTE.setdefault('assembleur_t3_clair', '#4c6c99')
+T.PALETTE.setdefault('assembleur_t3_bras', '#e0782e')
+T.PALETTE.setdefault('assembleur_t3_lumiere', '#5fe0e8')
+T.PALETTE.setdefault('type_violet', '#9a6ad6')
+
+
+def assembleur_avance(coll, leger=True):
+    """Assembleur avancé (T3) : 4 x 4 cases, même base que l'assembleur T2 (agrandi pareil), sortie devant (-Y).
+
+    Variante reconnaissable de l'assembleur : caisson, armoire et transformateur bleu nuit, bras robots orange (au lieu de
+    jaunes), moteur orange ; bandeau lumineux cyan en haut de la façade et sur l'établi (`voyant_bandeau_*`, pulse en
+    marche) ; à gauche du hublot, quatre voyants de couleur (vert, bleu, orange, violet) pour ses quatre types de recettes
+    (`voyant_types_*`). Pièces mobiles et pivots identiques à l'assembleur T2 (`bras1_`, `bras2_`, `plateau_`,
+    `ventilateur_`), qui travaillent deux fois plus vite (voir `partMotions.ts`).
+    """
+    assembleur_t2(coll, leger)
+    teintes = {'bleu': 'assembleur_t3_bras', 'jaune': 'assembleur_t3_bras', 'orange': 'assembleur_t3_lumiere'}
+    corps = {'caisson', 'armoire_porte', 'transformateur'}
+    for o in list(coll.objects):
+        if o.type != 'MESH':
+            continue
+        base = o.name.split('.')[0]
+        for i, m in enumerate(o.data.materials):
+            nom = m.name.split('.')[0]
+            if base in corps and nom == 'acier':
+                o.data.materials[i] = T.material('assembleur_t3')
+            elif base.startswith(('bras1', 'bras2', 'moteur')) and nom in teintes:
+                o.data.materials[i] = T.material(teintes[nom])
+            elif base == 'pieces_jaune':
+                o.data.materials[i] = T.material('assembleur_t3_bras')
+    # Façade : bandeau lumineux en haut, quatre voyants de types à gauche du hublot (repères du modèle T2, avant agrandissement).
+    yf = -0.25
+    lot = T.Lot(coll, 'pieces_t3')
+    vo = T.Lot(coll, 'voyant_bandeau')
+    lot.cube('assembleur_t3_clair', (2.3, 0.05, 0.12), (0, yf - 0.03, 1.66), 0.01)
+    vo.cube('assembleur_t3_lumiere', (2.1, 0.03, 0.05), (0, yf - 0.06, 1.66), 0.005)
+    vo.cube('assembleur_t3_lumiere', (2.2, 0.03, 0.035), (0, -1.225, 0.8), 0.004)  # liseré de l'établi
+    lot.cube('acier_sombre', (0.5, 0.04, 0.3), (-0.78, yf - 0.02, 1.3), 0.01)
+    ty = T.Lot(coll, 'voyant_types')
+    for k, c in enumerate(('vert', 'bleu', 'assembleur_t3_bras', 'type_violet')):
+        ty.cube(c, (0.08, 0.03, 0.16), (-0.96 + k * 0.12, yf - 0.05, 1.3), 0.008)
+    for l in (lot, vo, ty):
+        l.finir()
+
+
 MODELES = {'estampeuse_t1': estampeuse_t1, 'assembleur_t2': assembleur_t2, 'concasseur_t1': concasseur_t1,
            'betonniere_t2': betonniere_t2, 'station_lavage_t2': station_lavage_t2, 'constructeur_t2': constructeur_t2,
-           'presse_lourde_t3': presse_lourde_t3, 'presse_plastique_t2': presse_plastique_t2}
+           'presse_lourde_t3': presse_lourde_t3, 'presse_plastique_t2': presse_plastique_t2,
+           'assembleur_avance': assembleur_avance}
 
 
 
@@ -1711,6 +1758,7 @@ MODELES = {'estampeuse_t1': estampeuse_t1, 'assembleur_t2': assembleur_t2, 'conc
 EMPRISES = {
     'estampeuse_t1': (2.0, 2.0, False),
     'assembleur_t2': (2.0, 2.0, False),
+    'assembleur_avance': (2.0, 2.0, False),
     'constructeur_t2': (2.0, 2.0, False),
     'presse_lourde_t3': (2.0, 2.0, False),
 }
@@ -1725,9 +1773,11 @@ def _dans_emprise(fabrique, demi_x, demi_y, recentrer):
 
 MODELES = {nom: (_dans_emprise(fab, *EMPRISES[nom]) if nom in EMPRISES else fab) for nom, fab in MODELES.items()}
 
-def construire():
+def construire(noms=None):
     """Crée, pour chaque modèle, la collection web (légère) et la collection Unity (détaillée)."""
     for nom, fabrique in MODELES.items():
+        if noms and nom not in noms:
+            continue
         fabrique(T.collection(nom), leger=True)
         unity = T.collection(nom + '_unity')
         fabrique(unity, leger=False)
@@ -1735,9 +1785,11 @@ def construire():
         bpy.context.view_layer.layer_collection.children[unity.name].hide_viewport = True
 
 
-def exporter():
+def exporter(noms=None):
     export = os.path.join(ROOT, 'export')
     for nom in MODELES:
+        if noms and nom not in noms:
+            continue
         print('export web   :', T.export_glb(bpy.data.collections[nom], export))
         print('export Unity :', T.export_glb(bpy.data.collections[nom + '_unity'], os.path.join(export, 'unity'), nom))
 

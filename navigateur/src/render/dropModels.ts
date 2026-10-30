@@ -27,6 +27,7 @@ const EQUIPMENT_SHAPES: Record<string, DropShape> = {
   compass: 'boussole',
   backpack: 'sac_a_dos',
   hood: 'capuche',
+  jacket: 'veste',
   trousers: 'pantalon',
   boots: 'bottes',
   gloves: 'gants',
@@ -36,8 +37,6 @@ const EQUIPMENT_SHAPES: Record<string, DropShape> = {
   rifle_magazine: 'chargeur_fusil',
   sniper_magazine: 'chargeur_sniper',
 };
-/** Armures 3 et 5 : en attendant leurs modèles, la forme de l'armure 2 et de l'armure 4. */
-const PROVISIONAL_ARMOR: Record<number, number> = { 3: 2, 5: 4 };
 /** Pièces des armures 1 à 5 : une forme par palier et par emplacement (détails propres au palier). */
 const ARMOR_SHAPES = Object.fromEntries(
   ([1, 2, 3, 4, 5] as const).flatMap((n) =>
@@ -48,44 +47,53 @@ const ARMOR_SHAPES = Object.fromEntries(
         ['legs', 'jambieres'],
         ['feet', 'bottes'],
       ] as const
-    ).map(([slot, shape]) => [
-      `${n}_${slot}`,
-      `armure${PROVISIONAL_ARMOR[n] ?? n}_${shape}` as DropShape,
-    ]),
+    ).map(([slot, shape]) => [`${n}_${slot}`, `armure${n}_${shape}` as DropShape]),
   ),
 ) as Record<string, DropShape>;
 
-/** Objets intermédiaires des paliers 3 à 5 : forme provisoire d'un objet voisin en attendant leur modèle propre. */
-const PROVISIONAL_SHAPES: Record<string, DropShape> = {
+/** Objets intermédiaires des paliers 3 à 5 qui ont leur forme propre (`blender/scripts/objets.py`). */
+const OWN_SHAPES: Record<string, DropShape> = {
+  chassis_simple: 'chassis_simple',
+  chassis_steel: 'chassis_renforce',
+  chassis_alu: 'chassis_leger',
+  chassis_composite: 'chassis_composite',
+  glass: 'vitre',
+  armored_glass: 'vitre_blindee',
+  graphite: 'graphite',
+  lithium_salt: 'sel_lithium',
+  carbon_fiber: 'fibre_carbone',
+  kit_circuit: 'kit_circuit',
+  circuit_advanced: 'circuit_avance',
+  microcontroller: 'microcontroleur',
+  solar_cell: 'cellule_solaire',
+  graphite_filter: 'filtre_graphite',
+  battery_lithium: 'batterie_lithium',
+  battery_portable: 'batterie_portable',
   aluminium_rod: 'tige',
-  chassis_simple: 'moteur',
-  chassis_steel: 'moteur',
-  chassis_alu: 'moteur',
-  chassis_composite: 'moteur',
-  glass: 'verre',
-  armored_glass: 'verre',
-  graphite: 'caillou',
-  lithium_salt: 'sable',
-  carbon_fiber: 'bobine',
-  kit_circuit: 'puce',
-  repair_kit: 'conteneur',
-  battery_portable: 'conteneur',
-  circuit_advanced: 'puce',
-  microcontroller: 'puce',
-  solar_cell: 'plaque',
-  graphite_filter: 'bloc',
-  battery_lithium: 'conteneur',
-  fusion_capsule: 'conteneur',
-  supra_magnet: 'conteneur',
-  quantum_crystal: 'conteneur',
-  deuterium: 'baril',
-  tritium: 'baril',
-  liquid_nitrogen: 'baril',
+  repair_kit: 'kit_reparation',
+  fusion_capsule: 'capsule_fusion',
+  supra_magnet: 'aimant_supra',
+  quantum_crystal: 'cristal_quantique',
+  deuterium: 'deuterium',
+  tritium: 'tritium',
+  liquid_nitrogen: 'azote_liquide',
+  // Objets qui partageaient une forme : chacun la sienne.
+  aluminium_ingot: 'lingot_alu',
+  zamak_ingot: 'lingot_zamak',
+  cable_insulated: 'cable',
+  plastic_insulator: 'isolant',
+  barrel_empty: 'baril_vide',
+  barrel_water: 'baril_eau',
+  barrel_oil: 'baril_petrole',
+  crude_oil: 'petrole_brut',
+  uranium_rod: 'barre_uranium',
+  nuclear_waste: 'dechets_nucleaires',
 };
 
 /** Forme d'un objet du sac posé au sol (les machines ne sont pas ici : voir `dropMachine`). */
 export function dropShape(itemId: string): DropShape {
   const item = baseOf(itemId);
+  if (OWN_SHAPES[item]) return OWN_SHAPES[item];
   if (item === 'carapace') return 'carapace';
   if (item === 'living_tissue') return 'tissu_vivant';
   if (item === 'wood') return 'bois';
@@ -94,26 +102,32 @@ export function dropShape(itemId: string): DropShape {
     return 'minerai';
   if (item === 'silica_sand' || item === 'silicon_raw') return 'sable';
   if (item.endsWith('_ingot')) return 'lingot';
-  if (item === 'iron_gear' || item === 'mould_gear') return 'engrenage';
-  if (item === 'copper_wire' || item === 'cable_insulated' || item === 'mould_wire')
-    return 'bobine';
+  if (item === 'mould_plate') return 'moule_plaque';
+  if (item === 'mould_gear') return 'moule_engrenage';
+  if (item === 'mould_wire') return 'moule_fil';
+  if (item === 'iron_gear') return 'engrenage';
+  if (item === 'copper_wire' || item === 'cable_insulated') return 'bobine';
   if (item.endsWith('_plate')) return 'plaque';
   if (item === 'fiber') return 'fibre';
   if (item === 'cloth') return 'tissu';
   if (item.startsWith('barrel_') || item === 'crude_oil') return 'baril';
-  if (item.startsWith('science_pack') || item === 'combat_pack') return 'science';
+  if (item === 'combat_pack') return 'science_combat';
+  if (item.startsWith('science_pack')) {
+    // Un flacon par palier : `science_pack` (T1), `science_pack_2` à `science_pack_5`.
+    const tier = /^science_pack_([2-5])$/.exec(item)?.[1] ?? '1';
+    return `science_${tier}` as DropShape;
+  }
   if (item === 'silicon_chip' || item === 'plastic_insulator') return 'puce';
   if (item === 'concrete_block') return 'bloc';
   if (item.startsWith('uranium_') || item === 'nuclear_waste') return 'conteneur';
   if (item === 'contaminated_glass') return 'verre';
   if (item === 'rubber') return 'caoutchouc';
-  if (item === 'iron_rod' || item === 'steel_rod') return 'tige';
+  if (item === 'iron_rod' || item === 'steel_rod' || item === 'aluminium_rod') return 'tige';
   if (item === 'motor') return 'moteur';
   if (item === 'motor_heavy') return 'moteur_renforce';
   if (item === 'res_water') return 'eau';
-  if (PROVISIONAL_SHAPES[item]) return PROVISIONAL_SHAPES[item];
-  if (item === 'exoskeleton') return 'pantalon';
-  if (item === 'jetpack') return 'sac_a_dos';
+  if (item === 'exoskeleton') return 'exosquelette';
+  if (item === 'jetpack') return 'propulseur';
   const own = EQUIPMENT_SHAPES[item];
   if (own) return own;
   const armor = /^armor(1|2|3|4|5)_(head|torso|legs|feet)$/.exec(item);
@@ -129,7 +143,7 @@ const MATERIAL_FILE: Record<string, string> = {
   stone: 'pierre',
   concrete: 'beton',
   aluminium: 'aluminium',
-  armored: 'aluminium',
+  armored: 'blinde',
 };
 /** Ressources du monde (objets `res_*` du mode Créatif) : modèle du décor qu'elles posent. */
 const RESOURCE_MODELS: Record<string, string> = {
@@ -171,7 +185,7 @@ export function iconModelName(item: string): string | null {
 }
 
 /** Objets sans modèle 3D (ils gardent la caisse) : aucun pour l'instant, chaque objet a sa forme ou son modèle. */
-export const NO_MODEL_ITEMS: readonly string[] = ['jacket'];
+export const NO_MODEL_ITEMS: readonly string[] = [];
 
 /** Outils et armes tenus : fichier du modèle et façon de le charger. */
 export const HELD_MODELS: Record<string, { kind: 'pick' | 'weapon'; file: string }> = {

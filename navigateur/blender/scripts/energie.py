@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(ROOT, 'blender', 'lib'))
 import terra as T  # noqa: E402
+sys.path.insert(0, HERE)
 
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
@@ -636,8 +637,474 @@ def antenne_quantique(coll, leger=True):
     T.poser_au_sol(coll, 1.5)
 
 
+# --- Lot énergie au style doux (octobre 2026) : poteaux haute et très haute tension, lampadaire, éolienne. -----------
+# Formes arrondies et ombrage lisse (aides de `outils.py`, `T.adoucir`). Ces modèles dépassent un peu de leur emprise
+# (bras, rotor) : le jeu les met à l'échelle sur leur seule hauteur (`OVERHANG_MODELS` dans `factoryView.ts`).
+
+TEINTES_DOUX = {
+    'socle_beton': '#b9b2a4',
+    'socle_beton_sombre': '#958e80',
+    'pylone': '#9aa6b2',
+    'pylone_sombre': '#6f7b88',
+    'isolateur_verre': '#7fc4cf',
+    'isolateur_cuivre': '#d08a4a',
+    'panneau_jaune': '#e9b949',
+    'panneau_noir': '#2e3138',
+    'lampadaire': '#3e5249',
+    'lampadaire_clair': '#5b7266',
+    'lampe_globe': '#ffe7a3',
+    'eolienne': '#eef1f4',
+    'eolienne_gris': '#c5ccd4',
+    'eolienne_rouge': '#d0533f',
+}
+for _k, _v in TEINTES_DOUX.items():
+    T.PALETTE.setdefault(_k, _v)
+BRILLANTS_DOUX = {'isolateur_verre': 0.15, 'isolateur_cuivre': 0.35, 'pylone': 0.5, 'eolienne': 0.4, 'lampe_globe': 0.2}
+
+
+def _doux(coll):
+    """Finition du style doux : métal et verre un peu brillants, ombrage lisse."""
+    for nom, rugosite in BRILLANTS_DOUX.items():
+        m = bpy.data.materials.get(nom)
+        if m:
+            bsdf = next(nd for nd in m.node_tree.nodes if nd.type == 'BSDF_PRINCIPLED')
+            bsdf.inputs['Roughness'].default_value = rugosite
+    T.adoucir(coll)
+
+
+def _fut(lot, mat, z0, z1, r0, r1, n, xy=(0.0, 0.0)):
+    """Fût rond effilé (rayon r0 en bas, r1 en haut), bouts légèrement chanfreinés."""
+    import outils as O
+    x, y = xy
+    k = min(r0, r1) * 0.25
+    _sec = lambda z, r: ((x, y, z), O.X, O.Y, r, r, r)  # noqa: E731
+    O._loft(lot, mat, [_sec(z0, r0 - k), _sec(z0 + k, r0), _sec(z1 - k, r1), _sec(z1, r1 - k)], n + 1)
+
+
+def _socle(lot, demi, h, n):
+    """Socle en béton arrondi, avec un léger gradin."""
+    import outils as O
+    O._rond(lot, 'socle_beton_sombre', (0, 0, 0), (0, 0, 0.08), demi + 0.06, demi + 0.06, n, k=0.03, r=0.12)
+    O._rond(lot, 'socle_beton', (0, 0, 0.06), (0, 0, h), demi, demi, n, k=0.06, r=0.14)
+
+
+def _chaine(lot, p, disques, r, n):
+    """Chaîne d'isolateurs suspendue sous le point `p` (disques de verre, chapeau et pince en cuivre) ; renvoie le bas."""
+    import outils as O
+    x, y, z = p
+    O._cyl(lot, 'pylone_sombre', (x, y, z), (x, y, z - 0.12), 0.035, n)
+    zk = z - 0.12
+    m = max(2, n - 1)
+    for _ in range(disques):
+        O._cyl(lot, 'isolateur_verre', (x, y, zk), (x, y, zk - 0.06), r, m, k=0.02)
+        O._cyl(lot, 'isolateur_verre', (x, y, zk - 0.06), (x, y, zk - 0.11), r * 0.45, m)
+        zk -= 0.11
+    O._cyl(lot, 'isolateur_cuivre', (x, y, zk), (x, y, zk - 0.1), 0.06, n)
+    return Vector((x, y, zk - 0.1))
+
+
+def _panneau_danger(lot, p, n):
+    """Petit panneau jaune « danger électrique » (éclair noir) posé sur une face tournée vers -Y."""
+    import outils as O
+    x, y, z = p
+    O._rond(lot, 'panneau_jaune', (x, y, z - 0.16), (x, y, z + 0.16), 0.14, 0.012, n, k=0.004, r=0.03)
+    for a, b in (((x + 0.04, z + 0.11), (x - 0.02, z)), ((x - 0.02, z), (x + 0.03, z)), ((x + 0.03, z), (x - 0.04, z - 0.11))):
+        O._rond(lot, 'panneau_noir', (a[0], y - 0.014, a[1]), (b[0], y - 0.014, b[1]), 0.018, 0.004, 2, k=0.002, r=0.004)
+
+
+def poteau_haute_tension(coll, leger=True):
+    """Poteau haute tension (`pole_hv`) : 2 x 2 cases, 6 m (12 unités) de haut.
+
+    Mât d'acier effilé sur un socle en béton, trois bras en escalier (plus larges vers le bas), une chaîne d'isolateurs
+    en verre au bout de chaque bras et une sur la tête du mât ; panneau « danger » sur le mât. Les câbles du jeu partent
+    de l'isolateur de tête (repère `accroche_cable`). Rien ne bouge.
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    _socle(lot, 0.55, 0.45, n)
+    _fut(lot, 'pylone', 0.45, 11.6, 0.2, 0.11, n)
+    for z in (0.75, 3.5):
+        r = 0.2 - 0.09 * (z - 0.45) / 11.15
+        _fut(lot, 'pylone_sombre', z - 0.05, z + 0.05, r + 0.03, r + 0.03, n)
+    _panneau_danger(lot, (0, -0.18, 2.4), n)
+    for i, (z, w) in enumerate(((11.0, 0.9), (10.1, 1.25), (9.2, 1.6))):
+        O._rond(lot, 'pylone', (-w, 0, z), (w, 0, z), 0.07, 0.09, n, k=0.03)
+        for s in (-1, 1):
+            O._rond(lot, 'pylone_sombre', (s * w * 0.55, 0, z - 0.07), (s * 0.08, 0, z - 0.55), 0.04, 0.04, n, k=0.015)
+            _chaine(lot, (s * (w - 0.08), 0, z - 0.06), 3 if i else 2, 0.13, n)
+    O._cyl(lot, 'pylone_sombre', (0, 0, 11.6), (0, 0, 11.68), 0.16, n)
+    tete = Vector((0, 0, 11.68))
+    zk = tete.z
+    for _ in range(3):  # isolateur de tête, debout
+        O._cyl(lot, 'isolateur_verre', (0, 0, zk), (0, 0, zk + 0.06), 0.13, n, k=0.02)
+        O._cyl(lot, 'isolateur_verre', (0, 0, zk + 0.06), (0, 0, zk + 0.11), 0.06, n)
+        zk += 0.11
+    O._cyl(lot, 'isolateur_cuivre', (0, 0, zk), (0, 0, zk + 0.1), 0.06, n)
+    T.reperer(coll, 'accroche_cable', (0, 0, zk + 0.1))
+    lot.finir()
+    T.poser_au_sol(coll, 1.0)
+    _doux(coll)
+
+
+def poteau_tres_haute_tension(coll, leger=True):
+    """Poteau très haute tension (`pole_uhv`) : 2 x 2 cases, pylône de 10 m (20 unités).
+
+    Pylône en treillis : quatre montants arrondis qui se resserrent vers le haut, croisillons sur les quatre faces, trois
+    bras larges (le milieu est le plus large), chaînes d'isolateurs suspendues au bout des bras, pointe avec le câble de
+    garde. Plots en béton sous les montants. Les câbles du jeu partent de la pointe (repère `accroche_cable`).
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    H, ZB = 19.2, 13.6  # haut des montants, début du fût droit (au-dessus, les montants restent parallèles)
+    demi = lambda z: 0.85 - 0.55 * min(z, ZB) / ZB  # noqa: E731  (demi-écart des montants à la hauteur z)
+    coins = ((1, 1), (-1, 1), (-1, -1), (1, -1))
+    for sx, sy in coins:
+        O._rond(lot, 'socle_beton', (sx * 0.85, sy * 0.85, 0), (sx * 0.85, sy * 0.85, 0.35), 0.17, 0.17, n, k=0.04)
+    # Montants (deux tronçons : la partie qui se resserre, puis le fût droit).
+    for sx, sy in coins:
+        for z0, z1 in ((0.3, ZB), (ZB, H)):
+            O._rond(lot, 'pylone', (sx * demi(z0), sy * demi(z0), z0), (sx * demi(z1), sy * demi(z1), z1), 0.06, 0.06, n,
+                    k=0.02)
+    # Croisillons en X et entretoises, sur les quatre faces.
+    niveaux = [0.4, 2.6, 4.9, 7.0, 8.9, 10.6, 12.2, ZB, 15.0, 16.8, 18.0, H]
+    faces = (((1, -1), (1, 1)), ((1, 1), (-1, 1)), ((-1, 1), (-1, -1)), ((-1, -1), (1, -1)))
+    for z0, z1 in zip(niveaux, niveaux[1:]):
+        for (ax, ay), (bx, by) in faces:
+            a0 = (ax * demi(z0), ay * demi(z0), z0)
+            b0 = (bx * demi(z0), by * demi(z0), z0)
+            a1 = (ax * demi(z1), ay * demi(z1), z1)
+            b1 = (bx * demi(z1), by * demi(z1), z1)
+            lot.barre('pylone_sombre', a0, b1, 0.05, 0.01)
+            lot.barre('pylone_sombre', b0, a1, 0.05, 0.01)
+            lot.barre('pylone', a1, b1, 0.06, 0.012)
+    # Bras : poutre principale, poutre basse en biais, croisillons ; chaîne d'isolateurs au bout.
+    w0 = demi(ZB)
+    for z, w in ((15.0, 2.2), (16.8, 2.7), (18.6, 1.7)):
+        for s in (-1, 1):
+            for y in (-w0, w0):
+                O._rond(lot, 'pylone', (s * w0, y, z), (s * w, y * 0.3, z), 0.05, 0.05, n, k=0.02)
+                lot.barre('pylone_sombre', (s * w0, y, z - 0.75), (s * w, y * 0.3, z - 0.05), 0.06, 0.01)
+            for k in range(1, 4):
+                x = s * (w0 + (w - w0) * k / 4)
+                lot.barre('pylone_sombre', (x, -w0 * 0.8, z), (x, w0 * 0.8, z), 0.045, 0.008)
+            _chaine(lot, (s * (w - 0.1), 0, z - 0.04), 4 if leger else 6, 0.15, n)
+    # Pointe et câble de garde.
+    for sx, sy in coins:
+        O._rond(lot, 'pylone', (sx * w0, sy * w0, H), (0, 0, H + 0.75), 0.04, 0.04, n, k=0.015)
+    O._cyl(lot, 'isolateur_cuivre', (0, 0, H + 0.7), (0, 0, H + 0.82), 0.07, n)
+    T.reperer(coll, 'accroche_cable', (0, 0, H + 0.82))
+    _panneau_danger(lot, (0, -demi(1.6) - 0.07, 1.6), n)
+    lot.finir()
+    T.poser_au_sol(coll, 1.0)
+    _doux(coll)
+
+
+def lampadaire(coll, leger=True):
+    """Lampadaire (`lamp`) : 1 x 1 case, 3 m (6 unités) de haut.
+
+    Socle en béton, mât vert sombre effilé avec une bague décorative, crosse qui avance la tête vers l'avant (-Y), tête en
+    chapeau arrondi. Le globe s'allume quand le lampadaire est alimenté : pièce `voyant_lampe_*` (préfixe `voyant`, sa
+    couleur pâlit à l'arrêt et s'éclaire en marche) ; la lumière de nuit est ajoutée par le jeu.
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot, globe = T.Lot(coll, 'pieces'), T.Lot(coll, 'voyant_lampe')
+    O._rond(lot, 'socle_beton', (0, 0, 0), (0, 0, 0.22), 0.3, 0.3, n, k=0.04, r=0.1)
+    _fut(lot, 'lampadaire', 0.22, 0.75, 0.13, 0.11, n)
+    _fut(lot, 'lampadaire_clair', 0.75, 0.85, 0.135, 0.135, n)
+    _fut(lot, 'lampadaire', 0.85, 5.3, 0.08, 0.055, n)
+    _fut(lot, 'lampadaire_clair', 2.6, 2.68, 0.085, 0.085, n)
+    # Crosse : quelques segments arrondis qui décrivent un quart de cercle vers -Y.
+    R, zc = 0.55, 5.3
+    pts = [Vector((0, 0, zc - 0.02))] + [Vector((0, -(R - R * math.cos(a)), zc + R * math.sin(a)))
+                                           for a in [k * math.pi / 2 / 6 for k in range(1, 7)]]
+    for a, b in zip(pts, pts[1:]):
+        O._cyl(lot, 'lampadaire', a, b + (b - a).normalized() * 0.02, 0.05, n, k=0.005)
+    bout = pts[-1]  # (0, -0.55, 5.85) : la crosse redescend un peu vers la tête
+    tete = Vector((0, -0.62, 5.72))
+    O._cyl(lot, 'lampadaire', bout, tete, 0.045, n)
+    # Tête : chapeau arrondi, globe dessous.
+    O._loft(lot, 'lampadaire', [((tete.x, tete.y, tete.z + 0.08), O.X, O.Y, 0.06, 0.06, 0.06),
+                                ((tete.x, tete.y, tete.z), O.X, O.Y, 0.18, 0.18, 0.18),
+                                ((tete.x, tete.y, tete.z - 0.08), O.X, O.Y, 0.25, 0.25, 0.25),
+                                ((tete.x, tete.y, tete.z - 0.11), O.X, O.Y, 0.23, 0.23, 0.23)], n + 1)
+    O._loft(globe, 'lampe_globe', [((tete.x, tete.y, tete.z - 0.1), O.X, O.Y, 0.17, 0.17, 0.17),
+                                   ((tete.x, tete.y, tete.z - 0.22), O.X, O.Y, 0.15, 0.15, 0.15),
+                                   ((tete.x, tete.y, tete.z - 0.3), O.X, O.Y, 0.06, 0.06, 0.06)], n + 1)
+    for l in (lot, globe):
+        l.finir()
+    T.poser_au_sol(coll, 0.5)
+    _doux(coll)
+
+
+def eolienne(coll, leger=True):
+    """Éolienne (`wind_turbine`) : 2 x 2 cases ; tour de 5 m, rotor de 3 m de diamètre (tout en haut : 6,3 m).
+
+    Socle en béton, tour blanche effilée, nacelle arrondie, moyeu en ogive vers l'avant (-Y), trois pales fines et un peu
+    vrillées, bout des pales rouge. Pièce mobile : groupe `rotor_` (moyeu et pales), qui tourne autour de l'axe Y du
+    `pivot_rotor` quand l'éolienne produit.
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot, rotor = T.Lot(coll, 'pieces'), T.Lot(coll, 'rotor')
+    _socle(lot, 0.7, 0.35, n)
+    ZN = 9.6  # axe du rotor
+    _fut(lot, 'eolienne', 0.35, ZN - 0.25, 0.28, 0.14, n)
+    _fut(lot, 'eolienne_gris', 0.35, 0.5, 0.31, 0.31, n)
+    _fut(lot, 'eolienne_gris', ZN - 0.45, ZN - 0.3, 0.17, 0.17, n)
+    # Nacelle : volume arrondi allongé selon Y, un peu plus haut derrière.
+    O._loft(lot, 'eolienne', [((0, -0.5, ZN), O.X, O.Z, 0.17, 0.17, 0.15),
+                              ((0, -0.38, ZN), O.X, O.Z, 0.24, 0.25, 0.2),
+                              ((0, 0.3, ZN + 0.02), O.X, O.Z, 0.26, 0.28, 0.22),
+                              ((0, 0.75, ZN + 0.02), O.X, O.Z, 0.2, 0.22, 0.17),
+                              ((0, 0.86, ZN + 0.02), O.X, O.Z, 0.1, 0.12, 0.09)], n + 1)
+    O._rond(lot, 'eolienne_gris', (0, -0.1, ZN + 0.28), (0, 0.55, ZN + 0.28), 0.12, 0.025, n, k=0.01)  # trappe
+    # Rotor : ogive du moyeu et trois pales.
+    yh = -0.62
+    O._loft(rotor, 'eolienne', [((0, yh + 0.14, ZN), O.X, O.Z, 0.16, 0.16, 0.16),
+                                ((0, yh, ZN), O.X, O.Z, 0.19, 0.19, 0.19),
+                                ((0, yh - 0.18, ZN), O.X, O.Z, 0.14, 0.14, 0.14),
+                                ((0, yh - 0.3, ZN), O.X, O.Z, 0.05, 0.05, 0.05)], n + 1)
+    Ry = Vector((0, 1, 0))
+    L = 2.95
+    for k in range(3):
+        a = math.pi / 2 + k * 2 * math.pi / 3
+        d = Vector((math.cos(a), 0, math.sin(a)))
+        corde = Vector((-math.sin(a), 0, math.cos(a)))
+        sections = []
+        for t, c, e in ((0.12, 0.08, 0.06), (0.35, 0.2, 0.05), (0.7, 0.24, 0.04), (1.6, 0.17, 0.03), (2.5, 0.1, 0.02),
+                        (L, 0.05, 0.012)):
+            tw = 0.5 - 0.35 * t / L  # vrillage : la pale se met à plat vers le bout
+            u = (corde * math.cos(tw) + Ry * math.sin(tw)).normalized()
+            v = d.cross(u).normalized()
+            sections.append((Vector((0, yh, ZN)) + d * t, u, v, c, e, e))
+        coupe = 4
+        O._loft(rotor, 'eolienne', [(Vector(s[0]), s[1], s[2], s[3], s[4], s[5]) for s in sections[:coupe + 1]], n, (True, False))
+        O._loft(rotor, 'eolienne_rouge', [(Vector(s[0]), s[1], s[2], s[3], s[4], s[5]) for s in sections[coupe:]], n,
+                (False, True))
+    T.pivot(coll, 'pivot_rotor', (0, yh, ZN), (0, 1, 0))
+    for l in (lot, rotor):
+        l.finir()
+    T.poser_au_sol(coll, 1.0)
+    _doux(coll)
+
+
+# --- Lot énergie 2 au style doux : transformateur, disjoncteur, panneau solaire, accumulateur de base. -------------
+TEINTES_DOUX2 = {
+    'transfo': '#6f8796',
+    'transfo_sombre': '#4f6371',
+    'transfo_clair': '#93aab8',
+    'coffret': '#c9cdd2',
+    'coffret_sombre': '#8f969e',
+    'levier_rouge': '#d0533f',
+    'solaire': '#2f5a9e',
+    'solaire_ligne': '#8fb4e6',
+    'solaire_cadre': '#d3d8de',
+    'accu': '#5f7a5a',
+    'accu_sombre': '#435740',
+    'voyant_vert': '#6be08f',
+    'voyant_ambre': '#f2b33d',
+}
+for _k, _v in TEINTES_DOUX2.items():
+    T.PALETTE.setdefault(_k, _v)
+BRILLANTS_DOUX.update({'solaire': 0.12, 'transfo': 0.45, 'coffret': 0.4, 'levier_rouge': 0.35})
+
+
+def _borne_douce(coll, lot, p, h, n):
+    """Borne de raccordement arrondie (tige, isolateur en verre, boule en cuivre) ; repère `accroche_cable` sur la boule."""
+    import outils as O
+    x, y, z = p
+    O._cyl(lot, 'pylone_sombre', (x, y, z), (x, y, z + 0.05), 0.07, n)
+    O._cyl(lot, 'pylone', (x, y, z + 0.05), (x, y, z + h), 0.025, n)
+    for k in range(2):
+        zk = z + h - 0.14 + k * 0.06
+        O._cyl(lot, 'isolateur_verre', (x, y, zk), (x, y, zk + 0.035), 0.06, n, k=0.012)
+    c = (x, y, z + h + 0.05)
+    O._loft(lot, 'isolateur_cuivre', [((x, y, z + h), O.X, O.Y, 0.03, 0.03, 0.03), ((x, y, z + h + 0.05), O.X, O.Y, 0.06, 0.06, 0.06),
+                                      ((x, y, z + h + 0.1), O.X, O.Y, 0.03, 0.03, 0.03)], n + 1)
+    T.reperer(coll, 'accroche_cable', c)
+
+
+def transformateur(coll, leger=True):
+    """Transformateur (`transformer`) : 3 x 3 cases, 2,5 m (5 unités) de haut.
+
+    Cuve arrondie sur un socle en béton, radiateurs à ailettes sur les deux côtés, conservateur d'huile (petit cylindre
+    couché) sur le dessus, trois traversées en verre côté haute tension (derrière, plus hautes) et trois côté basse tension
+    (devant, plus petites) ; plaque et panneau « danger » en façade. Le câble s'accroche à la traversée centrale haute.
+    Voyants `voyant_*` (vert) en façade : allumés quand de l'énergie traverse.
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    O._rond(lot, 'socle_beton', (0, 0, 0), (0, 0, 0.3), 1.42, 1.3, n, k=0.05, r=0.14)
+    O._rond(lot, 'transfo', (0, 0, 0.3), (0, 0, 3.3), 0.85, 0.75, n, k=0.1, r=0.22)
+    O._rond(lot, 'transfo_clair', (0, 0, 3.25), (0, 0, 3.45), 0.92, 0.82, n, k=0.06, r=0.24)  # couvercle
+    # Radiateurs : ailettes arrondies sur les flancs ±X, deux collecteurs.
+    for s in (-1, 1):
+        for zc in (0.7, 2.9):
+            O._cyl(lot, 'transfo_sombre', (s * 0.85, 0, zc), (s * 1.3, 0, zc), 0.06, n)
+        for k in range(6 if leger else 9):
+            y = -0.55 + k * 1.1 / (5 if leger else 8)
+            O._rond(lot, 'transfo_clair', (s * 1.07, y, 0.6), (s * 1.07, y, 3.0), 0.22, 0.03, n, k=0.02, r=0.03)
+    # Conservateur d'huile couché sur le dessus, avec son support.
+    O._cyl(lot, 'transfo', (-0.6, 0.45, 4.05), (0.6, 0.45, 4.05), 0.24, n + 1, k=0.08)
+    for x in (-0.4, 0.4):
+        O._rond(lot, 'transfo_sombre', (x, 0.45, 3.45), (x, 0.45, 3.85), 0.05, 0.05, n, k=0.015)
+    # Traversées haute tension (derrière, +Y) et basse tension (devant, -Y).
+    for x in (-0.5, 0, 0.5):
+        y = -0.1
+        O._cyl(lot, 'transfo_sombre', (x, y, 3.45), (x, y, 3.55), 0.11, n)
+        zk = 3.55
+        for _ in range(4):
+            O._cyl(lot, 'isolateur_verre', (x, y, zk), (x, y, zk + 0.06), 0.11, max(2, n - 1), k=0.02)
+            O._cyl(lot, 'isolateur_verre', (x, y, zk + 0.06), (x, y, zk + 0.12), 0.05, max(2, n - 1))
+            zk += 0.12
+        O._cyl(lot, 'isolateur_cuivre', (x, y, zk), (x, y, zk + 0.1), 0.05, n)
+        if x == 0:
+            T.reperer(coll, 'accroche_cable', (x, y, zk + 0.1))
+        yb = -0.55
+        O._cyl(lot, 'transfo_sombre', (x, yb, 3.45), (x, yb, 3.52), 0.08, n)
+        O._cyl(lot, 'isolateur_verre', (x, yb, 3.52), (x, yb, 3.75), 0.06, max(2, n - 1), k=0.02)
+        O._cyl(lot, 'isolateur_cuivre', (x, yb, 3.75), (x, yb, 3.83), 0.04, n)
+    # Façade : plaque, panneau danger, voyants.
+    O._rond(lot, 'transfo_clair', (0, -0.76, 1.3), (0, -0.76, 1.8), 0.35, 0.015, n, k=0.005, r=0.04)
+    _panneau_danger(lot, (0, -0.765, 2.4), n)
+    vo = T.Lot(coll, 'voyant_flux')
+    for x in (-0.18, 0, 0.18):
+        O._cyl(vo, 'voyant_vert', (x, -0.75, 1.05), (x, -0.8, 1.05), 0.045, n)
+    for l in (lot, vo):
+        l.finir()
+    T.poser_au_sol(coll, 1.5)
+    _doux(coll)
+
+
+def disjoncteur(coll, leger=True):
+    """Disjoncteur (`breaker`) : 2 x 2 cases, 1,5 m (3 unités) de haut.
+
+    Coffret gris arrondi sur deux pieds, toit débordant, gros levier rouge en façade (groupe `levier_`, pivot `pivot_levier`
+    axe X) : levé quand le disjoncteur est fermé, il bascule vers le bas quand il s'ouvre (surcharge ou à la main). Voyant
+    ambre `voyant_*`, deux bornes sur le toit (le câble s'accroche à celle de gauche).
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot, lev = T.Lot(coll, 'pieces'), T.Lot(coll, 'levier')
+    O._rond(lot, 'socle_beton', (0, 0, 0), (0, 0, 0.16), 0.95, 0.75, n, k=0.04, r=0.1)
+    for x in (-0.55, 0.55):
+        O._rond(lot, 'coffret_sombre', (x, 0.1, 0.16), (x, 0.1, 0.55), 0.1, 0.1, n, k=0.03)
+    O._rond(lot, 'coffret', (0, 0.1, 0.55), (0, 0.1, 2.55), 0.8, 0.5, n, k=0.08, r=0.18)
+    O._rond(lot, 'coffret_sombre', (0, 0.05, 2.5), (0, 0.05, 2.66), 0.9, 0.62, n, k=0.05, r=0.16)  # toit
+    # Porte : cadre en relief, plaque, panneau danger.
+    O._rond(lot, 'coffret_sombre', (0, -0.41, 0.75), (0, -0.41, 2.35), 0.66, 0.02, n, k=0.01, r=0.08)
+    O._rond(lot, 'coffret', (0, -0.43, 0.8), (0, -0.43, 2.3), 0.62, 0.02, n, k=0.01, r=0.07)
+    _panneau_danger(lot, (0.38, -0.46, 2.0), n)
+    # Levier : palier, bras et poignée.
+    zp = 1.45
+    O._cyl(lot, 'coffret_sombre', (-0.22, -0.45, zp), (-0.22, -0.56, zp), 0.13, n)
+    O._cyl(lev, 'levier_rouge', (-0.32, -0.6, zp), (-0.12, -0.6, zp), 0.07, n)
+    O._rond(lev, 'levier_rouge', (-0.22, -0.6, zp), (-0.22, -0.66, zp + 0.5), 0.04, 0.04, n, k=0.015)
+    O._loft(lev, 'levier_rouge', [((-0.32, -0.67, zp + 0.53), O.X, O.Y, 0.0, 0.05, 0.05),
+                                  ((-0.3, -0.67, zp + 0.53), O.X, O.Y, 0.0, 0.07, 0.07),
+                                  ((-0.14, -0.67, zp + 0.53), O.X, O.Y, 0.0, 0.07, 0.07),
+                                  ((-0.12, -0.67, zp + 0.53), O.X, O.Y, 0.0, 0.05, 0.05)], n + 1)
+    T.pivot(coll, 'pivot_levier', (-0.22, -0.6, zp), (1, 0, 0))
+    # Voyant ambre et repères « I / O ».
+    vo = T.Lot(coll, 'voyant_etat')
+    O._cyl(vo, 'voyant_ambre', (0.3, -0.44, 1.35), (0.3, -0.5, 1.35), 0.07, n)
+    O._rond(lot, 'panneau_noir', (-0.5, -0.455, zp + 0.42), (-0.5, -0.455, zp + 0.56), 0.012, 0.004, 2, k=0.002, r=0.004)
+    O._cyl(lot, 'panneau_noir', (-0.5, -0.45, zp - 0.45), (-0.5, -0.46, zp - 0.45), 0.06, n)
+    O._cyl(lot, 'coffret', (-0.5, -0.452, zp - 0.45), (-0.5, -0.465, zp - 0.45), 0.04, n)
+    _borne_douce(coll, lot, (-0.45, 0.15, 2.66), 0.35, n)
+    O._cyl(lot, 'pylone_sombre', (0.45, 0.15, 2.66), (0.45, 0.15, 2.71), 0.07, n)
+    O._cyl(lot, 'pylone', (0.45, 0.15, 2.71), (0.45, 0.15, 2.9), 0.025, n)
+    O._cyl(lot, 'isolateur_cuivre', (0.45, 0.15, 2.9), (0.45, 0.15, 2.98), 0.05, n)
+    for l in (lot, lev, vo):
+        l.finir()
+    T.poser_au_sol(coll, 1.0)
+    _doux(coll)
+
+
+def panneau_solaire(coll, leger=True):
+    """Panneau solaire (`solar_panel`) : 3 x 3 cases, 1,2 m (2,4 unités) de haut.
+
+    Grand panneau bleu incliné vers l'avant (-Y), cadre clair arrondi, cellules séparées par des lignes claires, sur un
+    pied central et deux jambes de force ; boîtier de raccordement au pied avec sa borne (le câble s'y accroche).
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    O._rond(lot, 'socle_beton', (0, 0.3, 0), (0, 0.3, 0.14), 0.45, 0.45, n, k=0.03, r=0.1)
+    O._rond(lot, 'pylone', (0, 0.3, 0.14), (0, 0.3, 1.45), 0.08, 0.08, n, k=0.02)
+    a = 0.55  # inclinaison (rad)
+    c = Vector((0, 0.05, 1.6))
+    u = Vector((1, 0, 0))
+    v = Vector((0, math.cos(a), math.sin(a)))  # vers le haut du panneau (derrière)
+    w = u.cross(v)  # normale (vers le ciel et l'avant)
+    W, Hh = 1.44, 1.2
+    for s in (-1, 1):  # jambes de force vers les coins arrière
+        O._rond(lot, 'pylone_sombre', (s * 0.2, 0.3, 0.6), tuple(c + u * s * 0.9 + v * 0.6 - w * 0.06), 0.035, 0.035, n,
+                k=0.01)
+    O._rond(lot, 'pylone_sombre', tuple(c - w * 0.12 - u * 1.0), tuple(c - w * 0.12 + u * 1.0), 0.05, 0.05, n, k=0.015)
+    # Cadre et vitrage : deux plaques arrondies (le loft se fait le long de la normale).
+    O._loft(lot, 'solaire_cadre', [(c - w * 0.06, u, v, W - 0.02, Hh - 0.02, 0.06), (c - w * 0.04, u, v, W, Hh, 0.07),
+                                   (c + w * 0.02, u, v, W, Hh, 0.07), (c + w * 0.035, u, v, W - 0.02, Hh - 0.02, 0.06)], n)
+    O._loft(lot, 'solaire', [(c + w * 0.03, u, v, W - 0.07, Hh - 0.07, 0.03), (c + w * 0.045, u, v, W - 0.08, Hh - 0.08, 0.03)],
+            n)
+    for k in range(1, 6):  # lignes entre les cellules
+        x = -W + 0.07 + k * (2 * W - 0.14) / 6
+        p0, p1 = c + u * x - v * (Hh - 0.08) + w * 0.05, c + u * x + v * (Hh - 0.08) + w * 0.05
+        lot.barre('solaire_ligne', tuple(p0), tuple(p1), 0.018)
+    for k in range(1, 4):
+        y = -Hh + 0.07 + k * (2 * Hh - 0.14) / 4
+        p0, p1 = c - u * (W - 0.08) + v * y + w * 0.05, c + u * (W - 0.08) + v * y + w * 0.05
+        lot.barre('solaire_ligne', tuple(p0), tuple(p1), 0.018)
+    # Boîtier de raccordement au pied, borne.
+    O._rond(lot, 'coffret', (0.0, 0.62, 0.14), (0.0, 0.62, 0.55), 0.22, 0.13, n, k=0.03, r=0.05)
+    _borne_douce(coll, lot, (0.08, 0.62, 0.55), 0.3, n)
+    lot.finir()
+    T.poser_au_sol(coll, 1.5)
+    _doux(coll)
+
+
+def accumulateur_base(coll, leger=True):
+    """Accumulateur de base (`accumulator_basic`) : 2 x 2 cases, 1 m (2 unités) de haut.
+
+    Plus simple que l'accumulateur lithium : trois grosses cellules arrondies vert sombre côte à côte sur un châssis,
+    sangle claire, jauge à quatre segments en façade (`voyant_*`, vert, pulsent quand il est relié), deux bornes + / -
+    sur le dessus et la borne de raccordement (le câble s'y accroche).
+    """
+    import outils as O
+    n = 3 if leger else 5
+    lot, vo = T.Lot(coll, 'pieces'), T.Lot(coll, 'voyant_charge')
+    O._rond(lot, 'coffret_sombre', (0, 0, 0), (0, 0, 0.18), 0.95, 0.85, n, k=0.04, r=0.1)
+    for k, x in enumerate((-0.6, 0, 0.6)):
+        O._rond(lot, 'accu', (x, 0.05, 0.18), (x, 0.05, 1.55), 0.27, 0.62, n, k=0.08, r=0.14)
+        O._rond(lot, 'accu_sombre', (x, 0.05, 1.5), (x, 0.05, 1.62), 0.22, 0.55, n, k=0.04, r=0.1)
+        O._cyl(lot, 'levier_rouge' if k == 2 else 'panneau_noir', (x, 0.35, 1.62), (x, 0.35, 1.74), 0.07, n)
+        O._cyl(lot, 'isolateur_cuivre', (x, 0.35, 1.74), (x, 0.35, 1.8), 0.045, n)
+    for z in (0.5, 1.25):  # sangles
+        O._rond(lot, 'coffret', (-0.9, 0.05, z), (0.9, 0.05, z), 0.66, 0.06, n, k=0.02, r=0.05)
+    O._rond(lot, 'panneau_noir', (0, -0.6, 0.62), (0, -0.6, 1.12), 0.12, 0.015, n, k=0.005, r=0.03)
+    for k in range(4):
+        O._rond(vo, 'voyant_vert', (0, -0.62, 0.68 + k * 0.11), (0, -0.62, 0.76 + k * 0.11), 0.08, 0.012, 2, k=0.004, r=0.01)
+    _borne_douce(coll, lot, (-0.3, -0.25, 1.62), 0.35, n)
+    for l in (lot, vo):
+        l.finir()
+    T.poser_au_sol(coll, 1.0)
+    _doux(coll)
+
+
 MODELES = {
+    'transformateur': transformateur,
+    'disjoncteur': disjoncteur,
+    'panneau_solaire': panneau_solaire,
+    'accumulateur_base': accumulateur_base,
     'poteau_electrique': poteau_electrique,
+    'poteau_haute_tension': poteau_haute_tension,
+    'poteau_tres_haute_tension': poteau_tres_haute_tension,
+    'lampadaire': lampadaire,
+    'eolienne': eolienne,
     'roue_a_aubes': roue_a_aubes,
     'manivelle_reamorcage': manivelle_reamorcage,
     'chaudiere': chaudiere,

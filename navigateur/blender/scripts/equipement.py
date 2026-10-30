@@ -48,6 +48,11 @@ TEINTES = {
     'rivet': '#c3c8ce',
     'visiere': '#5fd8ee',
     'lueur': '#7ff0ff',
+    'composite_bande': '#e08a3a',
+    'nano_lueur': '#5ff0d8',
+    'exo_metal': '#5b616d',
+    'exo_vert': '#7ad08a',
+    'flamme_jet': '#ffb347',
 }
 
 
@@ -142,6 +147,87 @@ def objet_capuche(coll, leger=True):
     for sx in (-1, 1):
         O._cyl(lot, 'ficelle', (sx * 0.06, -0.2, 0.05), (sx * 0.1, -0.32, 0.01), 0.009, 2)
         _boule(lot, 'ficelle', (sx * 0.102, -0.325, 0.012), 0.016, 0.016, 0.012, 1)
+    _finir(coll, lot)
+
+
+def objet_veste(coll, leger=True):
+    """Veste sur un cintre, debout face au joueur (-Y) : buste de la teinte en deux pans, manches qui tombent le long du
+    corps, col relevé et poignets plus sombres, fermeture éclair claire, deux poches à rabat, bas côtelé ; cintre en bois
+    et crochet de fer au-dessus, pied rond pour tenir debout."""
+    n = _n(leger)
+    lot = T.Lot(coll, 'veste')
+    Z0, Z1 = 0.08, 0.5  # bas et haut du buste
+    # Pied et tige qui tiennent le cintre.
+    O._rond(lot, 'bois_sombre', (0, 0.03, 0), (0, 0.03, 0.03), 0.09, 0.07, n, k=0.01, r=0.03)
+    O._cyl(lot, 'gris_clair', (0, 0.06, 0.03), (0, 0.06, Z1 + 0.08), 0.008, 2)
+    # Buste : deux pans bombés, épaules arrondies.
+    for sx in (-1, 1):
+        O._rond(lot, TEINTE, (sx * 0.07, 0, Z0), (sx * 0.07, 0, Z1 - 0.02), 0.075, 0.045, n, k=0.02, r=0.03)
+        O._rond(lot, TEINTE, (sx * 0.06, 0, Z1 - 0.03), (sx * 0.17, 0, Z1 - 0.06), 0.045, 0.04, n, k=0.02)  # épaule
+        # Manche qui tombe en s'écartant un peu, poignet côtelé plus sombre.
+        O._rond(lot, TEINTE, (sx * 0.17, 0.005, Z1 - 0.06), (sx * 0.2, 0.01, Z0 + 0.06), 0.045, 0.042, n, k=0.02)
+        O._rond(lot, 'teinte_sombre', (sx * 0.2, 0.01, Z0 + 0.07), (sx * 0.205, 0.01, Z0 + 0.025), 0.042, 0.04, n, k=0.012)
+        # Poche à rabat et son bouton.
+        O._rond(lot, 'teinte_sombre', (sx * 0.075, -0.047, Z0 + 0.13), (sx * 0.075, -0.047, Z0 + 0.05), 0.045, 0.004, 2,
+                k=0.002, r=0.01)
+        O._rond(lot, TEINTE, (sx * 0.075, -0.052, Z0 + 0.14), (sx * 0.075, -0.052, Z0 + 0.115), 0.05, 0.006, 2, k=0.002,
+                r=0.01)
+        _boule(lot, 'sac_cuir', (sx * 0.075, -0.058, Z0 + 0.12), 0.009, 0.006, 0.009, 1)
+        # Col relevé.
+        O._rond(lot, 'teinte_sombre', (sx * 0.015, -0.01, Z1 - 0.02), (sx * 0.075, 0.0, Z1 + 0.035), 0.03, 0.035, n, k=0.012)
+    # Bas côtelé et fermeture éclair.
+    O._rond(lot, 'teinte_sombre', (-0.145, 0, Z0 + 0.012), (0.145, 0, Z0 + 0.012), 0.047, 0.022, n, k=0.01)
+    O._rond(lot, 'gris_clair', (0, -0.046, Z0 + 0.01), (0, -0.046, Z1 - 0.01), 0.006, 0.005, 2, k=0.002)
+    O._rond(lot, 'gris_clair', (0, -0.052, Z1 - 0.08), (0, -0.052, Z1 - 0.115), 0.01, 0.005, 2, k=0.002, r=0.004)
+    # Cintre (barre de bois sur les épaules) et crochet de fer.
+    O._rond(lot, 'bois', (-0.16, 0.035, Z1 - 0.04), (0, 0.035, Z1 + 0.02), 0.012, 0.012, n, k=0.004)
+    O._rond(lot, 'bois', (0.16, 0.035, Z1 - 0.04), (0, 0.035, Z1 + 0.02), 0.012, 0.012, n, k=0.004)
+    pts = [(0, 0.035, Z1 + 0.02), (0, 0.035, Z1 + 0.07), (0.015, 0.035, Z1 + 0.1), (0.04, 0.035, Z1 + 0.1),
+           (0.045, 0.035, Z1 + 0.08)]
+    for p0, p1 in zip(pts, pts[1:]):
+        O._cyl(lot, 'gris_clair', p0, p1, 0.007, 2)
+    _finir(coll, lot)
+
+
+def objet_exosquelette(coll, leger=True):
+    """Exosquelette posé debout : deux jambes articulées de barres métalliques (la teinte), genoux à moteur vert,
+    ceinture rembourrée, pieds plats, pistons le long des cuisses."""
+    n = _n(leger)
+    lot = T.Lot(coll, 'exo')
+    O._rond(lot, 'sac_cuir', (-0.17, 0, 0.5), (0.17, 0, 0.5), 0.06, 0.035, n, k=0.015)  # ceinture
+    O._rond(lot, 'exo_metal', (-0.12, 0.05, 0.5), (0.12, 0.05, 0.5), 0.03, 0.06, n, k=0.012)  # boîtier dorsal
+    for sx in (-1, 1):
+        x = sx * 0.13
+        hanche, genou, cheville = (x, 0, 0.47), (x, -0.03, 0.26), (x, 0.0, 0.06)
+        O._cyl(lot, 'exo_metal', (x - sx * 0.03, 0, 0.5), hanche, 0.025, n)
+        O._rond(lot, TEINTE, hanche, genou, 0.022, 0.03, n, k=0.008)
+        O._rond(lot, TEINTE, genou, cheville, 0.02, 0.028, n, k=0.008)
+        O._cyl(lot, 'exo_vert', (x - 0.035, -0.03, 0.26), (x + 0.035, -0.03, 0.26), 0.035, n + 1)  # moteur du genou
+        O._cyl(lot, 'exo_metal', (x - 0.04, -0.03, 0.26), (x + 0.04, -0.03, 0.26), 0.02, n)
+        O._cyl(lot, 'rivet', (x + sx * 0.03, 0.02, 0.44), (x + sx * 0.03, 0.0, 0.3), 0.01, 2)  # piston
+        O._cyl(lot, 'exo_metal', (x + sx * 0.03, 0.02, 0.46), (x + sx * 0.03, 0.015, 0.38), 0.016, 2)
+        for z in (0.38, 0.14):  # sangles de cuisse et de mollet
+            O._rond(lot, 'sac_cuir', (x - 0.05, -0.01, z), (x + 0.05, -0.01, z), 0.035, 0.015, n, k=0.006)
+        O._rond(lot, 'exo_metal', (x, 0.03, 0.015), (x, -0.12, 0.015), 0.045, 0.015, n, k=0.006)  # pied
+    _finir(coll, lot)
+
+
+def objet_propulseur(coll, leger=True):
+    """Propulseur dorsal debout : deux réservoirs de la teinte côte à côte, tuyères sombres en bas avec une petite
+    flamme, bretelles, plaque dorsale et petit écran de charge."""
+    n = _n(leger)
+    lot = T.Lot(coll, 'jetpack')
+    O._rond(lot, 'exo_metal', (0, 0.06, 0.12), (0, 0.06, 0.6), 0.14, 0.03, n, k=0.012)  # plaque dorsale
+    for sx in (-1, 1):
+        x = sx * 0.085
+        O._cyl(lot, TEINTE, (x, -0.02, 0.14), (x, -0.02, 0.58), 0.075, n + 1, k=0.03)
+        O._cyl(lot, 'rivet', (x, -0.02, 0.58), (x, -0.02, 0.63), 0.03, n)
+        O._cyl(lot, 'exo_metal', (x, -0.02, 0.14), (x, -0.02, 0.07), 0.05, n + 1, k=0.01)  # tuyère
+        O._cyl(lot, 'semelle', (x, -0.02, 0.075), (x, -0.02, 0.06), 0.045, n)
+        O._cyl(lot, 'flamme_jet', (x, -0.02, 0.06), (x, -0.02, 0.0), 0.03, n, k=0.012)
+        O._rond(lot, 'sac_cuir', (sx * 0.1, 0.1, 0.58), (sx * 0.1, 0.1, 0.18), 0.03, 0.012, n, k=0.005)  # bretelles
+    O._rond(lot, 'teinte_sombre', (0, -0.1, 0.38), (0, -0.1, 0.48), 0.035, 0.012, n, k=0.005)
+    O._rond(lot, 'exo_vert', (0, -0.112, 0.4), (0, -0.112, 0.46), 0.022, 0.004, 2, k=0.002)
     _finir(coll, lot)
 
 
@@ -311,6 +397,17 @@ def _casque(coll, leger, palier):
     elif palier == 2:
         O._rond(lot, 'teinte_sombre', (-0.12, -0.2, 0.11), (0.12, -0.2, 0.11), 0.012, 0.02, n, k=0.006)  # fente
         O._rond(lot, TEINTE, (0, -0.225, 0.14), (0, -0.245, 0.0), 0.022, 0.012, n, k=0.006)  # nasal
+    elif palier == 3:
+        # Composite : visière sombre large, bande orange en travers, ouïes latérales.
+        O._rond(lot, 'teinte_sombre', (-0.16, -0.185, 0.1), (0.16, -0.185, 0.1), 0.035, 0.045, n, k=0.02)
+        for sx in (-1, 1):
+            for k in range(3):
+                O._rond(lot, 'teinte_sombre', (sx * 0.205, -0.04 + k * 0.035, 0.07), (sx * 0.205, -0.04 + k * 0.035, 0.13),
+                        0.006, 0.01, 2, k=0.003)
+        O._cyl(lot, 'composite_bande', (0, 0, 0.03), (0, 0, 0.055), 0.215, n + 1)  # bandeau orange au-dessus du bord
+    elif palier == 5:
+        # Nano : casque intégral lisse, grande visière lumineuse, liserés lumineux.
+        _boule(lot, 'nano_lueur', (0, -0.11, 0.11), 0.15, 0.13, 0.055, 2)  # visière bombée qui épouse le casque
     else:
         O._rond(lot, 'visiere', (-0.15, -0.19, 0.11), (0.15, -0.19, 0.11), 0.04, 0.05, n, k=0.02)
         O._rond(lot, 'lueur', (0.16, 0.0, 0.12), (0.22, 0.0, 0.12), 0.012, 0.012, 2, k=0.004)
@@ -335,6 +432,21 @@ def _plastron(coll, leger, palier):
         for z in (0.1, 0.18, 0.26, 0.34):
             O._rond(lot, 'rivet', (-0.2, -0.108, z), (0.2, -0.108, z), 0.006, 0.008, 2, k=0.003)
         O._rond(lot, 'rivet', (0, -0.112, 0.05), (0, -0.104, 0.4), 0.008, 0.006, 2, k=0.003)
+    elif palier == 3:
+        # Composite : plaques en écailles (bandes sombres), bande orange en diagonale.
+        for z in (0.1, 0.19, 0.28):
+            O._rond(lot, 'teinte_sombre', (-0.19, -0.108, z), (0.19, -0.108, z), 0.005, 0.012, 2, k=0.003)
+        O._rond(lot, 'composite_bande', (-0.17, -0.112, 0.38), (0.12, -0.112, 0.05), 0.03, 0.006, n, k=0.003)
+        for sx in (-1, 1):
+            O._rond(lot, 'composite_bande', (sx * 0.2, -0.04, 0.47), (sx * 0.28, 0.04, 0.44), 0.012, 0.008, 2, k=0.003)
+    elif palier == 5:
+        # Nano : lignes lumineuses fines qui partent du cœur, cœur hexagonal.
+        _boule(lot, 'nano_lueur', (0, -0.11, 0.27), 0.04, 0.015, 0.04, 2)
+        for a in (-1.1, -0.4, 0.4, 1.1, 2.4, -2.4):
+            d = Vector((math.sin(a), 0, math.cos(a)))
+            p0 = Vector((0, -0.11, 0.27)) + d * 0.05
+            p1 = Vector((0, -0.105, 0.27)) + d * 0.16
+            O._rond(lot, 'nano_lueur', tuple(p0), tuple(p1), 0.005, 0.004, 2, k=0.002)
     else:
         _boule(lot, 'lueur', (0, -0.11, 0.27), 0.05, 0.02, 0.05, 2)  # cœur lumineux
         for sx in (-1, 1):
@@ -358,6 +470,13 @@ def _jambieres(coll, leger, palier):
         elif palier == 2:
             for z in (0.12, 0.33):
                 O._cyl(lot, 'rivet', (x, 0, z - 0.004), (x, 0, z + 0.004), 0.082, n)
+        elif palier == 3:
+            O._rond(lot, 'composite_bande', (x, -0.072, 0.04), (x, -0.08, 0.18), 0.012, 0.006, 2, k=0.003)
+            for z in (0.1, 0.36):
+                O._cyl(lot, 'teinte_sombre', (x, 0, z - 0.006), (x, 0, z + 0.006), 0.08, n)
+        elif palier == 5:
+            O._rond(lot, 'nano_lueur', (x + sx * 0.065, -0.03, 0.03), (x + sx * 0.075, -0.03, 0.4), 0.004, 0.006, 2, k=0.002)
+            _boule(lot, 'nano_lueur', (x, -0.1, 0.24), 0.02, 0.008, 0.02, 1)
         else:
             O._rond(lot, 'lueur', (x, -0.075, 0.05), (x, -0.08, 0.17), 0.008, 0.006, 2, k=0.003)
             O._rond(lot, 'lueur', (x, -0.085, 0.3), (x, -0.08, 0.4), 0.008, 0.006, 2, k=0.003)
@@ -375,6 +494,12 @@ def _bottes_armure(coll, leger, palier):
         elif palier == 2:
             _boule(lot, TEINTE, P((0, -0.16, 0.09)), 0.08, 0.07, 0.06, 2)
             O._rond(lot, 'rivet', P((0, -0.05, 0.15)), P((0, 0.02, 0.32)), 0.06, 0.012, n, k=0.006)  # plaque du tibia
+        elif palier == 3:
+            _boule(lot, 'teinte_sombre', P((0, -0.16, 0.09)), 0.08, 0.07, 0.055, 2)
+            O._rond(lot, 'composite_bande', P((0, -0.04, 0.16)), P((0, 0.02, 0.3)), 0.05, 0.01, n, k=0.005)
+        elif palier == 5:
+            O._rond(lot, 'nano_lueur', P((0, 0.12, 0.03)), P((0, -0.23, 0.03)), 0.095, 0.008, n, k=0.004)
+            O._rond(lot, 'nano_lueur', P((0.088, 0.04, 0.1)), P((0.088, 0.04, 0.3)), 0.004, 0.006, 2, k=0.002)
         else:
             O._rond(lot, 'lueur', P((0.087, 0.04, 0.08)), P((0.087, 0.04, 0.3)), 0.004, 0.008, 2, k=0.002)
             O._rond(lot, 'lueur', P((-0.087, 0.04, 0.08)), P((-0.087, 0.04, 0.3)), 0.004, 0.008, 2, k=0.002)
@@ -382,19 +507,55 @@ def _bottes_armure(coll, leger, palier):
     _finir(coll, lot)
 
 
+def _armure_icone(coll, leger, p, piece):
+    """Pièce d'armure posée au sol : la même que celle portée (`porte_armures.py`), sortie du corps et posée debout.
+
+    On construit la pièce portée (repère du personnage, m), on garde ce qui fait l'objet (le plastron sans les
+    brassards, pour qu'il se lise comme un plastron ; les deux jambières ; la paire de bottes), puis on la recentre au
+    sol et on la met à l'échelle des autres objets."""
+    import porte as P
+    import porte_armures as A
+    if piece == 'casque':
+        lots = [A.casque(coll, leger, p, P._coque)]
+    else:
+        lots = {'plastron': A.plastron, 'jambieres': A.jambieres, 'bottes': A.bottes}[piece](coll, leger, p)
+    for l in lots:
+        l.finir()
+    if piece == 'plastron':
+        for o in list(coll.objects):
+            if o.name.startswith(('bras_', 'avantbras_')):
+                bpy.data.objects.remove(o, do_unlink=True)
+    pts = [o.matrix_world @ v.co for o in coll.objects if o.type == 'MESH' for v in o.data.vertices]
+    c = Vector(((min(q.x for q in pts) + max(q.x for q in pts)) / 2, (min(q.y for q in pts) + max(q.y for q in pts)) / 2,
+                min(q.z for q in pts)))
+    k = {'casque': 1.45, 'plastron': 1.2, 'jambieres': 0.75, 'bottes': 1.5}[piece]
+    # Casque relevé (on voit sa face d'en haut) ; jambières tournées pour qu'on voie les deux.
+    rot = {'casque': Matrix.Rotation(0.8, 4, 'Z') @ Matrix.Rotation(-0.45, 4, 'X'),
+           'jambieres': Matrix.Rotation(0.8, 4, 'Z')}.get(piece, Matrix())
+    for o in coll.objects:
+        if o.type == 'MESH':
+            o.data.transform(Matrix.Translation(-c))
+            o.data.transform(rot)
+            o.data.transform(Matrix.Scale(k, 4))
+    zmin = min((v.co.z for o in coll.objects if o.type == 'MESH' for v in o.data.vertices))
+    for o in coll.objects:
+        if o.type == 'MESH':
+            o.data.transform(Matrix.Translation((0, 0, -zmin)))
+    O._brillant()
+    T.adoucir(coll)
+
+
 def _armures():
     m = {}
-    for p in (1, 2, 4):
-        m[f'objet_armure{p}_casque'] = lambda c, leger, p=p: _casque(c, leger, p)
-        m[f'objet_armure{p}_plastron'] = lambda c, leger, p=p: _plastron(c, leger, p)
-        m[f'objet_armure{p}_jambieres'] = lambda c, leger, p=p: _jambieres(c, leger, p)
-        m[f'objet_armure{p}_bottes'] = lambda c, leger, p=p: _bottes_armure(c, leger, p)
+    for p in (1, 2, 3, 4, 5):
+        for piece in ('casque', 'plastron', 'jambieres', 'bottes'):
+            m[f'objet_armure{p}_{piece}'] = lambda c, leger, p=p, piece=piece: _armure_icone(c, leger, p, piece)
     return m
 
 
 MODELES = {f.__name__: f for f in (
-    objet_boussole, objet_sac_a_dos, objet_capuche, objet_pantalon, objet_bottes, objet_gants, objet_sac_couchage,
-    objet_lit, objet_chargeur_pistolet, objet_chargeur_fusil, objet_chargeur_sniper)}
+    objet_boussole, objet_sac_a_dos, objet_capuche, objet_veste, objet_pantalon, objet_bottes, objet_gants, objet_sac_couchage,
+    objet_lit, objet_chargeur_pistolet, objet_chargeur_fusil, objet_chargeur_sniper, objet_exosquelette, objet_propulseur)}
 MODELES.update(_armures())
 
 

@@ -93,11 +93,12 @@ export const CARS: Record<CarKind, CarSpec> = {
   // Électrique : plus nerveuse que la vapeur au démarrage, sans fumée ; batterie de 180 MJ (environ 7 minutes à pleine puissance).
   locomotive_electric: {
     item: 'train_locomotive_electric',
-    model: 'locomotive_vapeur',
-    lengthM: 7.5,
-    frontM: 3.6,
-    bodyM: { front: 3.6, rear: 2.85 },
-    halfBaseM: 1.5,
+    model: 'locomotive_electrique',
+    // Caisse de 7,6 m (traverses de tête à 3,7 m du centre), attelage automatique de 0,8 m à chaque bout, bogies à ±2,7 m.
+    lengthM: 9.0,
+    frontM: 4.5,
+    bodyM: { front: 3.85, rear: 3.85 },
+    halfBaseM: 2.7,
     massKg: 20000,
     loco: {
       powerKw: 260,
@@ -112,7 +113,7 @@ export const CARS: Record<CarKind, CarSpec> = {
   // Plateforme : un wagon ouvert pour le fret en vrac, avec le même coffre que le wagon de fret.
   wagon_flat: {
     item: 'train_wagon_flat',
-    model: 'wagon_fret',
+    model: 'wagon_plateforme',
     lengthM: 6.6,
     frontM: 3.3,
     bodyM: { front: 2.55, rear: 2.55 },

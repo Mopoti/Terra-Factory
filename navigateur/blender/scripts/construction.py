@@ -17,6 +17,7 @@ Lancer :  blender --background --python blender/scripts/construction.py
 Produit :  blender/construction.blend, export/<nom>.glb et export/unity/<nom>.glb
 """
 
+import math
 import os
 import sys
 
@@ -26,7 +27,7 @@ sys.path.insert(0, os.path.join(ROOT, 'blender', 'lib'))
 import terra as T  # noqa: E402
 
 import bpy  # noqa: E402
-from mathutils import Matrix  # noqa: E402
+from mathutils import Matrix, Vector  # noqa: E402
 
 TEINTES = {
     'planche': '#b58a5b',
@@ -46,6 +47,12 @@ TEINTES = {
     'alu_sombre': '#9aa1a9',
     'alu_joint': '#6c737b',
     'alu_vitre': '#a9d4ea',
+    'blinde': '#5d646c',
+    'blinde_clair': '#78808a',
+    'blinde_sombre': '#41474e',
+    'blinde_joint': '#2c3035',
+    'blinde_vitre': '#7fb3c9',
+    'blinde_jaune': '#d9a63a',
 }
 
 
@@ -61,9 +68,12 @@ BOIS = ('planche', 'planche_claire', 'planche_sombre', 'bois_sombre')
 PIERRE = ('moellon', 'moellon_clair', 'moellon_sombre', 'mortier')
 BETON = ('beton', 'beton_clair', 'beton_sombre', 'beton_joint')
 ALU = ('alu', 'alu_clair', 'alu_sombre', 'alu_joint')
-MATS = {'bois': BOIS, 'pierre': PIERRE, 'beton': BETON, 'aluminium': ALU}
+BLINDE = ('blinde', 'blinde_clair', 'blinde_sombre', 'blinde_joint')
+MATS = {'bois': BOIS, 'pierre': PIERRE, 'beton': BETON, 'aluminium': ALU, 'blinde': BLINDE}
 #: Matériaux sans porte dans le jeu (pas de modèle de porte).
 SANS_PORTE = {'beton'}
+#: Matériaux qui n'ont que le mur et la porte dans le jeu (pas de dalle, d'escalier ni de pilier).
+MUR_ET_PORTE = {'blinde'}
 
 EP = 0.2  # épaisseur d'un mur (10 cm)
 JOINT = 0.03  # largeur d'un joint
@@ -130,6 +140,20 @@ def _parement_alu(lot, t, x0, x1, z0, z1, leger):
                 lot.cube(t[3], (0.025, 0.04, 0.025), (x, sy * EP * 0.47, z), 0.005)
 
 
+def _parement_blinde(lot, t, x0, x1, z0, z1, leger):
+    """Blindage : âme sombre, deux plaques d'acier épaisses par face, chanfreinées, bordées de rivets ; joint au milieu."""
+    lot.cube(t[3], (x1 - x0 - 0.02, EP * 0.8, z1 - z0), ((x0 + x1) / 2, 0, (z0 + z1) / 2))
+    xm = (x0 + x1) / 2
+    for sy in (-1, 1):
+        for a, b, teinte in ((x0, xm, t[0]), (xm, x1, t[1])):
+            lot.cube(teinte, (b - a - 0.03, 0.06, z1 - z0 - 0.04), ((a + b) / 2, sy * EP * 0.42, (z0 + z1) / 2),
+                     _bv(leger, 0.018))
+            for x in (a + 0.07, b - 0.07):
+                for z in (z0 + 0.08, (z0 + z1) / 2, z1 - 0.08):
+                    lot.cube(t[2], (0.035, 0.03, 0.035), (x, sy * (EP * 0.42 + 0.035), z), _bv(leger, 0.008))
+        lot.cube(t[2], (x1 - x0, 0.03, 0.06), ((x0 + x1) / 2, sy * EP * 0.47, z0 + 0.03), 0.006)
+
+
 def mur(coll, mat, leger=True):
     t = MATS[mat]
     lot = T.Lot(coll, f'mur_{mat}')
@@ -139,6 +163,8 @@ def mur(coll, mat, leger=True):
         _parement_beton(lot, t, -0.6, 0.6, 0, 1, leger)
     elif mat == 'aluminium':
         _parement_alu(lot, t, -0.6, 0.6, 0, 1, leger)
+    elif mat == 'blinde':
+        _parement_blinde(lot, t, -0.6, 0.6, 0, 1, leger)
     else:
         _parement_pierre(lot, t, -0.6, 0.6, 0, 1, leger)
     lot.finir()
@@ -193,6 +219,14 @@ def porte(coll, mat, leger=True):
     for s in (-1, 1):
         if mat in ('bois', 'aluminium'):
             lot.cube(t[2], (0.1, EP * 1.15, 5.0), (s * 0.55, 0, 2.5), _bv(leger, 0.015))
+        elif mat == 'blinde':
+            # Montants d'acier épais, bande de danger jaune et noire en bas.
+            lot.cube(t[2], (0.1, EP * 1.25, 5.0), (s * 0.55, 0, 2.5), _bv(leger, 0.02))
+            for k in range(4):
+                lot.cube('blinde_jaune' if k % 2 == 0 else t[3], (0.104, EP * 1.27, 0.15), (s * 0.55, 0, 0.2 + k * 0.15), 0.004)
+            for z in (1.2, 2.6, 3.8):
+                for sy in (-1, 1):
+                    lot.cube(t[1], (0.04, 0.03, 0.04), (s * 0.55, sy * EP * 0.64, z), 0.008)
         else:
             # Montants de pierre en blocs empilés.
             for k in range(5):
@@ -205,6 +239,9 @@ def porte(coll, mat, leger=True):
     elif mat == 'aluminium':
         _parement_alu(lot, t, -0.5, 0.5, 4.15, 5, leger)
         lot.cube(t[2], (1.2, EP * 1.15, 0.15), (0, 0, 4.075), _bv(leger, 0.015))
+    elif mat == 'blinde':
+        _parement_blinde(lot, t, -0.5, 0.5, 4.15, 5, leger)
+        lot.cube(t[2], (1.2, EP * 1.25, 0.15), (0, 0, 4.075), _bv(leger, 0.02))
     else:
         _parement_pierre(lot, t, -0.5, 0.5, 4.2, 5, leger, joints=((0.0,),), centre=False)
         lot.cube(t[2], (1.2, EP * 1.1, 0.2), (0, 0, 4.1), _bv(leger, 0.02))
@@ -230,12 +267,42 @@ def _battant_alu(lot, leger):
         lot.cube(t[1], (0.7, 0.04, 0.05), (0, s * (E / 2 + 0.05), 1.7), 0.01)
 
 
+def _battant_blinde(lot, leger):
+    """Battant blindé : vantail d'acier épais, renforts en croix, hublot étroit en verre blindé, volant de verrouillage."""
+    t = BLINDE
+    E = 0.12
+    lot.cube(t[2], (0.98, E, 3.98), (0, 0, 2.0), _bv(leger, 0.02))
+    for sy in (-1, 1):
+        y = sy * (E / 2 + 0.02)
+        for z0, z1, teinte in ((0.1, 1.95, t[0]), (2.05, 3.9, t[1])):
+            lot.cube(teinte, (0.86, 0.04, z1 - z0), (0, y, (z0 + z1) / 2), _bv(leger, 0.012))
+        lot.barre(t[2], (-0.38, y * 1.4, 0.25), (0.38, y * 1.4, 1.8), 0.08)
+        lot.barre(t[2], (0.38, y * 1.4, 0.25), (-0.38, y * 1.4, 1.8), 0.08)
+        for x in (-0.4, 0.4):
+            for z in (0.15, 1.0, 1.9, 2.1, 3.0, 3.85):
+                lot.cube(t[3], (0.035, 0.03, 0.035), (x, y * 1.6, z), 0.008)
+        # Hublot étroit et son cadre.
+        lot.cube(t[3], (0.2, 0.03, 0.62), (0, y * 1.5, 3.1), 0.01)
+        lot.cube('blinde_vitre', (0.14, 0.035, 0.54), (0, y * 1.55, 3.1), 0.01)
+        # Volant de verrouillage : moyeu, jante en 8 segments, 4 rayons.
+        c = Vector((0.0, sy * (E / 2 + 0.12), 2.2))
+        lot.cube(t[3], (0.06, 0.1, 0.06), tuple(c - Vector((0, sy * 0.05, 0))), 0.01)
+        for k in range(8):
+            a0, a1 = k * math.pi / 4, (k + 1) * math.pi / 4
+            p0 = c + Vector((0.16 * math.cos(a0), 0, 0.16 * math.sin(a0)))
+            p1 = c + Vector((0.16 * math.cos(a1), 0, 0.16 * math.sin(a1)))
+            lot.barre('blinde_jaune', tuple(p0), tuple(p1), 0.035)
+        for k in range(4):
+            a = k * math.pi / 2 + math.pi / 4
+            lot.barre(t[1], tuple(c), tuple(c + Vector((0.16 * math.cos(a), 0, 0.16 * math.sin(a)))), 0.025)
+
+
 def battant(coll, mat, leger=True):
     """Battant de 1 × 4 : planches verticales, traverses et écharpe, poignée de fer (pierre : ferrures de fer)."""
     t = MATS['bois']
     lot = T.Lot(coll, f'porte_{mat}_battant')
-    if mat == 'aluminium':
-        _battant_alu(lot, leger)
+    if mat in ('aluminium', 'blinde'):
+        (_battant_alu if mat == 'aluminium' else _battant_blinde)(lot, leger)
         lot.finir()
         return
     E = 0.08
@@ -352,10 +419,12 @@ def _modeles():
     m = {}
     for mat in MATS:
         m[f'mur_{mat}'] = lambda c, leger, mat=mat: mur(c, mat, leger)
-        m[f'dalle_{mat}'] = lambda c, leger, mat=mat: dalle(c, mat, leger)
         if mat not in SANS_PORTE:
             m[f'porte_{mat}'] = lambda c, leger, mat=mat: porte(c, mat, leger)
             m[f'porte_{mat}_battant'] = lambda c, leger, mat=mat: battant(c, mat, leger)
+        if mat in MUR_ET_PORTE:
+            continue
+        m[f'dalle_{mat}'] = lambda c, leger, mat=mat: dalle(c, mat, leger)
         m[f'escalier_{mat}'] = lambda c, leger, mat=mat: escalier(c, mat, leger)
         for partie in ('bas', 'fut', 'haut', 'seul'):
             m[f'pilier_{mat}_{partie}'] = lambda c, leger, mat=mat, p=partie: pilier(c, mat, p, leger)

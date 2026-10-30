@@ -196,6 +196,7 @@ import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
 import { loadPickModel, loadRawModel, loadWeaponModel } from './toolModel';
+import { isGloves, wornHidesHair, wornModelName } from './wornModels';
 import { GRIP_TILT, GUN_FILES, GunRig, holdGunGrip } from './gunAnim';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
@@ -377,8 +378,12 @@ export function startGameView(
     miner.attachHandTool(bodyTool, 1.0, 0, -0.7);
     // Style doux en vue extérieure : mains gantées, la droite serre le manche comme en vue subjective.
     void loadRawModel('terra/main_gantee').then((glove) => {
-      if (glove && viewAlive && miner instanceof Avatar)
+      if (glove && viewAlive && miner instanceof Avatar) {
         miner.wearGloves(glove.clone(), glove.clone());
+        // Équipement porté sur le personnage (et couleur des gants) : refait maintenant qu'il est là.
+        wornKey = '';
+        refreshWorn();
+      }
     });
     // L'arme portée va dans la main droite : sa poignée dans le poing ganté, le canon dans l'axe de l'avant-bras.
     const mount = miner instanceof Avatar ? miner.gunMount() : null;
@@ -530,7 +535,8 @@ export function startGameView(
   let wornKey = '';
   function refreshWorn(): void {
     const eq = options.state.changes.equipment;
-    const key = JSON.stringify(eq);
+    const own = miner instanceof Avatar ? miner : null;
+    const key = JSON.stringify(eq) + (own ? ':avatar' : '');
     if (key === wornKey) return;
     wornKey = key;
     for (const child of [...worn.children]) {
@@ -555,14 +561,39 @@ export function startGameView(
       mesh.castShadow = true;
       worn.add(mesh);
     };
+    // Personnage fait pour le jeu : l'équipement qui a un modèle porté est accroché à ses os, le reste garde sa forme
+    // simple ci-dessous ; les gants teintent ses mains gantées.
+    const modeled = (slot: keyof typeof eq): boolean => {
+      const item = eq[slot];
+      if (!own) return false;
+      if (slot === 'hands') {
+        own.setGloveColor(
+          item && isGloves(item) ? new THREE.Color(itemById(item).color).getHex() : null,
+        );
+        return !!item && isGloves(item);
+      }
+      const name = item ? wornModelName(item) : null;
+      if (!item || !name) {
+        own.wear(slot, null);
+        return false;
+      }
+      const color = new THREE.Color(itemById(item).color).getHex();
+      void loadRawModel(`terra/${name}`).then((model) => {
+        // Rien à faire si l'équipement a changé entre-temps (ou si le modèle manque : la forme simple reste).
+        if (!model || !viewAlive || options.state.changes.equipment[slot] !== item) return;
+        own.wear(slot, model.clone(), color, wornHidesHair(item));
+      });
+      return true;
+    };
     // Le personnage regarde vers +z (repère local) : le dos est vers -z. Capsule : y de -0,85 à +0,85.
-    if (eq.back) {
+    if (eq.back && !modeled('back')) {
       add(new THREE.BoxGeometry(0.4, 0.5, 0.22), eq.back, 0, 0.18, -0.32);
       add(new THREE.BoxGeometry(0.3, 0.14, 0.05), eq.back, 0, 0.32, -0.45);
     }
     // Plastron d'armure : par-dessus le torse du personnage.
-    if (eq.torso) add(new THREE.BoxGeometry(0.5, 0.46, 0.3), eq.torso, 0, 0.2, 0.01);
-    if (eq.head) {
+    if (eq.torso && !modeled('torso'))
+      add(new THREE.BoxGeometry(0.5, 0.46, 0.3), eq.torso, 0, 0.2, 0.01);
+    if (eq.head && !modeled('head')) {
       add(
         new THREE.SphereGeometry(0.3, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.62),
         eq.head,
@@ -571,12 +602,19 @@ export function startGameView(
         -0.02,
       );
     }
-    if (eq.legs) add(new THREE.CylinderGeometry(0.27, 0.26, 0.5, 12), eq.legs, 0, -0.5, 0);
-    if (eq.feet) add(new THREE.CylinderGeometry(0.285, 0.285, 0.17, 12), eq.feet, 0, -0.77, 0);
-    if (eq.hands) {
+    if (eq.legs && !modeled('legs'))
+      add(new THREE.CylinderGeometry(0.27, 0.26, 0.5, 12), eq.legs, 0, -0.5, 0);
+    if (eq.feet && !modeled('feet'))
+      add(new THREE.CylinderGeometry(0.285, 0.285, 0.17, 12), eq.feet, 0, -0.77, 0);
+    if (eq.hands && !modeled('hands')) {
       add(new THREE.SphereGeometry(0.075, 8, 6), eq.hands, 0.29, 0.02, 0.05);
       add(new THREE.SphereGeometry(0.075, 8, 6), eq.hands, -0.29, 0.02, 0.05);
     }
+    // Emplacements vidés : on retire ce que le personnage portait.
+    if (own)
+      for (const slot of ['back', 'torso', 'head', 'legs', 'feet'] as const)
+        if (!eq[slot]) own.wear(slot, null);
+    if (own && !eq.hands) own.setGloveColor(null);
   }
   refreshWorn();
 

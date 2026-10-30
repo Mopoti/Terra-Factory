@@ -97,6 +97,32 @@ interface FlameInstance {
  * Place un modèle comme `addMachineBody` : recentré, mis à l'échelle de l'emprise et de la hauteur de la machine, tourné
  * de quarts de tour. `place` transforme un point du modèle, `turn` une direction, `scale` est l'échelle du modèle.
  */
+/**
+ * Machines hautes et fines dont le modèle dépasse de l'emprise (bras des poteaux, crosse du lampadaire, rotor de
+ * l'éolienne) : leur modèle est à l'échelle réelle et le jeu le règle sur sa seule hauteur, sans le rétrécir pour le faire
+ * tenir dans les cases.
+ */
+const OVERHANG_MODELS: ReadonlySet<MachineType> = new Set<MachineType>([
+  'pole_hv',
+  'pole_uhv',
+  'lamp',
+  'wind_turbine',
+]);
+
+/** Échelle d'un modèle posé : ajusté à l'emprise (`sx` × `sz` m) et à la hauteur de la machine. */
+function modelScale(
+  type: MachineType,
+  sx: number,
+  sz: number,
+  size: { x: number; y: number; z: number },
+  odd: boolean,
+): number {
+  const def = machineDef(type);
+  const byHeight = (def.height * 1.3) / size.y;
+  if (OVERHANG_MODELS.has(type)) return Math.min(1, byHeight);
+  return Math.min(sx / (odd ? size.z : size.x), sz / (odd ? size.x : size.z), byHeight);
+}
+
 function placementOf(
   m: Machine,
   model: BakedModel,
@@ -107,16 +133,9 @@ function placementOf(
   place: (x: number, y: number, z: number) => [number, number, number];
   turn: (x: number, y: number, z: number) => [number, number, number];
 } {
-  const def = machineDef(m.type);
   const { w, d } = dims(m.type, m.rot);
   const odd = m.rot % 2 === 1;
-  const sizeX = odd ? model.size.z : model.size.x;
-  const sizeZ = odd ? model.size.x : model.size.z;
-  const scale = Math.min(
-    (w * CELL_SIZE_M - 0.06) / sizeX,
-    (d * CELL_SIZE_M - 0.06) / sizeZ,
-    (def.height * 1.3) / model.size.y,
-  );
+  const scale = modelScale(m.type, w * CELL_SIZE_M - 0.06, d * CELL_SIZE_M - 0.06, model.size, odd);
   const a = (MODEL_TURNS[m.rot % 4] * Math.PI) / 2;
   const cos = Math.cos(a);
   const sin = Math.sin(a);
@@ -871,7 +890,10 @@ export class FactoryView {
    */
   private animating(m: Machine): boolean {
     if (m.type === 'crank') return this.opened === m.id;
-    if (m.type === 'relay' || m.type === 'antenna') return this.factory.powerFactor(m) > 0;
+    if (m.type === 'relay' || m.type === 'antenna' || m.type === 'lamp')
+      return this.factory.powerFactor(m) > 0;
+    if (m.type === 'breaker') return this.factory.breakerState(m) === 'open';
+    if (m.type === 'transformer') return (this.factory.transformerFlow(m) ?? 0) > 0;
     if (isAccumulator(m.type)) return this.factory.gridInfo(m) !== null;
     // Tourelle : prête à tirer (munitions ou courant) = « idle » ; elle balaye alors l'horizon.
     if (isTurret(m.type)) return this.factory.status(m) === 'idle';
@@ -906,11 +928,13 @@ export class FactoryView {
     const model = modelFor(m.type);
     if (!model) return;
     const odd = m.rot % 2 === 1;
-    const sizeX = odd ? model.size.z : model.size.x;
-    const sizeZ = odd ? model.size.x : model.size.z;
-    const sx = w * CELL_SIZE_M - 0.06;
-    const sz = d * CELL_SIZE_M - 0.06;
-    const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
+    const scale = modelScale(
+      m.type,
+      w * CELL_SIZE_M - 0.06,
+      d * CELL_SIZE_M - 0.06,
+      model.size,
+      odd,
+    );
     const mb = new MeshBuilder();
     mb.model(parts.high, 0, 0, 0, MODEL_TURNS[m.rot % 4], scale, hexToRgb(def.color), 0.12);
     const mesh = new THREE.Mesh(geometryOf(mb), propsMaterial);
@@ -1671,10 +1695,7 @@ function addMachineBody(
   const model = modelFor(type);
   if (model) {
     // Modèle 3D du kit : ajusté à l'emprise et à la hauteur de la machine, face tournée vers la sortie.
-    const odd = rot % 2 === 1;
-    const sizeX = odd ? model.size.z : model.size.x;
-    const sizeZ = odd ? model.size.x : model.size.z;
-    const scale = Math.min(sx / sizeX, sz / sizeZ, (def.height * 1.3) / model.size.y);
+    const scale = modelScale(type, sx, sz, model.size, rot % 2 === 1);
     // Un modèle articulé n'a ici que sa partie basse : la partie haute est un objet mobile (voir `FactoryView.movers`).
     const body = staticOnly ? (animatedParts(type)?.low ?? model) : model;
     if (type === 'waypoint') {

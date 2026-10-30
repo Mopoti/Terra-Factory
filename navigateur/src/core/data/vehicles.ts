@@ -51,7 +51,7 @@ export const VEHICLES: Record<VehicleKind, VehicleSpec> = {
   // Électrique : un peu plus rapide que le quad, silencieux, sobre ; il se recharge à une borne (400 kW : environ 4 minutes).
   quad_electric: {
     item: 'vehicle_quad_electric',
-    model: 'quad',
+    model: 'quad_electrique',
     speedFactor: 3.3,
     burnKw: 90,
     runOver: { radius: 1.4, damage: 14 },
