@@ -39,25 +39,32 @@ describe('borne de recharge', () => {
     expect(s.changes.vehicles[1].fuel).toBe(0);
   });
 
-  it('recharge les batteries portables du joueur à portée, jusqu’à leur capacité', () => {
+  it('recharge les batteries portables du joueur à portée, niveau par niveau', () => {
     const { s, f } = setup();
-    run(s, f, [{ x: 4, z: 2 }], 60);
-    expect(s.changes.batteryS).toBeCloseTo(120, 0); // 2 batteries × 60 s
-    expect(s.batteryFill()).toBe(1);
+    expect(s.inventory.battery_portable).toBe(2);
+    run(s, f, [{ x: 4, z: 2 }], 3);
+    // 400 kW pendant 3 s = 1200 kJ = 2 niveaux de 600 kJ, sur une seule batterie (la plus chargée d'abord).
+    expect(s.inventory['battery_portable~2']).toBe(1);
+    expect(s.inventory.battery_portable).toBe(1);
+    run(s, f, [{ x: 4, z: 2 }], 100);
+    expect(s.inventory['battery_portable~10']).toBe(2);
+    expect(s.hasChargeableBattery()).toBe(false);
   });
 
   it('sans cible, la borne ne consomme rien ; loin, elle ne charge pas', () => {
     const { s, f, charger } = setup();
     run(s, f, [{ x: 60, z: 60 }], 3);
-    expect(s.changes.batteryS).toBe(0);
+    expect(s.inventory.battery_portable).toBe(2);
     expect(f.gridInfo(charger)!.demandKw).toBe(0);
   });
 
-  it('le propulseur puise d’abord dans les batteries portables', () => {
-    const s = new GameState({ inventory: { battery_portable: 1 } });
+  it('le propulseur puise d’abord dans la batterie portable la moins chargée', () => {
+    const s = new GameState({ inventory: { 'battery_portable~3': 1, 'battery_portable~7': 1 } });
     s.changes.equipment.back = 'jetpack';
-    s.changes.batteryS = 5;
-    expect(s.useJetpack(2)).toBe(true);
-    expect(s.changes.batteryS).toBe(3);
+    expect(s.useJetpack(1)).toBe(true);
+    expect(s.inventory['battery_portable~2']).toBe(1);
+    expect(s.inventory['battery_portable~7']).toBe(1);
+    expect(s.useJetpack(5.5)).toBe(true); // encore dans le même niveau de 6 s
+    expect(s.inventory['battery_portable~2']).toBe(1);
   });
 });

@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { itemById } from '../core/data/items';
 import { CARS, RAIL_ITEM, STATION_ITEM, carKindOfItem } from '../core/data/trains';
 import { VEHICLES, vehicleKindOfItem } from '../core/data/vehicles';
+import { baseOf } from '../core/data/itemData';
 import { machineForItem, type MachineType } from '../core/data/machines';
 import { MeshBuilder } from './meshBuilder';
 import {
@@ -83,7 +84,8 @@ const PROVISIONAL_SHAPES: Record<string, DropShape> = {
 };
 
 /** Forme d'un objet du sac posé au sol (les machines ne sont pas ici : voir `dropMachine`). */
-export function dropShape(item: string): DropShape {
+export function dropShape(itemId: string): DropShape {
+  const item = baseOf(itemId);
   if (item === 'carapace') return 'carapace';
   if (item === 'living_tissue') return 'tissu_vivant';
   if (item === 'wood') return 'bois';

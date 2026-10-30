@@ -95,6 +95,7 @@ import {
   type BagLimits,
   type EquipSlot,
 } from '../data/items';
+import { allLevels, levelInfo, variantId } from '../data/itemData';
 import {
   add,
   maxAddable,
@@ -220,6 +221,11 @@ export class GameState {
     this.changes = saved
       ? normalizeChanges(old ? renamePacks(saved.changes) : saved.changes)
       : emptyChanges();
+    // Ancienne sauvegarde : le kit entamé devient un objet à son niveau.
+    if (this.changes.kitCharges > 0) {
+      this.inventory = add(this.inventory, variantId('repair_kit', this.changes.kitCharges), 1);
+      this.changes.kitCharges = 0;
+    }
     this.migrateToolSlot();
   }
 
@@ -359,7 +365,12 @@ export class GameState {
       }
     }
     // Pas assez : on complète les piles entamées, puis on prend des cases libres (dans l'ordre du catalogue).
-    for (const def of ITEMS) {
+    const ids = [
+      ...ITEMS.map((d) => d.id),
+      ...Object.keys(this.inventory).filter((k) => k.includes('~')),
+    ];
+    for (const id of ids) {
+      const def = { id };
       const max = stackOf(def.id, this.limits);
       let need =
         (this.inventory[def.id] ?? 0) -
@@ -785,29 +796,61 @@ export class GameState {
   /** Protection totale des pièces portées (%), plafonnée à 80 : part des dégâts que l'armure absorbe. */
   /**
    * Répare une machine abîmée avec un kit de réparation : chaque kit a 5 charges, chacune rend 25 % de la vie maximale.
-   * Le kit entamé reste en cours (`changes.kitCharges`) ; on en ouvre un neuf dans le sac quand il est vide.
+   * Chaque kit est un objet à part (`repair_kit~4`…) : on use d'abord le plus entamé ; le dernier disparaît.
    */
   repairMachine(factory: Factory, id: number): 'ok' | 'full' | 'noKit' | 'missing' {
-    if (!factory.machines.some((m) => m.id === id)) return 'missing';
-    const max = Factory.maxHealth(factory.machines.find((m) => m.id === id)!.type);
+    const machine = factory.machines.find((m) => m.id === id);
+    if (!machine) return 'missing';
+    const max = Factory.maxHealth(machine.type);
     const hp = factory.health.get(id) ?? max;
     if (hp >= max) return 'full';
-    if (this.changes.kitCharges <= 0) {
-      if ((this.inventory.repair_kit ?? 0) < 1) return 'noKit';
-      this.takeUnits('repair_kit', 1);
-      this.changes.kitCharges = REPAIR_KIT_CHARGES;
-      this.emit({ type: 'inventory' });
-    }
-    this.changes.kitCharges -= 1;
+    const kit = allLevels('repair_kit')
+      .map((k) => ({ k, level: levelInfo(k)!.level }))
+      .filter((x) => x.level > 0 && (this.inventory[x.k] ?? 0) > 0)
+      .sort((a, b) => a.level - b.level)[0];
+    if (!kit) return 'noKit';
+    this.wearItem(kit.k, 1);
     const next = hp + max * REPAIR_KIT_STEP;
     if (next >= max) factory.health.delete(id);
     else factory.health.set(id, next);
     return 'ok';
   }
 
-  /** Charges de réparation disponibles : celles du kit entamé et celles des kits du sac. */
+  /** Charges de réparation disponibles dans le sac. */
   repairCharges(): number {
-    return this.changes.kitCharges + (this.inventory.repair_kit ?? 0) * REPAIR_KIT_CHARGES;
+    return allLevels('repair_kit').reduce(
+      (n, k) => n + (this.inventory[k] ?? 0) * (levelInfo(k)?.level ?? 0),
+      0,
+    );
+  }
+
+  /**
+   * Fait passer une unité de `id` à `to` (autre niveau du même objet, ou rien si `to` est null), à sa place dans le sac.
+   * Faux s'il n'y en a pas dans le sac.
+   */
+  transformItem(id: string, to: string | null): boolean {
+    if ((this.inventory[id] ?? 0) < 1) return false;
+    const bag = this.bagSlots();
+    const i = bag.findIndex((s) => s?.item === id && s.count === 1);
+    this.inventory = remove(this.inventory, id, 1).inventory;
+    if (to) this.inventory = add(this.inventory, to, 1);
+    if (i >= 0) bag[i] = to ? { item: to, count: 1 } : null;
+    // La main et la barre de raccourcis suivent l'objet qui change de niveau (un kit reste en main d'une charge à l'autre).
+    if ((this.inventory[id] ?? 0) === 0 && to) {
+      if (this.held === id) this.held = to;
+      this.changes.hotbar = this.changes.hotbar.map((x) => (x === id ? to : x));
+    }
+    this.emit({ type: 'inventory' });
+    return true;
+  }
+
+  /** Use une unité de `id` de `steps` niveaux (la détruit au niveau 0). Renvoie le niveau restant. */
+  wearItem(id: string, steps: number): number {
+    const info = levelInfo(id);
+    if (!info) return 0;
+    const level = Math.max(0, info.level - steps);
+    this.transformItem(id, level > 0 ? variantId(info.base, level) : null);
+    return level;
   }
 
   armorPercent(): number {
@@ -818,7 +861,37 @@ export class GameState {
 
   /** Dégâts réellement subis après l'armure. */
   mitigate(amount: number): number {
-    return this.creative ? amount : amount * (1 - this.armorPercent() / 100);
+    if (this.creative) return amount;
+    const taken = amount * (1 - this.armorPercent() / 100);
+    this.wearArmor(amount);
+    return taken;
+  }
+
+  /** Dégâts encaissés par chaque pièce d'armure portée avant de perdre un niveau d'usure (non enregistrés). */
+  static readonly ARMOR_WEAR_PER_STEP = 60;
+  private readonly armorWear = new Map<string, number>();
+
+  /** Un coup reçu use les pièces d'armure portées : un niveau de moins tous les `ARMOR_WEAR_PER_STEP` dégâts ; à zéro elle se brise. */
+  private wearArmor(amount: number): void {
+    for (const [slot, id] of Object.entries(this.changes.equipment)) {
+      const info = id ? levelInfo(id) : null;
+      if (!id || !info || !itemById(id).equip?.armor) continue;
+      const total = (this.armorWear.get(slot) ?? 0) + amount;
+      if (total < GameState.ARMOR_WEAR_PER_STEP) {
+        this.armorWear.set(slot, total);
+        continue;
+      }
+      this.armorWear.set(slot, total - GameState.ARMOR_WEAR_PER_STEP);
+      const level = info.level - 1;
+      const next = level > 0 ? variantId(info.base, level) : null;
+      // L'équipement porté change de niveau en place ; à zéro, la pièce est détruite.
+      this.inventory = remove(this.inventory, id, 1).inventory;
+      if (next) {
+        this.inventory = add(this.inventory, next, 1);
+        (this.changes.equipment as Record<string, string | null>)[slot] = next;
+      } else delete (this.changes.equipment as Record<string, string | null>)[slot];
+      this.emit({ type: 'inventory' });
+    }
   }
 
   /** Bonus de récolte de l'outil en place (null = mains nues). */
@@ -1935,27 +2008,40 @@ export class GameState {
 
   /** Secondes de poussée restantes dans la batterie du propulseur en cours (non sauvegardées : une batterie par rechargement). */
   private jetpackSeconds = 0;
+  /** Secondes restantes sur le niveau de batterie portable en cours (non enregistrées). */
+  private portableSeconds = 0;
   /** Durée de poussée d'une batterie lithium. */
   static readonly JETPACK_BATTERY_S = 20;
 
-  /** Secondes de poussée qu'une batterie portable peut stocker. */
-  static readonly PORTABLE_BATTERY_S = 60;
+  /** Secondes de poussée d'un niveau de batterie portable (10 niveaux : 60 s pour une batterie pleine). */
+  static readonly BATTERY_STEP_S = 6;
+  /** Énergie d'un niveau de batterie portable (kJ) : la poussée consomme `THRUST_KW`. */
+  static readonly BATTERY_STEP_KJ = 600;
+  /** Énergie reçue d'une borne qui n'a pas encore rempli un niveau (non enregistrée). */
+  private batteryBufferKJ = 0;
 
-  /** Capacité des batteries portables du sac (secondes de poussée), et part pleine (0 à 1). */
-  batteryCapacityS(): number {
-    return (this.inventory.battery_portable ?? 0) * GameState.PORTABLE_BATTERY_S;
-  }
-  batteryFill(): number {
-    const cap = this.batteryCapacityS();
-    return cap > 0 ? Math.min(1, this.changes.batteryS / cap) : 0;
+  /** Une batterie portable du sac n'est pas pleine. */
+  hasChargeableBattery(): boolean {
+    return allLevels('battery_portable').some(
+      (k) => (levelInfo(k)?.level ?? 0) < 10 && (this.inventory[k] ?? 0) > 0,
+    );
   }
 
-  /** Ajoute de l'énergie aux batteries portables (renvoie ce qui a été stocké, en secondes de poussée). */
-  chargeBatteries(seconds: number): number {
-    const room = Math.max(0, this.batteryCapacityS() - this.changes.batteryS);
-    const put = Math.min(room, seconds);
-    this.changes.batteryS += put;
-    return put;
+  /** Reçoit de l'énergie (kJ) : remplit d'abord la batterie portable la plus chargée qui n'est pas pleine. */
+  chargeBatteries(kj: number): void {
+    this.batteryBufferKJ += kj;
+    while (this.batteryBufferKJ >= GameState.BATTERY_STEP_KJ) {
+      const unit = allLevels('battery_portable')
+        .map((k) => ({ k, level: levelInfo(k)?.level ?? 0 }))
+        .filter((x) => x.level < 10 && (this.inventory[x.k] ?? 0) > 0)
+        .sort((a, b) => b.level - a.level)[0];
+      if (!unit) {
+        this.batteryBufferKJ = 0;
+        return;
+      }
+      this.batteryBufferKJ -= GameState.BATTERY_STEP_KJ;
+      this.transformItem(unit.k, variantId('battery_portable', unit.level + 1));
+    }
   }
 
   /** Le propulseur dorsal est-il porté ? */
@@ -1967,10 +2053,19 @@ export class GameState {
   useJetpack(dt: number): boolean {
     if (!this.wearsJetpack()) return false;
     if (this.creative) return true;
-    this.changes.batteryS = Math.min(this.changes.batteryS, this.batteryCapacityS());
     // Les batteries portables (rechargées à une borne) d'abord, puis les batteries lithium du sac.
-    if (this.changes.batteryS > 0) {
-      this.changes.batteryS = Math.max(0, this.changes.batteryS - dt);
+    if (this.portableSeconds <= 0) {
+      const unit = allLevels('battery_portable')
+        .map((k) => ({ k, level: levelInfo(k)?.level ?? 0 }))
+        .filter((x) => x.level > 0 && (this.inventory[x.k] ?? 0) > 0)
+        .sort((a, b) => a.level - b.level)[0];
+      if (unit) {
+        this.wearItem(unit.k, 1);
+        this.portableSeconds = GameState.BATTERY_STEP_S;
+      }
+    }
+    if (this.portableSeconds > 0) {
+      this.portableSeconds -= dt;
       return true;
     }
     if (this.jetpackSeconds <= 0) {

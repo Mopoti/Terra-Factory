@@ -8,8 +8,6 @@ import type { GameState } from './state';
 
 /** Portée d'une borne (m), mesurée depuis son centre. */
 export const CHARGE_RANGE_M = 4;
-/** Puissance (kW) que consomme la poussée du propulseur : une batterie portable de 60 s tient 6 MJ. */
-export const THRUST_KW = 100;
 
 interface Target {
   /** Ajoute `kW × dt` d'énergie ; renvoie ce qui reste à charger (0 = plein). */
@@ -65,9 +63,9 @@ export function stepChargers(
     }
     if (players.some((p) => near(p.x, p.z))) {
       targets.push({
-        needs: () => state.changes.batteryS < state.batteryCapacityS(),
+        needs: () => state.hasChargeableBattery(),
         give: (kw, step) => {
-          state.chargeBatteries((kw * step) / THRUST_KW);
+          state.chargeBatteries(kw * step);
         },
       });
     }

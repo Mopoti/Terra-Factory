@@ -170,8 +170,6 @@ export interface WorldChanges {
   tutorialSkipped: boolean;
   /** Balise hyperfréquence activée (fin de partie) et séquence finale déjà montrée. */
   beacon: boolean;
-  /** Énergie des batteries portables, en secondes de poussée du propulseur (au plus 60 s par batterie portable du sac). */
-  batteryS: number;
   /** Charges restantes du kit de réparation entamé (0 à 4). */
   kitCharges: number;
   /** Crédits galactiques gagnés au comptoir spatial. */
@@ -267,7 +265,6 @@ export function emptyChanges(): WorldChanges {
     tutorialSkipped: false,
     beacon: false,
     kitCharges: 0,
-    batteryS: 0,
     credits: 0,
     finaleShown: false,
     harvested: {},
@@ -452,7 +449,6 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.admin = r.admin === true;
   result.tutorialSkipped = r.tutorialSkipped === true;
   result.beacon = r.beacon === true;
-  if (isNum(r.batteryS) && r.batteryS > 0) result.batteryS = Math.min(3600, r.batteryS);
   if (isNum(r.kitCharges) && r.kitCharges > 0)
     result.kitCharges = Math.min(4, Math.floor(r.kitCharges));
   if (isNum(r.credits) && r.credits > 0) result.credits = Math.floor(r.credits);

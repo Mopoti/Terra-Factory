@@ -1,4 +1,5 @@
 import raw from '../../../content/items.json';
+import { levelInfo } from './itemData';
 
 export interface ItemDef {
   id: string;
@@ -166,10 +167,34 @@ export function withPartnersBeside<T extends { id: string }>(list: readonly T[])
 /** Portée de la récolte à la main, en mètres. */
 export const REACH_M: number = raw.reachM;
 
+const variants = new Map<string, ItemDef>();
+
 export function itemById(id: string): ItemDef {
   const found = ITEMS.find((i) => i.id === id);
-  if (!found) throw new Error(`Objet inconnu : ${id}`);
-  return found;
+  if (found) return found;
+  // Niveau d'un objet suivi (voir `itemData.ts`) : l'objet de base, qui ne s'empile pas et ne se fabrique pas.
+  const info = id.includes('~') ? levelInfo(id) : null;
+  if (info) {
+    const cached = variants.get(id);
+    if (cached) return cached;
+    const base = ITEMS.find((i) => i.id === info.base);
+    if (base) {
+      const def: ItemDef = {
+        ...base,
+        id,
+        recipe: null,
+        category: null,
+        yield: 1,
+        stack: 1,
+        equip: base.equip
+          ? { ...base.equip, armor: (base.equip.armor * info.level) / info.steps }
+          : null,
+      };
+      variants.set(id, def);
+      return def;
+    }
+  }
+  throw new Error(`Objet inconnu : ${id}`);
 }
 
 /** Énergie d'une unité de combustible en kilojoules (0 si l'objet ne brûle pas). */

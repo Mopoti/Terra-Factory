@@ -1,5 +1,6 @@
 import fr from './fr.json';
 import en from './en.json';
+import { levelInfo } from '../core/data/itemData';
 
 export type TranslationKey = keyof typeof fr;
 export type Locale = 'fr' | 'en';
@@ -76,6 +77,14 @@ export function setHintResolver(fn: (action: string) => string): void {
 
 /** Traduit une clé ; `{nom}` dans le texte est remplacé par la valeur fournie. */
 export function t(key: TranslationKey, params: Record<string, string> = {}): string {
+  // Niveau d'un objet suivi (« objet~niveau ») : nom de l'objet de base et part pleine.
+  if (key.startsWith('item.') && key.includes('~')) {
+    const info = levelInfo(key.slice(5));
+    if (info) {
+      const name = t(`item.${info.base}` as TranslationKey);
+      return `${name} (${Math.round((info.level / info.steps) * 100)} %)`;
+    }
+  }
   // Une clé manquante ne doit jamais faire planter l'affichage : on montre la clé elle-même.
   const text = dictionaries[current][key] ?? dictionaries.fr[key] ?? key;
   return text

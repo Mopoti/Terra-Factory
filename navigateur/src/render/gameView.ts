@@ -72,6 +72,7 @@ import {
   stepVertical,
   surfaceMaterialAt,
 } from '../core/game/physics';
+import { baseOf } from '../core/data/itemData';
 import { setEngine, type EngineKind } from '../audio/engine';
 import { playSfx } from '../audio/sfx';
 import { pickPiece } from '../core/build/pick';
@@ -4433,7 +4434,7 @@ export function startGameView(
       !building &&
       !guest &&
       aimedMachine &&
-      options.state.selectedItem() === 'repair_kit' &&
+      baseOf(options.state.selectedItem() ?? '') === 'repair_kit' &&
       pressed('interact')
     ) {
       const result = options.state.repairMachine(factory, aimedMachine.id);
@@ -4443,8 +4444,8 @@ export function startGameView(
         options.onMessage?.(t(`machine.repairKit.${result}` as TranslationKey));
       }
     }
-    // Portail à commande manuelle : la touche d'action l'ouvre ou le ferme.
-    if (!paused && !uiOpen && pressed('use') && aimedMachine) {
+    // Portail à commande manuelle : la touche d'activation (E) l'ouvre ou le ferme.
+    if (!paused && !uiOpen && pressed('activate') && aimedMachine) {
       const def = machineDef(aimedMachine.type);
       if (def.gate && !def.autoGate) {
         factory.toggleGate(aimedMachine);
@@ -4464,7 +4465,7 @@ export function startGameView(
         !building &&
         !clickStartedBuilding &&
         options.state.selectedItem() !== 'pistol' &&
-        options.state.selectedItem() !== 'repair_kit' &&
+        baseOf(options.state.selectedItem() ?? '') !== 'repair_kit' &&
         !creativeResourceOf(options.state.selectedItem()) &&
         input.isActionActive('interact'),
       activate: !paused && !uiOpen && !building && input.isActionActive('activate'),
