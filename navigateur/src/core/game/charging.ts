@@ -1,10 +1,11 @@
 /** Bornes de recharge : elles remplissent les batteries des véhicules électriques et les batteries portables du joueur qui sont à portée. */
-import { centerOf, type Factory } from '../factory/factory';
+import { centerOf, type Factory, type Machine } from '../factory/factory';
+import { baseOf, levelInfo, variantId } from '../data/itemData';
 import { machineDef } from '../data/machines';
 import { CARS } from '../data/trains';
 import { VEHICLES } from '../data/vehicles';
 import { carPoses } from '../rail/train';
-import type { GameState } from './state';
+import { GameState } from './state';
 
 /** Portée d'une borne (m), mesurée depuis son centre. */
 export const CHARGE_RANGE_M = 4;
@@ -13,6 +14,32 @@ interface Target {
   /** Ajoute `kW × dt` d'énergie ; renvoie ce qui reste à charger (0 = plein). */
   give(kw: number, dt: number): void;
   needs(): boolean;
+}
+
+/** Énergie reçue (kJ) par chaque borne qui n'a pas encore rempli un niveau d'une batterie rangée dedans. */
+const slotBuffer = new WeakMap<Machine, number>();
+
+/** Une batterie portable rangée dans la borne n'est pas pleine. */
+const slotBatteryNeeds = (m: Machine): boolean =>
+  m.slots.some(
+    (s) => baseOf(s.item) === 'battery_portable' && (levelInfo(s.item)?.level ?? 10) < 10,
+  );
+
+/** Reçoit de l'énergie (kJ) : remplit d'abord la batterie rangée dans la borne qui est la plus chargée sans être pleine. */
+function chargeSlots(m: Machine, kj: number): void {
+  let buffer = (slotBuffer.get(m) ?? 0) + kj;
+  while (buffer >= GameState.BATTERY_STEP_KJ) {
+    const unit = m.slots
+      .filter((s) => baseOf(s.item) === 'battery_portable' && (levelInfo(s.item)?.level ?? 10) < 10)
+      .sort((a, b) => (levelInfo(b.item)?.level ?? 0) - (levelInfo(a.item)?.level ?? 0))[0];
+    if (!unit) {
+      buffer = 0;
+      break;
+    }
+    buffer -= GameState.BATTERY_STEP_KJ;
+    unit.item = variantId('battery_portable', (levelInfo(unit.item)?.level ?? 0) + 1);
+  }
+  slotBuffer.set(m, buffer);
 }
 
 /**
@@ -61,6 +88,11 @@ export function stepChargers(
         }
       }
     }
+    // Les batteries rangées dans la borne se rechargent en tout temps ; celles du sac, quand le joueur est à portée.
+    targets.push({
+      needs: () => slotBatteryNeeds(m),
+      give: (kw, step) => chargeSlots(m, kw * step),
+    });
     if (players.some((p) => near(p.x, p.z))) {
       targets.push({
         needs: () => state.hasChargeableBattery(),

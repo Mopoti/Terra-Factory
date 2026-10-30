@@ -1100,6 +1100,7 @@
   "item.cable_insulated": "Câble isolé",
   "item.silicon_chip": "Puce en silicium",
   "item.science_pack_3": "Paquet de science T3",
+  "machine.chargerHint": "4 emplacements pour des batteries portables : celles qu'on y range se rechargent toutes seules (celles du sac aussi, à moins de 4 m).",
   "machine.labHint": "4 emplacements de paquets de science (piles de 20), de types différents : le laboratoire use d’abord le paquet le moins précieux.",
   "item.steel_plate": "Plaque d'acier",
   "item.science_pack_2": "Paquet de science T2",

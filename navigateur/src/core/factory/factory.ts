@@ -1,3 +1,4 @@
+import { baseOf } from '../data/itemData';
 import { CELL_SIZE_M } from '../constants';
 import { RISE_DIR } from '../data/buildings';
 import { energyKJ, itemById } from '../data/items';
@@ -184,7 +185,7 @@ export const stackLimit = (m: Machine, item: string): number =>
 
 /** Machine dont les `slots` reçoivent des objets précis (laboratoire : paquets ; réacteur à fusion : déchets). */
 export const hasSlotStore = (type: MachineType): boolean =>
-  type === 'lab' || type === 'fusion_reactor';
+  type === 'lab' || type === 'fusion_reactor' || type === 'charger';
 /** Combustible du réacteur à fusion. */
 export const FUSION_FUEL = ['nuclear_waste', 'contaminated_glass'] as const;
 
@@ -192,6 +193,7 @@ export const FUSION_FUEL = ['nuclear_waste', 'contaminated_glass'] as const;
 export function chestRoom(m: Machine, item: string): number {
   if (isLab(m.type) && !isSciencePack(item)) return 0;
   if (m.type === 'fusion_reactor' && !(FUSION_FUEL as readonly string[]).includes(item)) return 0;
+  if (m.type === 'charger' && baseOf(item) !== 'battery_portable') return 0;
   const cap = machineDef(m.type).slots ?? 0;
   const limit = stackLimit(m, item);
   let room = Math.max(0, cap - m.slots.length) * limit;

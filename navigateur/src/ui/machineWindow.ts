@@ -1195,7 +1195,9 @@ export function mountMachineWindow(
               ? 'machine.labHint'
               : m.type === 'fusion_reactor'
                 ? 'machine.fusion.help'
-                : 'machine.chestHint',
+                : m.type === 'charger'
+                  ? 'machine.chargerHint'
+                  : 'machine.chestHint',
           ),
         ),
       );

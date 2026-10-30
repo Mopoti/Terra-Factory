@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyMachine, Factory } from '../factory/factory';
+import { chestRoom, emptyMachine, Factory } from '../factory/factory';
 import { stepChargers } from './charging';
 import { GameState } from './state';
 
@@ -66,5 +66,29 @@ describe('borne de recharge', () => {
     expect(s.inventory['battery_portable~7']).toBe(1);
     expect(s.useJetpack(5.5)).toBe(true); // encore dans le même niveau de 6 s
     expect(s.inventory['battery_portable~2']).toBe(1);
+  });
+
+  it('recharge les batteries rangées dans la borne, sans que le joueur soit à portée', () => {
+    const { s, f, charger } = setup();
+    charger.slots.push({ item: 'battery_portable~2', count: 1 });
+    run(s, f, [{ x: 60, z: 60 }], 5);
+    const level = Number(charger.slots[0].item.split('~')[1]);
+    expect(level).toBeGreaterThan(2);
+    expect(s.inventory.battery_portable).toBe(2); // celles du sac, loin, ne bougent pas
+  });
+
+  it('la borne n’accepte que des batteries portables', () => {
+    const { charger } = setup();
+    expect(chestRoom(charger, 'battery_portable~3')).toBe(1 * 4);
+    expect(chestRoom(charger, 'iron_plate')).toBe(0);
+  });
+
+  it('une batterie pleine rangée dans la borne ne demande plus de courant', () => {
+    const { s, f, charger } = setup();
+    charger.slots.push({ item: 'battery_portable~9', count: 1 });
+    run(s, f, [], 20);
+    expect(charger.slots[0].item).toBe('battery_portable~10');
+    run(s, f, [], 2);
+    expect(f.gridInfo(charger)!.demandKw).toBe(0);
   });
 });

@@ -354,7 +354,9 @@
       "height": 1.8,
       "fuel": false,
       "consumesKw": 400,
-      "chargeKw": 400
+      "chargeKw": 400,
+      "slots": 4,
+      "stockMax": 1
     },
     {
       "id": "air_compressor",

@@ -525,7 +525,7 @@ Une machine se pose en **un clic**, la touche R la tourne ; **même case = range
 
 ### 7.10 Véhicules électriques et recharge ✅
 
-- La **borne de recharge** (T4, 3 × 3, 400 kW) recharge, dans un rayon de 4 m, les **véhicules électriques**, les **locomotives électriques** et les **batteries portables** du joueur. Elle partage sa puissance entre ses cibles et **ne consomme que s'il y en a une** à recharger. Les véhicules ne se rechargent jamais ailleurs.
+- La **borne de recharge** (T4, 3 × 3, 400 kW) recharge, dans un rayon de 4 m, les **véhicules électriques**, les **locomotives électriques** et les **batteries portables** du sac du joueur ; elle a aussi **4 emplacements** où l'on range des batteries portables (seules acceptées) : celles-ci se rechargent toutes seules, même si le joueur est loin. Elle partage sa puissance entre ses cibles et **ne consomme que s'il y en a une** à recharger. Les véhicules ne se rechargent jamais ailleurs.
 - La **batterie portable** se range dans le sac ; chaque batterie a sa propre charge (§5.3) ; le propulseur la consomme avant les batteries au lithium.
 
 ### 7.11 Santé des machines et réparation ✅
