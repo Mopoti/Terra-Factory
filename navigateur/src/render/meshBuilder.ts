@@ -21,6 +21,9 @@ import { lowDetail } from './modelLod';
 
 type Vec = [number, number, number];
 
+/** Sommets transformés d'un modèle en cours d'ajout (réutilisé d'un appel à l'autre). */
+let scratch = new Float64Array(0);
+
 export class MeshBuilder {
   readonly positions: number[] = [];
   readonly normals: number[] = [];
@@ -59,32 +62,57 @@ export class MeshBuilder {
     const s = Math.sin(a);
     const cx = m.min.x + m.size.x / 2;
     const cz = m.min.z + m.size.z / 2;
-    const place = (i: number): void => {
-      const flip = mirror ? -1 : 1;
+    const flip = mirror ? -1 : 1;
+    const n = m.positions.length / 3;
+    // Chaque sommet est transformé une seule fois (le même sommet sert à plusieurs triangles), puis recopié par indice.
+    if (scratch.length < n * 9) scratch = new Float64Array(n * 9 * 2);
+    const t = scratch;
+    const useTint = !!tint && mix > 0;
+    for (let i = 0; i < n; i++) {
+      const o = i * 9;
       const px = (m.positions[i * 3] - cx) * scale * flip;
       const py = (m.positions[i * 3 + 1] - m.min.y) * scaleY;
       const pz = (m.positions[i * 3 + 2] - cz) * scaleZ;
-      this.positions.push(x + px * c + pz * s, y + py, z - px * s + pz * c);
+      t[o] = x + px * c + pz * s;
+      t[o + 1] = y + py;
+      t[o + 2] = z - px * s + pz * c;
       const nx = m.normals[i * 3] * flip;
       const nz = m.normals[i * 3 + 2];
-      this.normals.push(nx * c + nz * s, m.normals[i * 3 + 1], -nx * s + nz * c);
+      t[o + 3] = nx * c + nz * s;
+      t[o + 4] = m.normals[i * 3 + 1];
+      t[o + 5] = -nx * s + nz * c;
       const r = m.colors[i * 3];
       const g = m.colors[i * 3 + 1];
       const b = m.colors[i * 3 + 2];
-      if (tint && mix > 0) {
-        this.colors.push(r + (tint.r - r) * mix, g + (tint.g - g) * mix, b + (tint.b - b) * mix);
-      } else this.colors.push(r, g, b);
+      if (useTint && tint) {
+        t[o + 6] = r + (tint.r - r) * mix;
+        t[o + 7] = g + (tint.g - g) * mix;
+        t[o + 8] = b + (tint.b - b) * mix;
+      } else {
+        t[o + 6] = r;
+        t[o + 7] = g;
+        t[o + 8] = b;
+      }
+    }
+    const pos = this.positions;
+    const nor = this.normals;
+    const col = this.colors;
+    const emit = (i: number): void => {
+      const o = i * 9;
+      pos.push(t[o], t[o + 1], t[o + 2]);
+      nor.push(t[o + 3], t[o + 4], t[o + 5]);
+      col.push(t[o + 6], t[o + 7], t[o + 8]);
     };
     // Un modèle retourné (miroir) a ses triangles à l'envers : on inverse l'ordre des sommets.
     for (let k = 0; k < m.index.length; k += 3) {
       if (mirror) {
-        place(m.index[k]);
-        place(m.index[k + 2]);
-        place(m.index[k + 1]);
+        emit(m.index[k]);
+        emit(m.index[k + 2]);
+        emit(m.index[k + 1]);
       } else {
-        place(m.index[k]);
-        place(m.index[k + 1]);
-        place(m.index[k + 2]);
+        emit(m.index[k]);
+        emit(m.index[k + 1]);
+        emit(m.index[k + 2]);
       }
     }
   }

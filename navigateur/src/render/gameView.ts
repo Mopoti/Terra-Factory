@@ -48,7 +48,7 @@ import {
   withPlaced,
 } from '../core/game/worldChanges';
 import { hash01 } from '../core/world/rng';
-import { WorldGenerator } from '../core/world/worldgen';
+import { WorldGenerator, type ChunkData } from '../core/world/worldgen';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
 import type { ActionId } from '../settings/controls';
@@ -59,6 +59,8 @@ import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
 import {
   buildChunkMesh,
+  startChunkMesh,
+  type ChunkJob,
   ghostUniforms,
   propsMaterial,
   setGroundTint,
@@ -1880,6 +1882,10 @@ export function startGameView(
   const blocked = new Set<string>();
   const obstacles = new Map<string, number>();
   let wanted: { cx: number; cz: number }[] = [];
+  /** Il faut chercher un chunk à fabriquer (le joueur a changé de chunk ou un chunk vient d'être posé) : sinon on ne parcourt pas la liste à chaque image. */
+  let scanChunks = true;
+  /** Chunk en cours de fabrication par étapes (le décor, arbres et rochers, coûte le plus : on le répartit sur plusieurs images). */
+  let chunkJob: { cx: number; cz: number; data: ChunkData; run: ChunkJob } | null = null;
   let wantedKey = '';
 
   /** Distances (en chunks) de bascule vers les modèles simplifiés, selon la qualité : « haute » garde tout en pleine finesse. */
@@ -1895,6 +1901,7 @@ export function startGameView(
     const key = `${pcx},${pcz},${radius}`;
     if (key === wantedKey) return;
     wantedKey = key;
+    scanChunks = true;
     wanted = [];
     for (let dz = -radius; dz <= radius; dz++) {
       for (let dx = -radius; dx <= radius; dx++) {
@@ -1931,8 +1938,8 @@ export function startGameView(
     return 2;
   }
 
-  /** Fabrique (ou refabrique) un chunk en tenant compte de ce que le joueur a changé. */
-  function buildInto(cx: number, cz: number): void {
+  /** Remplace le chunk (cx, cz) par ce maillage fini : l'ancien est retiré, les obstacles et les cibles sont remis à jour. */
+  function installChunk(cx: number, cz: number, data: ChunkData, mesh: ChunkMesh): void {
     const key = `${cx},${cz}`;
     const old = chunks.get(key);
     if (old) {
@@ -1941,21 +1948,53 @@ export function startGameView(
       for (const cell of old.blocked) blocked.delete(cell);
       for (const [cell] of old.tall) obstacles.delete(cell);
     }
-    const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
-    const mesh = buildChunkMesh(generator, data, lodFor(cx, cz, old?.lod));
     scene.add(mesh.group);
     for (const cell of mesh.blocked) blocked.add(cell);
     for (const [cell, height] of mesh.tall) obstacles.set(cell, height);
     chunks.set(key, mesh);
     interaction.registerChunk(key, data);
+    scanChunks = true;
+  }
+
+  /** Fabrique (ou refabrique) un chunk d'un coup en tenant compte de ce que le joueur a changé. */
+  function buildInto(cx: number, cz: number): void {
+    // Une fabrication par étapes de ce chunk serait périmée : on l'abandonne.
+    if (chunkJob && chunkJob.cx === cx && chunkJob.cz === cz) chunkJob = null;
+    const old = chunks.get(`${cx},${cz}`);
+    const data = applyChanges(generator.chunk(cx, cz), options.state.changes);
+    installChunk(cx, cz, data, buildChunkMesh(generator, data, lodFor(cx, cz, old?.lod)));
   }
 
   function loadMissing(): void {
+    if (!chunkJob && !scanChunks) return;
     const start = performance.now();
-    for (const { cx, cz } of wanted) {
-      if (performance.now() - start > CHUNK_BUDGET_MS) return;
-      const mesh = chunks.get(`${cx},${cz}`);
-      if (!mesh || mesh.lod !== lodFor(cx, cz, mesh.lod)) buildInto(cx, cz);
+    for (;;) {
+      const left = CHUNK_BUDGET_MS - (performance.now() - start);
+      if (left <= 0) return;
+      if (chunkJob && !wanted.some((w) => w.cx === chunkJob?.cx && w.cz === chunkJob?.cz))
+        chunkJob = null;
+      if (!chunkJob) {
+        const next = wanted.find(({ cx, cz }) => {
+          const mesh = chunks.get(`${cx},${cz}`);
+          return !mesh || mesh.lod !== lodFor(cx, cz, mesh.lod);
+        });
+        if (!next) {
+          scanChunks = false;
+          return;
+        }
+        const data = applyChanges(generator.chunk(next.cx, next.cz), options.state.changes);
+        const old = chunks.get(`${next.cx},${next.cz}`);
+        chunkJob = {
+          cx: next.cx,
+          cz: next.cz,
+          data,
+          run: startChunkMesh(generator, data, lodFor(next.cx, next.cz, old?.lod)),
+        };
+      }
+      const mesh = chunkJob.run.step(left);
+      if (!mesh) return;
+      installChunk(chunkJob.cx, chunkJob.cz, chunkJob.data, mesh);
+      chunkJob = null;
     }
   }
 

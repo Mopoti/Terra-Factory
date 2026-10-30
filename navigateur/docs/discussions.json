@@ -1,5 +1,5 @@
 {
- "key": "discussions-e1",
+ "key": "discussions-f1",
  "title": "Discussions : suite (4)",
  "intro": "Quatre chantiers lancés en parallèle. Réponds surtout aux questions de chaque ligne.",
  "cols": [
@@ -16,40 +16,32 @@
  "tabs": [
   {
    "id": "n",
-   "label": "Créatif, optimisation, multijoueur"
+   "label": "Fluidité et coffre quantique"
   }
  ],
  "rows": [
   {
-   "id": "e1",
+   "id": "f1",
    "tab": "n",
-   "name": "Créatif : un exemplaire suffit",
-   "tag": "e1",
-   "recipe": "Fait : en Créatif, avoir un exemplaire d'un objet permet d'en poser autant qu'on veut (machines, pièces, rails, véhicules, stations…) ; casser un objet le rend. Les objets du sac ne baissent plus.",
-   "role": "Le sac créatif doit-il aussi se remplir d'un exemplaire de chaque objet au départ, ou on les fabrique gratuitement comme aujourd'hui ?"
+   "name": "Chute de FPS en se déplaçant",
+   "tag": "f1",
+   "recipe": "Cause trouvée : en avançant, le jeu fabrique les chunks qui apparaissent devant toi, et le décor (arbres, rochers, buissons) était recopié d'un bloc dans la géométrie, ce qui bloquait l'image pendant plusieurs dizaines de millisecondes. Maintenant ce travail est réparti sur plusieurs images (le sol apparaît tout de suite, les arbres arrivent un peu après) ; un chunk que tu modifies (récolte, pose) se refait toujours d'un coup. Les anciennes pistes (recherches dans les listes, réseau électrique) restent corrigées.",
+   "role": "Peux-tu réessayer en te déplaçant (course, vue de dessus) et me dire si la chute a disparu ? Si des arbres apparaissent trop tard devant toi, je réduirai le temps par image ou j'avancerai le chargement. Dis-moi aussi ta qualité d'affichage (basse / moyenne / haute) et ta distance de vue."
   },
   {
-   "id": "e2",
+   "id": "f2",
    "tab": "n",
-   "name": "Optimisation",
-   "tag": "e2",
-   "recipe": "Passe faite (sans toucher aux modèles) : recherches d'objets et de machines par tables, construction du réseau électrique 7 fois plus rapide (c'était ce qui coûtait à chaque pose dans une grosse usine), usure et fumées recalculées seulement quand elles changent, lumières des lampadaires éteintes le jour. Mesures sur 4 400 machines : 1,3 → 0,6 ms par pas de simulation, 224 → 32 ms pour (re)construire l'usine.",
-   "role": "Je n'ai pas pu mesurer le rendu GPU ici. Peux-tu me dire sur quelle machine ça ramait (grosse usine, nuit, beaucoup d'ennemis, vue de dessus) pour que je cible la suite ?"
+   "name": "Coffre quantique lié au joueur",
+   "tag": "f2",
+   "recipe": "Corrigé : le contenu appartient au joueur, pas au coffre. Tous tes coffres quantiques montrent le même contenu ; personne d'autre ne le voit ; démolir un coffre ne rend rien à personne et le contenu reste enregistré (tu le retrouves en posant un nouveau coffre quantique). Les machines posées par un joueur alimentent le contenu de ce joueur.",
+   "role": "C'est bien ça ? Faut-il une limite de cases par joueur (64 aujourd'hui) ?"
   },
   {
-   "id": "e3",
+   "id": "f3",
    "tab": "n",
-   "name": "Coffre quantique par joueur",
-   "tag": "e3",
-   "recipe": "Fait avec le multijoueur existant : chacun voit son contenu dans le même coffre ; celui qui l'a posé voit aussi ce qu'y met sa chaîne de production. Démolir le coffre rend tout au démolisseur.",
-   "role": "D'accord pour que la chaîne de production alimente le contenu du propriétaire ?"
-  },
-  {
-   "id": "e4",
-   "tab": "n",
-   "name": "Kit et locomotive : règles gardées",
-   "tag": "e4",
-   "recipe": "Notées dans la doc : le kit de réparation s'use mais ne se recharge ni ne se répare ; la locomotive électrique ne se recharge pas en roulant.",
+   "name": "Créatif : fabrication gratuite",
+   "tag": "f3",
+   "recipe": "Gardée : en Créatif la fabrication reste gratuite.",
    "role": "Rien à répondre."
   }
  ]

@@ -245,14 +245,15 @@ function foliageMesh(
   return geometry;
 }
 
-function buildProps(
+/** Construit le décor d'un chunk par petites étapes (un `yield` par objet) : l'appelant en fait un peu par image. */
+function* buildPropsSteps(
   data: ChunkData,
   blocked: string[],
   tall: [string, number][],
   ground: { ore: TexBuf; water: TexBuf },
   biomeAt: (xM: number, zM: number) => BiomeId,
   lod: 0 | 1 | 2,
-): THREE.BufferGeometry | null {
+): Generator<void, THREE.BufferGeometry | null> {
   const b = new MeshBuilder();
   b.lod = lod;
   const rockCache = new Map<BiomeId, ReturnType<typeof rockModelsFor>>();
@@ -267,6 +268,7 @@ function buildProps(
   };
 
   for (const o of data.objects) {
+    yield;
     const res = resourceById(o.id);
     const base = hexToRgb(res.color);
     const jitter = 0.85 + 0.3 * hash01(1, o.gx, o.gz, 5);
@@ -431,6 +433,7 @@ function buildProps(
     );
   }
   for (const o of data.ore) {
+    yield;
     const richness = Math.min(1, o.amount / ORE_FULL_AMOUNT);
     const height = ORE_MIN_HEIGHT_M + (ORE_MAX_HEIGHT_M - ORE_MIN_HEIGHT_M) * richness;
     const x0 = o.gx * CELL_SIZE_M - ox;
@@ -559,12 +562,16 @@ function buildProps(
   return geometry;
 }
 
-/** Fabrique les maillages d'un chunk. Le groupe est placé à l'origine du chunk (précision des nombres). */
-export function buildChunkMesh(
-  gen: WorldGenerator,
-  data: ChunkData,
-  lod: 0 | 1 | 2 = 0,
-): ChunkMesh {
+/** Chunk en cours de fabrication : `step` avance de `budgetMs` au plus et rend le maillage quand il est fini. */
+export interface ChunkJob {
+  step(budgetMs: number): ChunkMesh | null;
+}
+
+/**
+ * Commence la fabrication des maillages d'un chunk : le sol est fait tout de suite, le décor (arbres, rochers, minerai)
+ * par étapes. Le groupe est placé à l'origine du chunk (précision des nombres).
+ */
+export function startChunkMesh(gen: WorldGenerator, data: ChunkData, lod: 0 | 1 | 2 = 0): ChunkJob {
   const group = new THREE.Group();
   group.position.set(data.cx * CHUNK_SIZE_M, 0, data.cz * CHUNK_SIZE_M);
   const blocked: string[] = [];
@@ -577,26 +584,46 @@ export function buildChunkMesh(
 
   ensureGroundTextures();
   const cover = { ore: emptyTexBuf(), water: emptyTexBuf() };
-  const propsGeometry = buildProps(data, blocked, tall, cover, (x, z) => gen.biomeAt(x, z), lod);
-  if (propsGeometry) {
-    const props = new THREE.Mesh(propsGeometry, propsMaterial);
-    props.castShadow = true;
-    props.receiveShadow = true;
-    group.add(props);
-  }
-  const foliageGeometries = [
-    foliageMesh(group, cover.ore, oreMaterial, cover.ore.colors),
-    foliageMesh(group, cover.water, waterMaterial, undefined, true),
-  ];
+  const steps = buildPropsSteps(data, blocked, tall, cover, (x, z) => gen.biomeAt(x, z), lod);
   return {
-    group,
-    lod,
-    blocked,
-    tall,
-    dispose: () => {
-      groundGeometry.dispose();
-      propsGeometry?.dispose();
-      for (const g of foliageGeometries) g?.dispose();
+    step(budgetMs: number): ChunkMesh | null {
+      const start = performance.now();
+      let next = steps.next();
+      while (!next.done) {
+        if (performance.now() - start >= budgetMs) return null;
+        next = steps.next();
+      }
+      const propsGeometry = next.value;
+      if (propsGeometry) {
+        const props = new THREE.Mesh(propsGeometry, propsMaterial);
+        props.castShadow = true;
+        props.receiveShadow = true;
+        group.add(props);
+      }
+      const foliageGeometries = [
+        foliageMesh(group, cover.ore, oreMaterial, cover.ore.colors),
+        foliageMesh(group, cover.water, waterMaterial, undefined, true),
+      ];
+      return {
+        group,
+        lod,
+        blocked,
+        tall,
+        dispose: () => {
+          groundGeometry.dispose();
+          propsGeometry?.dispose();
+          for (const g of foliageGeometries) g?.dispose();
+        },
+      };
     },
   };
+}
+
+/** Fabrique d'un coup les maillages d'un chunk (voir `startChunkMesh` pour le faire par étapes). */
+export function buildChunkMesh(
+  gen: WorldGenerator,
+  data: ChunkData,
+  lod: 0 | 1 | 2 = 0,
+): ChunkMesh {
+  return startChunkMesh(gen, data, lod).step(Infinity) as ChunkMesh;
 }
