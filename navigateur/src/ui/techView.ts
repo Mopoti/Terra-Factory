@@ -195,7 +195,8 @@ export function mountTech(
           ? t('tech.stop')
           : t('tech.study')
         : t('tech.research');
-    button.disabled = done || blocked;
+    // En Créatif, un prérequis manquant ne bloque pas : le clic recherche aussi tous les prérequis.
+    button.disabled = done || (blocked && !state.creative);
     button.addEventListener('click', () => {
       if (science > 0) {
         actions.bus.dispatch<'study'>({ type: 'study', tech: studying ? null : tech.id });
@@ -204,7 +205,11 @@ export function mountTech(
         refresh();
         return;
       }
-      const result = actions.bus.dispatch<'research'>({ type: 'research', tech: tech.id });
+      const result = actions.bus.dispatch<'research'>({
+        type: 'research',
+        tech: tech.id,
+        prereqs: state.creative,
+      });
       playSfx(result === 'ok' ? 'craft' : 'deny');
       message =
         result === 'ok'
@@ -214,23 +219,6 @@ export function mountTech(
             : result === 'missing'
               ? t('tech.missing')
               : '';
-      refresh();
-    });
-    return button;
-  }
-
-  /** Créatif : recherche la technologie avec tous ses prérequis manquants (bouton visible quand un prérequis manque). */
-  function allButton(tech: TechDef): HTMLButtonElement {
-    const button = el('button', 'menu-btn', t('tech.researchAll'));
-    button.type = 'button';
-    button.addEventListener('click', () => {
-      const result = actions.bus.dispatch<'research'>({
-        type: 'research',
-        tech: tech.id,
-        prereqs: true,
-      });
-      playSfx(result === 'ok' ? 'craft' : 'deny');
-      message = result === 'ok' ? t('tech.researched', { tech: techName(tech.id) }) : '';
       refresh();
     });
     return button;
@@ -292,12 +280,6 @@ export function mountTech(
       if (tech.unlocks.length === 0)
         unlocks.append(el('div', 'tech-line sub', t(`tech.effect.${tech.id}` as TranslationKey)));
       body.append(unlocks, actionButton(tech));
-      if (
-        state.creative &&
-        !known().includes(tech.id) &&
-        !tech.requires.every((r) => known().includes(r))
-      )
-        body.append(allButton(tech));
     }
     if (message) body.append(el('div', 'inv-message', message));
     detailEl.replaceChildren(head, body);
