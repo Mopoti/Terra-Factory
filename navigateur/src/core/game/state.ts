@@ -2128,9 +2128,9 @@ export class GameState {
   /** Durée d'une batterie lithium en mode simple. */
   static readonly AR_LITHIUM_S = 900;
 
-  /** Le joueur porte une pièce d'armure T4 ou T5 (qui contient l'affichage). */
+  /** Le joueur porte un casque d'armure T4 ou T5 (qui contient l'affichage). */
   arAvailable(): boolean {
-    return Object.values(this.changes.equipment).some((id) => /^armor[45]_/.test(baseOf(id)));
+    return /^armor[45]_head$/.test(baseOf(this.changes.equipment.head ?? ''));
   }
 
   /** Passe au mode suivant (désactivé, simple, complet) ; renvoie ce qui empêche, le cas échéant. */

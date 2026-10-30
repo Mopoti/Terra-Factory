@@ -1,7 +1,7 @@
 {
  "key": "discussions-j1",
- "title": "Discussions : suite (10)",
- "intro": "La réalité augmentée est codée en essai. À tester en jeu.",
+ "title": "Discussions : suite (11)",
+ "intro": "Casque exigé : corrigé. L'armure active (batterie par pièce) est notée ; elle demande quelques précisions avant de coder.",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -21,12 +21,12 @@
  ],
  "rows": [
   {
-   "id": "s1",
+   "id": "t1",
    "tab": "n",
-   "name": "Réalité augmentée : à tester",
-   "tag": "s1",
-   "recipe": "Armure T4 ou T5 portée + une batterie portable (ou lithium) dans le sac, puis touche J : simple (température + liseré au sol sous les machines abîmées), complet (+ vent, réseau de la machine visée, anneaux rouges sous les ennemis proches). Simple : 150 s par niveau de batterie, complet : trois fois plus vite. La touche H est déjà prise par la destination du train, donc J (reconfigurable dans les paramètres).",
-   "role": "Le liseré est-il assez discret et beau ? Les anneaux rouges des ennemis te plaisent-ils ? La consommation est-elle bien dosée ? J te convient-il, ou préfères-tu partager H avec la destination du train quand on n'est pas dans une locomotive ?"
+   "name": "Armure active : batteries par pièce",
+   "tag": "t1",
+   "recipe": "Noté dans le GDD : chaque pièce T4/T5 porte sa batterie, la réserve est la somme des pièces ; casque = réalité augmentée, jambes = exosquelette activable, torse = barre de raccourcis en plus, mains = outil intégré (énergie par coup). Pour la réalité augmentée, le casque est maintenant exigé. Ma proposition pour la batterie : une case « batterie » sur chaque pièce où l'on glisse une batterie portable (idée de l'objet inséré déjà validée), qui se recharge à la borne comme celles du sac, et la réserve de l'armure est la somme de ces cases.",
+   "role": "1) La batterie d'une pièce est-elle bien une batterie portable insérée dans une case de la pièce (rechargée à la borne) ? Et que devient la batterie du sac pour le propulseur ? 2) Exosquelette sur les jambes : l'exosquelette actuel (emplacement jambes) devient-il la pièce de jambes T4/T5, ou reste-t-il une pièce à part ? Quelle touche pour l'activer ? 3) Mains : un outil intégré qui remplace tous les outils (pioche, hache…) ou un seul outil T4/T5 plus efficace ? 4) Barre de raccourcis en plus : quelle taille (comme la barre actuelle) ? 5) Les pièces T4/T5 existent déjà comme armure : on les enrichit (même objets) ou on crée des variantes « actives » ?"
   }
  ]
 }

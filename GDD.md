@@ -624,7 +624,12 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Pas d'affichage permanent** de la température ou du vent à l'écran par défaut. Les **armures T4 et T5** donnent un **affichage en réalité augmentée** ✅ (essai), que la touche **J** fait passer par trois modes : **désactivé**, **simple** et **complet** (la touche H, déjà prise par la destination du train, n'a pas pu servir ; tout est reconfigurable). Style **discret** : pas de barre de vie flottante.
   - **Simple** : la **température** locale (une ligne fine sous la boussole) et un **liseré lumineux au sol** autour des machines abîmées à moins de 40 m (vert, orange puis rouge selon la vie).
   - **Complet** : en plus, le **vent** (force et direction), le **réseau électrique** de la machine visée (production et demande) et des **anneaux rouges au sol sous les ennemis** à moins de 50 m (essai à juger).
-  - **Énergie** : il faut au moins une **batterie portable** (ou lithium) dans le sac. Elle se vide par niveaux (150 s par niveau en simple, **trois fois plus vite en complet**) ; plus de batterie, l'affichage se coupe. Sans armure T4 ou T5 portée, la touche refuse. Gratuit en Créatif.
+  - **Condition** ✅ : il faut **porter le casque** T4 ou T5 ; sans casque, pas d'affichage et pas de consommation pour cette fonction. (Essai actuel : l'énergie vient des batteries du sac, voir ci-dessous pour la cible.)
+- **Armures actives T4 et T5** ⏳ (conception du PO, pas encore codée) : chaque **pièce** de l'armure reçoit sa **batterie** ; la **réserve d'énergie** de l'armure est la somme des batteries de toutes les pièces portées (plus de pièces, plus d'autonomie). Les fonctions de l'armure **consomment de l'énergie**, la **T5 un peu moins que la T4** :
+  - **casque** : l'affichage en réalité augmentée (trois modes) ;
+  - **jambes** : l'**exosquelette** s'active ou se désactive à volonté ; plus puissant en T5 qu'en T4 ;
+  - **torse** : une **barre de raccourcis en plus**, qui ne consomme presque rien ;
+  - **mains** : remplacent l'**outil** ; **chaque coup consomme** de l'énergie.
 - ⏳ Reste à concevoir : chauffage des abris, combustible d'hiver, cultures ; le vent pourra plus tard orienter la fumée, la pollution ou les nuages.
 
 ---

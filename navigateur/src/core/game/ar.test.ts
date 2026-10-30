@@ -50,6 +50,14 @@ describe('réalité augmentée', () => {
     expect(steps).toBeGreaterThanOrEqual(240);
   });
 
+  it('exige le casque, pas une autre pièce', () => {
+    const s = new GameState({ inventory: { 'battery_portable~5': 1 } });
+    s.changes.equipment.torso = 'armor5_torso';
+    expect(s.cycleAr()).toBe('noArmor');
+    s.changes.equipment.head = 'armor5_head';
+    expect(s.cycleAr()).toBe('ok');
+  });
+
   it('se coupe quand l’armure est retirée', () => {
     const s = armored({ 'battery_portable~5': 1 });
     s.cycleAr();
