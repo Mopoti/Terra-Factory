@@ -42,8 +42,8 @@ describe('borne de recharge', () => {
   it('recharge les batteries portables du joueur à portée, niveau par niveau', () => {
     const { s, f } = setup();
     expect(s.inventory.battery_portable).toBe(2);
-    run(s, f, [{ x: 4, z: 2 }], 3);
-    // 400 kW pendant 3 s = 1200 kJ = 2 niveaux de 600 kJ, sur une seule batterie (la plus chargée d'abord).
+    run(s, f, [{ x: 4, z: 2 }], 3.2);
+    // 400 kW pendant 3 s (la borne met un pas à réclamer son courant) = 1200 kJ = 2 niveaux de 600 kJ, sur une seule batterie (la plus chargée d'abord).
     expect(s.inventory['battery_portable~2']).toBe(1);
     expect(s.inventory.battery_portable).toBe(1);
     run(s, f, [{ x: 4, z: 2 }], 100);
@@ -90,5 +90,33 @@ describe('borne de recharge', () => {
     expect(charger.slots[0].item).toBe('battery_portable~10');
     run(s, f, [], 2);
     expect(f.gridInfo(charger)!.demandKw).toBe(0);
+  });
+
+  it('une borne ne prend que le surplus : 40 kW produits, elle charge à 40 kW sans faire sauter le réseau', () => {
+    const wind = emptyMachine(1, 'wind_turbine', 0, 5, 0);
+    const charger = emptyMachine(3, 'charger', 6, 0, 0);
+    charger.slots.push({ item: 'battery_portable', count: 1 });
+    const f = new Factory([wind, emptyMachine(2, 'pole', 4, 4, 0), charger], world);
+    f.windSpeed = 1;
+    const s = new GameState({ inventory: {} });
+    run(s, f, [], 31);
+    expect(f.gridInfo(charger)!.blackout).toBe(false);
+    expect(f.gridInfo(charger)!.satisfaction).toBe(1);
+    expect(f.chargerKw(charger)).toBeCloseTo(40, 6);
+    // 40 kW pendant 30 s = 1200 kJ : deux niveaux de 600 kJ.
+    expect(Number(charger.slots[0].item.split('~')[1])).toBe(2);
+  });
+
+  it('une borne cède la place aux autres machines du réseau', () => {
+    const wind = emptyMachine(1, 'wind_turbine', 0, 5, 0);
+    const lamp = emptyMachine(4, 'lamp', 0, 9, 0);
+    const charger = emptyMachine(3, 'charger', 6, 0, 0);
+    charger.slots.push({ item: 'battery_portable', count: 1 });
+    const f = new Factory([wind, emptyMachine(2, 'pole', 4, 4, 0), lamp, charger], world);
+    f.windSpeed = 1;
+    const s = new GameState({ inventory: {} });
+    run(s, f, [], 5);
+    expect(f.powerFactor(lamp)).toBe(1);
+    expect(f.chargerKw(charger)).toBeCloseTo(35, 6); // 40 kW produits − 5 kW du lampadaire
   });
 });

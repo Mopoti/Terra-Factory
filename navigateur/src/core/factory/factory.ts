@@ -1113,7 +1113,8 @@ export class Factory {
         const mine = this.transformers.filter((l) => l.low === g.id);
         if (mine.length === 0) continue;
         const rating = mine.length * (machineDef('transformer').transformKw ?? 0);
-        const out = Math.min(Math.max(0, g.capacityKw - g.demandKw), rating);
+        const spare = g.capacityKw - g.demandKw - (this.chargeWant.get(g.id) ?? 0);
+        const out = Math.min(Math.max(0, spare), rating);
         if (out <= 0) continue;
         for (const l of mine) {
           const high = this.grids.get(l.high);
@@ -1916,6 +1917,17 @@ export class Factory {
 
   /** Bornes de recharge qui ont une cible à charger (fixé par la simulation, un pas avant le calcul du courant). */
   readonly chargerBusy = new Set<number>();
+  /** Bornes de recharge : demande, part accordée (kW) et nombre de bornes actives, par réseau. Elles ne prennent que le surplus. */
+  private readonly chargeWant = new Map<number, number>();
+  private readonly chargeGrant = new Map<number, number>();
+  private readonly chargersOn = new Map<number, number>();
+
+  /** Puissance (kW) dont dispose cette borne en ce moment : sa part du surplus de son réseau, au plus sa puissance nominale. */
+  chargerKw(m: Machine): number {
+    const id = this.gridOf.get(m.id);
+    if (id === undefined || !this.chargerBusy.has(m.id)) return 0;
+    return (this.chargeGrant.get(id) ?? 0) / Math.max(1, this.chargersOn.get(id) ?? 1);
+  }
 
   /** Portail ouvert ? (`wear` = 1.) */
   gateOpen(m: Machine): boolean {
@@ -1976,10 +1988,21 @@ export class Factory {
       g.capacityKw = 0;
       g.demandKw = 0;
     }
+    this.chargeWant.clear();
+    this.chargeGrant.clear();
+    this.chargersOn.clear();
     for (const m of this.machines) {
       const g = this.gridInfo(m);
       if (!g) continue;
       const def = machineDef(m.type);
+      if (m.type === 'charger') {
+        // Une borne ne réclame pas de courant fixe : elle prend ce qui reste une fois les autres machines servies.
+        if (this.chargerBusy.has(m.id)) {
+          this.chargeWant.set(g.id, (this.chargeWant.get(g.id) ?? 0) + (def.consumesKw ?? 0));
+          this.chargersOn.set(g.id, (this.chargersOn.get(g.id) ?? 0) + 1);
+        }
+        continue;
+      }
       if (m.type === 'fusion_reactor') {
         // Amorçage : 500 MW ; plasma : aimants 50 MW et production 500 MW.
         if (this.fusionOn(m)) {
@@ -2001,6 +2024,13 @@ export class Factory {
       }
     }
     this.transfer();
+    for (const g of this.grids.values()) {
+      const want = this.chargeWant.get(g.id) ?? 0;
+      if (want <= 0) continue;
+      const grant = g.blackout ? 0 : Math.min(want, Math.max(0, g.capacityKw - g.demandKw));
+      g.demandKw += grant;
+      this.chargeGrant.set(g.id, grant);
+    }
     this.storeEnergy(dt);
     const tripped: Machine[] = [];
     for (const g of this.grids.values()) {

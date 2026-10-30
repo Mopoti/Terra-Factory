@@ -107,7 +107,8 @@ export function stepChargers(
       continue;
     }
     factory.chargerBusy.add(m.id);
-    const share = ((machineDef('charger').chargeKw ?? 0) * factory.powerFactor(m)) / needy.length;
+    const share =
+      Math.min(machineDef('charger').chargeKw ?? 0, factory.chargerKw(m)) / needy.length;
     for (const t of needy) t.give(share, dt);
   }
 }
