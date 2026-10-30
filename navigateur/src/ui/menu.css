@@ -3346,3 +3346,20 @@ input[type='range'] {
 .slot-gauge i.lo {
   background: #d9473a;
 }
+
+/* Réalité augmentée (armures T4 et T5) : une ligne discrète sous la boussole. */
+.ar-panel {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 14px;
+  border-radius: 12px;
+  background: rgba(20, 28, 34, 0.45);
+  border: 1px solid rgba(140, 220, 255, 0.35);
+  color: #bfeaff;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  z-index: 4;
+}

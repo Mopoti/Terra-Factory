@@ -50,7 +50,8 @@ import {
 import { hash01 } from '../core/world/rng';
 import { WorldGenerator, type ChunkData } from '../core/world/worldgen';
 import { FrameStats } from '../core/report/perf';
-import { t, type TranslationKey } from '../i18n';
+import { getLocale, t, type TranslationKey } from '../i18n';
+import { formatTemperature } from '../core/units';
 import { Input } from '../input/input';
 import type { ActionId } from '../settings/controls';
 import type { Settings } from '../settings/schema';
@@ -58,7 +59,7 @@ import { getSettings, lowerAdapted, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
-import { coldDamagePerS, temperatureAt, windAt, type Wind } from '../core/game/weather';
+import { coldDamagePerS, compassOf, temperatureAt, windAt, type Wind } from '../core/game/weather';
 import {
   buildChunkMesh,
   startChunkMesh,
@@ -3304,6 +3305,99 @@ export function startGameView(
   compassValue.className = 'compass-value';
   compass.append(compassValue);
   container.appendChild(compass);
+  // Réalité augmentée (armures T4 et T5, touche J) : température, machines abîmées (liseré au sol), et en mode complet
+  // vent, réseau électrique visé et ennemis proches. Discret : une ligne de texte et des anneaux au sol.
+  const arPanel = document.createElement('div');
+  arPanel.className = 'ar-panel';
+  arPanel.hidden = true;
+  container.appendChild(arPanel);
+  const arRingGeometry = new THREE.RingGeometry(0.92, 1, 40);
+  arRingGeometry.rotateX(-Math.PI / 2);
+  const arRings: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>[] = [];
+  let arRingsUsed = 0;
+  let arTextClock = 0;
+  const arRing = (x: number, z: number, radius: number, color: number): void => {
+    let ring = arRings[arRingsUsed];
+    if (!ring) {
+      ring = new THREE.Mesh(
+        arRingGeometry,
+        new THREE.MeshBasicMaterial({
+          transparent: true,
+          opacity: 0.8,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        }),
+      );
+      ring.renderOrder = 5;
+      scene.add(ring);
+      arRings.push(ring);
+    }
+    arRingsUsed++;
+    ring.visible = true;
+    ring.material.color.setHex(color);
+    ring.position.set(x, 0.06, z);
+    ring.scale.set(radius, 1, radius);
+  };
+  function updateAr(dt: number): void {
+    const state = options.state;
+    for (const r of arRings) r.visible = false;
+    arRingsUsed = 0;
+    if (state.arMode === 0 || !state.useAr(dt)) {
+      arPanel.hidden = true;
+      if (state.arMode === 0) return;
+      options.onMessage?.(t('ar.empty'));
+      return;
+    }
+    const full = state.arMode === 2;
+    // Machines abîmées : liseré vert → orange → rouge selon la vie, à moins de 40 m.
+    for (const m of factory.machines) {
+      if (m.hp === undefined) continue;
+      const { w, d } = dims(m.type, m.rot);
+      const cx = (m.gx + w / 2) * CELL_SIZE_M;
+      const cz = (m.gz + d / 2) * CELL_SIZE_M;
+      if (Math.hypot(cx - playerX, cz - playerZ) > 40) continue;
+      const f = factory.healthFraction(m);
+      const color = f > 0.66 ? 0x7fd36b : f > 0.33 ? 0xf0a53a : 0xe0503c;
+      arRing(cx, cz, Math.max(w, d) * CELL_SIZE_M * 0.6 + 0.3, color);
+    }
+    if (full) {
+      for (const e of threat.enemies) {
+        if (Math.hypot(e.x - playerX, e.z - playerZ) > 50) continue;
+        arRing(e.x, e.z, 0.7, 0xff3b3b);
+      }
+    }
+    arTextClock -= dt;
+    if (arTextClock > 0) {
+      arPanel.hidden = false;
+      return;
+    }
+    arTextClock = 0.25;
+    const w = weatherNow(playerX, playerZ);
+    const units = getSettings().display.units;
+    const parts = [formatTemperature(w.tempC, units, getLocale())];
+    if (full) {
+      parts.push(
+        t('ar.wind', {
+          speed: String(Math.round(w.wind.speed * 60)),
+          dir: t(`compass.${compassOf(w.wind.dir)}` as TranslationKey),
+        }),
+      );
+      const grid = aimedMachine ? factory.gridInfo(aimedMachine) : null;
+      if (grid)
+        parts.push(
+          t('ar.grid', {
+            prod: String(Math.round(grid.capacityKw)),
+            demand: String(Math.round(grid.demandKw)),
+          }),
+        );
+    }
+    arPanel.textContent = parts.join('  ·  ');
+    arPanel.hidden = false;
+  }
+  const weatherNow = (x: number, z: number): { tempC: number; wind: Wind } => ({
+    tempC: temperatureAt(generator.seed, x, z, options.state.changes.time, timeCfg),
+    wind: windAt(generator.seed, options.state.changes.time),
+  });
   /** Cap de la caméra en degrés : 0 = nord, 90 = est. */
   // Repère du corps sur la boussole (croix rouge ; au bord, une flèche quand il est hors du champ).
   const corpseMark = document.createElement('span');
@@ -4493,6 +4587,12 @@ export function startGameView(
     }
     updateGhost(views);
     updateCompass();
+    if (!paused && pressed('ar')) {
+      const r = options.state.cycleAr();
+      if (r !== 'ok') options.onMessage?.(t(`ar.${r}` as TranslationKey));
+      else options.onMessage?.(t(`ar.mode.${options.state.arMode}` as TranslationKey));
+    }
+    if (!paused) updateAr(dt);
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
     const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
     const inRoom = options.state.rooms().find((r) => r.level === 0 && r.cells.includes(pcell));
@@ -4723,10 +4823,7 @@ export function startGameView(
         ? guest.client.players.filter((p) => p.id !== guest.client.you.id)
         : (hostSession?.players().filter((p) => p.id !== HOST_ID) ?? []),
     vehicleMachine,
-    weatherAt: (x, z) => ({
-      tempC: temperatureAt(generator.seed, x, z, options.state.changes.time, timeCfg),
-      wind: windAt(generator.seed, options.state.changes.time),
-    }),
+    weatherAt: weatherNow,
     mountedMachineId: () => (mounted ? -mounted.id : trains.mountedWindowId()),
     dropItem: (item, count) => {
       // Devant le joueur ; sur place si l'emplacement est bloqué.

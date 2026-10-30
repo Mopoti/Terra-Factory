@@ -95,7 +95,7 @@ import {
   type BagLimits,
   type EquipSlot,
 } from '../data/items';
-import { allLevels, levelInfo, variantId } from '../data/itemData';
+import { allLevels, baseOf, levelInfo, variantId } from '../data/itemData';
 import {
   add,
   maxAddable,
@@ -2112,6 +2112,82 @@ export class GameState {
       this.emit({ type: 'inventory' });
     }
     this.jetpackSeconds -= dt;
+    return true;
+  }
+
+  // --- Réalité augmentée (armures T4 et T5) ------------------------------------------------------
+
+  /** Mode d'affichage : 0 désactivé, 1 simple, 2 complet (non enregistré). */
+  arMode: 0 | 1 | 2 = 0;
+  /** Secondes d'affichage simple que la batterie en cours peut encore fournir. */
+  private arSeconds = 0;
+  /** Durée d'un niveau de batterie portable en mode simple (10 niveaux : 25 min pour une batterie pleine). */
+  static readonly AR_STEP_S = 150;
+  /** Le mode complet consomme autant de fois plus que le mode simple. */
+  static readonly AR_COMPLETE_FACTOR = 3;
+  /** Durée d'une batterie lithium en mode simple. */
+  static readonly AR_LITHIUM_S = 900;
+
+  /** Le joueur porte une pièce d'armure T4 ou T5 (qui contient l'affichage). */
+  arAvailable(): boolean {
+    return Object.values(this.changes.equipment).some((id) => /^armor[45]_/.test(baseOf(id)));
+  }
+
+  /** Passe au mode suivant (désactivé, simple, complet) ; renvoie ce qui empêche, le cas échéant. */
+  cycleAr(): 'ok' | 'noArmor' | 'noBattery' {
+    if (!this.arAvailable()) {
+      this.arMode = 0;
+      return 'noArmor';
+    }
+    const next = ((this.arMode + 1) % 3) as 0 | 1 | 2;
+    if (next > 0 && !this.creative && !this.hasArEnergy()) {
+      this.arMode = 0;
+      return 'noBattery';
+    }
+    this.arMode = next;
+    return 'ok';
+  }
+
+  private hasArEnergy(): boolean {
+    return (
+      this.arSeconds > 0 ||
+      (this.inventory.battery_lithium ?? 0) > 0 ||
+      allLevels('battery_portable').some(
+        (k) => (levelInfo(k)?.level ?? 0) > 0 && (this.inventory[k] ?? 0) > 0,
+      )
+    );
+  }
+
+  /**
+   * Consomme `dt` secondes d'affichage dans le mode actuel (batteries portables d'abord, puis lithium). Renvoie faux
+   * (et coupe l'affichage) si l'armure n'est plus portée ou s'il n'y a plus de batterie.
+   */
+  useAr(dt: number): boolean {
+    if (this.arMode === 0) return false;
+    if (!this.arAvailable()) {
+      this.arMode = 0;
+      return false;
+    }
+    if (this.creative) return true;
+    const cost = dt * (this.arMode === 2 ? GameState.AR_COMPLETE_FACTOR : 1);
+    if (this.arSeconds <= 0) {
+      const unit = allLevels('battery_portable')
+        .map((k) => ({ k, level: levelInfo(k)?.level ?? 0 }))
+        .filter((x) => x.level > 0 && (this.inventory[x.k] ?? 0) > 0)
+        .sort((a, b) => a.level - b.level)[0];
+      if (unit) {
+        this.wearItem(unit.k, 1);
+        this.arSeconds = GameState.AR_STEP_S;
+      } else if ((this.inventory.battery_lithium ?? 0) > 0) {
+        this.inventory = remove(this.inventory, 'battery_lithium', 1).inventory;
+        this.arSeconds = GameState.AR_LITHIUM_S;
+        this.emit({ type: 'inventory' });
+      } else {
+        this.arMode = 0;
+        return false;
+      }
+    }
+    this.arSeconds -= cost;
     return true;
   }
 
