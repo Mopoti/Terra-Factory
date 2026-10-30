@@ -1,7 +1,7 @@
 {
  "key": "discussions-j1",
- "title": "Discussions : suite (5)",
- "intro": "Le GDD est validé. Reste la conception du climat décidée avec toi ; réponds aux questions de la ligne.",
+ "title": "Discussions : suite (6)",
+ "intro": "Le climat est tranché. Quel chantier ensuite ?",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -16,17 +16,17 @@
  "tabs": [
   {
    "id": "n",
-   "label": "Climat"
+   "label": "Suite"
   }
  ],
  "rows": [
   {
-   "id": "k1",
+   "id": "m1",
    "tab": "n",
-   "name": "Température et vent",
-   "tag": "k1",
-   "recipe": "Noté dans le GDD (§10.3) : la température dépend du biome, de la saison et de l'heure ; une découverte donne un thermomètre posable contre un mur ; le vent devient réaliste (direction et force qui évoluent lentement, communes à une zone) et un objet posé sur une dalle en montre le sens et la force. Rien n'est codé.",
-   "role": "Quels effets veux-tu pour la température (chauffage des abris, combustible d'hiver, vêtements, cultures) ? Et un nom pour les deux objets (thermomètre et girouette / manche à air) ?"
+   "name": "Prochain chantier",
+   "tag": "m1",
+   "recipe": "Climat noté (froid = dégâts sans vêtements ou armure ; thermomètre et girouette). Restent ouverts : équilibrage, emplacements d'amélioration, fin de partie, signalisation des trains, et d'abord coder le climat (température, vent réaliste, deux objets) si tu veux.",
+   "role": "Par quoi veux-tu continuer ?"
   }
  ]
 }

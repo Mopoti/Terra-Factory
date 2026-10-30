@@ -618,6 +618,8 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Voir la température** n'est pas gratuit : une **découverte** donne le **thermomètre**, un objet **posable contre un mur** qui affiche la température de l'endroit (dans une pièce close, celle de l'abri). Sans lui, le joueur ne perçoit la température que par ses effets. Unité au choix dans les paramètres (°C, °F, K).
 - **Vent** : il doit **ressembler au vent réel** : une **direction** et une **force** qui évoluent lentement et de façon cohérente dans la durée (rafales, calmes, changements de direction progressifs), et non plus une simple oscillation propre à chaque éolienne comme aujourd'hui (🔶 §7.3). Le même vent s'applique à toutes les éoliennes d'une zone ; leur production suit la force du vent.
 - **Voir le vent** : un objet qui **se pose sur une dalle** (la **manche à air** ou girouette, nom à trancher) montre la **direction** et la **force** du vent ; il suit la même découverte que le thermomètre ou une découverte voisine.
+- **Effet du froid** : un joueur exposé à un froid trop fort avec **trop peu de vêtements ou d'armure** subit des **dégâts** ; l'isolation des vêtements et armures compte donc (valeurs à équilibrer, §14). Les autres effets (chauffage des abris, combustible d'hiver, cultures) restent à concevoir.
+- **Noms** : **thermomètre** et **girouette**.
 - Le vent pourra plus tard orienter la fumée, la pollution ou les nuages ; non décidé.
 
 ---
@@ -808,7 +810,7 @@ Performance (nombre de triangles du décor lointain, chunks actifs, envoi de la 
 1. Pour l'équilibrage : quelles valeurs fixer en premier (coûts de découvertes, puissances, vie des barrières) ?
 2. Conception des **emplacements d'amélioration** : un ou plusieurs par machine, quels producteurs en premier ?
 3. Que doit faire le joueur « à la fin » : au-delà du comptoir spatial, objectifs, succès ?
-4. **Température** : principe décidé (§10.3 : un objet pour la voir, un vent réaliste avec girouette). À trancher : effets exacts (chauffage, combustible d'hiver, cultures, vêtements) et nom des deux objets.
+4. **Température** : principe décidé (§10.3 : un objet pour la voir, un vent réaliste avec girouette). Effet du froid décidé (dégâts si trop peu de vêtements ou d'armure) ; noms : thermomètre et girouette. À concevoir : chauffage des abris, combustible d'hiver, cultures, valeurs d'isolation.
 5. Signalisation ferroviaire : signaux simples ou cantons complets ?
 
 ---
