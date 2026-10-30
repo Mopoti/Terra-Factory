@@ -93,3 +93,45 @@ describe('mode Créatif : un exemplaire suffit', () => {
     expect(s.placeMachine(f, 'chest_wood', 10, 0, 0, () => false)).toBe('missing');
   });
 });
+
+describe('coffre quantique : chaque joueur voit son contenu', () => {
+  const setup = (): { host: GameState; ana: GameState; chest: ReturnType<typeof emptyMachine> } => {
+    const host = new GameState({ inventory: { wood: 10 } });
+    const profile = { inventory: { wood: 7 }, changes: {} };
+    const ana = GameState.forPlayer(
+      host,
+      profile,
+      { research: true, credits: true, inventory: false },
+      'Ana',
+    );
+    const chest = emptyMachine(1, 'quantum_chest', 0, 0, 0);
+    return { host, ana, chest };
+  };
+  it('le même coffre montre à chacun ce qu’il y a rangé', () => {
+    const { host, ana, chest } = setup();
+    expect(host.putInChest(chest, 'wood', 2)).toBe(2);
+    expect(ana.putInChest(chest, 'wood', 5)).toBe(5);
+    expect(host.chestOf(chest).slots).toEqual([{ item: 'wood', count: 2 }]);
+    expect(ana.chestOf(chest).slots).toEqual([{ item: 'wood', count: 5 }]);
+    expect(chest.slots).toEqual([{ item: 'wood', count: 2 }]); // le contenu du propriétaire
+    expect(chest.stores?.Ana).toEqual([{ item: 'wood', count: 5 }]);
+    expect(ana.takeFromChest(chest, 0, 3)).toBe(3);
+    expect(ana.chestOf(chest).slots).toEqual([{ item: 'wood', count: 2 }]);
+    expect(host.chestOf(chest).slots).toEqual([{ item: 'wood', count: 2 }]);
+  });
+  it('le contenu de chaque joueur survit à la sauvegarde', () => {
+    const { ana, chest } = setup();
+    ana.putInChest(chest, 'wood', 4);
+    const back = normalizeMachines(JSON.parse(JSON.stringify([chest])));
+    expect(back[0].stores?.Ana).toEqual([{ item: 'wood', count: 4 }]);
+  });
+  it('démolir le coffre rend le contenu de tous au démolisseur', () => {
+    const { host, ana, chest } = setup();
+    const f = new Factory([chest], { oreAt: () => null, mineOre: () => 0 });
+    host.putInChest(chest, 'wood', 2);
+    ana.putInChest(chest, 'wood', 5);
+    const before = host.inventory.wood ?? 0;
+    expect(host.removeMachine(f, 1, { x: 0, z: 0 })).toBe(true);
+    expect(host.inventory.wood ?? 0).toBeGreaterThanOrEqual(before + 7);
+  });
+});

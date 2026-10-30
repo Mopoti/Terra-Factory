@@ -187,6 +187,7 @@ function startGuest(client: GuestClient, who: JoinInfo): void {
     inventory: client.inventory,
     changes: mergeChanges(client.world as WorldChanges, client.changes),
   });
+  state.playerKey = client.you.name;
   const sync = new GuestSync(client, state);
   sync.onLost(() => void reconnect(sync, who));
   startGame(game, undefined, { client, sync }, state);

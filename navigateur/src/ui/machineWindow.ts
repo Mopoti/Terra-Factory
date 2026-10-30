@@ -166,12 +166,16 @@ export function mountMachineWindow(
       state.hand,
     ]);
 
-  const machine = (): Machine | null =>
-    current === null
-      ? null
-      : current < 0
-        ? (actions.resolve?.(current) ?? null)
-        : (factory.machines.find((m) => m.id === current) ?? null);
+  const machine = (): Machine | null => {
+    const found =
+      current === null
+        ? null
+        : current < 0
+          ? (actions.resolve?.(current) ?? null)
+          : (factory.machines.find((m) => m.id === current) ?? null);
+    // Coffre quantique : chaque joueur n'y voit que son contenu.
+    return found ? state.chestOf(found) : null;
+  };
 
   /** Une case de la machine peut-elle recevoir cet objet ? */
   const accepts = (m: Machine, slot: SlotName, item: string): boolean =>

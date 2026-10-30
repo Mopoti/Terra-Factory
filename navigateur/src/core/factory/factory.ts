@@ -107,6 +107,9 @@ export interface Machine {
   broken: boolean;
   /** Points de vie restants d'une machine abîmée par les ennemis (absent = intacte), enregistrés avec la partie. */
   hp?: number;
+  /** Coffre quantique : joueur qui l'a posé (son contenu est `slots`) et contenu de chaque autre joueur (par nom). */
+  owner?: string;
+  stores?: Record<string, Stack[]>;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
   /** Balise : nom affiché (« Balise » par défaut) et couleur (#rrggbb). */
@@ -594,6 +597,26 @@ export function normalizeMachines(raw: unknown): Machine[] {
         machine.type === 'fusion_reactor' ||
         machine.type === 'breaker');
     if (isNum(m.hp) && m.hp > 0 && m.hp < Factory.maxHealth(machine.type)) machine.hp = m.hp;
+    if (machine.type === 'quantum_chest') {
+      if (typeof m.owner === 'string' && m.owner) machine.owner = m.owner;
+      if (typeof m.stores === 'object' && m.stores !== null) {
+        const stores: Record<string, Stack[]> = {};
+        for (const [who, list] of Object.entries(m.stores as Record<string, unknown>)) {
+          if (!Array.isArray(list)) continue;
+          const stacks = list.filter(
+            (x): x is Stack =>
+              typeof x === 'object' &&
+              x !== null &&
+              typeof (x as Stack).item === 'string' &&
+              isNum((x as Stack).count) &&
+              (x as Stack).count > 0,
+          );
+          if (stacks.length > 0)
+            stores[who] = stacks.map((x) => ({ item: x.item, count: Math.floor(x.count) }));
+        }
+        if (Object.keys(stores).length > 0) machine.stores = stores;
+      }
+    }
     machine.wear = isNum(m.wear) && m.wear > 0 ? Math.min(MOULD_CYCLES, Math.floor(m.wear)) : 0;
     if (
       Array.isArray(m.slots) &&

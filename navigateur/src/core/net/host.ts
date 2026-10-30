@@ -288,7 +288,7 @@ export class HostSession {
       this.profiles.set(name, profile);
     }
     if (this.remotes.has(profile.id)) return (this.refuse(link, 'denied'), null);
-    const state = GameState.forPlayer(this.opts.state, profile, mp.share);
+    const state = GameState.forPlayer(this.opts.state, profile, mp.share, name);
     const bus = new CommandBus({
       state,
       factory: this.opts.factory,

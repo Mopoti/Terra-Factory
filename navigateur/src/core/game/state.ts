@@ -259,8 +259,10 @@ export class GameState {
     host: GameState,
     profile: { inventory: Inventory; changes: PlayerChanges },
     share: { research: boolean; credits: boolean; inventory: boolean },
+    name = '',
   ): GameState {
     const guest = new GameState(undefined, host.baseLimits);
+    guest.playerKey = name;
     const keys = new Set<string>(perPlayerKeys(share));
     const own = profile.changes as Record<string, unknown>;
     const fresh = splitChanges(emptyChanges(), [...keys] as PlayerKey[]).player as Record<
@@ -302,6 +304,20 @@ export class GameState {
   private spend(item: string, n: number): void {
     if (this.creative && this.creativeStock && (this.inventory[item] ?? 0) >= 1) return;
     this.inventory = remove(this.inventory, item, n).inventory;
+  }
+
+  /** Nom du joueur dont c'est la fiche ('' pour l'hôte ou une partie solo) : décide quel contenu du coffre quantique il voit. */
+  playerKey = '';
+
+  /**
+   * Coffre quantique : tous les joueurs ouvrent le même coffre mais chacun ne voit que son contenu. Le contenu du joueur qui
+   * l'a posé (et de la chaîne de production qui l'alimente) est `slots` ; celui des autres est rangé par nom dans `stores`.
+   * Renvoie la machine à manipuler (la même, ou une vue dont `slots` est le contenu de ce joueur).
+   */
+  chestOf(m: Machine): Machine {
+    if (m.type !== 'quantum_chest' || this.playerKey === (m.owner ?? '')) return m;
+    const stores = (m.stores ??= {});
+    return { ...m, slots: (stores[this.playerKey] ??= []) };
   }
 
   /** Mode Créatif : un exemplaire suffit pour poser à l'infini (désactivé dans les tests qui comptent les objets). */
@@ -524,7 +540,8 @@ export class GameState {
   }
 
   /** Prend des objets d'une case de coffre (ou d'ingrédient d'assembleur) au bout du curseur. */
-  takeChestToHand(m: Machine, index: number, count: number): number {
+  takeChestToHand(machine: Machine, index: number, count: number): number {
+    const m = this.chestOf(machine);
     const st = m.slots[index];
     if (!st || (this.hand && this.hand.item !== st.item)) return 0;
     const n = Math.min(count, st.count);
@@ -2140,7 +2157,9 @@ export class GameState {
     const at = { x: (gx + 0.5) * CELL_SIZE_M, z: (gz + 0.5) * CELL_SIZE_M };
     for (const belt of factory.replacedBelts(type, gx, gz, rot, lift))
       this.removeMachine(factory, belt.id, at);
-    factory.add(emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier));
+    const placed = emptyMachine(this.changes.nextMachineId++, type, gx, gz, rot, lift, tier);
+    if (type === 'quantum_chest' && this.playerKey) placed.owner = this.playerKey;
+    factory.add(placed);
     this.supportBelt(type, gx, gz, lift);
     this.emit({ type: 'factory' });
     this.emit({ type: 'inventory' });
@@ -2328,7 +2347,14 @@ export class GameState {
     const m = factory.remove(id);
     if (!m) return false;
     this.giveBack(itemOfTier(machineDef(m.type), m.tier), 1, at);
-    for (const stack of [m.fuel, m.input, m.stock, m.extra, ...m.slots])
+    for (const stack of [
+      m.fuel,
+      m.input,
+      m.stock,
+      m.extra,
+      ...m.slots,
+      ...Object.values(m.stores ?? {}).flat(),
+    ])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);
     this.emit({ type: 'factory' });
@@ -2511,7 +2537,8 @@ export class GameState {
   }
 
   /** Range des objets du sac dans un coffre (jusqu'à `count`). Renvoie la quantité rangée. */
-  putInChest(m: Machine, item: string, count: number, bagIndex?: number): number {
+  putInChest(machine: Machine, item: string, count: number, bagIndex?: number): number {
+    const m = this.chestOf(machine);
     // Un wagon de fret : la charge utile et le volume limitent, en plus des cases.
     const car = isCargoWindow(m.id) ? this.carById(carIdOfCargo(m.id)) : null;
     const n = Math.min(
@@ -2529,7 +2556,8 @@ export class GameState {
   }
 
   /** Reprend dans le sac la pile n° `index` d'un coffre (tout ce qui tient). Renvoie la quantité. */
-  takeFromChest(m: Machine, index: number, count = Infinity): number {
+  takeFromChest(machine: Machine, index: number, count = Infinity): number {
+    const m = this.chestOf(machine);
     const stack = m.slots[index];
     if (!stack) return 0;
     const moved = Math.min(count, stack.count, maxAddable(this.inventory, stack.item, this.limits));
