@@ -1,7 +1,7 @@
 {
  "key": "discussions-j1",
- "title": "Discussions : suite (13)",
- "intro": "Premier pas codé : le menu circulaire avec le casque.",
+ "title": "Discussions : suite (14)",
+ "intro": "Menu circulaire validé. Il reste à trancher ou tester ces points.",
  "cols": [
   "Sujet",
   "Mes remarques",
@@ -21,12 +21,12 @@
  ],
  "rows": [
   {
-   "id": "v1",
+   "id": "w1",
    "tab": "n",
-   "name": "Menu circulaire : à tester",
-   "tag": "v1",
-   "recipe": "Touche J : un anneau au centre de l'écran. Avec un casque T4 ou T5 il propose « Casque : réalité augmentée » ; un clic ouvre l'anneau des options (désactivé, simple, complet), un clic sur le centre revient en arrière, Échap ferme. L'énergie vient encore des batteries du sac, en attendant la batterie par pièce.",
-   "role": "Le menu te plaît-il (taille, couleurs, clics) ? Quelle pièce ajouter ensuite : la batterie par pièce (indispensable aux autres), puis jambes, torse, mains ?"
+   "name": "Points encore à valider",
+   "tag": "w1",
+   "recipe": "Liseré au sol sous les machines abîmées et anneaux rouges sous les ennemis (réalité augmentée) ; dosage de la consommation (150 s par niveau en simple, trois fois plus vite en complet, T5 20 % de moins) ; touche J (H est prise par la destination du train) ; sévérité du froid ; pose du thermomètre contre un mur et de la girouette sur une dalle.",
+   "role": "Lesquels te posent problème après test ? Sinon dis-moi par quoi on continue (armure : jambes, torse, mains ; ou un autre chantier)."
   }
  ]
 }
