@@ -170,6 +170,8 @@ export interface WorldChanges {
   tutorialSkipped: boolean;
   /** Balise hyperfréquence activée (fin de partie) et séquence finale déjà montrée. */
   beacon: boolean;
+  /** Contenu des coffres quantiques de chaque joueur (par nom ; '' pour l'hôte) : reste enregistré même sans coffre. */
+  quantum: Record<string, { item: string; count: number }[]>;
   /** Charges restantes du kit de réparation entamé (0 à 4). */
   kitCharges: number;
   /** Crédits galactiques gagnés au comptoir spatial. */
@@ -265,6 +267,7 @@ export function emptyChanges(): WorldChanges {
     tutorialSkipped: false,
     beacon: false,
     kitCharges: 0,
+    quantum: {},
     credits: 0,
     finaleShown: false,
     harvested: {},
@@ -449,6 +452,18 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.admin = r.admin === true;
   result.tutorialSkipped = r.tutorialSkipped === true;
   result.beacon = r.beacon === true;
+  if (typeof r.quantum === 'object' && r.quantum !== null && !Array.isArray(r.quantum)) {
+    for (const [who, list] of Object.entries(r.quantum as Record<string, unknown>)) {
+      if (!Array.isArray(list)) continue;
+      const stacks = list.flatMap((x) => {
+        const st = x as { item?: unknown; count?: unknown };
+        return typeof st?.item === 'string' && isNum(st.count) && st.count > 0
+          ? [{ item: st.item, count: Math.floor(st.count) }]
+          : [];
+      });
+      if (stacks.length > 0) result.quantum[who] = stacks;
+    }
+  }
   if (isNum(r.kitCharges) && r.kitCharges > 0)
     result.kitCharges = Math.min(4, Math.floor(r.kitCharges));
   if (isNum(r.credits) && r.credits > 0) result.credits = Math.floor(r.credits);

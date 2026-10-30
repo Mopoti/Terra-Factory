@@ -310,14 +310,13 @@ export class GameState {
   playerKey = '';
 
   /**
-   * Coffre quantique : tous les joueurs ouvrent le même coffre mais chacun ne voit que son contenu. Le contenu du joueur qui
-   * l'a posé (et de la chaîne de production qui l'alimente) est `slots` ; celui des autres est rangé par nom dans `stores`.
-   * Renvoie la machine à manipuler (la même, ou une vue dont `slots` est le contenu de ce joueur).
+   * Coffre quantique : le contenu appartient au joueur, pas au coffre. Tous ses coffres quantiques montrent le même
+   * contenu, que personne d'autre ne voit ; il reste enregistré même si les coffres sont démolis. Renvoie la machine à
+   * manipuler (une vue dont `slots` est le contenu de ce joueur).
    */
   chestOf(m: Machine): Machine {
-    if (m.type !== 'quantum_chest' || this.playerKey === (m.owner ?? '')) return m;
-    const stores = (m.stores ??= {});
-    return { ...m, slots: (stores[this.playerKey] ??= []) };
+    if (m.type !== 'quantum_chest') return m;
+    return { ...m, slots: (this.changes.quantum[this.playerKey] ??= []) };
   }
 
   /** Mode Créatif : un exemplaire suffit pour poser à l'infini (désactivé dans les tests qui comptent les objets). */
@@ -2347,14 +2346,9 @@ export class GameState {
     const m = factory.remove(id);
     if (!m) return false;
     this.giveBack(itemOfTier(machineDef(m.type), m.tier), 1, at);
-    for (const stack of [
-      m.fuel,
-      m.input,
-      m.stock,
-      m.extra,
-      ...m.slots,
-      ...Object.values(m.stores ?? {}).flat(),
-    ])
+    // Le contenu d'un coffre quantique n'est pas dans le coffre : il reste à son joueur.
+    const inside = m.type === 'quantum_chest' ? [] : m.slots;
+    for (const stack of [m.fuel, m.input, m.stock, m.extra, ...inside])
       if (stack) this.giveBack(stack.item, stack.count, at);
     for (const b of m.belt) this.giveBack(b.item, 1, at);
     this.emit({ type: 'factory' });

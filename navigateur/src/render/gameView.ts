@@ -612,6 +612,8 @@ export function startGameView(
     },
   };
   const factory = new Factory(options.state.changes.machines, factoryWorld);
+  factory.quantum = options.state.changes.quantum;
+  factory.reindex();
   const factoryView = new FactoryView(scene, factory);
   // Modèles 3D du kit : chargés en arrière-plan, les machines les prennent dès qu'ils sont prêts.
   let viewAlive = true;
