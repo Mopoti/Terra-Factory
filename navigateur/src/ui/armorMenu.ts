@@ -78,6 +78,21 @@ export function mountArmorMenu(
         })),
       });
     }
+    if (state.exoAvailable()) {
+      list.push({
+        id: 'exo',
+        label: t('armor.exo'),
+        status: t(state.exoOn ? 'armor.exo.1' : 'armor.exo.0'),
+        choices: [false, true].map((on) => ({
+          label: t(on ? 'armor.exo.1' : 'armor.exo.0'),
+          active: state.exoOn === on,
+          apply: () => {
+            const r = state.setExo(on);
+            return r === 'ok' ? null : t(`exo.${r}` as TranslationKey);
+          },
+        })),
+      });
+    }
     return list;
   };
 

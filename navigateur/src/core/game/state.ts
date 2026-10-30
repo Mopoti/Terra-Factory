@@ -339,6 +339,8 @@ export class GameState {
       l.maxWeightG += bonus.weightG;
       l.maxVolumeMl += bonus.volumeMl;
     }
+    // Exosquelette actif des jambes T4 (puissance 1) ou T5 (puissance 2) : 40 kg de plus par point de puissance.
+    if (this.activeExoLegs()) l.maxWeightG += GameState.EXO_CARRY_G * this.exoPower();
     return l;
   }
 
@@ -2224,9 +2226,24 @@ export class GameState {
     return baseOf(this.changes.equipment.head ?? '').startsWith('armor5_') ? 0.8 : 1;
   }
 
+  /** Dépense `cost` (secondes d'affichage simple) dans les batteries de l'armure, la moins chargée d'abord ; faux s'il n'y a plus rien. */
+  private drainArmor(cost: number): boolean {
+    if (this.arSeconds <= 0) {
+      const unit = this.armorBatteryLevels()
+        .filter((b) => b.level > 0)
+        .sort((a, b) => a.level - b.level)[0];
+      if (!unit) return false;
+      this.changes.armorBattery[unit.slot] = variantId('battery_portable', unit.level - 1);
+      this.arSeconds = GameState.AR_STEP_S;
+      this.emit({ type: 'inventory' });
+    }
+    this.arSeconds -= cost;
+    return true;
+  }
+
   /**
-   * Consomme `dt` secondes d'affichage dans le mode actuel, dans les batteries insérées dans l'armure (la moins chargée
-   * d'abord). Renvoie faux (et coupe l'affichage) si le casque n'est plus porté ou s'il n'y a plus d'énergie.
+   * Consomme `dt` secondes d'affichage dans le mode actuel, dans les batteries insérées dans l'armure. Renvoie faux
+   * (et coupe l'affichage) si le casque n'est plus porté ou s'il n'y a plus d'énergie.
    */
   useAr(dt: number): boolean {
     if (this.arMode === 0) return false;
@@ -2236,20 +2253,68 @@ export class GameState {
     }
     if (this.creative) return true;
     const cost = dt * (this.arMode === 2 ? GameState.AR_COMPLETE_FACTOR : 1) * this.arTierFactor();
-    if (this.arSeconds <= 0) {
-      const unit = this.armorBatteryLevels()
-        .filter((b) => b.level > 0)
-        .sort((a, b) => a.level - b.level)[0];
-      if (!unit) {
-        this.arMode = 0;
-        return false;
-      }
-      this.changes.armorBattery[unit.slot] = variantId('battery_portable', unit.level - 1);
-      this.arSeconds = GameState.AR_STEP_S;
-      this.emit({ type: 'inventory' });
+    if (this.drainArmor(cost)) return true;
+    this.arMode = 0;
+    return false;
+  }
+
+  // --- Exosquelette des jambes (armures T4 et T5) --------------------------------------------------
+
+  /** Exosquelette activé par le joueur (non enregistré). */
+  exoOn = false;
+  /** Poids supplémentaire que porte l'exosquelette actif, par point de puissance. */
+  static readonly EXO_CARRY_G = 40_000;
+  /** Énergie dépensée par seconde de marche (secondes d'affichage simple) : un peu moins en T5 qu'en T4. */
+  static readonly EXO_DRAIN_T4 = 2;
+  static readonly EXO_DRAIN_T5 = 1.6;
+
+  /** Les jambes portées sont une armure T4 ou T5 (qui contient l'exosquelette). */
+  exoAvailable(): boolean {
+    return /^armor[45]_legs$/.test(baseOf(this.changes.equipment.legs ?? ''));
+  }
+
+  private activeExoLegs(): boolean {
+    return this.exoOn && this.exoAvailable();
+  }
+
+  /** Puissance de l'exosquelette en ce moment : 0 (aucun ou éteint), 1 (T3 ou armure T4), 2 (armure T5). */
+  exoPower(): 0 | 1 | 2 {
+    const legs = baseOf(this.changes.equipment.legs ?? '');
+    if (legs === 'exoskeleton') return 1;
+    if (!this.activeExoLegs()) return 0;
+    return legs.startsWith('armor5_') ? 2 : 1;
+  }
+
+  /** Allume ou éteint l'exosquelette des jambes ; renvoie ce qui empêche, le cas échéant. */
+  setExo(on: boolean): 'ok' | 'noLegs' | 'noBattery' {
+    if (!on) {
+      this.exoOn = false;
+      return 'ok';
     }
-    this.arSeconds -= cost;
-    return true;
+    if (!this.exoAvailable()) {
+      this.exoOn = false;
+      return 'noLegs';
+    }
+    if (!this.creative && !this.hasArEnergy()) {
+      this.exoOn = false;
+      return 'noBattery';
+    }
+    this.exoOn = true;
+    return 'ok';
+  }
+
+  /** Une image de marche (ou d'arrêt) : l'exosquelette puise dans les batteries quand on marche, et s'éteint à court d'énergie. */
+  tickExo(dt: number, walking: boolean): void {
+    if (!this.exoOn) return;
+    if (!this.exoAvailable()) {
+      this.exoOn = false;
+      return;
+    }
+    if (this.creative || !walking) return;
+    const rate = baseOf(this.changes.equipment.legs ?? '').startsWith('armor5_')
+      ? GameState.EXO_DRAIN_T5
+      : GameState.EXO_DRAIN_T4;
+    if (!this.drainArmor(dt * rate)) this.exoOn = false;
   }
 
   // --- Machines ------------------------------------------------------------------------------------

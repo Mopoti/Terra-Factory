@@ -135,6 +135,71 @@ describe('batterie dans une pièce d’armure', () => {
   });
 });
 
+describe('exosquelette des jambes', () => {
+  const legs = (piece: string, level: number | null = 5): GameState => {
+    const s = new GameState({ inventory: {} });
+    s.changes.equipment.legs = piece;
+    if (level !== null) s.changes.armorBattery.legs = variantId('battery_portable', level);
+    return s;
+  };
+
+  it('exige des jambes T4 ou T5 et une batterie', () => {
+    const plain = new GameState({ inventory: {} });
+    plain.changes.equipment.legs = 'armor3_legs';
+    expect(plain.setExo(true)).toBe('noLegs');
+    expect(legs('armor4_legs', null).setExo(true)).toBe('noBattery');
+    expect(legs('armor4_legs').setExo(true)).toBe('ok');
+  });
+
+  it('T4 donne la puissance 1 (+40 kg), T5 la puissance 2 (+80 kg), seulement allumé', () => {
+    const t4 = legs('armor4_legs');
+    const base = t4.limits.maxWeightG;
+    expect(t4.exoPower()).toBe(0);
+    t4.setExo(true);
+    expect(t4.exoPower()).toBe(1);
+    expect(t4.limits.maxWeightG).toBe(base + 40_000);
+    const t5 = legs('armor5_legs');
+    t5.setExo(true);
+    expect(t5.exoPower()).toBe(2);
+    expect(t5.limits.maxWeightG).toBe(base + 80_000);
+  });
+
+  it('consomme seulement en marchant, la T5 un peu moins que la T4', () => {
+    const t4 = legs('armor4_legs');
+    t4.setExo(true);
+    t4.tickExo(60, false);
+    expect(t4.changes.armorBattery.legs).toBe('battery_portable~5');
+    const run = (piece: string): number => {
+      const s = legs(piece, 3);
+      s.setExo(true);
+      let n = 0;
+      while (s.exoOn && n < 5000) {
+        s.tickExo(1, true);
+        n++;
+      }
+      return n;
+    };
+    expect(run('armor5_legs')).toBeGreaterThan(run('armor4_legs'));
+  });
+
+  it('s’éteint à court d’énergie ou quand les jambes sont retirées', () => {
+    const s = legs('armor4_legs', 1);
+    s.setExo(true);
+    for (let i = 0; i < 400 && s.exoOn; i++) s.tickExo(1, true);
+    expect(s.exoOn).toBe(false);
+    const t = legs('armor4_legs');
+    t.setExo(true);
+    delete t.changes.equipment.legs;
+    t.tickExo(1, true);
+    expect(t.exoOn).toBe(false);
+  });
+
+  it('l’ancien exosquelette (T3) reste actif sans énergie', () => {
+    const s = legs('exoskeleton', null);
+    expect(s.exoPower()).toBe(1);
+  });
+});
+
 describe('sauvegarde de la batterie d’armure', () => {
   it('survit à l’enregistrement, mais pas sans pièce T4 ou T5 pour la porter', () => {
     const changes = emptyChanges();

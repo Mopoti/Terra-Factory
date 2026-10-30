@@ -2394,8 +2394,7 @@ export function startGameView(
   }
   /** Un tapis emporte le joueur qui s'y tient (à la vitesse des objets), tant que rien ne le bloque. */
   /** L'exosquelette (jambes) : un peu plus de vitesse de marche et le tapis n'emporte plus le joueur qui avance. */
-  const wearsExoskeleton = (): boolean => options.state.changes.equipment.legs === 'exoskeleton';
-  const EXO_SPEED = 1.1;
+  const exoPower = (): number => options.state.exoPower();
   const isWalking = (): boolean =>
     input.isActionActive('forward') ||
     input.isActionActive('backward') ||
@@ -2403,7 +2402,7 @@ export function startGameView(
     input.isActionActive('right');
   function carryByBelt(dt: number): void {
     if (!onGround) return;
-    if (wearsExoskeleton() && isWalking()) return;
+    if (exoPower() > 0 && isWalking()) return;
     // Un tapis surélevé ou une rampe emporte aussi quand on se tient dessus ; au sol, seulement les tapis à plat.
     let m: Machine | null = factory.beltUnder(playerX, playerZ, playerY);
     if (!m && playerY <= 0.2) {
@@ -2465,7 +2464,7 @@ export function startGameView(
       WALK_SPEED_M_S *
       base *
       (flying ? FLY_SPEED_FACTOR : 1) *
-      (!mounted && wearsExoskeleton() ? EXO_SPEED : 1) *
+      (!mounted ? 1 + 0.1 * exoPower() : 1) *
       (!mounted && input.isActionActive('sprint') && !crouching
         ? flying
           ? 2
@@ -4592,7 +4591,12 @@ export function startGameView(
     updateGhost(views);
     updateCompass();
     if (!paused && pressed('ar')) options.onToggleArmor?.();
-    if (!paused) updateAr(dt);
+    if (!paused) {
+      updateAr(dt);
+      const wasExo = options.state.exoOn;
+      options.state.tickExo(dt, isWalking());
+      if (wasExo && !options.state.exoOn) options.onMessage?.(t('exo.off'));
+    }
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
     const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
     const inRoom = options.state.rooms().find((r) => r.level === 0 && r.cells.includes(pcell));
