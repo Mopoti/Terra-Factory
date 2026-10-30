@@ -49,6 +49,7 @@ import {
 } from '../core/game/worldChanges';
 import { hash01 } from '../core/world/rng';
 import { WorldGenerator, type ChunkData } from '../core/world/worldgen';
+import { FrameStats } from '../core/report/perf';
 import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
 import type { ActionId } from '../settings/controls';
@@ -4064,7 +4065,47 @@ export function startGameView(
   let fpsSince = 0;
   let debugSince = 0;
   let clickStartedBuilding = false;
+  /** Carte graphique et contenu de la scène (appels de dessin, triangles…), pour comprendre une chute d'images. */
+  function graphicsInfo(): Record<string, unknown> {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const mem = renderer.info.memory;
+    const render = renderer.info.render;
+    return {
+      gpu: ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : 'inconnu',
+      drawCalls: render.calls,
+      triangles: render.triangles,
+      geometries: mem.geometries,
+      textures: mem.textures,
+      cores: navigator.hardwareConcurrency,
+      deviceMemoryGb: (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? null,
+    };
+  }
+
+  /** Fluidité : durée de chaque image et répartition du travail, pour les rapports de bug. */
+  const frameStats = new FrameStats();
+  const frameParts: Record<string, number> = {};
+  let lastFrameAt = 0;
+  const timed = <T>(name: string, fn: () => T): T => {
+    const t0 = performance.now();
+    try {
+      return fn();
+    } finally {
+      frameParts[name] = (frameParts[name] ?? 0) + performance.now() - t0;
+    }
+  };
+  if (typeof PerformanceObserver !== 'undefined') {
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) frameStats.recordLongTask(e.startTime, e.duration);
+      }).observe({ entryTypes: ['longtask'] });
+    } catch {
+      // Navigateur sans suivi des tâches longues : on s'en passe.
+    }
+  }
   renderer.setAnimationLoop((now) => {
+    const frameStart = performance.now();
+    for (const k of Object.keys(frameParts)) delete frameParts[k];
     pressedThisFrame.clear();
     // Un clic commencé pendant la pose n'ouvre ni ne récolte rien : si le dernier exemplaire vient d'être posé, la
     // machine posée ne s'ouvre pas sous le même clic. Il faut relâcher puis recliquer.
@@ -4300,7 +4341,7 @@ export function startGameView(
       Math.floor(playerZ / CHUNK_SIZE_M),
       viewDistance,
     );
-    loadMissing();
+    timed('chunks', loadMissing);
 
     const edge =
       rig.view === 'top' && views.top.edgeScroll && !paused && !uiOpen && !isLocked()
@@ -4408,9 +4449,8 @@ export function startGameView(
       remotePlayers.update(guest.client.players, guest.client.you.id, dt);
     } else if (!paused) {
       const me = { x: playerX, z: playerZ };
-      const events = sim.advance(
-        dt,
-        hostSession ? hostSession.simPlayers(me) : [{ id: 'player', ...me }],
+      const events = timed('simulation', () =>
+        sim.advance(dt, hostSession ? hostSession.simPlayers(me) : [{ id: 'player', ...me }]),
       );
       for (const e of events) onSimEvent(e);
       if (hostSession) {
@@ -4431,11 +4471,13 @@ export function startGameView(
       for (const d of threat.deaths.splice(0))
         options.state.dropLoot('carapace', d.mutant ? 2 : 1 + (d.id % 2), d.x, d.z);
     else threat.deaths.length = 0;
-    factoryView.updateDamage();
-    factoryView.updateSmoke(now / 1000);
-    factoryView.updateMovers(now / 1000);
-    factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
-    factoryView.updateParts(now / 1000, { x: playerX, z: playerZ });
+    timed('factoryView', () => {
+      factoryView.updateDamage();
+      factoryView.updateSmoke(now / 1000);
+      factoryView.updateMovers(now / 1000);
+      factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
+      factoryView.updateParts(now / 1000, { x: playerX, z: playerZ });
+    });
     enemyView.update(
       threat.enemies,
       (e) => {
@@ -4462,10 +4504,12 @@ export function startGameView(
     chunkTimer += realDt;
     if (chunkTimer >= 0.6 && dirtyChunks.size > 0) {
       chunkTimer = 0;
-      for (const k of dirtyChunks) {
-        const [cx, cz] = k.split(',').map(Number);
-        if (chunks.has(k)) buildInto(cx, cz);
-      }
+      timed('chunksEdited', () => {
+        for (const k of dirtyChunks) {
+          const [cx, cz] = k.split(',').map(Number);
+          if (chunks.has(k)) buildInto(cx, cz);
+        }
+      });
       dirtyChunks.clear();
     }
     panelTimer += realDt;
@@ -4530,8 +4574,15 @@ export function startGameView(
       viewport: { w: window.innerWidth, h: window.innerHeight },
     });
 
-    renderer.render(scene, camera);
+    timed('render', () => renderer.render(scene, camera));
     input.endFrame();
+    frameStats.record({
+      at: frameStart,
+      interval: lastFrameAt > 0 ? frameStart - lastFrameAt : 16.7,
+      cpu: performance.now() - frameStart,
+      parts: { ...frameParts },
+    });
+    lastFrameAt = frameStart;
 
     frames++;
     if (now - fpsSince >= 500) {
@@ -4576,6 +4627,15 @@ export function startGameView(
       mountedTrainCar: trains.isMounted() ? trains.mountedWindowId() : null,
       aimedStructure: interaction.aimedStructure ?? null,
       chunks: chunks.size,
+      fluidity: frameStats.summary(performance.now()),
+      graphics: graphicsInfo(),
+      world: {
+        machines: factory.machines.length,
+        enemies: threat.enemies.length,
+        chunkQueue: wanted.filter((w) => !chunks.has(`${w.cx},${w.cz}`)).length,
+        viewDistance,
+        pixelRatio: window.devicePixelRatio,
+      },
     }),
     otherPlayers: () =>
       guest
