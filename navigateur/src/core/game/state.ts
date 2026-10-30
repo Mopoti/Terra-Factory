@@ -2133,18 +2133,21 @@ export class GameState {
     return /^armor[45]_head$/.test(baseOf(this.changes.equipment.head ?? ''));
   }
 
-  /** Passe au mode suivant (désactivé, simple, complet) ; renvoie ce qui empêche, le cas échéant. */
-  cycleAr(): 'ok' | 'noArmor' | 'noBattery' {
+  /** Choisit le mode d'affichage ; renvoie ce qui empêche, le cas échéant (le mode reste alors désactivé). */
+  setAr(mode: 0 | 1 | 2): 'ok' | 'noArmor' | 'noBattery' {
+    if (mode === 0) {
+      this.arMode = 0;
+      return 'ok';
+    }
     if (!this.arAvailable()) {
       this.arMode = 0;
       return 'noArmor';
     }
-    const next = ((this.arMode + 1) % 3) as 0 | 1 | 2;
-    if (next > 0 && !this.creative && !this.hasArEnergy()) {
+    if (!this.creative && !this.hasArEnergy()) {
       this.arMode = 0;
       return 'noBattery';
     }
-    this.arMode = next;
+    this.arMode = mode;
     return 'ok';
   }
 

@@ -27,6 +27,7 @@ import { mountMenu } from './ui/menu';
 import { mountMenuBackground } from './ui/menuBackground';
 import { mountPauseMenu, type PauseMenu } from './ui/pauseMenu';
 import { mountMenuPad } from './input/gamepad';
+import { mountArmorMenu, type ArmorMenu } from './ui/armorMenu';
 import { installKeyHints } from './ui/keyHints';
 import { PeerNetwork } from './net/peerNetwork';
 import { HostSession } from './core/net/host';
@@ -59,6 +60,7 @@ const inventoryEl = document.getElementById('inventory') as HTMLElement;
 const machineEl = document.getElementById('machine') as HTMLElement;
 const mapEl = document.getElementById('map') as HTMLElement;
 const techEl = document.getElementById('tech') as HTMLElement;
+const armorEl = document.getElementById('armor') as HTMLElement;
 
 /** Stockage définitif (IndexedDB) ; les parties de l'ancien stockage navigateur y sont reprises une fois. */
 const storage = await openBestStorage();
@@ -81,6 +83,7 @@ interface Session {
   machine: MachineWindow;
   map: MapWindow;
   tech: TechWindow;
+  armor: ArmorMenu;
   /** Sac et changements du monde de cette session. */
   state: GameState;
   /** Partie rejointe chez un autre joueur (aucune sauvegarde locale). */
@@ -164,6 +167,7 @@ function quitToMenu(): void {
   s.inventory.dispose();
   s.map.dispose();
   s.tech.dispose();
+  s.armor.dispose();
   s.hotbar.dispose();
   s.machine.dispose();
   s.view.dispose();
@@ -260,6 +264,16 @@ function startGame(
       )
         session?.map.toggle();
     },
+    onToggleArmor: () => {
+      if (
+        !session?.pause.isOpen() &&
+        !session?.inventory.isOpen() &&
+        !session?.machine.isOpen() &&
+        !session?.map.isOpen() &&
+        !session?.tech.isOpen()
+      )
+        session?.armor.toggle();
+    },
     onToggleTech: () => {
       if (
         !session?.pause.isOpen() &&
@@ -324,6 +338,7 @@ function startGame(
     machine: null as unknown as MachineWindow,
     map: null as unknown as MapWindow,
     tech: null as unknown as TechWindow,
+    armor: null as unknown as ArmorMenu,
     state,
     guest,
     savedPlayers: slot?.players,
@@ -358,7 +373,13 @@ function startGame(
     // Seul le menu pause (Échap) fige le jeu. Sac, machine, carte et technologies laissent l'usine tourner
     // et le joueur marcher : la souris est libre pour s'en servir.
     view.setPaused(s.pause.isOpen());
-    view.setUiOpen(s.inventory.isOpen() || s.machine.isOpen() || s.map.isOpen() || s.tech.isOpen());
+    view.setUiOpen(
+      s.inventory.isOpen() ||
+        s.machine.isOpen() ||
+        s.map.isOpen() ||
+        s.tech.isOpen() ||
+        s.armor.isOpen(),
+    );
     view.setOpenedMachine(s.machine.isOpen() ? s.machine.openedId() : null);
   };
 
@@ -381,6 +402,10 @@ function startGame(
     },
   });
   s.tech = mountTech(techEl, state, { onOpenChange: syncPaused, bus: view.bus });
+  s.armor = mountArmorMenu(armorEl, state, {
+    onOpenChange: syncPaused,
+    onMessage: (text) => showToast(text),
+  });
   s.map = mountMap(mapEl, {
     world: game.world,
     state,

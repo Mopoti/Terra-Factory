@@ -217,6 +217,8 @@ export interface GameViewOptions {
   onToggleInventory?: () => void;
   /** La touche « Carte » a été pressée. */
   onToggleMap?: () => void;
+  /** La touche de l'armure active a été pressée (menu circulaire des avantages). */
+  onToggleArmor?: () => void;
   /** Le mode débogage change (le cadre « Partie / Sac / Menu » ne s'affiche qu'en débogage). */
   onDebugChange?: (on: boolean) => void;
   /** La touche « Arbre technologique » a été pressée. */
@@ -4587,11 +4589,7 @@ export function startGameView(
     }
     updateGhost(views);
     updateCompass();
-    if (!paused && pressed('ar')) {
-      const r = options.state.cycleAr();
-      if (r !== 'ok') options.onMessage?.(t(`ar.${r}` as TranslationKey));
-      else options.onMessage?.(t(`ar.mode.${options.state.arMode}` as TranslationKey));
-    }
+    if (!paused && pressed('ar')) options.onToggleArmor?.();
     if (!paused) updateAr(dt);
     // Les étages au-dessus du joueur sont masqués (sauf celui qu'on est en train de construire).
     const pcell = `${Math.floor(playerX / CELL_SIZE_M)},${Math.floor(playerZ / CELL_SIZE_M)}`;
