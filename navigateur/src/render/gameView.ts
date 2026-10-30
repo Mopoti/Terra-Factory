@@ -147,11 +147,20 @@ import { WEAPONS, isWeapon, type WeaponSpec } from '../core/data/weapons';
 import { EnemyView } from './enemyView';
 import { RemotePlayersView } from './remotePlayers';
 import type { PlayerInfo } from '../core/net/protocol';
-import { bakedModel, loadModels, modelsReady } from './models';
+import {
+  ORE_FILE_NAMES,
+  bakedModel,
+  loadModels,
+  modelsReady,
+  modelsSettled,
+  type BakedModel,
+} from './models';
+import { lowDetail } from './modelLod';
 import { MeshBuilder, hexToRgb } from './meshBuilder';
-import type { BiomeId } from '../core/world/biomes';
+import { BIOME_IDS, type BiomeId } from '../core/world/biomes';
 import { rollWheels, vehicleFromModel, type VehicleMesh } from './vehicleModel';
 import {
+  allScenery,
   BUSH_HEIGHT_MODEL_M,
   OWN_TREE_MAX_WIDTH,
   ROCK_MODEL_WIDTH_M,
@@ -1883,6 +1892,25 @@ export function startGameView(
   const blocked = new Set<string>();
   const obstacles = new Map<string, number>();
   let wanted: { cx: number; cz: number }[] = [];
+  // Les versions simplifiées des modèles de décor sont calculées une fois chacune : on les prépare à l'avance, un modèle à la
+  // fois, plutôt qu'en pleine marche (le premier arbre d'un biome lointain coûtait plusieurs dizaines de ms).
+  {
+    let queue: BakedModel[] | null = null;
+    const warm = (): void => {
+      if (!modelsSettled()) {
+        window.setTimeout(warm, 500);
+        return;
+      }
+      queue ??= allScenery(BIOME_IDS, Object.keys(ORE_FILE_NAMES));
+      const next = queue.pop();
+      if (!next) return;
+      lowDetail(next, 1);
+      lowDetail(next, 2);
+      window.setTimeout(warm, 40);
+    };
+    window.setTimeout(warm, 1500);
+  }
+
   /** Il faut chercher un chunk à fabriquer (le joueur a changé de chunk ou un chunk vient d'être posé) : sinon on ne parcourt pas la liste à chaque image. */
   let scanChunks = true;
   /** Chunk en cours de fabrication par étapes (le décor, arbres et rochers, coûte le plus : on le répartit sur plusieurs images). */
@@ -1996,6 +2024,8 @@ export function startGameView(
       if (!mesh) return;
       installChunk(chunkJob.cx, chunkJob.cz, chunkJob.data, mesh);
       chunkJob = null;
+      // Un seul chunk fini par image : sa géométrie part vers la carte graphique à la première image où on le dessine.
+      return;
     }
   }
 
@@ -4065,6 +4095,23 @@ export function startGameView(
   let fpsSince = 0;
   let debugSince = 0;
   let clickStartedBuilding = false;
+  /** Triangles des chunks chargés, par niveau de détail : nombre de chunks et triangles du sol, du décor et du minerai. */
+  function chunkTriangles(): Record<
+    string,
+    { chunks: number; ground: number; props: number; cover: number }
+  > {
+    const out: Record<string, { chunks: number; ground: number; props: number; cover: number }> =
+      {};
+    for (const mesh of chunks.values()) {
+      const e = (out[`lod${mesh.lod}`] ??= { chunks: 0, ground: 0, props: 0, cover: 0 });
+      e.chunks++;
+      e.ground += mesh.triangles.ground;
+      e.props += mesh.triangles.props;
+      e.cover += mesh.triangles.cover;
+    }
+    return out;
+  }
+
   /** Carte graphique et contenu de la scène (appels de dessin, triangles…), pour comprendre une chute d'images. */
   function graphicsInfo(): Record<string, unknown> {
     const gl = renderer.getContext();
@@ -4632,6 +4679,7 @@ export function startGameView(
       world: {
         machines: factory.machines.length,
         enemies: threat.enemies.length,
+        chunkTriangles: chunkTriangles(),
         chunkQueue: wanted.filter((w) => !chunks.has(`${w.cx},${w.cz}`)).length,
         viewDistance,
         pixelRatio: window.devicePixelRatio,

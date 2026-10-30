@@ -14,7 +14,7 @@ interface Geometry {
 }
 
 /** Part des triangles gardée à chaque niveau : 1 = assez loin, 2 = très loin. */
-const KEEP: Record<1 | 2, number> = { 1: 0.4, 2: 0.15 };
+const KEEP: Record<1 | 2, number> = { 1: 0.3, 2: 0.07 };
 /** En dessous, un modèle est déjà assez simple : on le garde tel quel. */
 const MIN_TRIANGLES = 60;
 /** Finesse de la grille (cases le long de la plus grande dimension), de la plus fine à la plus grossière. */

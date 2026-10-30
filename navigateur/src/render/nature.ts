@@ -234,3 +234,12 @@ export function loadNature(baseUrl = import.meta.env.BASE_URL ?? './'): Promise<
   loading = Promise.all([lowLoad, loadModels(baseUrl)]).then(() => undefined);
   return loading;
 }
+
+/** Tous les modèles de décor (arbres, buissons, rochers et amas de minerai de chaque biome et de chaque gisement). */
+export function allScenery(biomes: readonly BiomeId[], resources: readonly string[]): BakedModel[] {
+  const all = [
+    ...biomes.flatMap((b) => [...treeModelsFor(b), ...bushModelsFor(b), ...rockModelsFor(b)]),
+    ...resources.flatMap((r) => oreClumpModels(r)),
+  ];
+  return [...new Set(all)];
+}

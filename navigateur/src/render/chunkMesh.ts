@@ -39,6 +39,8 @@ export interface ChunkMesh {
   blocked: string[];
   /** Obstacles solides pour la caméra (rochers, nids) : case « gx,gz » et hauteur en m. */
   tall: [string, number][];
+  /** Triangles du chunk : sol, décor et minerai (pour les rapports de fluidité). */
+  triangles: { ground: number; props: number; cover: number };
   dispose(): void;
 }
 
@@ -269,6 +271,10 @@ function* buildPropsSteps(
 
   for (const o of data.objects) {
     yield;
+    // Les touffes d'herbe ne se voient pas de loin : absentes des chunks très éloignés, une sur deux des éloignés.
+    // (Elles ne bloquent rien et ne sont pas des obstacles : la récolte ne change pas.)
+    if (o.id === 'fiber_bush' && (lod === 2 || (lod === 1 && hash01(2, o.gx, o.gz, 31) < 0.5)))
+      continue;
     const res = resourceById(o.id);
     const base = hexToRgb(res.color);
     const jitter = 0.85 + 0.3 * hash01(1, o.gx, o.gz, 5);
@@ -554,10 +560,26 @@ function* buildPropsSteps(
   }
 
   if (b.positions.length === 0) return null;
+  // Les listes de nombres deviennent des tableaux typés par tranches (un chunk riche en minerai en a plus d'un million) :
+  // d'un bloc, cette copie seule pouvait bloquer l'image plusieurs dizaines de millisecondes.
+  const count = b.positions.length;
+  const positions = new Float32Array(count);
+  const normals = new Float32Array(count);
+  const colors = new Float32Array(count);
+  const SLICE = 90000;
+  for (let from = 0; from < count; from += SLICE) {
+    const to = Math.min(count, from + SLICE);
+    for (let j = from; j < to; j++) {
+      positions[j] = b.positions[j];
+      normals[j] = b.normals[j];
+      colors[j] = b.colors[j];
+    }
+    yield;
+  }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(b.positions), 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(b.normals), 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(b.colors), 3));
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -604,11 +626,18 @@ export function startChunkMesh(gen: WorldGenerator, data: ChunkData, lod: 0 | 1 
         foliageMesh(group, cover.ore, oreMaterial, cover.ore.colors),
         foliageMesh(group, cover.water, waterMaterial, undefined, true),
       ];
+      const count = (g: THREE.BufferGeometry | null | undefined): number =>
+        g ? (g.index ? g.index.count : (g.getAttribute('position')?.count ?? 0)) / 3 : 0;
       return {
         group,
         lod,
         blocked,
         tall,
+        triangles: {
+          ground: count(groundGeometry),
+          props: count(propsGeometry),
+          cover: foliageGeometries.reduce((n, g) => n + count(g), 0),
+        },
         dispose: () => {
           groundGeometry.dispose();
           propsGeometry?.dispose();
