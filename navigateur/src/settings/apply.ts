@@ -1,4 +1,4 @@
-import { getSettings, onSettingsChange } from './store';
+import { getSettings, onSettingsChange, refreshAdapted } from './store';
 import type { Settings } from './schema';
 
 const ACCENT: Record<Settings['display']['colorblind'], string> = {
@@ -30,6 +30,7 @@ function apply(s: Settings): void {
 }
 
 export function startApplyingSettings(): void {
+  refreshAdapted();
   apply(getSettings());
   onSettingsChange(apply);
 }

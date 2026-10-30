@@ -1,6 +1,8 @@
 import type { UnitPrefs } from '../core/units';
 import { defaultControls, type ControlsSettings, type KeyboardPreset } from './controls';
 
+import type { GraphicsPreset } from './graphics';
+
 export type Quality = 'low' | 'medium' | 'high';
 export type ShadowQuality = 'off' | 'normal' | 'detailed';
 export type TimeFormat = 'auto' | '24h' | '12h';
@@ -30,6 +32,8 @@ export type PadMap = { [K in keyof typeof DEFAULT_PAD]: number };
 
 export interface Settings {
   display: {
+    /** Préréglage graphique : règle d'un coup la qualité, les ombres et la distance de vue (« personnalisé » dès qu'on en change un). */
+    preset: GraphicsPreset;
     gamma: number;
     brightness: number;
     viewDistance: number;
@@ -123,6 +127,7 @@ export type SectionName = 'display' | 'sound' | 'views' | 'controls' | 'game';
 export function defaultSettings(preset: KeyboardPreset): Settings {
   return {
     display: {
+      preset: 'adapted',
       gamma: 1,
       brightness: 100,
       viewDistance: 8,

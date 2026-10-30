@@ -1,5 +1,5 @@
 {
- "key": "discussions-h1",
+ "key": "discussions-i1",
  "title": "Discussions : suite (4)",
  "intro": "Quatre chantiers lancés en parallèle. Réponds surtout aux questions de chaque ligne.",
  "cols": [
@@ -16,25 +16,25 @@
  "tabs": [
   {
    "id": "n",
-   "label": "Fluidité : analyse du rapport"
+   "label": "Préréglage graphique"
   }
  ],
  "rows": [
   {
-   "id": "h1",
+   "id": "i1",
    "tab": "n",
-   "name": "Ce que dit ton rapport",
-   "tag": "h1",
-   "recipe": "Ta machine (GTX 970) tient 135 images par seconde en moyenne, avec une image sur 120 qui dépasse 33 ms. Les à-coups viennent de deux endroits : (1) la fabrication d'un gros chunk (forêt dense, minerai) : jusqu'à 76 ms dans une seule image ; (2) l'envoi de la géométrie à la carte graphique juste après (60 ms), et des blocages de 80 à 140 ms où le programme ne fait presque rien (la carte graphique ou le pilote attend). La scène est lourde : 2,9 millions de triangles, surtout des chunks lointains en forêt.",
-   "role": "Rien à répondre."
+   "name": "Préréglage graphique",
+   "tag": "i1",
+   "recipe": "Fait : un réglage « Préréglage graphique » en tête des paramètres d'affichage : Adapté à mon ordinateur, Basse, Moyenne, Haute, Personnalisé. Bas : qualité basse, sans ombres, vue 6 chunks. Moyen : qualité moyenne, ombres normales, vue 8. Haut : qualité haute, ombres détaillées, vue 12. Dès que tu changes à la main la qualité, les ombres ou la distance de vue, le préréglage passe en « Personnalisé ».",
+   "role": "Les valeurs de chaque niveau te conviennent ? Veux-tu que la limite d'images par seconde fasse partie du préréglage ?"
   },
   {
-   "id": "h2",
+   "id": "i2",
    "tab": "n",
-   "name": "Corrections faites",
-   "tag": "h2",
-   "recipe": "Copie des données en tranches ; un seul chunk fini par image ; niveaux de détail des arbres calculés à l'avance au lieu de pendant la marche ; décor lointain plus simplifié (30 % puis 7 % des triangles, au lieu de 40 % et 15 %) ; herbe absente au loin. Le rapport donne maintenant aussi les triangles par niveau de détail.",
-   "role": "Peux-tu refaire un rapport après une chute ? Si la chute est surtout côté carte graphique (peu de temps de programme), je baisserai encore la distance du détail ou le nombre de triangles des chunks lointains."
+   "name": "Mode adapté",
+   "tag": "i2",
+   "recipe": "Il regarde la carte graphique, le nombre de cœurs, la mémoire, le type d'écran (tactile, 4K) et choisit bas, moyen ou haut. Il est recalculé à chaque lancement. En jeu, si les images dépassent 28 ms en médiane pendant 20 secondes, il descend d'un niveau et le retient ; il ne remonte pas tout seul (rechoisir « Adapté » efface la mémoire).",
+   "role": "Ça te va qu'il ne remonte jamais tout seul ? Les anciens réglages déjà enregistrés restent en « Personnalisé » (rien n'est écrasé)."
   }
  ]
 }

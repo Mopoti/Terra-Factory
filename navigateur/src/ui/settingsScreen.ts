@@ -33,6 +33,7 @@ import type { SectionName } from '../settings/schema';
 import {
   getAt,
   getSettings,
+  onSettingsChange,
   resetSection,
   setBindings,
   setKeyboardPreset,
@@ -82,6 +83,8 @@ function renderRow(row: Row): HTMLElement {
   wrap.append(name);
   const control = el('div', 'row-control');
   wrap.append(control);
+  /** Remet la valeur affichée d'accord avec les réglages (un préréglage change d'autres lignes). */
+  let refresh: (() => void) | undefined;
 
   if (row.kind === 'range' || row.kind === 'sound') {
     const [min, max, step, suffix] =
@@ -103,6 +106,10 @@ function renderRow(row: Row): HTMLElement {
       show();
     });
     control.append(input, value);
+    refresh = () => {
+      input.value = String(getAt(row.path));
+      show();
+    };
     if (row.kind === 'sound') {
       const category = row.path.split('.')[1] as SoundCategory | 'master';
       const mute = el('input');
@@ -125,6 +132,9 @@ function renderRow(row: Row): HTMLElement {
     input.setAttribute('aria-label', name.textContent ?? '');
     input.addEventListener('change', () => setSetting(row.path, input.checked));
     control.append(input);
+    refresh = () => {
+      input.checked = getAt(row.path) === true;
+    };
   } else {
     const select = el('select');
     select.setAttribute('aria-label', name.textContent ?? '');
@@ -139,6 +149,16 @@ function renderRow(row: Row): HTMLElement {
       if (chosen) setSetting(row.path, chosen.value);
     });
     control.append(select);
+    refresh = () => {
+      select.value = String(getAt(row.path));
+    };
+  }
+  if (refresh) {
+    const update = refresh;
+    const off = onSettingsChange(() => {
+      if (!wrap.isConnected) off();
+      else update();
+    });
   }
   return wrap;
 }

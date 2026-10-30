@@ -9,12 +9,22 @@ import {
   type Binding,
   type KeyboardPreset,
 } from './controls';
+import {
+  TIER_VALUES,
+  adaptedTier,
+  lowestTier,
+  presetValues,
+  storeDowngrade,
+  tierOf,
+  type GraphicsPreset,
+  type Tier,
+} from './graphics';
 import { ROW_BY_PATH } from './rows';
 import { defaultSettings, type SectionName, type Settings } from './schema';
 
 const STORAGE_KEY = 'terra.settings';
 /** Version du format enregistré. À incrémenter quand la structure change (voir `migrate`). */
-export const SETTINGS_VERSION = 4;
+export const SETTINGS_VERSION = 5;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -63,6 +73,7 @@ function mergeControls(defaults: Settings['controls'], raw: unknown): Settings['
 
 /**
  * Met à niveau des réglages enregistrés par une ancienne version (sans modifier l'original).
+ * - v5 : le préréglage graphique apparaît : des réglages déjà enregistrés restent « personnalisés » (rien n'est écrasé).
  * - v2 : la rotation de la vue du dessus passe par défaut de « par pas de 90° » à « libre » ;
  *   l'ancienne valeur par défaut enregistrée est abandonnée (le joueur peut la re-choisir).
  * - v4 : la touche E n'est plus un second « Interagir » (clic) : elle devient « Activer » (portes, leviers) ; l'ancien second emplacement E est abandonné.
@@ -74,6 +85,10 @@ export function migrate(data: Record<string, unknown>, version: number): Record<
     const views = out.views;
     const top = isRecord(views) ? views.top : undefined;
     if (isRecord(top) && top.rotation === 'step') delete top.rotation;
+  }
+  if (version < 5) {
+    const display = out.display;
+    if (isRecord(display) && display.preset === undefined) display.preset = 'custom';
   }
   if (version < 4) {
     const controls = out.controls;
@@ -167,6 +182,10 @@ export function getAt(path: string): unknown {
 
 /** Change un réglage (valeur déjà valide pour sa ligne ; elle est bornée au passage). */
 export function setSetting(path: string, value: string | number | boolean): void {
+  if (path === 'display.preset') {
+    applyPreset(value as GraphicsPreset);
+    return;
+  }
   const row = ROW_BY_PATH.get(path);
   let v = value;
   if (typeof v === 'number' && (row?.kind === 'range' || row?.kind === 'sound')) {
@@ -175,7 +194,68 @@ export function setSetting(path: string, value: string | number | boolean): void
   }
   const next = structuredClone(current);
   setAt(next as unknown as Record<string, unknown>, path, v);
+  // Changer à la main la qualité, les ombres ou la distance de vue sort du préréglage (sauf si on retombe sur un niveau).
+  if (path === 'display.quality' || path === 'display.shadows' || path === 'display.viewDistance') {
+    const tier = tierOf(next.display);
+    next.display.preset = tier ?? 'custom';
+  }
   commit(next);
+}
+
+/** Écrit les réglages graphiques d'un niveau dans les réglages détaillés. */
+function withValues(s: Settings, preset: GraphicsPreset, values: typeof TIER_VALUES.low): Settings {
+  const next = structuredClone(s);
+  next.display.preset = preset;
+  next.display.quality = values.quality;
+  next.display.shadows = values.shadows;
+  next.display.viewDistance = values.viewDistance;
+  return next;
+}
+
+/**
+ * Choisit un préréglage graphique : bas, moyen et haut écrivent leurs réglages ; « adapté » mesure l'ordinateur et choisit
+ * le meilleur ; « personnalisé » ne change rien. Choisir « adapté » efface un éventuel abaissement automatique antérieur.
+ */
+export function applyPreset(preset: GraphicsPreset): void {
+  if (preset === 'custom') {
+    const next = structuredClone(current);
+    next.display.preset = 'custom';
+    commit(next);
+    return;
+  }
+  if (preset === 'adapted') storeDowngrade(null);
+  commit(withValues(current, preset, presetValues(preset, adaptedTier())));
+}
+
+/**
+ * Au lancement, un préréglage « adapté » est recalculé (l'ordinateur ou le navigateur ont pu changer). Rien ne change pour
+ * les autres préréglages.
+ */
+export function refreshAdapted(): void {
+  if (current.display.preset !== 'adapted') return;
+  const values = presetValues('adapted', adaptedTier());
+  const d = current.display;
+  if (
+    d.quality === values.quality &&
+    d.shadows === values.shadows &&
+    d.viewDistance === values.viewDistance
+  )
+    return;
+  commit(withValues(current, 'adapted', values));
+}
+
+/**
+ * Le jeu ne tient pas la cadence avec un préréglage « adapté » : on descend d'un niveau (et on s'en souvient, il ne remonte
+ * pas tout seul). Renvoie le nouveau niveau, ou null si on ne peut pas descendre.
+ */
+export function lowerAdapted(): Tier | null {
+  if (current.display.preset !== 'adapted') return null;
+  const now = tierOf(current.display) ?? adaptedTier();
+  const next: Tier | null = now === 'high' ? 'medium' : now === 'medium' ? 'low' : null;
+  if (!next) return null;
+  storeDowngrade(lowestTier(next, adaptedTier()));
+  commit(withValues(current, 'adapted', TIER_VALUES[next]));
+  return next;
 }
 
 export function setBindings(changes: { action: ActionId; slot: 0 | 1; code: Binding }[]): void {

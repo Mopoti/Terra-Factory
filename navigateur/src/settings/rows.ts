@@ -49,6 +49,16 @@ const ghost = (view: string): Row[] => [
 export const DISPLAY_SECTION: Section = {
   id: 'display',
   rows: [
+    select(
+      'display.preset',
+      pairs(
+        ['adapted', 'adapted'],
+        ['low', 'low'],
+        ['medium', 'medium'],
+        ['high', 'high'],
+        ['custom', 'custom'],
+      ),
+    ),
     range('display.gamma', 0.5, 2, 0.05),
     range('display.brightness', 50, 150, 5, '%'),
     range('display.viewDistance', 2, 16, 1, ' chunks'),

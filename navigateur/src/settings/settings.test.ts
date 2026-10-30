@@ -12,7 +12,15 @@ import {
   type ControlsSettings,
 } from './controls';
 import { ROW_BY_PATH } from './rows';
-import { migrate, sanitize } from './store';
+import {
+  applyPreset,
+  getSettings,
+  loadSettings,
+  lowerAdapted,
+  migrate,
+  sanitize,
+  setSetting,
+} from './store';
 import { defaultSettings } from './schema';
 import fr from '../i18n/fr.json';
 import en from '../i18n/en.json';
@@ -253,5 +261,60 @@ describe('migration des réglages', () => {
     const data = { views: { top: { rotation: 'step' } } };
     migrate(data, 1);
     expect(data.views.top.rotation).toBe('step');
+  });
+});
+
+describe('préréglages graphiques', () => {
+  it('bas, moyen et haut règlent d’un coup la qualité, les ombres et la distance de vue', () => {
+    loadSettings();
+    applyPreset('low');
+    expect(getSettings().display).toMatchObject({
+      preset: 'low',
+      quality: 'low',
+      shadows: 'off',
+      viewDistance: 6,
+    });
+    applyPreset('high');
+    expect(getSettings().display).toMatchObject({
+      preset: 'high',
+      quality: 'high',
+      shadows: 'detailed',
+      viewDistance: 12,
+    });
+  });
+  it('changer un sous-réglage à la main passe en « personnalisé »', () => {
+    applyPreset('medium');
+    setSetting('display.shadows', 'off');
+    expect(getSettings().display.preset).toBe('custom');
+    expect(getSettings().display.quality).toBe('medium');
+  });
+  it('retomber exactement sur un niveau le reconnaît', () => {
+    applyPreset('custom');
+    setSetting('display.quality', 'low');
+    setSetting('display.shadows', 'off');
+    setSetting('display.viewDistance', 6);
+    expect(getSettings().display.preset).toBe('low');
+  });
+  it('« adapté » choisit des réglages d’après l’ordinateur et peut descendre d’un cran', () => {
+    setSetting('display.preset', 'adapted');
+    expect(getSettings().display.preset).toBe('adapted');
+    const first = getSettings().display.quality;
+    expect(['low', 'medium', 'high']).toContain(first);
+    const lowered = lowerAdapted();
+    if (first === 'low') expect(lowered).toBeNull();
+    else {
+      expect(lowered).not.toBeNull();
+      expect(getSettings().display.preset).toBe('adapted');
+      expect(getSettings().display.quality).not.toBe(first);
+    }
+  });
+  it('des réglages déjà enregistrés restent personnalisés ; une installation neuve est « adaptée »', () => {
+    const old = sanitize({ version: 4, data: { display: { quality: 'high' } } }, 'zqsd');
+    expect(old.display.preset).toBe('custom');
+    expect(old.display.quality).toBe('high');
+    expect(sanitize(null, 'zqsd').display.preset).toBe('adapted');
+    expect(
+      sanitize({ version: 5, data: { display: { preset: 'bidon' } } }, 'zqsd').display.preset,
+    ).toBe('adapted');
   });
 });

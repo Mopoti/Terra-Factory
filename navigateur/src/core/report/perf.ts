@@ -31,6 +31,16 @@ export class FrameStats {
     if (this.samples.length > this.capacity) this.samples.shift();
   }
 
+  /** Intervalle médian (ms) des `last` dernières images, ou null s'il y en a trop peu. */
+  medianInterval(last: number, minFrames = 120): number | null {
+    const recent = this.samples.slice(-last);
+    if (recent.length < minFrames) return null;
+    return percentile(
+      recent.map((x) => x.interval).sort((a, b) => a - b),
+      0.5,
+    );
+  }
+
   /** Tâche longue du navigateur (plus de 50 ms), signalée par `PerformanceObserver`. */
   recordLongTask(at: number, ms: number): void {
     this.longTasks.push({ at, ms });

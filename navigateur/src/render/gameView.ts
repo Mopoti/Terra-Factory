@@ -54,7 +54,7 @@ import { t, type TranslationKey } from '../i18n';
 import { Input } from '../input/input';
 import type { ActionId } from '../settings/controls';
 import type { Settings } from '../settings/schema';
-import { getSettings, onSettingsChange } from '../settings/store';
+import { getSettings, lowerAdapted, onSettingsChange } from '../settings/store';
 import { edgePan, ghostRadiusPx } from './cameraMath';
 import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
@@ -4133,6 +4133,7 @@ export function startGameView(
   const frameStats = new FrameStats();
   const frameParts: Record<string, number> = {};
   let lastFrameAt = 0;
+  let lastAdaptCheck = performance.now();
   const timed = <T>(name: string, fn: () => T): T => {
     const t0 = performance.now();
     try {
@@ -4630,6 +4631,23 @@ export function startGameView(
       parts: { ...frameParts },
     });
     lastFrameAt = frameStart;
+    // Préréglage « adapté » : si le jeu ne tient pas la cadence (hors pause et onglet caché), on descend d'un niveau.
+    if (frameStart - lastAdaptCheck > 20000) {
+      lastAdaptCheck = frameStart;
+      const display = getSettings().display;
+      const median = frameStats.medianInterval(900);
+      const wanted = display.fpsLimit > 0 ? 1000 / display.fpsLimit : 0;
+      if (
+        display.preset === 'adapted' &&
+        !paused &&
+        !document.hidden &&
+        median !== null &&
+        median > Math.max(28, wanted * 1.5)
+      ) {
+        const tier = lowerAdapted();
+        if (tier) options.onMessage?.(t('gfx.lowered', { v: t(`opt.${tier}` as TranslationKey) }));
+      }
+    }
 
     frames++;
     if (now - fpsSince >= 500) {
