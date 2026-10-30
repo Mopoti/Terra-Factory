@@ -66,22 +66,15 @@ describe('réalité augmentée', () => {
   });
 });
 
-describe('recherche avec prérequis (Créatif)', () => {
-  it('recherche tous les prérequis manquants puis la technologie', async () => {
-    const { techById } = await import('../data/techs');
-    const s = new GameState({ inventory: {} });
-    s.creative = true;
-    const target = 'wind';
-    expect(s.research(target)).toBe('locked');
-    expect(s.researchWithPrerequisites(target)).toBe('ok');
-    expect(s.changes.unlocked).toContain(target);
-    for (const r of techById(target).requires) expect(s.changes.unlocked).toContain(r);
-    expect(s.researchWithPrerequisites(target)).toBe('done');
-  });
-
-  it('hors Créatif, ne saute pas les prérequis', () => {
-    const s = new GameState({ inventory: {} });
-    expect(s.researchWithPrerequisites('wind')).not.toBe('ok');
-    expect(s.changes.unlocked).not.toContain('wind');
+describe('chaîne de recherche', () => {
+  it('liste les prérequis manquants avant la technologie, sans doublon', async () => {
+    const { researchChain, techById } = await import('../data/techs');
+    const chain = researchChain('wind', []);
+    expect(chain.at(-1)).toBe('wind');
+    expect(new Set(chain).size).toBe(chain.length);
+    chain.forEach((id, i) => {
+      for (const r of techById(id).requires) expect(chain.indexOf(r)).toBeLessThan(i);
+    });
+    expect(researchChain('wind', chain)).toEqual([]);
   });
 });

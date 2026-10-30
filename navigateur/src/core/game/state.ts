@@ -1126,24 +1126,6 @@ export class GameState {
     return 'ok';
   }
 
-  /**
-   * Créatif : recherche la technologie et, avant elle, tous ses prérequis manquants (dans l'ordre de l'arbre).
-   * Hors Créatif, se comporte comme `research`.
-   */
-  researchWithPrerequisites(id: string): ReturnType<GameState['research']> {
-    if (!this.creative) return this.research(id);
-    const order: string[] = [];
-    const visit = (techId: string): void => {
-      if (this.changes.unlocked.includes(techId) || order.includes(techId)) return;
-      for (const r of techById(techId).requires) visit(r);
-      order.push(techId);
-    };
-    visit(id);
-    if (order.length === 0) return 'done';
-    for (const techId of order) this.research(techId);
-    return 'ok';
-  }
-
   /** Ajoute une ligne au journal de la partie (les plus anciennes sont oubliées au-delà de `MAX_LOG`). */
   addLog(kind: LogEntry['kind'], id: string): void {
     this.changes.log.push({ t: Date.now(), kind, id });

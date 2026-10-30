@@ -276,7 +276,9 @@ L'énergie des combustibles est en **mégajoules par unité** ; les machines à 
 
 En Créatif, **un seul exemplaire** d'un objet suffit pour le poser **autant de fois qu'on veut** ; casser un objet le rend. La fabrication est **gratuite** et le sac sans limite de poids ni de volume ; les ressources du monde (arbre, rocher, gisements) se posent depuis un onglet dédié.
 
-En Créatif, le bouton **« Rechercher »** reste actif même quand des prérequis manquent : le clic recherche d'un coup tous les prérequis manquants (dans l'ordre de l'arbre) puis la découverte choisie, sans coût. ✅
+En Créatif, le bouton **« Rechercher »** reste actif même quand des prérequis manquent : le clic recherche **petit à petit** (une découverte toutes les 0,45 s, l'arbre se centre sur chacune et la fait clignoter) tous les prérequis manquants, dans l'ordre de l'arbre, jusqu'à la découverte choisie, sans coût. ✅
+
+L'arbre des découvertes a une **barre de recherche** (par nom de découverte ou d'objet débloqué) : choisir un résultat centre l'arbre dessus et la **fait clignoter**. ✅
 
 ---
 

@@ -994,6 +994,8 @@
   "tech.cost": "Cost",
   "tech.unlocks": "Unlocks",
   "tech.requires": "Requires",
+  "tech.search": "Find a discovery or item…",
+  "tech.search.none": "No result",
   "tech.research": "Research",
   "tech.done": "Researched",
   "tech.locked": "Missing prerequisite",

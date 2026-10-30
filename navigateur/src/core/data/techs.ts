@@ -219,3 +219,15 @@ export function techStatus(tech: TechDef, known: readonly string[]): TechStatus 
 /** Prérequis qui sont des étapes de l'arbre : les paquets qui paient une découverte n'en font pas partie. */
 export const treeParents = (tech: TechDef): string[] =>
   tech.requires.filter((r) => tech.id.startsWith('pack_') || !r.startsWith('pack_'));
+
+/** Prérequis manquants de `id` (récursifs), dans l'ordre où il faut les rechercher ; `id` lui-même en dernier. */
+export function researchChain(id: string, known: readonly string[]): string[] {
+  const order: string[] = [];
+  const visit = (techId: string): void => {
+    if (known.includes(techId) || order.includes(techId)) return;
+    for (const r of techById(techId).requires) visit(r);
+    order.push(techId);
+  };
+  visit(id);
+  return order;
+}

@@ -29,8 +29,7 @@ export interface CommandSpecs {
   sell: { args: { item: string; count: number }; result: number };
   buy: { args: { item: string; count: number }; result: number };
   research: {
-    /** `prereqs` (Créatif seulement) : recherche aussi tous les prérequis manquants. */
-    args: { tech: string; prereqs?: boolean };
+    args: { tech: string };
     result: 'ok' | 'done' | 'locked' | 'missing' | 'lab';
   };
   study: { args: { tech: string | null }; result: 'ok' | 'done' | 'locked' | 'notLab' };
@@ -119,9 +118,7 @@ export class CommandBus {
       case 'buy':
         return state.buyItem(c.item, c.count) as CommandSpecs[K]['result'];
       case 'research':
-        return (
-          c.prereqs ? state.researchWithPrerequisites(c.tech) : state.research(c.tech)
-        ) as CommandSpecs[K]['result'];
+        return state.research(c.tech) as CommandSpecs[K]['result'];
       case 'study':
         return state.study(c.tech) as CommandSpecs[K]['result'];
       case 'queueCraft':

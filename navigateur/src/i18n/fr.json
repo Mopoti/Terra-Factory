@@ -994,6 +994,8 @@
   "tech.cost": "Coût",
   "tech.unlocks": "Débloque",
   "tech.requires": "Nécessite",
+  "tech.search": "Chercher une découverte ou un objet…",
+  "tech.search.none": "Aucun résultat",
   "tech.research": "Rechercher",
   "tech.done": "Recherchée",
   "tech.locked": "Prérequis manquant",

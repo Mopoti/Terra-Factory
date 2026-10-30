@@ -3422,3 +3422,54 @@ input[type='range'] {
   font-size: 0.8rem;
   cursor: pointer;
 }
+
+/* Barre de recherche de l'arbre des découvertes, et clignotement d'une découverte trouvée ou recherchée. */
+.tech-search {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: min(260px, 60%);
+  z-index: 3;
+}
+.tech-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 13, 10, 0.25);
+  background: rgba(255, 252, 246, 0.95);
+  font: inherit;
+}
+.tech-search-results {
+  margin-top: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 13, 10, 0.2);
+  background: rgba(255, 252, 246, 0.98);
+  overflow: hidden;
+}
+.tech-search-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tech-search-row:hover {
+  background: rgba(15, 13, 10, 0.08);
+}
+.tech-node.flash {
+  animation: tech-flash 0.6s ease-in-out 4;
+}
+@keyframes tech-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 190, 40, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 190, 40, 0.95);
+  }
+}

@@ -4,6 +4,7 @@ import { RECIPES } from '../core/data/recipes';
 import {
   TECHS,
   isSciencePack,
+  researchChain,
   scienceCost,
   techById,
   techStatus,
@@ -181,6 +182,120 @@ export function mountTech(
     return lines;
   }
 
+  /** Découvertes qui clignotent (trouvées par la recherche ou tout juste recherchées). */
+  const flashing = new Set<string>();
+  const flash = (id: string): void => {
+    flashing.add(id);
+    renderTree();
+    window.setTimeout(() => {
+      flashing.delete(id);
+      if (isOpenNow) renderTree();
+    }, 2400);
+  };
+
+  /** Créatif : recherche petit à petit les prérequis manquants, jusqu'à la découverte cliquée. */
+  let chainTimer = 0;
+  let chainQueue: string[] = [];
+  function chainStep(): void {
+    const id = chainQueue.shift();
+    if (id === undefined) {
+      window.clearInterval(chainTimer);
+      chainTimer = 0;
+      refresh();
+      return;
+    }
+    const result = actions.bus.dispatch<'research'>({ type: 'research', tech: id });
+    if (result !== 'ok' && result !== 'done') {
+      chainQueue = [];
+      return chainStep();
+    }
+    playSfx('craft');
+    sel = id;
+    message = t('tech.researched', { tech: techName(id) });
+    refresh();
+    focus(id);
+    flash(id);
+  }
+  function startChain(id: string): void {
+    if (chainTimer) return;
+    chainQueue = researchChain(id, known());
+    chainStep();
+    if (chainQueue.length > 0) chainTimer = window.setInterval(chainStep, 450);
+    else chainTimer = 0;
+  }
+  /** Fin de fenêtre en cours de chaîne : on termine tout de suite ce qui restait. */
+  function finishChain(): void {
+    window.clearInterval(chainTimer);
+    chainTimer = 0;
+    for (const id of chainQueue) actions.bus.dispatch<'research'>({ type: 'research', tech: id });
+    chainQueue = [];
+  }
+
+  const plain = (text: string): string =>
+    text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  /** Découvertes dont le nom, ou celui d'un objet qu'elles débloquent, contient `query`. */
+  function searchTechs(query: string): TechDef[] {
+    const q = plain(query.trim());
+    if (q.length === 0) return [];
+    return TECHS.filter((x) => {
+      if (plain(techName(x.id)).includes(q)) return true;
+      return x.unlocks.some((item) => plain(itemName(item)).includes(q));
+    })
+      .sort((a, b) => a.tier - b.tier || byOrder(a, b))
+      .slice(0, 8);
+  }
+
+  /** Barre de recherche de l'arbre : liste de résultats ; un choix centre l'arbre sur la découverte et la fait clignoter. */
+  function searchBox(): HTMLElement {
+    const box = el('div', 'tech-search');
+    const input = el('input', 'tech-search-input');
+    input.type = 'search';
+    input.placeholder = t('tech.search');
+    input.setAttribute('aria-label', t('tech.search'));
+    const results = el('div', 'tech-search-results');
+    results.hidden = true;
+    const choose = (id: string): void => {
+      results.hidden = true;
+      input.value = '';
+      select(id, true);
+      flash(id);
+    };
+    const update = (): void => {
+      const found = searchTechs(input.value);
+      results.replaceChildren(
+        ...found.map((x) => {
+          const row = el('button', `tech-search-row ${statusOf(x)}`, techName(x.id));
+          row.type = 'button';
+          row.append(el('span', 'tech-node-tier', `T${x.tier}`));
+          row.addEventListener('click', () => choose(x.id));
+          return row;
+        }),
+      );
+      if (input.value.trim().length > 0 && found.length === 0)
+        results.append(el('div', 'tech-line sub', t('tech.search.none')));
+      results.hidden = input.value.trim().length === 0;
+    };
+    input.addEventListener('input', update);
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        const first = searchTechs(input.value)[0];
+        if (first) choose(first.id);
+      } else if (e.key === 'Escape') {
+        if (input.value) {
+          e.stopImmediatePropagation();
+          input.value = '';
+          update();
+        }
+      }
+    });
+    box.append(input, results);
+    return box;
+  }
+
   function actionButton(tech: TechDef): HTMLButtonElement {
     const done = known().includes(tech.id);
     const blocked = !tech.requires.every((r) => known().includes(r));
@@ -205,11 +320,11 @@ export function mountTech(
         refresh();
         return;
       }
-      const result = actions.bus.dispatch<'research'>({
-        type: 'research',
-        tech: tech.id,
-        prereqs: state.creative,
-      });
+      if (state.creative && blocked) {
+        startChain(tech.id);
+        return;
+      }
+      const result = actions.bus.dispatch<'research'>({ type: 'research', tech: tech.id });
       playSfx(result === 'ok' ? 'craft' : 'deny');
       message =
         result === 'ok'
@@ -354,7 +469,7 @@ export function mountTech(
     for (const tech of TECHS) {
       const node = nodes.get(tech.id);
       if (!node) continue;
-      node.className = `tech-node ${statusOf(tech)}${tech.id === sel ? ' sel' : ''}${chain && !chain.has(tech.id) ? ' dim' : ''}`;
+      node.className = `tech-node ${statusOf(tech)}${tech.id === sel ? ' sel' : ''}${chain && !chain.has(tech.id) ? ' dim' : ''}${flashing.has(tech.id) ? ' flash' : ''}`;
     }
     for (const e of edgeEls) {
       const on = !!chain && chain.has(e.from) && chain.has(e.to);
@@ -425,7 +540,7 @@ export function mountTech(
       mk('+', t('tech.zoomIn'), () => zoomAt(1.25, ...mid())),
       mk('⤢', t('tech.fit'), fit),
     );
-    treeView.append(tools, el('div', 'tech-hint', t('tech.navHint')));
+    treeView.append(tools, searchBox(), el('div', 'tech-hint', t('tech.navHint')));
   }
 
   let dragged = false;
@@ -503,6 +618,8 @@ export function mountTech(
 
   function closeWindow(): void {
     if (!isOpenNow) return;
+    finishChain();
+    flashing.clear();
     isOpenNow = false;
     stopWatching();
     stopWatching = () => {};
