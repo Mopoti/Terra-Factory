@@ -1,6 +1,7 @@
 /** Jauge fine sous l'icône d'un objet qui a une charge ou une usure (batterie portable, kit de réparation, armure). */
 import { fillOf, levelInfo, trackedOf } from '../core/data/itemData';
 import type { GameState } from '../core/game/state';
+import { t, type TranslationKey } from '../i18n';
 
 /** Remplissage (0 à 1) de la jauge de cet objet, ou null s'il n'en a pas (ou s'il est neuf et plein). */
 export function gaugeOf(item: string): number | null {
@@ -23,4 +24,12 @@ export function itemGauge(_state: GameState, item: string): HTMLElement | null {
   inner.className = fill > 0.5 ? 'hi' : fill > 0.2 ? 'mid' : 'lo';
   bar.append(inner);
   return bar;
+}
+
+/** Nom d'un objet pour une info-bulle : pour un objet suivi (batterie, kit, armure), avec sa charge ou son usure en %. */
+export function itemLabel(item: string): string {
+  const info = levelInfo(item);
+  if (!info) return t(`item.${item}` as TranslationKey);
+  const pct = Math.round((info.level / info.steps) * 100);
+  return `${t(`item.${info.base}` as TranslationKey)} (${pct} %)`;
 }

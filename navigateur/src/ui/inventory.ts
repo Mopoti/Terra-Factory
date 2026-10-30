@@ -9,7 +9,7 @@ import {
   itemById,
   type EquipSlot,
 } from '../core/data/items';
-import { itemGauge } from './gauge';
+import { itemGauge, itemLabel } from './gauge';
 import { itemIcon } from './itemIcon';
 import { totals } from '../core/game/inventory';
 import type { GameState } from '../core/game/state';
@@ -181,7 +181,7 @@ export function mountInventory(
     const def = itemById(hovered);
     // Nom et quantité totale dans le sac, bien lisibles dès le survol.
     tooltip.replaceChildren(
-      el('strong', undefined, itemName(hovered)),
+      el('strong', undefined, itemLabel(hovered)),
       el('div', 'inv-total', t('inv.total', { n: String(state.inventory[hovered] ?? 0) })),
     );
     const recipe = state.recipeFor(def.id);

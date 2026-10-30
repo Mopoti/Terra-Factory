@@ -52,6 +52,7 @@ import type { CommandBus } from '../core/game/commands';
 import type { GameState } from '../core/game/state';
 import { getLocale, onLocaleChange, t, type TranslationKey } from '../i18n';
 import { ITEM_DRAG_TYPE } from './hotbar';
+import { itemGauge, itemLabel } from './gauge';
 import { itemIcon } from './itemIcon';
 import {
   BAG_SLOT_TYPE,
@@ -729,8 +730,10 @@ export function mountMachineWindow(
         cell.style.setProperty('--item', itemById(stack.item).color);
         const count = el('span', 'slot-count', String(stack.count));
         live.chest[i] = count;
-        cell.title = itemName(stack.item);
+        cell.title = itemLabel(stack.item);
         cell.append(itemIcon(stack.item), count);
+        const gauge = itemGauge(state, stack.item);
+        if (gauge) cell.append(gauge);
         cell.draggable = true;
         cell.addEventListener('dragstart', (e) => {
           dragging = true;
