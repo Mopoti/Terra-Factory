@@ -1,28 +1,38 @@
 import { describe, expect, it } from 'vitest';
+import { variantId } from '../data/itemData';
 import { GameState } from './state';
+import { emptyChanges, normalizeChanges } from './worldChanges';
 
 describe('réalité augmentée', () => {
-  const armored = (inventory: Record<string, number>): GameState => {
-    const s = new GameState({ inventory });
-    s.changes.equipment.head = 'armor4_head';
+  /** Un joueur casqué T4 avec une batterie (niveau donné) dans le casque. */
+  const armored = (level: number | null, helmet = 'armor4_head'): GameState => {
+    const s = new GameState({ inventory: {} });
+    s.changes.equipment.head = helmet;
+    if (level !== null) s.changes.armorBattery.head = variantId('battery_portable', level);
     return s;
   };
 
-  it('exige une armure T4 ou T5', () => {
-    const s = new GameState({ inventory: { 'battery_portable~5': 1 } });
+  it('exige un casque T4 ou T5, pas une autre pièce', () => {
+    const s = new GameState({ inventory: {} });
     s.changes.equipment.head = 'armor3_head';
+    s.changes.armorBattery.head = 'battery_portable~5';
     expect(s.setAr(1)).toBe('noArmor');
-    expect(s.arMode).toBe(0);
+    s.changes.equipment.head = undefined;
+    s.changes.equipment.torso = 'armor5_torso';
+    expect(s.setAr(1)).toBe('noArmor');
+    s.changes.equipment.head = 'armor5_head';
+    expect(s.setAr(1)).toBe('ok');
   });
 
-  it('exige une batterie', () => {
-    const s = armored({});
+  it('exige une batterie dans l’armure, pas dans le sac', () => {
+    const s = armored(null);
+    s.inventory['battery_portable~5'] = 1;
     expect(s.setAr(1)).toBe('noBattery');
     expect(s.arMode).toBe(0);
   });
 
   it('passe de désactivé à simple, complet puis désactivé', () => {
-    const s = armored({ 'battery_portable~5': 1 });
+    const s = armored(5);
     s.setAr(1);
     expect(s.arMode).toBe(1);
     s.setAr(2);
@@ -31,12 +41,12 @@ describe('réalité augmentée', () => {
     expect(s.arMode).toBe(0);
   });
 
-  it('le mode complet consomme trois fois plus que le simple', () => {
-    const simple = armored({ 'battery_portable~5': 1 });
+  it('puise dans la batterie de l’armure ; le mode complet consomme trois fois plus', () => {
+    const simple = armored(5);
     simple.setAr(1);
     expect(simple.useAr(60)).toBe(true);
-    expect(simple.inventory['battery_portable~4']).toBe(1);
-    const full = armored({ 'battery_portable~5': 1 });
+    expect(simple.changes.armorBattery.head).toBe('battery_portable~4');
+    const full = armored(5);
     full.setAr(2);
     let steps = 0;
     for (let t = 0; t < 600; t++) {
@@ -49,20 +59,92 @@ describe('réalité augmentée', () => {
     expect(steps).toBeGreaterThanOrEqual(240);
   });
 
-  it('exige le casque, pas une autre pièce', () => {
-    const s = new GameState({ inventory: { 'battery_portable~5': 1 } });
-    s.changes.equipment.torso = 'armor5_torso';
-    expect(s.setAr(1)).toBe('noArmor');
-    s.changes.equipment.head = 'armor5_head';
-    expect(s.setAr(1)).toBe('ok');
+  it('l’armure T5 consomme un peu moins que la T4', () => {
+    const run = (helmet: string): number => {
+      const s = armored(3, helmet);
+      s.setAr(1);
+      let steps = 0;
+      while (s.useAr(1) && steps < 5000) steps++;
+      return steps;
+    };
+    expect(run('armor5_head')).toBeGreaterThan(run('armor4_head'));
   });
 
-  it('se coupe quand l’armure est retirée', () => {
-    const s = armored({ 'battery_portable~5': 1 });
+  it('se coupe quand le casque est retiré', () => {
+    const s = armored(5);
     s.setAr(1);
     delete s.changes.equipment.head;
     expect(s.useAr(1)).toBe(false);
     expect(s.arMode).toBe(0);
+  });
+});
+
+describe('batterie dans une pièce d’armure', () => {
+  const worn = (): GameState => {
+    const s = new GameState({ inventory: { 'battery_portable~4': 1, battery_portable: 1 } });
+    s.changes.equipment.torso = 'armor5_torso';
+    return s;
+  };
+
+  it('s’insère dans une pièce T4 ou T5 seulement, et seule une batterie portable passe', () => {
+    const s = worn();
+    expect(s.insertArmorBattery('torso', 'battery_portable~4')).toBe('ok');
+    expect(s.changes.armorBattery.torso).toBe('battery_portable~4');
+    expect(s.inventory['battery_portable~4']).toBeUndefined();
+    s.inventory.iron_plate = 1;
+    expect(s.insertArmorBattery('torso', 'iron_plate')).toBe('notBattery');
+    expect(s.insertArmorBattery('legs', 'battery_portable')).toBe('noPiece');
+    s.changes.equipment.hands = 'gloves';
+    expect(s.insertArmorBattery('hands', 'battery_portable')).toBe('noPiece');
+  });
+
+  it('remplacer la batterie rend l’ancienne au sac, et la reprendre aussi', () => {
+    const s = worn();
+    s.insertArmorBattery('torso', 'battery_portable~4');
+    expect(s.insertArmorBattery('torso', 'battery_portable')).toBe('ok');
+    expect(s.inventory['battery_portable~4']).toBe(1);
+    expect(s.removeArmorBattery('torso')).toBe('ok');
+    expect(s.inventory.battery_portable).toBe(1);
+    expect(s.removeArmorBattery('torso')).toBe('empty');
+  });
+
+  it('enlever la pièce rend la batterie au sac', () => {
+    const s = worn();
+    s.insertArmorBattery('torso', 'battery_portable~4');
+    expect(s.unequip('torso')).toBe('ok');
+    expect(s.changes.armorBattery.torso).toBeUndefined();
+    expect(s.inventory['battery_portable~4']).toBe(1);
+  });
+
+  it('la mort la laisse sur le corps', () => {
+    const s = worn();
+    s.insertArmorBattery('torso', 'battery_portable~4');
+    const corpse = s.dieAt(0, 0, 0);
+    expect(corpse.inventory['battery_portable~4']).toBe(1);
+    expect(s.changes.armorBattery).toEqual({});
+  });
+
+  it('se recharge avec les batteries du sac (la borne), jusqu’à pleine', () => {
+    const s = new GameState({ inventory: {} });
+    s.changes.equipment.torso = 'armor4_torso';
+    s.changes.armorBattery.torso = 'battery_portable~8';
+    expect(s.hasChargeableBattery()).toBe(true);
+    s.chargeBatteries(5000);
+    expect(s.changes.armorBattery.torso).toBe('battery_portable~10');
+    expect(s.hasChargeableBattery()).toBe(false);
+  });
+});
+
+describe('sauvegarde de la batterie d’armure', () => {
+  it('survit à l’enregistrement, mais pas sans pièce T4 ou T5 pour la porter', () => {
+    const changes = emptyChanges();
+    changes.equipment.torso = 'armor5_torso';
+    changes.armorBattery.torso = 'battery_portable~7';
+    const back = normalizeChanges(JSON.parse(JSON.stringify(changes)));
+    expect(back.armorBattery.torso).toBe('battery_portable~7');
+    const bad = JSON.parse(JSON.stringify(changes));
+    bad.equipment = { torso: 'jacket' };
+    expect(normalizeChanges(bad).armorBattery).toEqual({});
   });
 });
 

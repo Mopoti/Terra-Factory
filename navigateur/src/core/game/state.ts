@@ -607,6 +607,12 @@ export class GameState {
     const saved = { inventory: this.inventory, equipment: { ...this.changes.equipment } };
     this.inventory = remove(this.inventory, item, 1).inventory;
     this.changes.equipment[slot] = item;
+    // La batterie insérée dans l'ancienne pièce retourne au sac.
+    const battery = this.changes.armorBattery[slot];
+    if (battery) {
+      this.inventory = add(this.inventory, battery, 1);
+      delete this.changes.armorBattery[slot];
+    }
     if (previous) {
       if (maxAddable(this.inventory, previous, this.limits) < 1) {
         this.inventory = saved.inventory;
@@ -624,13 +630,18 @@ export class GameState {
     const item = this.changes.equipment[slot];
     if (!item) return 'empty';
     const saved = { ...this.changes.equipment };
+    const savedBattery = { ...this.changes.armorBattery };
     delete this.changes.equipment[slot];
+    const battery = this.changes.armorBattery[slot];
+    delete this.changes.armorBattery[slot];
     const lim = this.limits;
-    const withItem = add(this.inventory, item, 1);
+    let withItem = add(this.inventory, item, 1);
+    if (battery) withItem = add(withItem, battery, 1);
     const used = totals(withItem);
     const slots = slotsUsed(withItem, lim);
     if (used.weightG > lim.maxWeightG || used.volumeMl > lim.maxVolumeMl || slots > lim.maxSlots) {
       this.changes.equipment = saved;
+      this.changes.armorBattery = savedBattery;
       return 'bagFull';
     }
     this.inventory = withItem;
@@ -1430,6 +1441,9 @@ export class GameState {
       inventory,
       equipment: { ...this.changes.equipment },
     };
+    for (const battery of Object.values(this.changes.armorBattery))
+      inventory[battery] = (inventory[battery] ?? 0) + 1;
+    this.changes.armorBattery = {};
     for (const tool of this.changes.tools) if (tool) inventory[tool] = (inventory[tool] ?? 0) + 1;
     this.changes.tools = this.changes.tools.map(() => null);
     this.inventory = {};
@@ -2059,8 +2073,10 @@ export class GameState {
 
   /** Une batterie portable du sac n'est pas pleine. */
   hasChargeableBattery(): boolean {
-    return allLevels('battery_portable').some(
-      (k) => (levelInfo(k)?.level ?? 0) < 10 && (this.inventory[k] ?? 0) > 0,
+    return (
+      allLevels('battery_portable').some(
+        (k) => (levelInfo(k)?.level ?? 0) < 10 && (this.inventory[k] ?? 0) > 0,
+      ) || this.armorBatteryLevels().some((b) => b.level < 10)
     );
   }
 
@@ -2072,12 +2088,20 @@ export class GameState {
         .map((k) => ({ k, level: levelInfo(k)?.level ?? 0 }))
         .filter((x) => x.level < 10 && (this.inventory[x.k] ?? 0) > 0)
         .sort((a, b) => b.level - a.level)[0];
-      if (!unit) {
+      // Celles de l'armure se rechargent aussi : d'abord le sac, puis la pièce la plus chargée.
+      const worn = this.armorBatteryLevels()
+        .filter((b) => b.level < 10)
+        .sort((a, b) => b.level - a.level)[0];
+      if (!unit && !worn) {
         this.batteryBufferKJ = 0;
         return;
       }
       this.batteryBufferKJ -= GameState.BATTERY_STEP_KJ;
-      this.transformItem(unit.k, variantId('battery_portable', unit.level + 1));
+      if (unit) this.transformItem(unit.k, variantId('battery_portable', unit.level + 1));
+      else if (worn) {
+        this.changes.armorBattery[worn.slot] = variantId('battery_portable', worn.level + 1);
+        this.emit({ type: 'inventory' });
+      }
     }
   }
 
@@ -2151,19 +2175,58 @@ export class GameState {
     return 'ok';
   }
 
-  private hasArEnergy(): boolean {
-    return (
-      this.arSeconds > 0 ||
-      (this.inventory.battery_lithium ?? 0) > 0 ||
-      allLevels('battery_portable').some(
-        (k) => (levelInfo(k)?.level ?? 0) > 0 && (this.inventory[k] ?? 0) > 0,
-      )
+  /** Cette pièce d'armure portée (T4 ou T5) peut recevoir une batterie. */
+  canHoldBattery(slot: EquipSlot): boolean {
+    return /^armor[45]_/.test(baseOf(this.changes.equipment[slot] ?? ''));
+  }
+
+  /** Insère une batterie portable du sac dans la pièce d'armure de cet emplacement (celle qui s'y trouvait revient au sac). */
+  insertArmorBattery(slot: EquipSlot, item: string): 'ok' | 'noPiece' | 'notBattery' | 'bagFull' {
+    if (!this.canHoldBattery(slot)) return 'noPiece';
+    if (baseOf(item) !== 'battery_portable' || (this.inventory[item] ?? 0) <= 0)
+      return 'notBattery';
+    const previous = this.changes.armorBattery[slot];
+    let next = remove(this.inventory, item, 1).inventory;
+    if (previous) {
+      if (maxAddable(next, previous, this.limits) < 1) return 'bagFull';
+      next = add(next, previous, 1);
+    }
+    this.inventory = next;
+    this.changes.armorBattery[slot] = item;
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Reprend la batterie d'une pièce d'armure dans le sac. */
+  removeArmorBattery(slot: EquipSlot): 'ok' | 'empty' | 'bagFull' {
+    const battery = this.changes.armorBattery[slot];
+    if (!battery) return 'empty';
+    if (maxAddable(this.inventory, battery, this.limits) < 1) return 'bagFull';
+    this.inventory = add(this.inventory, battery, 1);
+    delete this.changes.armorBattery[slot];
+    this.emit({ type: 'inventory' });
+    return 'ok';
+  }
+
+  /** Niveaux (0 à 10) des batteries insérées dans l'armure : leur somme est la réserve de l'armure. */
+  armorBatteryLevels(): { slot: EquipSlot; level: number }[] {
+    return (Object.entries(this.changes.armorBattery) as [EquipSlot, string][]).map(
+      ([slot, id]) => ({ slot, level: levelInfo(id)?.level ?? 0 }),
     );
   }
 
+  private hasArEnergy(): boolean {
+    return this.arSeconds > 0 || this.armorBatteryLevels().some((b) => b.level > 0);
+  }
+
+  /** Part d'énergie que l'armure T5 consomme par rapport à la T4 (la T5 en consomme un peu moins). */
+  private arTierFactor(): number {
+    return baseOf(this.changes.equipment.head ?? '').startsWith('armor5_') ? 0.8 : 1;
+  }
+
   /**
-   * Consomme `dt` secondes d'affichage dans le mode actuel (batteries portables d'abord, puis lithium). Renvoie faux
-   * (et coupe l'affichage) si l'armure n'est plus portée ou s'il n'y a plus de batterie.
+   * Consomme `dt` secondes d'affichage dans le mode actuel, dans les batteries insérées dans l'armure (la moins chargée
+   * d'abord). Renvoie faux (et coupe l'affichage) si le casque n'est plus porté ou s'il n'y a plus d'énergie.
    */
   useAr(dt: number): boolean {
     if (this.arMode === 0) return false;
@@ -2172,23 +2235,18 @@ export class GameState {
       return false;
     }
     if (this.creative) return true;
-    const cost = dt * (this.arMode === 2 ? GameState.AR_COMPLETE_FACTOR : 1);
+    const cost = dt * (this.arMode === 2 ? GameState.AR_COMPLETE_FACTOR : 1) * this.arTierFactor();
     if (this.arSeconds <= 0) {
-      const unit = allLevels('battery_portable')
-        .map((k) => ({ k, level: levelInfo(k)?.level ?? 0 }))
-        .filter((x) => x.level > 0 && (this.inventory[x.k] ?? 0) > 0)
+      const unit = this.armorBatteryLevels()
+        .filter((b) => b.level > 0)
         .sort((a, b) => a.level - b.level)[0];
-      if (unit) {
-        this.wearItem(unit.k, 1);
-        this.arSeconds = GameState.AR_STEP_S;
-      } else if ((this.inventory.battery_lithium ?? 0) > 0) {
-        this.inventory = remove(this.inventory, 'battery_lithium', 1).inventory;
-        this.arSeconds = GameState.AR_LITHIUM_S;
-        this.emit({ type: 'inventory' });
-      } else {
+      if (!unit) {
         this.arMode = 0;
         return false;
       }
+      this.changes.armorBattery[unit.slot] = variantId('battery_portable', unit.level - 1);
+      this.arSeconds = GameState.AR_STEP_S;
+      this.emit({ type: 'inventory' });
     }
     this.arSeconds -= cost;
     return true;

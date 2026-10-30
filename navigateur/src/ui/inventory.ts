@@ -148,7 +148,60 @@ export function mountInventory(
         e.preventDefault();
         equipItem(dropped);
       });
-      return cell;
+      return state.canHoldBattery(slot) ? withBatterySocket(slot, cell) : cell;
+    };
+    /** Pièce d'armure T4 ou T5 : une case de batterie portable sous la pièce (clic pour insérer ou reprendre). */
+    const withBatterySocket = (slot: EquipSlot, cell: HTMLElement): HTMLElement => {
+      const box = el('div', 'equip-with-battery');
+      const battery = state.changes.armorBattery[slot];
+      const socket = el('button', battery ? 'slot equip-battery' : 'slot equip-battery empty');
+      socket.type = 'button';
+      socket.title = battery ? itemLabel(battery) : t('equip.battery');
+      if (battery) {
+        socket.style.setProperty('--item', itemById(battery).color);
+        socket.append(itemIcon(battery));
+        const bar = itemGauge(state, battery);
+        if (bar) socket.append(bar);
+        socket.addEventListener('mouseenter', () => {
+          hovered = battery;
+          state.pointed = hovered;
+          showTooltip();
+        });
+        socket.addEventListener('mouseleave', () => {
+          hovered = null;
+          state.pointed = hovered;
+          showTooltip();
+        });
+      } else socket.append(el('span', 'equip-label', t('equip.battery')));
+      const insert = (item: string): void => {
+        state.returnHand();
+        const result = state.insertArmorBattery(slot, item);
+        playSfx(result === 'ok' ? 'pickup' : 'deny');
+        message = result === 'ok' ? '' : t(`equip.battery.${result}` as TranslationKey);
+        if (result === 'ok') selected = null;
+        render();
+      };
+      socket.addEventListener('click', () => {
+        const held = state.hand?.item ?? selected;
+        if (held) return insert(held);
+        if (battery) {
+          const result = state.removeArmorBattery(slot);
+          playSfx(result === 'ok' ? 'pickup' : 'deny');
+          message = result === 'bagFull' ? t('equip.bagFull') : '';
+          render();
+        }
+      });
+      socket.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types.includes(ITEM_DRAG_TYPE)) e.preventDefault();
+      });
+      socket.addEventListener('drop', (e) => {
+        const dropped = e.dataTransfer?.getData(ITEM_DRAG_TYPE);
+        if (!dropped) return;
+        e.preventDefault();
+        insert(dropped);
+      });
+      box.append(cell, socket);
+      return box;
     };
     const rows: EquipSlot[][] = [['head'], ['torso', 'back'], ['legs', 'hands'], ['feet']];
     for (const row of rows) {

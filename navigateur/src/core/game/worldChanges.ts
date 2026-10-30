@@ -8,6 +8,7 @@ import { CELL_SIZE_M, CHUNK_CELLS } from '../constants';
 import { footprint, normalizeMachines, type Machine } from '../factory/factory';
 import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
+import { baseOf, levelInfo } from '../data/itemData';
 import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
@@ -161,6 +162,8 @@ export interface WorldChanges {
   nextMachineId: number;
   /** Équipement porté : un objet par emplacement du corps. */
   equipment: Partial<Record<EquipSlot, string>>;
+  /** Batterie portable insérée dans une pièce d'armure T4 ou T5 (au plus une par emplacement). */
+  armorBattery: Partial<Record<EquipSlot, string>>;
   /** Technologies déjà recherchées. */
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
@@ -261,6 +264,7 @@ export function emptyChanges(): WorldChanges {
     machines: [],
     nextMachineId: 1,
     equipment: {},
+    armorBattery: {},
     unlocked: [],
     admin: false,
     tutorialDone: [],
@@ -483,6 +487,19 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   result.discovered = Array.isArray(r.discovered)
     ? DISCOVERIES.map((d) => d.id).filter((id) => (r.discovered as unknown[]).includes(id))
     : [];
+  if (typeof r.armorBattery === 'object' && r.armorBattery !== null) {
+    for (const [slot, id] of Object.entries(r.armorBattery as Record<string, unknown>)) {
+      const worn = result.equipment[slot as EquipSlot];
+      if (
+        typeof id === 'string' &&
+        worn &&
+        /^armor[45]_/.test(baseOf(worn)) &&
+        baseOf(id) === 'battery_portable' &&
+        levelInfo(id)
+      )
+        result.armorBattery[slot as EquipSlot] = id;
+    }
+  }
   const rec = (v: unknown): Record<string, unknown> | null =>
     typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
   for (const raw of Array.isArray(r.corpses) ? r.corpses.slice(0, 50) : []) {

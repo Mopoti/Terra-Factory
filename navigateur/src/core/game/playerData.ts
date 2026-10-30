@@ -14,6 +14,7 @@ export const PLAYER_KEYS = [
   'tools',
   'toolsHeld',
   'equipment',
+  'armorBattery',
   'ammo',
   'rifleAmmo',
   'sniperAmmo',
