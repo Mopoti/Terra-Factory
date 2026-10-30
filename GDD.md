@@ -630,6 +630,7 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
   - **jambes** : l'**exosquelette** s'active ou se désactive à volonté ; plus puissant en T5 qu'en T4 ;
   - **torse** : une **barre de raccourcis en plus**, qui ne consomme presque rien ;
   - **mains** : remplacent l'**outil** ; **chaque coup consomme** de l'énergie.
+  - **Interface** (essai demandé par le PO) : un **menu circulaire** (un « camembert creux » au centre de l'écran) liste les **avantages** offerts par les pièces équipées. Choisir un avantage soit l'**active ou le désactive**, soit ouvre un **second anneau** identique avec les **options** de cet avantage (ex. casque : désactivé, simple, complet). Ouverture par la touche de l'armure (J pour l'instant).
 - ⏳ Reste à concevoir : chauffage des abris, combustible d'hiver, cultures ; le vent pourra plus tard orienter la fumée, la pollution ou les nuages.
 
 ---
