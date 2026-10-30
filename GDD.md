@@ -1,9 +1,9 @@
 # Terra Factory — Game Design Document (GDD)
 
-> **Statut** : document de référence vivant, rédigé à partir de l'état réel du jeu (données `content/*.json`, code `src/`, documents `docs/`) au **Tour 83**.
+> **Statut** : document de référence vivant, mis à jour sur l'état réel du jeu (données `content/*.json`, code `src/`, documents `docs/`) au **Tour 287** (30 octobre 2026). Il décrit les **règles du jeu** indépendamment de la technique ; la version navigateur est la version de référence, la version Unreal est un essai (`unreal/`).
 > **Langue** : français. **Public** : le Product Owner (PO), les développeurs et les artistes qui rejoindront le projet.
 > **Règle d'or** : en cas de contradiction, **les fichiers de données et le code font foi** ; ce GDD est mis à jour à chaque fin de session avec `passation.md`.
-> Les tableaux de chiffres (objets, machines, technologies) sont **générés depuis `content/*.json`**.
+> Les tableaux de chiffres (objets, machines, découvertes) sont **générés depuis `content/*.json`**.
 > Marqueurs : ✅ implémenté · 🔶 provisoire / à valider · ⏳ prévu, pas encore fait · ❌ hors périmètre pour l'instant.
 
 ---
@@ -17,7 +17,7 @@
 5. Les objets
 6. La construction
 7. L'usine : machines, logistique, énergie, fluides
-8. Technologies et recherche
+8. Découvertes et recherche
 9. Pollution, ennemis et défense
 10. Jour, nuit et saisons
 11. Interface, commandes et paramètres
@@ -41,7 +41,7 @@
 2. **Liberté de vue et de construction** : trois vues changeables en jeu ; construction libre, sans contrainte de support, étage par étage ; machines posées au sol ou à l'étage.
 3. **Un monde déterministe et partageable** : même seed = même monde, pour tout le monde, sans rien stocker d'autre que les changements du joueur.
 4. **Une simulation lisible, pas punitive** : physique « réaliste mais jouable » (énergie, pression, pollution) avec des réglages de partie ; ennemis non agressifs par défaut.
-5. **Tout est donnée** : objets, machines, ressources, technologies, pièces de construction dans des fichiers JSON ; textes en fichiers de traduction (fr/en) ; aucune valeur d'équilibrage en dur dans le code quand c'est évitable.
+5. **Tout est donnée** : objets, machines, ressources, découvertes, pièces de construction dans des fichiers JSON ; textes en fichiers de traduction (fr/en) ; aucune valeur d'équilibrage en dur dans le code quand c'est évitable.
 6. **Tout est remappable et configurable** : touches, vues, image, sons, unités.
 
 ### 1.3 Plateforme et technologie
@@ -67,25 +67,27 @@ Récolter à la main ──► Fabriquer outils / premières machines ──► 
         │                                                                                      ▼
  Se défendre ◄── Pollution attire les ennemis ◄── Produire de l'énergie ◄── Transporter (tapis, bras, tunnels)
         │                                                                                      │
-        └──────────────► Rechercher (technologies) ◄── Paquets de science ◄── Assembler ◄──────┘
+        └──────────────► Découvrir (recettes) ◄── Paquets de science ◄── Assembler ◄──────┘
 ```
 
 ### 2.2 Phases de progression (parcours type)
 
-| Phase                              | Objectif                                              | Ce que le joueur débloque / fait                                                      |
-| ---------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **0. Survie à mains nues**         | Récolter bois, pierre, fibres (récolte ×3 plus lente) | Sac, fabrication à la main, premier outil                                             |
-| **1. Outillage**                   | Outil en pierre puis en fer                           | Récolte plus rapide (×2 puis ×3,5), 2 unités par coup avec le fer                     |
-| **2. Premières machines**          | Foreuse + fourneau au combustible                     | Minerais → lingots sans effort manuel ; coffres                                       |
-| **3. Logistique**                  | Tapis, bras, séparateurs, groupeurs, tunnels, niveaux | Technologie _Logistique_ (20 lingots de fer)                                          |
-| **4. Électricité**                 | Générateur, poteaux, foreuse électrique, laboratoire  | Technologie _Électricité_ ; la **pollution** devient un enjeu                         |
-| **5. Recherche et automatisation** | Paquets de science → laboratoires                     | _Automatisation_ : assembleur, bras électrique ; fabrication automatique              |
-| **6. Vapeur**                      | Pompe, tuyaux (enterrables), chaudières, turbines     | Électricité « propre » en infrastructure, mais grosse source de pollution (chaudière) |
-| **7. Défense et expansion**        | Pistolet, tourelles, buggy, destruction des nids      | _Défense_, _Navigation_ ; contrôle de la pollution                                    |
+Le jeu est organisé en **six paliers (T0 à T5)**. Un palier se franchit en **découvrant** des recettes (§8), payées en **paquets de science** du palier et du palier précédent. Chaque palier a son propre paquet (T1 : 2 pierres + 1 minerai de fer ; T2 : engrenage + fil de cuivre ; T3 : plaque d'acier + tuyau de laiton ; T4 : puce de silicium + câble isolé ; T5 : puce + plaque d'acier + uranium appauvri), fabriqué avec des éléments du palier précédent.
+
+| Palier | Thème                         | Ce que le joueur débloque / fait                                                                                                                                                                                                                                                                       |
+| ------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **T0** | Survie à mains nues           | Récolte du bois, de la pierre, des fibres (mains nues ×3 plus lentes), sac, fabrication à la main, outils de pierre puis de fer, foreuse et fourneau à combustible, coffres, **poteau électrique en bois et laboratoire**. Les 22 découvertes de ce palier se paient en objets du sac.                 |
+| **T1** | Logistique, vapeur et défense | Tapis, bras, séparateurs, groupeurs, tunnels ; **vapeur** (pompe, chaudière, turbine) ; tourelle ; clôtures et portails en bois ; lampadaire ; kit de réparation.                                                                                                                                      |
+| **T2** | Métallurgie et électricité    | Générateur, foreuse et bras électriques, assembleur, acier (Bessemer), béton, lavage des minerais, constructeur ; **poteau haute tension, transformateur, disjoncteur** ; éolienne ; barrières et portails en béton.                                                                                   |
+| **T3** | Industrie                     | Foreuse économe, four électrique, presse lourde, plastique et silicium, pétrole et raffinerie, **locomotive à vapeur et rails**, assembleur avancé, poteau très haute tension, panneau solaire, accumulateur de base, barrières en béton armé et portail motorisé.                                     |
+| **T4** | Énergie lourde et nucléaire   | Centrifugeuse, uranium, réacteur à fission, vitrification, batteries au lithium et accumulateur, borne de recharge, quad et locomotive électriques, batterie portable, propulseur dorsal, pile à combustible, foreuse à plasma, bras industriel, purificateur d'air, électrolyseur, mur holographique. |
+| **T5** | Fin de partie                 | Fusion, compresseur d'air et azote liquide, coffre quantique, fabricateur universel, tourelle à rail, **balise quantique** (relais et antenne).                                                                                                                                                        |
+
+La pollution, les ennemis et la défense (§9) accompagnent toute la partie : plus l'usine grossit, plus elle attire d'ennemis.
 
 ### 2.3 Conditions de fin
 
-Pas de victoire scriptée à ce stade : **bac à sable** avec progression technologique. ⏳ Objectifs / succès à définir (voir §15) ; le drapeau « admin » (mode débogage utilisé) est déjà enregistré pour désactiver les futurs succès.
+**Bac à sable** avec une fin de partie optionnelle : la découverte **Balise quantique** (T5, après la fusion) permet de monter un **relais émetteur** et une **antenne** ; une fois la balise activée (séquence finale), le **comptoir spatial** s'ouvre : le relais **achète et vend** des objets contre des **crédits galactiques** (vente à 50 % et achat à 150 % de la valeur d'un objet, déduite de ses recettes). ⏳ Objectifs et succès à définir (voir §15) ; le drapeau « admin » (mode débogage utilisé) est déjà enregistré pour désactiver les futurs succès.
 
 ---
 
@@ -127,7 +129,7 @@ Deux bruits très étalés (température, humidité) donnent le biome ; transiti
 - Les gisements sont des **cases de minerai de 50 × 50 cm** (10 cm de haut max) ; chaque case a sa quantité, **plus riche au centre**, contour irrégulier par bruit.
 - Un nid ou un étang n'est jamais posé sur un gisement.
 
-> Tour 85 : les ressources suivent désormais la refonte (voir `docs/refonte-objets.md`). Zinc, bauxite, quartz et uraninite se récoltent mais n'ont pas encore d'usage (fonderie : point 3). **Ponts** : une dalle de sol posée sur l'eau la rend praticable (marche, tapis, tuyaux, poteaux).
+> Sable, pierre de carrière (gisement de pierre) et pétrole sont aussi des gisements ; zinc, bauxite, quartz et uraninite servent aux paliers 2 à 4. Tour 85 : les ressources suivent désormais la refonte (voir `docs/refonte-objets.md`). Zinc, bauxite, quartz et uraninite se récoltent mais n'ont pas encore d'usage (fonderie : point 3). **Ponts** : une dalle de sol posée sur l'eau la rend praticable (marche, tapis, tuyaux, poteaux).
 
 ### 3.4 Zone de départ garantie ✅
 
@@ -162,14 +164,14 @@ Décision de cadrage : l'usine continue de tourner ; dans le navigateur, un futu
 | Taille / rayon       | 1,70 m / 25 cm                                                                                                    |
 | Marche               | 4,5 m/s                                                                                                           |
 | Sprint (Maj)         | ×1,7                                                                                                              |
-| Accroupi (Ctrl)      | oui                                                                                                               |
+| Accroupi (C)         | oui                                                                                                               |
 | Saut                 | 7 m/s, gravité 22 m/s² → **≈ 1,1 m** : **2 blocs de mur empilés (1 m) se montent d'un saut**, 3 blocs (1,5 m) non |
 | Marche (sans sauter) | jusqu'à 35 cm (dalle de sol, marche d'escalier de 50 cm sur sa longueur)                                          |
 | Santé                | 100 PV ; récupération de 4 PV/s après 5 s sans dégât                                                              |
 | Portée d'action      | 3 m (récolte, ramassage) ; 6 m (construction)                                                                     |
 | Buggy                | ×2,6 la marche, voir §4.8                                                                                         |
 
-Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par ses **outils, son équipement et les technologies** débloquées.
+Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par ses **outils, son équipement et les découvertes** faites.
 
 ### 4.2 Vues ✅
 
@@ -182,17 +184,17 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 
 - La barre de santé est **masquée par défaut** (réglage « Afficher la barre de santé ») ; la **rougeur des bords de l'écran** indique la gravité des dégâts.
 - À **0 PV** : le joueur est assommé ; **son corps reste sur place** (capsule grise couchée) **avec tout ce qu'il portait** (sac, équipement) ; il réapparaît au **dernier duvet ou lit posé**, sinon au **premier point** (départ de la partie), **les mains vides**.
-- Le corps est visible **sur la carte (✝, ainsi que ⚑ lit et ⚐ duvet)** et, si la technologie **Navigation** est recherchée, **repéré sur la boussole** (✝ ; flèche ◄✝ / ✝► s'il est hors du champ). Un nouveau corps remplace l'ancien.
+- Le corps est visible **sur la carte (✝, ainsi que ⚑ lit et ⚐ duvet)** et, si la découverte **Navigation** est faite, **repéré sur la boussole** (✝ ; flèche ◄✝ / ✝► s'il est hors du champ). Un nouveau corps remplace l'ancien.
 - **Récupération** : près du corps (2,5 m), **F** reprend l'équipement et le contenu d'un coup (dans la limite de la place du sac ; le reste attend sur le corps).
 - **Réapparition** : **duvet d'exploration** (usage unique, détruit après la réapparition) ou **lit** (permanent), posés au clic ; le dernier posé compte. Maj + F les range.
 
 ### 4.4 Sac à dos et inventaire ✅
 
-- Base : **30 cases**, piles de **100** maximum, limite de **50 kg et 60 L** (poids ET volume).
+- Base : **30 cases**, piles de **100** maximum (les objets à état : 1), limite de **50 kg et 60 L** (poids ET volume).
 - Les **objets équipés quittent le sac**. Un sac à dos équipé ajoute +10 cases, +20 kg, +30 L.
 - Gestes de souris unifiés (sac, coffres, machines, buggy) : clic = pile au curseur ; clic droit = la moitié ; **Ctrl** = quantité choisie ; **Maj** = transfert direct vers/depuis le sac ; glisser hors de la fenêtre = jeter ; glisser sur la barre = raccourci.
 - Un objet **posable** peut rester « en main » à la fermeture du sac ; clic droit mains vides = vider les mains.
-- **Fabrication à la main** (dans le sac) par onglets : _Machines_, _Ustensiles_, _Constructions_, _Équipements_. Seuls les objets **débloqués** (technologie) sont fabricables ; les matières premières ne figurent pas dans le panneau.
+- **Fabrication à la main** (dans le sac) par les onglets du §5.1. Seuls les objets **découverts** (§8) sont fabricables ; les matières premières ne figurent pas dans le panneau. Les objets à état (§5.3) ne s'empilent qu'à égal niveau.
 - **Barre de raccourcis** de 10 cases (touches 1 à 9 puis 0). Il n'y a plus de case d'outils dédiée : l'outil se range dans une case ordinaire.
 
 ### 4.5 Outils et récolte ✅
@@ -210,93 +212,69 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 
 ### 4.6 Équipement ✅
 
-Cinq emplacements : **Tête, Tronc, Mains, Jambes, Pieds** ; s'équipe par glisser-déposer ou sélection puis clic ; mis à jour visuellement sur le personnage (formes simples provisoires).
+Six emplacements : **Tête, Tronc, Dos, Mains, Jambes, Pieds** ; s'équipe par glisser-déposer ou sélection puis clic ; l'équipement porté est dessiné sur le personnage (modèles portés encore provisoires pour la plupart).
 
-| Équipement | Emplacement | Recette              | Effet                      |
-| ---------- | ----------- | -------------------- | -------------------------- |
-| Sac à dos  | Tronc       | 12 × tissu           | +10 cases, +20 kg, +30 L   |
-| Capuche    | Tête        | 6 × tissu            | cosmétique (effet à venir) |
-| Pantalon   | Jambes      | 8 × tissu            | cosmétique (effet à venir) |
-| Bottes     | Pieds       | 6 × tissu + 2 × bois | cosmétique (effet à venir) |
-| Gants      | Mains       | 4 × tissu            | cosmétique (effet à venir) |
+- **Vêtements** (tissu) : sac à dos (+10 cases, +20 kg, +30 L), capuche, pantalon, bottes, gants (cosmétiques pour l'instant ⏳).
+- **Armures de 1 à 5** : casque, plastron, jambières et bottes de chaque palier ; chaque pièce réduit les dégâts reçus (somme des pièces, plafonnée). **Usure** : chaque coup reçu use les pièces portées (un niveau sur dix tous les 60 dégâts par pièce) ; une pièce usée protège moins ; à zéro elle **se brise**. Une armure neuve est pleine ; les pièces usées sont des objets à part (voir §5.3).
+- **Exosquelette** (palier 4) et **propulseur dorsal** (palier 4, emplacement Dos) : le propulseur donne de brèves poussées verticales et brûle d'abord les **batteries portables** (rechargées à une borne), puis les batteries au lithium du sac (20 s chacune).
 
-Tous se fabriquent à partir de **tissu** (8 fibres par tissu, technologie _Textile_). Seul le sac à dos agit pour l'instant ; les autres vêtements sont cosmétiques (effets prévus avec la refonte : protection, endurance…) ⏳.
+### 4.7 Armes et outils ✅
 
-### 4.7 Armes ✅
+- **Armes à feu** : pistolet, fusil, sniper, chacun avec son **chargeur** (munitions fabriquées) ; recharge avec **R** ; le rayon de tir est visible. Le **corps à corps** (sans arme) fait 12 dégâts à 2,6 m.
+- **Outils** (pierre, fer) : vitesse de récolte ×2 et ×3,5 (§4.5). Le **kit de réparation** est un outil de maintenance (§7.11).
+- Les **nids** encaissent aussi les tirs (§9).
 
-- **Pistolet** (16 lingots de fer) : 10 dégâts par tir (rayon, portée 40 m), cadence 0,35 s ; **chargeur** (4 lingots de fer) = **12 balles** ; recharge avec **R**. Tracé de tir visible, bruitages.
-- **Corps à corps** (sans pistolet) : 12 dégâts, portée 2,6 m.
-- Le pistolet (choisi dans la barre) ne sort que pendant l'action de tir. Les **nids** encaissent aussi les tirs (§9).
+### 4.8 Véhicules ✅
 
-### 4.8 Le buggy ✅
+Posés dans le monde, montés avec **F**, rangés avec **Maj + F**. Chacun a un coffre ou une case de carburant selon son type ; la position, l'orientation, la réserve d'énergie et le contenu sont sauvegardés. Ils **écrasent** les ennemis (cooldown).
 
-- Véhicule posé dans le monde (**24 fer + 8 cuivre + 6 bois**, 30 kg), monté avec **F**, rangé avec **Maj + F**.
-- **Vitesse ×2,6** la marche ; consomme **180 kW** de combustible (un charbon = 50 s de route) ; **sans carburant il ne bouge plus**.
-- Possède une **case de carburant** et un **coffre** (fenêtre ouverte par clic sur le buggy ou touche inventaire au volant) ; il puise d'abord dans sa case, puis son coffre, puis le sac.
-- Il peut **écraser les ennemis** (cooldown). Position, orientation, carburant et contenu sont sauvegardés.
+| Véhicule            | Vitesse (× la marche) | Énergie                                                                       | Particularité                |
+| ------------------- | --------------------- | ----------------------------------------------------------------------------- | ---------------------------- |
+| Charrette           | ×0,8                  | aucune (poussée à pied)                                                       | sans moteur, grand coffre    |
+| Buggy               | ×2,6                  | 180 kW de combustible                                                         | case de carburant et coffre  |
+| Quad                | ×3,1                  | 110 kW de combustible                                                         | léger et sobre               |
+| **Quad électrique** | ×3,3                  | batterie : 15 minutes de route, rechargée à une **borne de recharge** (§7.10) | pas de carburant, silencieux |
+| Camionnette         | ×2,2                  | 300 kW                                                                        | coffre de 32 cases           |
+| Char                | ×1,8                  | 450 kW                                                                        | lent, écrase tout            |
+
+Les **trains** sont décrits au §7.8.
 
 ---
 
 ## 5. Les objets
 
-Tout objet a un **identifiant texte stable** (ex. `iron_ingot`), un **poids**, un **volume**, éventuellement une **recette**, une **énergie de combustion**, un **emplacement d'équipement** ou un **effet d'outil**. Source : `content/items.json`.
+Le jeu compte **251 objets**. Tout objet a un **identifiant texte stable** (ex. `iron_ingot`), un **poids**, un **volume**, éventuellement une **recette**, une **énergie de combustion**, un **emplacement d'équipement**, un **effet d'outil** et un **palier** (T0 à T5). Sources : `content/items.json` (données) et `docs/fiches-objets.html` (fiches générées, avec les paquets demandés).
 
-> 🔶 **Refonte annoncée** : le PO prévoit une **grosse refonte des objets** (poids, volumes, énergies, recettes, catalogue). Les valeurs ci-dessous sont celles d'aujourd'hui, **à ne pas équilibrer avant cette refonte**.
+### 5.1 Familles et onglets de fabrication ✅
 
-### 5.1 Matières premières et combustibles
+Les objets fabricables sont classés en **15 onglets** (le sac, la fenêtre de fabrication à la main et l'assembleur partagent ce classement) : _Ressources, Extraction, Fonderie, Usinage, Logistique, Fluides, Énergie, Science, Construction lourde, Outils et défense, Équipements, Armures, Constructions, Rail, Véhicules_. Les **matières brutes** (récoltées) ne se fabriquent pas.
 
-| Objet             | Poids   | Volume | Énergie (combustible) | Obtention |
-| ----------------- | ------- | ------ | --------------------- | --------- |
-| Bois              | 0,8 kg  | 3 L    | 1,8 MJ                | récolte   |
-| Pierre            | 1,2 kg  | 0,6 L  | —                     | récolte   |
-| Minerai de fer    | 0,4 kg  | 0,3 L  | —                     | récolte   |
-| Minerai de cuivre | 0,45 kg | 0,3 L  | —                     | récolte   |
-| Charbon           | 0,25 kg | 0,3 L  | 9 MJ                  | récolte   |
-| Fibre             | 0,05 kg | 0,3 L  | 0,54 MJ               | récolte   |
+### 5.2 Règles de recette ✅
 
-**Énergie des combustibles** : exprimée en **mégajoules (MJ) par unité** ; les machines à combustible ont une consommation en **kilowatts (kW = kJ/s)** dans la même unité (§7.6). Un charbon (9 MJ) fait tourner une foreuse (90 kW) 100 s ; le bois (1,8 MJ) 20 s. Le bois est volontairement faible (valeur de jeu, non réaliste) en attendant la refonte.
+- **Trois types d'ingrédients au plus** par recette ; **quatre à partir du palier 3** (l'assembleur avancé et le fabricateur universel acceptent quatre types).
+- Les objets avancés passent par des **intermédiaires** : châssis (simple, renforcé, léger, composite), kit circuit, circuit avancé, microcontrôleur, vitre, graphite, fibre de carbone, cellule photovoltaïque, batterie au lithium, etc. Un objet de palier n s'obtient avec des éléments des paliers inférieurs.
+- Les **paquets de science** se fabriquent à la main (**5 s × le palier**) ou à l'assembleur.
+- Les outils, le kit de réparation et les armures se fabriquent à la main ; les machines à l'assembleur ou à la main selon leur taille (§7.1).
 
-### 5.2 Produits intermédiaires
+### 5.3 Données par objet : charge et usure ✅
 
-| Objet             | Poids   | Volume | Recette                                  |
-| ----------------- | ------- | ------ | ---------------------------------------- |
-| Lingot de fer     | 0,35 kg | 0,15 L | fonte au fourneau                        |
-| Lingot de cuivre  | 0,4 kg  | 0,15 L | fonte au fourneau                        |
-| Tissu             | 0,1 kg  | 0,3 L  | 8 × fibre                                |
-| Paquet de science | 0,1 kg  | 0,2 L  | 2 × lingot de fer + 2 × lingot de cuivre |
-| Boussole          | 0,2 kg  | 0,2 L  | 2 × lingot de fer + 1 × lingot de cuivre |
+Certains objets ont un **état propre** à chaque exemplaire. Il est représenté par des **niveaux** : un même objet existe en plusieurs exemplaires de niveaux différents, qui **ne se mélangent pas** dans une pile (une pile = un seul exemplaire).
 
-- **Fourneau** (recette choisie dans la fenêtre) : lingots de fer (2 hématite + 1 charbon, 2 s), **fonte** (2 hématite + 3 charbon, 4 s), lingots de cuivre (2 malachite, 3 s) ; moules en fonte (plaque, engrenage, fil). **Estampeuse** (moule exigé, 8 cycles) : plaque de fer, engrenage, fil de cuivre. Détail : `docs/refonte-objets.md` §3.
-- Le **paquet de science** se fabrique à la main ou à l'assembleur ; il alimente les laboratoires (§8).
+| Objet                            | Niveaux                                        | Neuf / fabriqué | Ce qui le fait changer                                                                      |
+| -------------------------------- | ---------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------- |
+| **Kit de réparation**            | 5 charges                                      | plein           | une charge par réparation (§7.11) ; ne se recharge pas, ne se répare pas ; disparaît à zéro |
+| **Batterie portable**            | 10 niveaux (10 × 6 s de poussée du propulseur) | **vide**        | se recharge à une borne de recharge ; le propulseur la consomme                             |
+| **Armures 1 à 5** (chaque pièce) | 10 niveaux d'usure                             | pleine          | usée par les coups reçus ; brisée à zéro                                                    |
 
-### 5.3 Pièces de construction
+L'état se lit sur l'**icône** : une jauge fine sous l'objet (verte, orange, rouge) et le nom indique le pourcentage (« Batterie portable (60 %) »). Les piles, coffres, objets au sol, échanges et sauvegardes les gardent. Une ancienne sauvegarde convertit son kit entamé en objet.
 
-| Pièce              | Poids  | Volume | Recette    |
-| ------------------ | ------ | ------ | ---------- |
-| Mur en bois        | 1,0 kg | 1,0 L  | 2 × bois   |
-| Porte en bois      | 4,0 kg | 4,0 L  | 8 × bois   |
-| Porte en pierre    | 4,0 kg | 4,0 L  | 8 × pierre |
-| Mur en pierre      | 1,0 kg | 1,0 L  | 2 × pierre |
-| Escalier en bois   | 1,5 kg | 1,5 L  | 4 × bois   |
-| Escalier en pierre | 1,5 kg | 1,5 L  | 4 × pierre |
-| Dalle en bois      | 1,0 kg | 1,0 L  | 2 × bois   |
-| Dalle en pierre    | 1,0 kg | 1,0 L  | 2 × pierre |
+### 5.4 Combustibles et énergie ✅
 
-### 5.4 Machines (objets à poser)
+L'énergie des combustibles est en **mégajoules par unité** ; les machines à combustible ont une consommation en **kilowatts** (1 kW = 1 kJ/s). Charbon 9 MJ, bois 1,8 MJ, fibre 0,54 MJ ; le **deutérium et le tritium** (500 MJ) ne servent qu'à la pile à combustible.
 
-Les objets-machines et leurs coûts figurent au §7.1.
+### 5.5 Mode Créatif ✅
 
-### 5.5 Autres objets
-
-| Objet                | Poids  | Volume | Recette                                              |
-| -------------------- | ------ | ------ | ---------------------------------------------------- |
-| Pistolet             | 1,1 kg | 1,2 L  | 16 × lingot de fer                                   |
-| Chargeur (12 balles) | 0,3 kg | 0,3 L  | 4 × lingot de fer                                    |
-| Buggy                | 30 kg  | 40 L   | 24 × lingot de fer + 8 × lingot de cuivre + 6 × bois |
-
-### 5.6 Catégories de fabrication
-
-`Machines` (tout objet `machine_*` et le buggy), `Ustensiles` (le reste), `Constructions` (`piece_*`), `Équipements` (objets portables). La catégorie est déduite par `categoryOf()` ; les noms d'onglets sont dans `craft.cat.*`.
+En Créatif, **un seul exemplaire** d'un objet suffit pour le poser **autant de fois qu'on veut** ; casser un objet le rend. La fabrication est **gratuite** et le sac sans limite de poids ni de volume ; les ressources du monde (arbre, rocher, gisements) se posent depuis un onglet dédié.
 
 ---
 
@@ -340,108 +318,239 @@ Les volumes clos sont détectés (pièces de ≤ 400 cases) ; ils servent au mas
 
 ### 7.1 Catalogue des machines ✅
 
-Les emprises sont données en cases (largeur × profondeur, orientation 0) ; la rotation par pas de 90° échange les deux. Les **machines non linéaires** peuvent se poser **à l'étage** sur une dalle (PageUp).
+Le jeu compte **77 machines**. Les emprises sont en cases de 50 cm (largeur × profondeur, orientation 0) ; la rotation par pas de 90° les échange. Les machines **non linéaires** peuvent se poser **à l'étage** sur une dalle (PageUp). Le coût est celui de la fabrication (`content/items.json`, tableau généré). Les chiffres d'énergie sont des **valeurs de départ** à équilibrer (§14).
 
-| Machine                   | Emprise (cases) | Hauteur | Coût                                                   | Énergie                      |
-| ------------------------- | --------------- | ------- | ------------------------------------------------------ | ---------------------------- |
-| Foreuse                   | 4×4             | 1,5 m   | 6 × lingot de fer + 6 × pierre                         | brûle 90 kW                  |
-| Fourneau                  | 3×3             | 1,0 m   | 10 × pierre                                            | brûle 90 kW                  |
-| Tapis roulant             | 2×2             | 0,15 m  | 2 × lingot de fer                                      | —                            |
-| Coffre en bois            | 2×2             | 0,5 m   | 16 × bois                                              | —                            |
-| Coffre en fer             | 2×2             | 0,5 m   | 16 × lingot de fer                                     | —                            |
-| Générateur à combustible  | 3×3             | 1,0 m   | 12 × lingot de fer + 12 × pierre                       | produit 300 kW, brûle 900 kW |
-| Poteau électrique         | 2×2             | 3,5 m   | 2 × lingot de fer + 4 × bois                           | —                            |
-| Foreuse électrique        | 4×4             | 1,5 m   | 12 × lingot de fer + 8 × lingot de cuivre + 4 × pierre | consomme 90 kW               |
-| Séparateur                | 2×2             | 0,5 m   | 10 × lingot de fer                                     | —                            |
-| Groupeur                  | 2×2             | 0,5 m   | 10 × lingot de fer                                     | —                            |
-| Bras robotique            | 2×2             | 0,5 m   | 12 × lingot de fer                                     | brûle 20 kW                  |
-| Bras robotique électrique | 2×2             | 0,5 m   | 12 × lingot de fer + 6 × lingot de cuivre              | consomme 20 kW               |
-| Assembleur                | 3×3             | 1,0 m   | 24 × lingot de fer + 12 × lingot de cuivre             | consomme 60 kW               |
-| Laboratoire               | 3×3             | 1,0 m   | 20 × lingot de fer + 16 × lingot de cuivre             | consomme 30 kW               |
-| Tuyau                     | 2×2             | 0,5 m   | 2 × lingot de fer                                      | —                            |
-| Pompe à eau électrique    | 2×2             | 1,0 m   | 10 × lingot de fer + 6 × lingot de cuivre              | consomme 20 kW               |
-| Chaudière                 | 3×3             | 1,5 m   | 20 × lingot de fer + 10 × pierre                       | brûle 700 kW                 |
-| Turbine à vapeur          | 3×4             | 1,0 m   | 24 × lingot de fer + 16 × lingot de cuivre             | produit 200 kW               |
-| Tourelle automatique      | 3×2             | 1,0 m   | 16 × lingot de fer + 6 × lingot de cuivre              | —                            |
+**Extraction et fonderie**
+
+| Machine                               | Emprise (cases) | Hauteur | Coût                                                                                | Énergie / vie    |
+| ------------------------------------- | --------------- | ------- | ----------------------------------------------------------------------------------- | ---------------- |
+| Foreuse                               | 4×5             | 2 m     | 6 × Lingot de fer + 6 × Pierre                                                      | brûle 90 kW      |
+| Foreuse électrique                    | 4×5             | 2 m     | 2 × Châssis simple + 1 × Moteur + 2 × Kit circuit                                   | consomme 90 kW   |
+| Foreuse économe (T3)                  | 4×5             | 2 m     | 6 × Plaque d'acier + 12 × Tige en acier + 8 × Engrenage en fer + 12 × Fil de cuivre | consomme 67,5 kW |
+| Foreuse à plasma                      | 6×6             | 2,5 m   | 2 × Moteur renforcé + 1 × Châssis composite + 1 × Microcontrôleur                   | consomme 1500 kW |
+| Fourneau                              | 3×4             | 1 m     | 10 × Pierre                                                                         | brûle 90 kW      |
+| Four électrique (T3)                  | 4×4             | 1 m     | 4 × Plaque d'acier + 8 × Tige en acier + 6 × Engrenage en fer + 12 × Fil de cuivre  | consomme 200 kW  |
+| Estampeuse                            | 4×4             | 1,5 m   | 12 × Lingot de fer + 10 × Pierre                                                    | brûle 60 kW      |
+| Concasseur                            | 4×4             | 1 m     | 8 × Lingot de fer + 12 × Pierre                                                     | brûle 60 kW      |
+| Convertisseur Bessemer                | 4×4             | 1,5 m   | 10 × Plaque de fer + 6 × Engrenage en fer + 8 × Fil de cuivre                       | consomme 90 kW   |
+| Bétonnière                            | 4×4             | 1 m     | 8 × Plaque de fer + 4 × Engrenage en fer + 10 × Pierre                              | consomme 30 kW   |
+| Constructeur (T2)                     | 4×4             | 1 m     | 10 × Plaque de fer + 6 × Engrenage en fer + 10 × Fil de cuivre                      | consomme 40 kW   |
+| Station de lavage (T2)                | 4×4             | 1 m     | 8 × Plaque de fer + 4 × Engrenage en fer + 10 × Pierre                              | consomme 25 kW   |
+| Presse hydraulique lourde (T3)        | 4×4             | 1,5 m   | 6 × Plaque d'acier + 12 × Tige en acier + 8 × Engrenage en fer + 12 × Fil de cuivre | consomme 150 kW  |
+| Centrifugeuse (T4)                    | 4×4             | 1,5 m   | 6 × Châssis renforcé + 1 × Moteur renforcé + 4 × Kit circuit + 4 × Bloc de béton    | consomme 120 kW  |
+| Station de vitrification (T4)         | 3×3             | 1,2 m   | 16 × Plaque d'acier + 20 × Bloc de béton + 8 × Câble isolé + 4 × Puce en silicium   | consomme 100 kW  |
+| Presse à plastique (T3)               | 3×3             | 1 m     | 4 × Châssis renforcé + 1 × Moteur + 3 × Kit circuit                                 | consomme 80 kW   |
+| Remplisseuse / videuse de barils (T3) | 2×2             | 1 m     | 4 × Lingot d'acier + 4 × Engrenage en fer + 8 × Fil de cuivre                       | consomme 20 kW   |
+| Compresseur d’air                     | 3×3             | 1,5 m   | 2 × Châssis renforcé + 1 × Moteur renforcé + 1 × Microcontrôleur                    | consomme 300 kW  |
+| Électrolyseur                         | 3×3             | 1,5 m   | 2 × Châssis renforcé + 1 × Microcontrôleur + 4 × Graphite                           | consomme 200 kW  |
+
+**Logistique**
+
+| Machine                   | Emprise (cases) | Hauteur | Coût                                                                | Énergie / vie  |
+| ------------------------- | --------------- | ------- | ------------------------------------------------------------------- | -------------- |
+| Tapis roulant             | 2×2             | 0,15 m  | 2 × Lingot de fer                                                   | —              |
+| Séparateur                | 2×2             | 0,5 m   | 3 × Plaque de fer + 8 × Tige en fer                                 | —              |
+| Groupeur                  | 2×2             | 0,5 m   | 3 × Plaque de fer + 8 × Tige en fer                                 | —              |
+| Trieur (T3)               | 2×2             | 0,5 m   | 3 × Lingot d'acier + 2 × Engrenage en fer + 6 × Fil de cuivre       | consomme 15 kW |
+| Bras robotique            | 2×3             | 1 m     | 2 × Engrenage en fer + 2 × Plaque de fer + 8 × Tige en fer          | brûle 20 kW    |
+| Bras robotique électrique | 2×3             | 1 m     | 2 × Châssis simple + 2 × Engrenage en fer + 3 × Kit circuit         | consomme 20 kW |
+| Bras filtrant (T3)        | 2×3             | 1 m     | 4 × Lingot d'acier + 4 × Engrenage en fer + 8 × Fil de cuivre       | consomme 30 kW |
+| Bras industriel           | 2×3             | 1,2 m   | 1 × Châssis composite + 1 × Moteur renforcé + 1 × Circuit avancé    | consomme 60 kW |
+| Coffre en bois            | 2×2             | 0,5 m   | 16 × Bois                                                           | —              |
+| Coffre en fer             | 2×2             | 0,5 m   | 7 × Plaque de fer + 4 × Tige en fer                                 | —              |
+| Coffre quantique          | 2×2             | 0,9 m   | 1 × Cristal quantique + 1 × Microcontrôleur + 1 × Châssis composite | —              |
+
+**Assemblage et recherche**
+
+| Machine                | Emprise (cases) | Hauteur | Coût                                                                     | Énergie / vie    |
+| ---------------------- | --------------- | ------- | ------------------------------------------------------------------------ | ---------------- |
+| Assembleur             | 4×4             | 1,5 m   | 3 × Châssis simple + 4 × Engrenage en fer + 6 × Kit circuit              | consomme 60 kW   |
+| Assembleur avancé (T3) | 4×4             | 1,5 m   | 3 × Châssis renforcé + 2 × Moteur + 3 × Circuit avancé                   | consomme 120 kW  |
+| Fabricateur universel  | 4×4             | 2 m     | 4 × Microcontrôleur + 1 × Aimant supraconducteur + 1 × Châssis composite | consomme 1500 kW |
+| Laboratoire            | 3×3             | 1 m     | 3 × Kit circuit + 3 × Châssis simple + 4 × Vitre                         | consomme 30 kW   |
+
+**Énergie**
+
+| Machine                      | Emprise (cases) | Hauteur | Coût                                                                                        | Énergie / vie                        |
+| ---------------------------- | --------------- | ------- | ------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Manivelle de réamorçage      | 2×2             | 1 m     | 4 × Plaque de fer + 2 × Engrenage en fer                                                    | —                                    |
+| Générateur à combustible     | 3×3             | 1 m     | 2 × Châssis simple + 6 × Tige en fer + 12 × Pierre                                          | produit 300 kW, brûle 900 kW         |
+| Roue à aubes                 | 3×3             | 1,5 m   | 12 × Bois + 4 × Pierre + 4 × Fil de cuivre                                                  | produit 10 kW                        |
+| Chaudière                    | 3×3             | 1,5 m   | 6 × Plaque de fer + 16 × Tige en fer + 10 × Pierre                                          | brûle 700 kW                         |
+| Turbine à vapeur             | 3×4             | 1 m     | 4 × Châssis simple + 4 × Engrenage en fer + 4 × Kit circuit                                 | produit 200 kW                       |
+| Pile à combustible           | 3×3             | 1,4 m   | 1 × Châssis composite + 4 × Graphite + 1 × Microcontrôleur                                  | produit 2000 kW, brûle 2000 kW       |
+| Réacteur à fission (T4)      | 4×4             | 2,5 m   | 15 × Châssis renforcé + 40 × Bloc de béton + 10 × Circuit avancé + 20 × Lingot de zamak     | produit 10000 kW                     |
+| Réacteur à fusion magnétique | 6×6             | 3 m     | 100 × Châssis renforcé + 200 × Bloc de béton + 50 × Microcontrôleur + 100 × Lingot de zamak | consomme 50000 kW, produit 500000 kW |
+| Éolienne                     | 2×2             | 6 m     | 2 × Châssis renforcé + 2 × Moteur + 1 × Kit circuit                                         | produit 40 kW                        |
+| Panneau solaire              | 3×3             | 1,2 m   | 4 × Cellule photovoltaïque + 1 × Châssis léger + 1 × Vitre                                  | produit 60 kW                        |
+| Accumulateur                 | 2×2             | 1 m     | 1 × Châssis renforcé + 2 × Isolant en plastique + 1 × Microcontrôleur                       | —                                    |
+| Accumulateur (T3)            | 2×2             | 1,2 m   | 2 × Châssis renforcé + 4 × Batterie lithium + 1 × Microcontrôleur                           | —                                    |
+| Poteau électrique            | 2×2             | 3,5 m   | 2 × Lingot de fer + 4 × Bois                                                                | —                                    |
+| Poteau haute tension         | 2×2             | 6 m     | 1 × Châssis renforcé + 4 × Vitre + 1 × Kit circuit                                          | —                                    |
+| Poteau très haute tension    | 2×2             | 10 m    | 2 × Châssis léger + 4 × Isolant en plastique + 1 × Microcontrôleur                          | —                                    |
+| Transformateur               | 3×3             | 2,5 m   | 2 × Châssis renforcé + 24 × Fil de cuivre + 4 × Vitre                                       | —                                    |
+| Disjoncteur                  | 2×2             | 1,5 m   | 1 × Châssis renforcé + 1 × Kit circuit + 1 × Vitre                                          | —                                    |
+| Lampadaire électrique        | 1×1             | 3 m     | 1 × Châssis simple + 2 × Vitre + 1 × Kit circuit                                            | consomme 5 kW                        |
+| Borne de recharge            | 3×3             | 1,8 m   | 1 × Châssis renforcé + 1 × Microcontrôleur + 2 × Isolant en plastique                       | consomme 400 kW                      |
+
+**Fluides**
+
+| Machine                      | Emprise (cases) | Hauteur | Coût                                                                    | Énergie / vie   |
+| ---------------------------- | --------------- | ------- | ----------------------------------------------------------------------- | --------------- |
+| Tuyau en cuivre              | 2×2             | 0,5 m   | 1 × Plaque de cuivre                                                    | —               |
+| Pompe à eau électrique       | 2×2             | 1,5 m   | 2 × Châssis simple + 4 × Tige en fer + 1 × Moteur                       | consomme 20 kW  |
+| Chevalet de pompage (T3)     | 4×4             | 3 m     | 4 × Châssis renforcé + 1 × Moteur + 2 × Kit circuit                     | consomme 60 kW  |
+| Raffinerie (T3)              | 4×4             | 3 m     | 6 × Châssis renforcé + 8 × Bloc de béton + 1 × Moteur + 4 × Kit circuit | consomme 150 kW |
+| Surpresseur (T2)             | 2×2             | 1 m     | 3 × Châssis simple + 4 × Engrenage en fer + 2 × Kit circuit             | consomme 30 kW  |
+| Tour de refroidissement (T2) | 3×3             | 1,5 m   | 12 × Plaque de fer + 4 × Engrenage en fer + 10 × Pierre                 | —               |
+| Tour d'évaporation (T4)      | 3×3             | 2 m     | 12 × Plaque d'acier + 20 × Bloc de béton + 6 × Engrenage en fer         | —               |
+
+**Défense et protection**
+
+| Machine                        | Emprise (cases) | Hauteur | Coût                                                                              | Énergie / vie            |
+| ------------------------------ | --------------- | ------- | --------------------------------------------------------------------------------- | ------------------------ |
+| Tourelle légère                | 3×2             | 1 m     | 3 × Châssis simple + 2 × Engrenage en fer + 3 × Kit circuit                       | —                        |
+| Tourelle lourde                | 3×2             | 1 m     | 20 × Plaque de fer + 8 × Engrenage en fer + 8 × Lingot de cuivre                  | —                        |
+| Tourelle laser                 | 3×2             | 1 m     | 10 × Plaque d'acier + 16 × Fil de cuivre + 4 × Puce en silicium + 1 × Moteur      | consomme 25 kW           |
+| Tourelle à plasma              | 3×3             | 1 m     | 20 × Plaque d'acier + 10 × Puce en silicium + 10 × Carapace + 1 × Moteur renforcé | consomme 70 kW           |
+| Tourelle à rail                | 3×3             | 1,4 m   | 1 × Aimant supraconducteur + 1 × Châssis composite + 1 × Batterie lithium         | consomme 1500 kW         |
+| Clôture en bois                | 3×1             | 1,5 m   | 6 × Bois + 2 × Tige en fer                                                        | 150 PV                   |
+| Barrière en béton              | 3×1             | 1,5 m   | 4 × Bloc de béton + 2 × Tige en fer                                               | 500 PV                   |
+| Barrière en béton armé         | 3×1             | 1,5 m   | 4 × Bloc de béton + 4 × Tige en acier                                             | 1200 PV                  |
+| Portail en bois                | 6×1             | 2,5 m   | 8 × Bois + 2 × Engrenage en fer + 2 × Tige en fer                                 | 200 PV                   |
+| Portail en béton               | 6×1             | 2,5 m   | 6 × Bloc de béton + 2 × Engrenage en fer + 2 × Tige en fer                        | 600 PV                   |
+| Portail en béton armé (moteur) | 6×1             | 2,5 m   | 6 × Bloc de béton + 4 × Tige en acier + 1 × Moteur                                | 1400 PV                  |
+| Mur holographique              | 3×1             | 1,5 m   | 1 × Microcontrôleur + 4 × Vitre + 1 × Batterie lithium                            | consomme 80 kW, 800 PV   |
+| Portail holographique          | 6×1             | 2,5 m   | 1 × Microcontrôleur + 6 × Vitre + 1 × Batterie lithium + 1 × Moteur               | consomme 120 kW, 1000 PV |
+| Purificateur d’air             | 3×3             | 1,8 m   | 2 × Filtre en graphite + 1 × Châssis renforcé + 1 × Microcontrôleur               | consomme 150 kW          |
+
+**Autres**
+
+| Machine                        | Emprise (cases) | Hauteur | Coût                                                                                  | Énergie / vie    |
+| ------------------------------ | --------------- | ------- | ------------------------------------------------------------------------------------- | ---------------- |
+| Relais émetteur hyperfréquence | 2×2             | 1,5 m   | 10 × Plaque d'acier + 10 × Câble isolé + 6 × Puce en silicium                         | consomme 1000 kW |
+| Antenne d'alignement quantique | 3×3             | 3 m     | 20 × Plaque d'acier + 10 × Lingot de zamak + 20 × Câble isolé + 10 × Puce en silicium | consomme 5000 kW |
+| Balise                         | 1×1             | 2 m     | 4 × Lingot de fer + 2 × Fil de cuivre                                                 | —                |
 
 Fonctionnement résumé :
 
-- **Foreuse** (à combustible ou électrique) : mine les cases de minerai sous elle (4 × 4), stocke jusqu'à 100 unités ; sa **sortie** est devant, le combustible entre derrière.
-- **Fourneau** : une entrée (minerai), un combustible, une sortie ; **un seul minerai à la fois**.
-- **Coffres** : 16 cases (bois), 32 cases (fer).
-- **Assembleur** : on choisit la **recette** (n'importe quel objet à recette : tapis, bras, coffres, pièces…) ; consomme les ingrédients amenés par tapis/bras ; 2 s par cycle ; 60 kW.
-- **Laboratoire** : consomme des paquets de science pour étudier une technologie ; 30 kW, **5 s par paquet** (barre de progression dans la fenêtre), stock de 20 paquets ; les technologies _Recherche T1 à T4_ retirent 1 s par niveau aux paquets des paliers 1 à n (T1 : 4 s ; T2 : T1 3 s, T2 4 s ; T3 : 2/3/4 s ; T4 : 1/2/3/4 s). Le paquet de combat reste à 5 s.
-- **Poteau** : porte le courant (câble de **8 m**, raccord machine à **4 m**).
-- **Tourelle** : voir §9.4.
-- Chaque machine affiche un **état** (en marche, arrêt, panne de combustible, pas de courant, pas d'eau, plein, pas d'étude, etc.) et une infobulle de diagnostic quand on la vise.
+- **Foreuse** (combustible, électrique, économe, à plasma) : mine les cases de minerai sous elle, stocke son extraction ; sa **sortie** est devant. L'économe et la foreuse à plasma extraient bien plus vite.
+- **Fourneau, estampeuse, concasseur, Bessemer, bétonnière, constructeur, station de lavage, presse, centrifugeuse, compresseur d'air, électrolyseur…** : machines à **recette choisie dans leur fenêtre** ; elles consomment des ingrédients amenés par tapis ou bras. Un **seul type de minerai à la fois** dans un fourneau.
+- **Assembleur / assembleur avancé / fabricateur universel** : on choisit la **recette** parmi les objets fabricables ; 3 types d'ingrédients au plus (4 pour l'avancé et le fabricateur) ; l'assembleur fait un cycle en 2 s, l'avancé en 1,5 s, le fabricateur en 0,5 s.
+- **Laboratoire** : consomme des paquets de science pour étudier une découverte (§8) ; stock de 20 paquets ; les découvertes de recherche raccourcissent le temps par paquet.
+- **Coffres** : bois (16 cases), fer (32), **quantique** (64 cases, §12.3).
+- **Purificateur d'air** : retire 4 points de pollution par seconde autour de lui (air et sol).
+- Chaque machine affiche un **état** (en marche, arrêt, panne de combustible, pas de courant, pas d'eau, plein, abîmée…) et une infobulle de diagnostic quand on la vise. Sa **vie** s'affiche dans sa fenêtre.
 
 ### 7.2 Transport : tapis, bras, séparateurs ✅
 
-- **Tapis** : tuile 2 × 2, **0,75 case/s**, **6 objets par tuile**, hauteur 15 cm. Le joueur peut **marcher dessus** et est **emporté** (×2 la vitesse des objets).
-- **Formes** (`LIFTS`) : plat, **rampes** 0 → 1 m → 2 m (toutes à **45°**), **niveaux surélevés** (1 m et 2 m ; le joueur passe sous le niveau 2), **descentes**, **tunnels** (entrée PageDown / sortie PageUp, jusqu'à **8 tuiles**, objets invisibles entre les deux, on peut construire par-dessus).
-- **Tracé** : maintenir le clic et tracer pose plusieurs tuiles ; chaque élément s'oriente vers le suivant. PageUp/PageDown en traçant monte/descend d'un niveau ; sur un patron seul, il l'incline (haut / plat / bas).
-- **Séparateur** : 1 entrée, 3 sorties (devant, gauche, droite). **Groupeur** : 3 entrées, 1 sortie. Ils se posent **sur un tapis** et le remplacent.
-- **Bras** (à combustible ou électrique) : prend sur 3 côtés (derrière, gauche, droite) et dépose devant ; cycle de 0,9 s (0,45 s en électrique). Un bras à combustible se réapprovisionne seul s'il y en a à côté.
-- **Flèches au sol** (relevées à 20 cm) : **orange** = sortie, **bleu** = entrée ; **eau en bleu, vapeur en blanc, charbon en noir** sur la chaudière.
-- Les machines **touchant** le côté d'entrée/sortie se raccordent (décalage libre, pas de grille imposée).
+- **Tapis** : tuile 2 × 2, trois paliers de vitesse, **6 objets par tuile**, hauteur 15 cm. Le joueur peut **marcher dessus** et est **emporté**.
+- **Formes** : plat, **rampes** à 45°, **niveaux surélevés** (1 m et 2 m ; le joueur passe sous le niveau 2), **descentes**, **tunnels** (entrée PageDown / sortie PageUp, jusqu'à **8 tuiles**, on peut construire par-dessus).
+- **Tracé** : maintenir le clic et tracer pose plusieurs tuiles ; chaque élément s'oriente vers le suivant. PageUp / PageDown monte ou descend d'un niveau.
+- **Séparateur** (1 entrée, 3 sorties), **groupeur** (3 entrées, 1 sortie) et **trieur** se posent **sur un tapis** et le remplacent ; le **bras filtrant** et le trieur ont des **listes blanche / noire**.
+- **Bras** (combustible, électrique, filtrant, industriel) : prend sur 3 côtés, dépose devant ; cycle de 0,9 s (0,45 s électrique, 0,2 s industriel).
+- **Flèches au sol** : **orange** = sortie, **bleu** = entrée. Les machines **touchant** un côté d'entrée / sortie se raccordent.
 
-### 7.3 Électricité ✅
+### 7.3 Énergie électrique ✅
 
-- **Production** : générateur (300 kW), turbine (200 kW). **Réseau** : poteaux reliés par câbles visibles ; machines raccordées par poteau.
-- **Consommateurs** : foreuse électrique (90 kW), bras électrique (20 kW), assembleur (60 kW), laboratoire (30 kW), pompe (20 kW).
-- **Satisfaction** : si la demande dépasse la capacité, toutes les machines du réseau ralentissent proportionnellement (facteur de puissance). Sans courant, une machine est à l'arrêt (la pompe tourne à 20 % pour amorcer).
-- Les générateurs ne brûlent que **la part de leur capacité demandée** (charge).
-- Aucune batterie ni panneau solaire pour l'instant ⏳.
+Un **réseau** est un ensemble de poteaux de **même niveau** reliés par des câbles (visibles). Trois niveaux, qui forment une hiérarchie : **gros** poteaux pour de grosses centrales, **moyens**, puis **petits** poteaux près des machines.
+
+| Poteau             | Palier | Prises | Câble entre poteaux | Puissance maximale du réseau |
+| ------------------ | ------ | ------ | ------------------- | ---------------------------- |
+| Bois               | T0     | 3      | 8 m                 | 500 kW                       |
+| Haute tension      | T2     | 4      | 20 m                | 10 MW                        |
+| Très haute tension | T3     | 5      | 40 m                | 600 MW                       |
+
+- Chaque machine électrique (consommatrice ou productrice) se branche sur une **prise** du poteau le plus proche (à 4 m) qui en a encore ; les plus anciennes gardent leur prise. Sans prise libre, la machine n'est pas alimentée (l'infobulle le dit).
+- **Limite de puissance** : la production d'un réseau ne dépasse jamais la limite de son niveau. Une machine dont la puissance (production ou consommation) dépasse celle des poteaux à portée **n'est pas raccordée** : un réacteur de 10 MW exige la haute tension, la fusion (500 MW) la très haute tension. Il faut donc **diviser** : plusieurs réseaux plus petits plutôt qu'un seul.
+- **Transformateur** (T2, 3×3, 10 MW) : prend une prise sur un poteau de chaque niveau voisin (à moins de 4 m) ; **le courant ne descend que par lui**, jusqu'à ce qui manque au réseau du bas ; le réseau du haut voit cela comme de la demande. Jamais de remontée.
+- **Disjoncteur** (T2) : relie les deux poteaux de même niveau les plus proches. Fermé, les deux réseaux n'en font qu'un ; ouvert (à la main), ils sont séparés. **Sur surcharge, les disjoncteurs fermés du réseau sautent** au lieu du blackout : le réseau se coupe en morceaux, à refermer à la main.
+- **Compteur** : un clic sur un poteau affiche ses prises, le niveau et la limite, la production, la demande, la part satisfaite, une **courbe** de production et de demande (4 dernières minutes) et la liste des machines raccordées.
+- **Satisfaction** : si la demande dépasse la production, toutes les machines du réseau ralentissent proportionnellement. Une surcharge durable provoque un **blackout** (le réseau s'éteint) : réduire la demande puis actionner une **manivelle** de réamorçage. Les générateurs ne brûlent que **la part de leur capacité demandée**.
+- **Sources** : générateur à combustible (300 kW), roue à aubes (10 kW, à l'eau), turbine à vapeur (200 kW), **éolienne** (T2, jusqu'à 40 kW : le vent monte et retombe, 15 à 100 %), **panneau solaire** (T3, jusqu'à 60 kW, proportionnel à la lumière du jour, nul la nuit), réacteur à fission (10 MW), **pile à combustible** (T4, 2 MW, deutérium ou tritium), réacteur à fusion (500 MW, T5).
+- **Stockage** : accumulateur de base (T3, 200 MJ, 400 kW) et accumulateur au lithium (T4, 1 GJ, 25 / 50 MW) : ils chargent avec le surplus et rendent leur énergie quand la demande dépasse la production, sans dépasser la limite du niveau.
+- **Lampadaire** (T1, 5 kW) : éclaire la nuit (les lampadaires alimentés les plus proches du joueur).
+- **Borne de recharge** : voir §7.10.
 
 ### 7.4 Fluides et vapeur ✅
 
-- **Eau et vapeur** circulent par **équilibrage des niveaux** entre machines raccordées (le débit dépend de l'écart de pression : un long tuyau perd en débit). Un **tuyau ne porte qu'un fluide à la fois**.
-- **Pompe** : au bord d'un étang (sa ligne de sortie sur la terre, l'autre dans l'eau), 100 eau/s, 20 kW.
-- **Tuyaux** : 2 × 2, posés en traçant ; **enterrables comme les tapis** (PageDown = entrée de tunnel, PageUp = sortie, jusqu'à 8 tuiles ; on peut construire par-dessus).
-- **Chaudière** (3 × 3) : **eau par les deux côtés** (elle **traverse** : chaînage de plusieurs chaudières, chaque côté entre et sort), **combustible derrière** (tapis/bras), **vapeur devant**. 60 vapeur/s à pleine chauffe (réserve 200), 700 kW de combustible, 2 pollution/s.
-- **Turbine** (3 largeur × 4 longueur) : vapeur en entrée derrière, **le reste ressort devant** pour la turbine suivante ; rendement 0 sous 20 % de pression, plein à 60 % ; 20 vapeur/s ; en file indienne, la pression baisse le long de la file. Une chaudière ≈ 3 turbines.
-- Fumée blanche animée sur les turbines en marche.
+- **Eau et vapeur** circulent par **équilibrage des niveaux** entre machines raccordées (le débit dépend de l'écart de pression : un long tuyau perd en débit). Un **tuyau ne porte qu'un fluide à la fois**. Des **barils** transportent eau et pétrole.
+- **Pompe** : au bord d'un étang, 100 eau/s. **Tuyaux** : 2 × 2, posés en traçant, **enterrables** comme les tapis ; trois paliers de pression maximale ; un tuyau qui dépasse sa pression maximale **éclate**.
+- **Chaudière** (3 × 3) : eau par les deux côtés (chaînage), combustible derrière, **vapeur devant**. **Turbine** (3 × 4) : vapeur en entrée derrière, le reste ressort devant ; une chaudière ≈ 3 turbines.
+- **Pétrole** : pompe à pétrole, raffinerie, presse à plastique (isolant). **Surpresseur**, **tour de refroidissement** (eau chaude), **tour d'évaporation** (eau sale, fait muter les nids voisins).
 
 ### 7.5 Pollution et machines
 
 Voir §9.1.
 
-### 7.6 Énergie de combustion ✅ (Tour 83)
+### 7.6 Énergie de combustion ✅
 
-- Items : **énergie en MJ par unité**. Machines : **`burnKw` en kW** (kJ/s) à pleine charge. `fuelLeft` est en **kJ**.
-- Valeurs : foreuse 90 kW, fourneau 90 kW, bras 20 kW, **générateur 900 kW** (→ 300 kW électriques, rendement ≈ 33 %), **chaudière 700 kW** (→ 600 kW de vapeur, rendement ≈ 86 %), buggy 180 kW.
-- Les infobulles montrent l'énergie des objets et la consommation des machines ; le temps restant est calculé à pleine charge.
+Items : énergie en **MJ par unité**. Machines : **`burnKw`** en kW à pleine charge. Foreuse et fourneau 90 kW, bras 20 kW, **générateur 900 kW de combustible pour 300 kW électriques** (rendement ≈ 33 %), **chaudière 700 kW** (→ 600 kW de vapeur), buggy 180 kW.
 
 ### 7.7 Poser et déplacer
 
-Une machine se pose en **un clic**, la touche R la tourne ; **même case = ranger** (la machine revient au sac avec ses contenus). Les tapis et tuyaux peuvent chevaucher partiellement une machine (une case au moins visible). Les machines à l'étage exigent une dalle sous chacune de leurs cases.
+Une machine se pose en **un clic**, la touche R la tourne ; **même case = ranger** (la machine revient au sac avec ses contenus, sauf le contenu du coffre quantique). Les tapis et tuyaux peuvent chevaucher partiellement une machine. Les machines à l'étage exigent une dalle sous chacune de leurs cases.
+
+### 7.8 Voies ferrées et trains ✅
+
+- **Pièces de voie** : un **droit** (2,5 m ; 3,54 m en diagonale), un **virage unique de 45°** (à gauche ou à droite, rayon 8,75 m, 3 rails) et une **rampe** (10 m, monte de 2,5 m, 4 rails). Huit virages de 45° font un cercle. Les pièces sont repérées par un point d'ancrage et un **cap** par pas de 45°.
+- **Pose** : un **patron vert** (pose possible) ou **rouge** (impossible, avec la raison : chevauche une voie, trop loin, obstacle, pente, raccord non aligné) suit le curseur ; il se **colle** au bout libre le plus proche (moins de 2,6 m). **Clic maintenu** : le curseur qui avance ajoute des patrons à la suite (reculer en retire), **relâcher pose** toute la chaîne, **clic droit** retire les patrons. Un simple clic pose une pièce.
+- **Embranchement** sans aiguillage : un bout de rail peut avoir plusieurs suites (Y) ; **au milieu d'une ligne** on propose un virage de chaque côté pour créer un Y. Le train va vers sa prochaine station, sinon **tout droit** ; **Q** ou **D** à l'approche choisit la voie de gauche ou de droite. **Croisement en « + »** pour traverser une voie.
+- **Matériel** (rails et locomotive à vapeur : palier 3) : locomotive à vapeur (140 kW, charbon ou bois, soute de 50), **locomotive électrique** (T4, 260 kW, batterie de 180 MJ rechargée à une borne : **elle ne se recharge pas en roulant, même sur rails électrifiés**), wagon de fret (coffre de 32 cases), **wagon plateforme** (fret en vrac, coffre de 32 cases), wagon-citerne (10 000 L). Attelage automatique : deux véhicules attelés gardent toujours la même distance. Les véhicules sont des boîtes de collision pour le joueur.
+- **Conduite** : **F** monte dans la locomotive, **Z / S** avancent et reculent, **Espace** freine, **C** attelle ou dételle. **Stations** nommées et **pilote automatique** (« va à la station X », itinéraire le plus court ou le plus rapide) ; programmes à base de règles « condition → action » (`docs/trains-programmation.md`). Signaux et cantons : ⏳.
+- Les anciennes parties d'avant la refonte des rails sont **refusées** au chargement (version de voie incompatible).
+
+### 7.9 Barrières et portails ✅
+
+| Élément                          | Taille | Points de vie | Palier |
+| -------------------------------- | ------ | ------------- | ------ |
+| Clôture en bois                  | 1,5 m  | 150           | T1     |
+| Barrière en béton                | 1,5 m  | 500           | T2     |
+| Barrière en béton armé           | 1,5 m  | 1 200         | T3     |
+| Portail en bois                  | 3 m    | 200           | T1     |
+| Portail en béton                 | 3 m    | 600           | T2     |
+| Portail en béton armé (motorisé) | 3 m    | 1 400         | T3     |
+| Mur holographique                | 1,5 m  | 800           | T4     |
+| Portail holographique            | 3 m    | 1 000         | T4     |
+
+- Les barrières **bloquent le joueur et les ennemis**. **Les ennemis ne les contournent pas et ne les ouvrent pas : ils les attaquent** (et les détruisent s'ils les épuisent).
+- Un **portail manuel** s'ouvre et se ferme avec la touche d'**activation (E)** ; le **portail en béton armé** est **motorisé** : il s'ouvre seul quand un joueur approche (4,5 m) et se referme ensuite.
+- Le **mur et le portail holographiques** consomment de l'énergie **en continu** (80 et 120 kW) et ne barrent le passage **que s'ils sont alimentés**.
+
+### 7.10 Véhicules électriques et recharge ✅
+
+- La **borne de recharge** (T4, 3 × 3, 400 kW) recharge, dans un rayon de 4 m, les **véhicules électriques**, les **locomotives électriques** et les **batteries portables** du joueur. Elle partage sa puissance entre ses cibles et **ne consomme que s'il y en a une** à recharger. Les véhicules ne se rechargent jamais ailleurs.
+- La **batterie portable** se range dans le sac ; chaque batterie a sa propre charge (§5.3) ; le propulseur la consomme avant les batteries au lithium.
+
+### 7.11 Santé des machines et réparation ✅
+
+- Les machines ont des **points de vie** (120 par défaut, plus pour les barrières) ; les ennemis les abîment (§9.5). Une machine abîmée **noircit par taches** selon son état (légèrement sous 75 % de vie, nettement sous 50 % avec une fumée noire, très fortement sous 25 % avec des étincelles) ; sa vie en pourcentage est dans sa fenêtre. La vie est **sauvegardée**.
+- Le **kit de réparation** (T1, 5 charges) se prend **en main** (sac ou barre de raccourcis) ; un **clic** sur une machine abîmée consomme une charge (**+25 % de la vie maximale**) avec un bruit de clé à cliquet. On use d'abord le kit le plus entamé. **Un kit s'use mais ne se recharge ni ne se répare.**
 
 ---
 
-## 8. Technologies et recherche
+## 8. Découvertes et recherche
 
 ### 8.1 Principe ✅
 
-Un objet qui n'appartient à aucune technologie est disponible dès le départ. Les autres exigent la technologie qui les débloque (fabrication à la main ou à l'assembleur). Fenêtre **Technologies (T)** : une carte par technologie (coût, prérequis, déblocages).
+On ne recherche pas des « technologies » : on **découvre des recettes**. Une **découverte** débloque la fabrication d'un ou plusieurs objets (machines, constructions, intermédiaires, véhicules…). Elle exige d'avoir **découvert d'autres recettes** en amont (**prérequis**) : on peut partir d'un produit final et voir **tout ce qu'il faut avoir découvert avant**. Le jeu compte **163 découvertes** réparties sur six paliers (T0 : 22, T1 : 24, T2 : 30, T3 : 43, T4 : 32, T5 : 12). Un objet qui n'appartient à aucune découverte est disponible dès le départ.
 
-### 8.2 Deux modes de recherche
+### 8.2 Coûts et modes ✅
 
-- **À la main** : le coût (objets du sac) est consommé immédiatement.
-- **En laboratoire** : le coût est en **paquets de science** ; on choisit la technologie étudiée ; un laboratoire alimenté (tapis, bras ou main) et en courant consomme les paquets (5 s chacun, moins avec les technologies Recherche) ; **sans étude choisie, les laboratoires étudient automatiquement** la première technologie disponible. L'avancement est sauvegardé.
+- **Palier 0** : payé en **objets du sac** (recherche à la main, sans laboratoire).
+- **Paliers 1 à 5** : payé en **paquets de science** du palier **et** du palier précédent (palier 1 : paquets T1 seuls), de l'ordre de **100 à 200 paquets de chaque**. Il faut étudier la découverte dans un **laboratoire** alimenté en paquets (tapis, bras ou main) et en courant ; **sans étude choisie, les laboratoires étudient automatiquement** la première découverte disponible. L'avancement est sauvegardé.
+- Avertissements : on ne peut pas mettre un paquet d'un palier sur une recette d'un palier qui n'est pas encore découvert ; des alertes signalent les conditions non respectées.
+- Une ancienne sauvegarde reçoit toutes les découvertes dont les objets étaient déjà fabricables, avec leurs prérequis.
 
-### 8.3 Arbre actuel
+### 8.3 Arbre des découvertes ✅
 
-| Technologie    | Coût                                                     | Prérequis               | Débloque                                                                     |
-| -------------- | -------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------- |
-| Logistique     | 20 × lingot de fer                                       | —                       | Séparateur, Groupeur, Coffre en fer, Bras robotique                          |
-| Textile        | 30 × fibre                                               | —                       | Tissu, Sac à dos, Capuche, Pantalon, Bottes, Gants                           |
-| Électricité    | 30 × lingot de fer + 20 × lingot de cuivre               | —                       | Poteau électrique, Générateur à combustible, Foreuse électrique, Laboratoire |
-| Automatisation | 20 × paquet de science                                   | Électricité, Logistique | Bras robotique électrique, Assembleur                                        |
-| Vapeur         | 30 × lingot de fer + 15 × lingot de cuivre + 10 × pierre | Électricité             | Tuyau, Pompe à eau électrique, Chaudière, Turbine à vapeur                   |
-| Navigation     | 10 × lingot de fer + 5 × lingot de cuivre                | —                       | Boussole                                                                     |
-| Défense        | 30 × lingot de fer + 10 × lingot de cuivre               | Logistique              | Tourelle automatique                                                         |
+L'écran **Découvertes (T)** montre l'**arbre entier** à droite (2/3 de l'écran : disposition par couches, liens orthogonaux, glisser pour déplacer, **Ctrl + molette** pour zoomer) et, à gauche (1/3), le détail de la découverte choisie et la **liste ordonnée** de ce qu'il faut découvrir pour y arriver (orange : prochaine étape ; rouge : prérequis proche ou manquant ; vert : déjà fait). Un **Ctrl + clic gauche** sur une recette ouvre une fenêtre par-dessus avec l'arbre et un filtre « prérequis proches / éloignés ». Le tableau détaillé est dans `docs/decouvertes-t0-t5.md` (généré) et les données dans `content/techs.json` (généré par `tools/gen_decouvertes.py --jeu`).
 
-Le tableau complet et le détail de l'arbre se trouvent dans `content/techs.json`. **La boussole** de l'interface n'apparaît qu'une fois _Navigation_ recherchée. ⏳ Les technologies seront étendues avec la refonte des objets.
+Quelques jalons : _Logistique_ (tapis, bras), _Électricité_ (poteau, générateur, laboratoire), _Acier_ puis _Vapeur_, _Poteau haute tension_ et _Transformateur_ (T2), _Plastique_ et _Silicium_ (T3), _Batterie au lithium_ (T4), _Réacteur à fission_ (T4), _Fusion_ (T5).
+
+### 8.4 Effets de recherche ✅
+
+Les découvertes de **Recherche** (I à IV) raccourcissent le temps d'étude par paquet : de 5 s à 4, 3, 2 puis 1 s pour les paquets des paliers concernés. Le paquet de combat reste à 5 s. La **boussole** n'apparaît qu'une fois la _Navigation_ découverte.
 
 ---
 
@@ -468,11 +577,18 @@ Un nid a **150 PV de dégâts cumulés** (sauvegardés) : on le détruit **en ti
 
 ### 9.4 Tourelle ✅
 
-3 × 2 cases, 16 fer + 6 cuivre, technologie _Défense_. **Portée 22 m, 9 dégâts toutes les 0,6 s**, utilise des **chargeurs** (12 balles ; stock de 20) amenés par tapis, bras ou main ; tire sur l'ennemi le plus proche.
+3 × 2 cases, 16 fer + 6 cuivre, découverte _Défense_ (T1). **Portée 22 m, 9 dégâts toutes les 0,6 s**, utilise des **chargeurs** (12 balles ; stock de 20) amenés par tapis, bras ou main ; tire sur l'ennemi le plus proche.
 
-### 9.5 Attaque des installations
+### 9.5 Attaque des installations ✅
 
-Les ennemis détruisent les machines polluantes (120 PV) ; une machine détruite par les ennemis disparaît avec son contenu (contrairement à la démolition volontaire, qui rend tout au joueur). ⏳ Réparation, murs défensifs, vagues, loot.
+- Les ennemis visent le joueur ou une **machine polluante** ; une machine a **120 PV** (plus pour les barrières, §7.9). Détruite par les ennemis, elle disparaît **avec son contenu** (contrairement à la démolition volontaire, qui rend tout au joueur). Les dégâts sont **sauvegardés**.
+- Les ennemis **ne contournent pas les barrières** : face à une clôture, une barrière ou un portail fermé, ils l'attaquent. Les murs et portails holographiques ne bloquent que s'ils sont alimentés.
+- Les machines abîmées se **réparent avec un kit de réparation** (§7.11).
+- ⏳ Vagues d'ennemis, butin.
+
+### 9.6 Tourelles étendues ✅
+
+Cinq tourelles : légère et lourde (munitions), **laser**, **plasma** et **à rail** (électriques, sans munitions ; la tourelle à rail, T5, tire à 70 m pour 220 dégâts toutes les 1,6 s).
 
 ---
 
@@ -505,7 +621,7 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Menu d'accueil** : _Continuer_ (nom de la partie + date de sa dernière sauvegarde), _Nouvelle partie_, _Charger une partie_, _Paramètres_, _Quitter_ (masqué en version web).
 - **Éditeur de partie** : nom, seed (avec mélange aléatoire), curseurs des familles du monde, options ennemis, réalisme, **jour/nuit/saisons + camembert**.
 - **Gestion des parties** : charger, renommer, dupliquer, supprimer ; une partie = un dossier de sauvegardes manuelles et automatiques.
-- **En jeu** : barre de raccourcis, fenêtre de sac / fabrication / équipement, fenêtres de machines, de coffres et du buggy, **carte (M)**, **technologies (T)**, **pause (Échap)**, aides de construction à l'écran, notifications.
+- **En jeu** : barre de raccourcis, fenêtre de sac / fabrication / équipement, fenêtres de machines, de coffres et du buggy, **carte (M)**, **découvertes (T)**, **pause (Échap)**, aides de construction à l'écran, notifications.
 
 ### 11.2 Mode débogage (F9) ✅
 
@@ -513,7 +629,7 @@ Touche **F9** (F3 est la recherche du navigateur) : affiche les **boîtes autour
 
 ### 11.3 Boussole ✅
 
-Bandeau avec cap en degrés, **débloquée par la technologie Navigation** ; affiche aussi le repère du corps du joueur.
+Bandeau avec cap en degrés, **débloquée par la découverte Navigation** ; affiche aussi le repère du corps du joueur.
 
 ### 11.4 Commandes (par défaut ; tout est remappable)
 
@@ -527,7 +643,7 @@ Bandeau avec cap en degrés, **débloquée par la technologie Navigation** ; aff
 | Action secondaire (démolir maintenu, vider les mains bref) | Clic droit                               |
 | Lâcher l'objet                                             | G                                        |
 | Définir le point de réapparition                           | H                                        |
-| Inventaire / carte / technologies                          | Tab ou I / M / T                         |
+| Inventaire / carte / découvertes                           | Tab ou I / M / T                         |
 | Débogage / capture d'écran                                 | F9 / F2                                  |
 | Menu / pause                                               | Échap                                    |
 | Pivoter / recharger                                        | R                                        |
@@ -541,7 +657,8 @@ Chaque action accepte **deux combinaisons** (touche + touche, touche + clic, tou
 
 ### 11.5 Paramètres ✅ (stockés dans le navigateur, effet immédiat)
 
-- **Affichage** : langue (français / anglais), plein écran, gamma, luminosité, distance d'affichage (2–16 chunks, défaut 8), qualité (basse / moyenne / haute), ombres (désactivées / normales / détaillées), limite d'images/s (30 / 60 / 120 / illimité), taille de l'interface (80–150 %), **unités** (distance m/ft, température °C/°F/K, masse kg/lb, pression Pa/bar/psi, énergie J·W / kWh), format de l'heure, **daltonisme**, afficher les FPS, **afficher la barre de santé** (non par défaut).
+- **Affichage** : langue (français / anglais), plein écran, **préréglage graphique** (adapté à mon ordinateur / bas / moyen / haut / personnalisé), gamma, luminosité, distance d'affichage (2–16 chunks), qualité (basse / moyenne / haute), ombres (désactivées / normales / détaillées), limite d'images/s (30 / 60 / 120 / illimité), taille de l'interface (80–150 %), **unités** (distance m/ft, température °C/°F/K, masse kg/lb, pression Pa/bar/psi, énergie J·W / kWh), format de l'heure, **daltonisme**, afficher les FPS, **afficher la barre de santé**.
+- **Préréglage graphique** : _bas_ (qualité basse, sans ombres, vue 6 chunks), _moyen_ (moyenne, ombres normales, vue 8), _haut_ (haute, ombres détaillées, vue 12) règlent d'un coup la qualité, les ombres et la distance de vue ; _adapté_ choisit le meilleur niveau d'après la carte graphique, le processeur, la mémoire et l'écran de l'ordinateur (recalculé à chaque lancement) et **descend d'un niveau tout seul** si le jeu ne tient pas la cadence (il ne remonte pas sans que le joueur rechoisisse « adapté »). Changer à la main un des trois réglages passe en _personnalisé_. Le **rapport de bug** contient les images par seconde, leurs à-coups et la répartition du travail.
 - **Sons** : général, musique, ambiance, interactions, machines, alertes (chaque curseur + muet).
 - **Vues** : réglages par vue (voir §4.2) et communs (sensibilité, axe inversé, lissage).
 - **Touches** : voir §11.4. **Jeu** : sauvegarde automatique (intervalle), confirmations.
@@ -565,14 +682,23 @@ Français et anglais ; **aucun texte en dur** (fichiers `fr.json` / `en.json` au
 | Jour / nuit / saisons                    | voir §10                                                                           |
 | Seed et familles du monde                | voir §3                                                                            |
 
-⏳ Types de partie **créatif / survie**, difficulté, multijoueur on/off, état initial du joueur : « on en reparlera bientôt » (PO).
+Le mode **Créatif** (§5.5) et le mode Survie sont choisis à la création de la partie ; le **multijoueur** s'active dans l'éditeur de partie (§12.3). ⏳ Difficulté fine, état initial du joueur.
 
 ### 12.2 Sauvegarde ✅
 
 - Une **partie** contient plusieurs **sauvegardes** (manuelles et automatiques) pour revenir loin en arrière sans perdre les anciennes.
-- Ce qui est enregistré : joueur (position, orientation, vue, hauteur), **sac**, et tous les **changements du monde** : ressources prélevées, objets au sol, pièces de construction, machines (contenu, combustible, fluides, tapis), équipement, technologies, recherche en cours, pollution (air et sol), **ennemis**, **temps de jeu**, véhicules, munitions, **corps et point de réapparition**, barre de raccourcis et d'outils.
+- Ce qui est enregistré : joueur (position, orientation, vue, hauteur), **sac**, et tous les **changements du monde** : ressources prélevées, objets au sol, pièces de construction, machines (contenu, combustible, fluides, tapis), équipement, découvertes, recherche en cours, pollution (air et sol), **ennemis**, **temps de jeu**, véhicules, munitions, **corps et point de réapparition**, barre de raccourcis et d'outils.
 - **Format versionné avec migrations** (ids texte stables, versions d'emprise des machines et d'unité d'énergie) : une ancienne sauvegarde se charge dans une version plus récente.
 - Stockage : navigateur (**IndexedDB**, repli sur localStorage puis mémoire) ; **export / import de fichier** disponibles ✅ ; dossier sur disque / version bureau plus tard ⏳.
+- **Versions incompatibles** : les parties d'avant la refonte des rails sont **refusées** (grisées dans le menu : « version incompatible, créer une nouvelle partie »). Les autres changements de format sont migrés.
+- Sont aussi enregistrés : points de vie des machines abîmées, contenu du coffre quantique de chaque joueur, niveaux des objets à état, préréglage graphique (réglages du navigateur, pas de la partie).
+
+### 12.3 Multijoueur ✅
+
+- **5 joueurs au plus**, pas de joueur contre joueur ; les ennemis visent le joueur le plus proche. **L'hôte fait tourner la simulation** ; les autres envoient leurs actions. Une partie solo peut **devenir multijoueur** à tout moment (pause → Multijoueur).
+- Connexion directement entre navigateurs avec un **code d'invitation à 6 caractères** ou un lien ; partie **privée** (l'hôte accepte chaque arrivant) ou **publique** (mot de passe facultatif, stocké sous forme d'empreinte).
+- **Partagé** : le monde et les machines ; technologies (découvertes) et crédits du comptoir selon le réglage de la partie. **Individuel** : sac, barre d'objets, équipement, position, vie, cadavre, point de réapparition, tutoriel. Un joueur qui revient (même nom) retrouve sa fiche ; les joueurs sont enregistrés dans la sauvegarde de l'hôte.
+- **Coffre quantique** : c'est le **contenu qui appartient au joueur**, pas le coffre. Tous les coffres quantiques d'un joueur montrent le même contenu (64 cases), que les autres joueurs ne voient pas ; démolir un coffre ne rend rien et le contenu reste enregistré ; une machine posée par un joueur alimente le contenu de ce joueur.
 
 ---
 
@@ -580,10 +706,11 @@ Français et anglais ; **aucun texte en dur** (fichiers `fr.json` / `en.json` au
 
 - **Séparation stricte** : `src/core` (règles, sans affichage ni navigateur ; testé), `src/render` (Three.js : scène, caméras, chunks, machines), `src/ui` (menus, fenêtres), `src/i18n`, `src/settings`. Contenu dans `content/*.json`.
 - **Monde** : grille à deux niveaux (cases logistiques de 50 cm + pas fin de 10 cm), positions en **entiers**, chunks générés à la demande et mis en cache ; maillage fusionné et **instancié** pour la performance.
-- **Simulation** : déterministe côté génération ; la simulation d'usine avance avec le temps réel de l'image (pas variable, plafonné à 0,5 s) 🔶 — la décision de cadrage d'un **pas fixe à 20 ticks/s** reste à implémenter avec le multijoueur.
+- **Simulation** : à **pas fixe de 20 ticks/s** (`WorldSimulation`), déterministe côté génération ; l'hôte la fait tourner pour tous les joueurs.
 - **Commandes** : les actions du joueur passent par l'état de jeu (`GameState`) qui émet des événements ; base du futur multijoueur et de l'annulation.
 - **Unités SI** en interne ; conversion à l'affichage selon les paramètres.
-- **Tests** : Vitest (≈ 350 tests : génération, physique, construction, usine, fluides, ennemis, sauvegarde, saisons) + vérifications navigateur (Playwright/Chromium) sur scènes injectées.
+- **Tests** : Vitest (plus de 800 tests : génération, physique, construction, usine, énergie, fluides, rails, ennemis, sauvegarde, saisons, multijoueur, réglages) + vérifications navigateur (Playwright/Chromium) sur scènes injectées.
+- **Fluidité** : les chunks sont fabriqués **par étapes** (un seul fini par image, décor réparti sur plusieurs images), les niveaux de détail du décor sont préparés à l'avance, les machines et objets se retrouvent par tables ; le **rapport de bug** mesure les images (voir §11.5).
 - **Déploiement** : Vercel, branche de travail ; aperçu en ligne à chaque push.
 
 ---
@@ -592,18 +719,18 @@ Français et anglais ; **aucun texte en dur** (fichiers `fr.json` / `en.json` au
 
 ### 14.1 Cadences
 
-| Élément               | Valeur                                 |
-| --------------------- | -------------------------------------- |
-| Foreuse à combustible | 0,5 minerai/s (1 toutes les 2 s)       |
-| Foreuse électrique    | 0,75 minerai/s (1 toutes les 1,33 s)   |
-| Fourneau              | 1 lingot / 3 s (≈ 1,5 foreuse brûleur) |
-| Tapis                 | 0,75 case/s, 6 objets par tuile        |
-| Bras                  | 0,9 s / geste (0,45 s électrique)      |
-| Assembleur            | 2 s / cycle                            |
-| Laboratoire           | 5 s / paquet de science (4 → 1 s avec Recherche) |
-| Pompe                 | 100 eau/s                              |
-| Chaudière             | 60 vapeur/s                            |
-| Turbine               | 200 kW pour 20 vapeur/s                |
+| Élément                                                 | Valeur                                                                                         |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Foreuse à combustible / électrique / économe / à plasma | extraction de plus en plus rapide (1 minerai toutes les 2 s → 0,04 s pour la foreuse à plasma) |
+| Fourneau                                                | 1 recette par cycle (3 s à 20 s selon la recette)                                              |
+| Tapis                                                   | 3 paliers de vitesse (0,75 case/s au palier 1), 6 objets par tuile                             |
+| Bras                                                    | 0,9 s / geste ; électrique 0,45 s ; industriel 0,2 s                                           |
+| Assembleur / avancé / fabricateur                       | 2 s / 1,5 s / 0,5 s par cycle                                                                  |
+| Paquet de science fait à la main                        | 5 s × le palier                                                                                |
+| Laboratoire                                             | 5 s / paquet (4 à 1 s avec Recherche)                                                          |
+| Pompe                                                   | 100 eau/s                                                                                      |
+| Chaudière                                               | 60 vapeur/s                                                                                    |
+| Turbine                                                 | 200 kW pour 20 vapeur/s                                                                        |
 
 ### 14.2 Combat
 
@@ -619,14 +746,18 @@ Français et anglais ; **aucun texte en dur** (fichiers `fr.json` / `en.json` au
 
 ### 14.3 Énergie
 
-| Élément                | Valeur                                     |
-| ---------------------- | ------------------------------------------ |
-| Charbon / bois / fibre | 9 MJ / 1,8 MJ / 0,54 MJ                    |
-| Foreuse, fourneau      | 90 kW                                      |
-| Bras à combustible     | 20 kW                                      |
-| Générateur             | 900 kW de combustible → 300 kW électriques |
-| Chaudière              | 700 kW de combustible → 60 vapeur/s        |
-| Buggy                  | 180 kW                                     |
+| Élément                                          | Valeur                                                                                                                  |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Charbon / bois / fibre                           | 9 MJ / 1,8 MJ / 0,54 MJ ; deutérium et tritium 500 MJ                                                                   |
+| Foreuse, fourneau                                | 90 kW                                                                                                                   |
+| Générateur                                       | 900 kW de combustible → 300 kW électriques                                                                              |
+| Chaudière                                        | 700 kW de combustible → 60 vapeur/s                                                                                     |
+| Poteau bois / haute tension / très haute tension | 500 kW / 10 MW / 600 MW maximum par réseau ; 3 / 4 / 5 prises ; câble 8 / 20 / 40 m                                     |
+| Éolienne / panneau solaire                       | jusqu'à 40 kW (15–100 % selon le vent) / jusqu'à 60 kW (selon la lumière)                                               |
+| Accumulateur de base / au lithium                | 200 MJ à 400 kW / 1 GJ à 25–50 MW                                                                                       |
+| Pile à combustible, fission, fusion              | 2 MW, 10 MW, 500 MW                                                                                                     |
+| Borne de recharge                                | 400 kW ; batterie portable 10 niveaux de 6 s de poussée ; quad électrique 900 s de route ; locomotive électrique 180 MJ |
+| Buggy / quad / camionnette / char                | 180 / 110 / 300 / 450 kW de combustible                                                                                 |
 
 ### 14.4 Pollution
 
@@ -640,53 +771,55 @@ Voir §9.1. Rythme d'apparition des ennemis : coût 12 (agressif 8) de pollution
 
 ### 15.1 Réalisé (par chantier)
 
-- Socle, menu, paramètres, monde infini par seed, caméras, éditeur de partie, sauvegardes, récolte et inventaire (chantiers 0 à 7 du prototype) ✅
-- Construction (pièces, pièces fermées, étages, aura), machines, tapis (niveaux, rampes, tunnels), électricité, laboratoire et technologies, assembleur, fluides et vapeur (tuyaux enterrables), pollution et ennemis, tourelles, véhicule (buggy), équipement et outils, jour/nuit et saisons, mort et réapparition, mode débogage ✅
+- Socle, menu, paramètres (dont le préréglage graphique), monde infini par seed, caméras, éditeur de partie, sauvegardes, récolte et inventaire ✅
+- Construction (pièces, étages), machines, tapis, électricité à trois niveaux (transformateur, disjoncteur, énergies renouvelables, accumulateurs), fluides et vapeur, pétrole, nucléaire, laboratoire et **arbre de 163 découvertes (T0 à T5)**, assembleur avancé ✅
+- Pollution, ennemis, tourelles (cinq), **barrières et portails**, **santé et réparation des machines**, équipement, armures avec usure, **données par objet**, véhicules (dont électriques et recharge), **voies ferrées et trains** (refonte des rails), stations et pilote automatique ✅
+- Jour / nuit / saisons, éclairage des lampadaires, mort et réapparition, mode Créatif (un exemplaire suffit), **multijoueur** (jusqu'à 5, coffre quantique par joueur), rapport de bug avec mesure de fluidité ✅
 
 ### 15.2 Prévu / à décider
 
-| Sujet                                                                                 | Statut                                                      |
-| ------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Refonte des objets** (catalogue, poids, volumes, énergies, recettes)                | 🔶 annoncée par le PO ; **à cadrer avant tout équilibrage** |
-| **Multijoueur** (5 joueurs max, hôte = un joueur puis mini-serveur)                   | ⏳ **à discuter avec le PO** avant de commencer             |
-| **Types de partie** (créatif / survie), difficulté                                    | ⏳ « bientôt »                                              |
-| **Succès** (désactivés en mode admin)                                                 | ⏳                                                          |
-| **Structure de réapparition** (lit, balise) à la place de la touche H                 | ⏳                                                          |
-| **Vrais modèles 3D** et **vrais sons**                                                | ⏳ nécessite des assets (`docs/modeles.md`)                 |
-| **Effets des vêtements** (protection, endurance, froid)                               | ⏳                                                          |
-| **Température, chaleur, météo, chauffage des abris** (pièces fermées + saisons)       | ⏳                                                          |
-| **Réalisme** (niveaux arcade / équilibré / réaliste appliqués aux systèmes physiques) | ⏳                                                          |
-| **Pas fixe de simulation à 20 ticks/s**, chargeur de chunk                            | ⏳ avec le multijoueur                                      |
-| **Autres véhicules** (brouette, voiture électrique, camion, train…)                   | ⏳                                                          |
-| **Terrain creusable** (voxels, profondeur limitée)                                    | ❌ pour l'instant                                           |
-| **Mods / données externes**, **mode photo**, **version bureau / Unity**               | ⏳ / ❌                                                     |
+| Sujet                                                                                                                                      | Statut                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| **Vrais modèles 3D** pour les objets, machines et véhicules récents, modèles portés de l'équipement (liste : `docs/objets-sans-design.md`) | ⏳ faits dans la conversation des modèles |
+| **Équilibrage** global (coûts, puissances, vie, vitesses) : toutes les valeurs sont des points de départ                                   | ⏳ après la version complète du jeu       |
+| **Emplacements d'amélioration** sur les machines (consommation, production, vitesse, rendement ; un objet inséré)                          | ⏳ idée validée, à concevoir              |
+| **Réparer une armure** avec un kit, **usure des armes**, portails ouverts aux véhicules, chargement d'un véhicule sur un wagon plateforme  | ⏳                                        |
+| **Signaux et cantons** pour les trains, rails électrifiés (la locomotive électrique ne se recharge toujours qu'à la borne)                 | ⏳                                        |
+| **Effets des vêtements**, température, météo, chauffage des abris                                                                          | ⏳                                        |
+| **Succès** (désactivés en mode admin), structure de réapparition                                                                           | ⏳                                        |
+| **Terrain creusable** (voxels : gisements qui descendent, renforts sous les foreuses, terrain aplani par le joueur)                        | ⏳ prévu avec la version Unreal           |
+| **Version Unreal** : après une version navigateur équilibrée (la démo = la version 1 complète)                                             | ⏳                                        |
+| **Mods / données externes**, **mode photo**                                                                                                | ⏳ / ❌                                   |
 
 ### 15.3 Risques
 
-Performance (instancing, chunks actifs), ampleur de la physique réaliste (par couches, curseur de réalisme), licences des assets Unity (conversion glTF), équilibrage global après la refonte des objets, simulation d'usine dans les zones éloignées.
+Performance (nombre de triangles du décor lointain, chunks actifs, envoi de la géométrie à la carte graphique : suivi par le rapport de bug), équilibrage global à la fin, simulation d'usine dans les zones éloignées, cohérence entre la version navigateur et l'essai Unreal, licences des assets.
 
 ### 15.4 Questions ouvertes pour le PO
 
-1. Contenu exact de la **refonte des objets** : quel catalogue, quelles familles, quelles unités de référence ?
-2. Calendrier du **multijoueur** et du mode créatif / survie.
-3. Souhait pour la **structure de réapparition** (lit unique ? balise multiple ? consommable ?).
-4. Que doit faire le joueur « à la fin » : objectifs, succès, campagne ou bac à sable pur ?
-5. Place de la **température** et des saisons dans le gameplay (chauffage, combustible d'hiver, cultures ?).
+1. Pour l'équilibrage : quelles valeurs fixer en premier (coûts de découvertes, puissances, vie des barrières) ?
+2. Conception des **emplacements d'amélioration** : un ou plusieurs par machine, quels producteurs en premier ?
+3. Que doit faire le joueur « à la fin » : au-delà du comptoir spatial, objectifs, succès ?
+4. Place de la **température** et des saisons dans le gameplay (chauffage, combustible d'hiver, cultures ?).
+5. Signalisation ferroviaire : signaux simples ou cantons complets ?
 
 ---
 
 ## 16. Glossaire et sources
 
-| Terme        | Sens                                                                       |
-| ------------ | -------------------------------------------------------------------------- |
-| **Case**     | carré de 50 × 50 cm, unité de la grille                                    |
-| **Tuile**    | 2 × 2 cases : unité des tapis et des tuyaux                                |
-| **Chunk**    | 16 × 16 cases (8 m), unité de génération                                   |
-| **Bloc**     | 50 cm de mur (5 par étage)                                                 |
-| **Gisement** | tas de cases de minerai                                                    |
-| **Seed**     | texte qui détermine le monde                                               |
-| **Tunnel**   | tapis ou tuyau enterré entre une entrée et une sortie                      |
-| **kW / MJ**  | puissance consommée / énergie d'un combustible (même base : 1 kW = 1 kJ/s) |
-| **PO**       | Product Owner (le décideur du projet)                                      |
+| Terme          | Sens                                                                                |
+| -------------- | ----------------------------------------------------------------------------------- |
+| **Case**       | carré de 50 × 50 cm, unité de la grille                                             |
+| **Tuile**      | 2 × 2 cases : unité des tapis et des tuyaux                                         |
+| **Chunk**      | 16 × 16 cases (8 m), unité de génération                                            |
+| **Bloc**       | 50 cm de mur (5 par étage)                                                          |
+| **Gisement**   | tas de cases de minerai                                                             |
+| **Seed**       | texte qui détermine le monde                                                        |
+| **Tunnel**     | tapis ou tuyau enterré entre une entrée et une sortie                               |
+| **kW / MJ**    | puissance consommée / énergie d'un combustible (même base : 1 kW = 1 kJ/s)          |
+| **PO**         | Product Owner (le décideur du projet)                                               |
+| **Palier**     | T0 à T5 : niveau de progression d'un objet ou d'une découverte                      |
+| **Découverte** | recette(s) débloquée(s) en payant des paquets de science                            |
+| **Niveau**     | état d'un objet suivi (charge d'une batterie, usure d'une armure, charges d'un kit) |
 
-**Sources de vérité** : `content/items.json`, `machines.json`, `resources.json`, `techs.json`, `buildings.json` · `src/core/` (règles) · `src/i18n/` (textes) · `docs/` (décisions détaillées : `monde.md`, `construction-refonte.md`, `usine.md`, `dimensions.md`, `equilibrage.md`, `parametres.md`, `commandes.md`, `architecture.md`, `besoins.md`, `risques.md`, `modeles.md`) · `passation.md` (journal des tours).
+**Sources de vérité** : `content/items.json`, `machines.json`, `resources.json`, `techs.json`, `buildings.json` · `src/core/` (règles) · `src/i18n/` (textes) · `docs/` (décisions détaillées : `usine.md`, `rails-refonte.md`, `multijoueur.md`, `decouvertes-t0-t5.md`, `monde.md`, `construction-refonte.md`, `usine.md`, `dimensions.md`, `equilibrage.md`, `parametres.md`, `commandes.md`, `architecture.md`, `besoins.md`, `risques.md`, `modeles.md`) · `passation.md` (journal des tours).

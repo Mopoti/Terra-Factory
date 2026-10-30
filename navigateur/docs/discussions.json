@@ -1,5 +1,5 @@
 {
- "key": "discussions-i1",
+ "key": "discussions-j1",
  "title": "Discussions : suite (4)",
  "intro": "Quatre chantiers lancés en parallèle. Réponds surtout aux questions de chaque ligne.",
  "cols": [
@@ -16,25 +16,25 @@
  "tabs": [
   {
    "id": "n",
-   "label": "Préréglage graphique"
+   "label": "GDD à jour"
   }
  ],
  "rows": [
   {
-   "id": "i1",
+   "id": "j1",
    "tab": "n",
-   "name": "Préréglage graphique",
-   "tag": "i1",
-   "recipe": "Fait : un réglage « Préréglage graphique » en tête des paramètres d'affichage : Adapté à mon ordinateur, Basse, Moyenne, Haute, Personnalisé. Bas : qualité basse, sans ombres, vue 6 chunks. Moyen : qualité moyenne, ombres normales, vue 8. Haut : qualité haute, ombres détaillées, vue 12. Dès que tu changes à la main la qualité, les ombres ou la distance de vue, le préréglage passe en « Personnalisé ».",
-   "role": "Les valeurs de chaque niveau te conviennent ? Veux-tu que la limite d'images par seconde fasse partie du préréglage ?"
+   "name": "GDD mis à jour",
+   "tag": "j1",
+   "recipe": "Le GDD (le document de règles du jeu, commun aux versions navigateur et Unreal) datait du tour 83. Je l'ai remis à jour : paliers T0 à T5, objets et données par objet, catalogue des 77 machines, énergie à trois niveaux, rails et trains, barrières et portails, recharge et véhicules électriques, santé et réparation, 163 découvertes, préréglage graphique, multijoueur et coffre quantique, tableaux d'équilibrage et feuille de route.",
+   "role": "Peux-tu le relire (lien dans ma réponse) et me dire ce qui est faux ou manquant ? Les sections Vision, Monde, Construction, Jour / nuit et Commandes n'ont pas été reprises à fond."
   },
   {
-   "id": "i2",
+   "id": "j2",
    "tab": "n",
-   "name": "Mode adapté",
-   "tag": "i2",
-   "recipe": "Il regarde la carte graphique, le nombre de cœurs, la mémoire, le type d'écran (tactile, 4K) et choisit bas, moyen ou haut. Il est recalculé à chaque lancement. En jeu, si les images dépassent 28 ms en médiane pendant 20 secondes, il descend d'un niveau et le retient ; il ne remonte pas tout seul (rechoisir « Adapté » efface la mémoire).",
-   "role": "Ça te va qu'il ne remonte jamais tout seul ? Les anciens réglages déjà enregistrés restent en « Personnalisé » (rien n'est écrasé)."
+   "name": "Questions ouvertes du GDD",
+   "tag": "j2",
+   "recipe": "Je les ai remises à jour : équilibrage (par quoi commencer), emplacements d'amélioration (un ou plusieurs par machine), fin de partie au-delà du comptoir spatial, place de la température, signalisation ferroviaire.",
+   "role": "Ce sont les prochains sujets de conception. Lesquels veux-tu traiter en premier ?"
   }
  ]
 }
