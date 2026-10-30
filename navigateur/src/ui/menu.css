@@ -3473,3 +3473,16 @@ input[type='range'] {
     box-shadow: 0 0 0 6px rgba(255, 190, 40, 0.95);
   }
 }
+
+/* Recherche en chaîne (Créatif) : en attente en rouge, puis recherchée en vert. */
+.tech-node {
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+}
+.tech-node.chain-wait {
+  box-shadow: 0 0 0 4px rgba(214, 64, 52, 0.9);
+}
+.tech-node.chain-done {
+  box-shadow: 0 0 0 4px rgba(70, 170, 80, 0.95);
+}

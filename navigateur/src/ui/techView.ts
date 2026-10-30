@@ -193,35 +193,42 @@ export function mountTech(
     }, 2400);
   };
 
-  /** Créatif : recherche petit à petit les prérequis manquants, jusqu'à la découverte cliquée. */
+  /** Créatif : recherche vite, l'une après l'autre, les prérequis manquants jusqu'à la découverte cliquée. */
   let chainTimer = 0;
   let chainQueue: string[] = [];
+  /** Découvertes de la chaîne : en attente (rouge) puis recherchées (vert). */
+  const chainWait = new Set<string>();
+  const chainDone = new Set<string>();
   function chainStep(): void {
     const id = chainQueue.shift();
     if (id === undefined) {
       window.clearInterval(chainTimer);
       chainTimer = 0;
       refresh();
+      window.setTimeout(() => {
+        chainDone.clear();
+        if (isOpenNow) renderTree();
+      }, 900);
       return;
     }
     const result = actions.bus.dispatch<'research'>({ type: 'research', tech: id });
-    if (result !== 'ok' && result !== 'done') {
-      chainQueue = [];
-      return chainStep();
-    }
+    chainWait.delete(id);
+    if (result === 'ok' || result === 'done') chainDone.add(id);
     playSfx('craft');
-    sel = id;
-    message = t('tech.researched', { tech: techName(id) });
     refresh();
-    focus(id);
-    flash(id);
   }
   function startChain(id: string): void {
     if (chainTimer) return;
     chainQueue = researchChain(id, known());
-    chainStep();
-    if (chainQueue.length > 0) chainTimer = window.setInterval(chainStep, 450);
-    else chainTimer = 0;
+    chainWait.clear();
+    chainDone.clear();
+    for (const q of chainQueue) chainWait.add(q);
+    // L'arbre reste centré sur la découverte que le joueur vient de choisir.
+    sel = id;
+    message = t('tech.researched', { tech: techName(id) });
+    focus(id);
+    refresh();
+    chainTimer = window.setInterval(chainStep, 110);
   }
   /** Fin de fenêtre en cours de chaîne : on termine tout de suite ce qui restait. */
   function finishChain(): void {
@@ -229,6 +236,8 @@ export function mountTech(
     chainTimer = 0;
     for (const id of chainQueue) actions.bus.dispatch<'research'>({ type: 'research', tech: id });
     chainQueue = [];
+    chainWait.clear();
+    chainDone.clear();
   }
 
   const plain = (text: string): string =>
@@ -469,7 +478,7 @@ export function mountTech(
     for (const tech of TECHS) {
       const node = nodes.get(tech.id);
       if (!node) continue;
-      node.className = `tech-node ${statusOf(tech)}${tech.id === sel ? ' sel' : ''}${chain && !chain.has(tech.id) ? ' dim' : ''}${flashing.has(tech.id) ? ' flash' : ''}`;
+      node.className = `tech-node ${statusOf(tech)}${tech.id === sel ? ' sel' : ''}${chain && !chain.has(tech.id) ? ' dim' : ''}${flashing.has(tech.id) ? ' flash' : ''}${chainWait.has(tech.id) ? ' chain-wait' : ''}${chainDone.has(tech.id) ? ' chain-done' : ''}`;
     }
     for (const e of edgeEls) {
       const on = !!chain && chain.has(e.from) && chain.has(e.to);
