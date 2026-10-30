@@ -82,3 +82,33 @@ export function compassOf(dir: number): (typeof POINTS)[number] {
   const bearing = 90 + (dir * 180) / Math.PI;
   return POINTS[((Math.round(bearing / 45) % 8) + 8) % 8];
 }
+
+/** Valeurs imposées par les commandes du chat (absent = le calcul normal). */
+export interface WeatherOverrides {
+  /** Température de l'air (°C) partout. */
+  tempC?: number;
+  /** Force du vent (0 à 1). */
+  windSpeed?: number;
+  /** Direction du vent (radians). */
+  windDir?: number;
+}
+
+/** Vent du jeu : le calcul normal, sauf ce que les commandes imposent. */
+export function windWith(seed: number, time: number, o?: WeatherOverrides): Wind {
+  const w = windAt(seed, time);
+  return { dir: o?.windDir ?? w.dir, speed: o?.windSpeed ?? w.speed };
+}
+
+/** Température de l'air (°C) du jeu : le calcul normal, sauf ce que les commandes imposent. */
+export function airTempWith(computed: number, o?: WeatherOverrides): number {
+  return o?.tempC ?? computed;
+}
+
+/** Température visée à l'intérieur d'un abri clos (°C) et part de l'écart avec l'extérieur qu'il compense. */
+export const SHELTER_TARGET_C = 14;
+export const SHELTER_FACTOR = 0.5;
+
+/** Température dans une pièce close, pour une température extérieure donnée : l'abri adoucit les extrêmes. */
+export function shelterTempC(outsideC: number): number {
+  return outsideC + (SHELTER_TARGET_C - outsideC) * SHELTER_FACTOR;
+}

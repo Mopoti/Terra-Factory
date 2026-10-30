@@ -21,6 +21,7 @@ import {
 } from './partMotions';
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
+import { WeatherProps, isWeatherProp } from './weatherProps';
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
 import {
@@ -337,6 +338,8 @@ export class FactoryView {
     }),
   );
   private ghostKey = '';
+  /** Thermomètres, girouettes et éoliennes (formes simples animées). */
+  readonly weather: WeatherProps;
   /** Instant (s) où chaque tuyau rompu a été vu pour la première fois (gerbe de vapeur). */
   private readonly burstAt = new Map<number, number>();
   /** Balises : faisceau coloré et nom flottant, refaits à chaque `rebuild`. */
@@ -346,6 +349,7 @@ export class FactoryView {
     private readonly scene: THREE.Scene,
     private readonly factory: Factory,
   ) {
+    this.weather = new WeatherProps(scene);
     this.bodies.material = propsMaterial;
     this.items.material = propsMaterial;
     this.bands.material = bandMaterial;
@@ -400,11 +404,13 @@ export class FactoryView {
     this.pipes = this.factory.machines.filter((m) => m.type === 'pipe');
     this.turbines = this.factory.machines.filter((m) => m.type === 'turbine');
     this.lamps = this.factory.machines.filter((m) => m.type === 'lamp');
+    this.weather.sync(this.factory.machines);
     const mb = new MeshBuilder();
     const bands = new BandBuilder();
     this.entries.clear();
     this.clearMovers();
     for (const m of this.factory.machines) {
+      if (isWeatherProp(m.type)) continue; // dessiné par `WeatherProps`
       // Les modèles se chargent en arrière-plan : on n'affiche pas d'abord la forme simple puis le modèle. Une machine
       // qui a un modèle prévu attend la fin du chargement (puis prend le modèle maison, sinon celui du kit, sinon la forme simple).
       if (

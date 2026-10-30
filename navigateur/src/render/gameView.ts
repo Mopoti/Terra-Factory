@@ -23,6 +23,7 @@ import {
   slabAt,
   slabFace,
   wallBeside,
+  wallSide,
   type PiecePos,
 } from '../core/build/pieces';
 import {
@@ -68,10 +69,12 @@ import { CameraRig } from './cameraRig';
 import { climateAt, dayLight } from '../core/game/seasons';
 import {
   COLD_HURT_PER_S,
+  airTempWith,
   coldDamagePerS,
   compassOf,
+  shelterTempC,
   temperatureAt,
-  windAt,
+  windWith,
   type Wind,
 } from '../core/game/weather';
 import {
@@ -233,6 +236,8 @@ export interface GameViewOptions {
   onToggleMap?: () => void;
   /** La touche de l'armure active a été pressée (menu circulaire des avantages). */
   onToggleArmor?: () => void;
+  /** La touche du chat (Entrée) a été pressée. */
+  onToggleChat?: () => void;
   /** Le mode débogage change (le cadre « Partie / Sac / Menu » ne s'affiche qu'en débogage). */
   onDebugChange?: (on: boolean) => void;
   /** La touche « Arbre technologique » a été pressée. */
@@ -1197,7 +1202,8 @@ export function startGameView(
    */
   function mountRule(type: MachineType, level: number): ((c: Cell) => boolean) | null {
     const pieces = options.state.changes.pieces;
-    if (type === 'thermometer') return (c) => !wallBeside(pieces, level, c.gx, c.gz);
+    const storey = level === UPPER_LEVEL ? 1 : 0;
+    if (type === 'thermometer') return (c) => !wallBeside(pieces, storey, c.gx, c.gz);
     if (type === 'vane' && level === 0) return (c) => !slabAt(pieces, 0, c.gx, c.gz);
     return null;
   }
@@ -3431,10 +3437,30 @@ export function startGameView(
     arPanel.textContent = parts.join('  ·  ');
     arPanel.hidden = false;
   }
-  const weatherNow = (x: number, z: number): { tempC: number; wind: Wind } => ({
-    tempC: temperatureAt(generator.seed, x, z, options.state.changes.time, timeCfg),
-    wind: windAt(generator.seed, options.state.changes.time),
-  });
+  /** Cette position (en mètres) est-elle dans une pièce close du rez-de-chaussée ? */
+  const insideAt = (x: number, z: number): boolean => {
+    const cell = `${Math.floor(x / CELL_SIZE_M)},${Math.floor(z / CELL_SIZE_M)}`;
+    return options.state.rooms().some((r) => r.level === 0 && r.cells.includes(cell));
+  };
+  /** Température de l'air et vent ici : le calcul du monde, les commandes du chat, puis l'abri s'il y en a un. */
+  const weatherNow = (x: number, z: number): { tempC: number; wind: Wind } => {
+    const changes = options.state.changes;
+    const outside = airTempWith(
+      temperatureAt(generator.seed, x, z, changes.time, timeCfg),
+      changes.weather,
+    );
+    return {
+      tempC: insideAt(x, z) ? shelterTempC(outside) : outside,
+      wind: windWith(generator.seed, changes.time, changes.weather),
+    };
+  };
+  factoryView.weather.source = {
+    wind: () => weatherNow(playerX, playerZ).wind,
+    tempAt: (x, z) => weatherNow(x, z).tempC,
+    wallSide: (m) =>
+      wallSide(options.state.changes.pieces, m.lift === UPPER_LEVEL ? 1 : 0, m.gx, m.gz),
+    format: (c) => formatTemperature(c, getSettings().display.units, getLocale()),
+  };
   /** Cap de la caméra en degrés : 0 = nord, 90 = est. */
   // Repère du corps sur la boussole (croix rouge ; au bord, une flèche quand il est hors du champ).
   const corpseMark = document.createElement('span');
@@ -4036,10 +4062,7 @@ export function startGameView(
     }
     // Froid : trop peu de vêtements ou d'armure pour la température d'ici, on perd de la santé (l'armure n'y change rien).
     if (!options.state.creative) {
-      const cold = coldDamagePerS(
-        temperatureAt(generator.seed, playerX, playerZ, options.state.changes.time, timeCfg),
-        options.state.warmth(),
-      );
+      const cold = coldDamagePerS(weatherNow(playerX, playerZ).tempC, options.state.warmth());
       if (cold > 0) {
         playerHealth -= cold * dt;
         // Un froid léger n'empêche pas la santé de remonter ; un vrai froid, si.
@@ -4626,6 +4649,7 @@ export function startGameView(
     updateGhost(views);
     updateCompass();
     if (!paused && pressed('ar')) options.onToggleArmor?.();
+    if (!paused && pressed('chat')) options.onToggleChat?.();
     if (!paused) {
       updateAr(dt);
       const wasExo = options.state.exoOn;
@@ -4679,6 +4703,7 @@ export function startGameView(
       factoryView.updateMovers(now / 1000);
       factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
       factoryView.updateParts(now / 1000, { x: playerX, z: playerZ });
+      factoryView.weather.update(dt);
     });
     enemyView.update(
       threat.enemies,

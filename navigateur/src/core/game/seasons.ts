@@ -208,3 +208,22 @@ export function dayLight(
   } else light = night;
   return { isDay, light, minutes: into };
 }
+
+/** Prochain instant (s de jeu) en plein jour (`day`) ou en pleine nuit (`night`), à partir de `now`. */
+export function timeAtPhase(now: number, cfg: TimeSettings, phase: 'day' | 'night'): number {
+  const cycle = cycleSeconds(cfg);
+  const dawn = Math.min(1, cfg.dayMinutes * 0.1);
+  const into = phase === 'day' ? cfg.dayMinutes / 2 : cfg.dayMinutes + cfg.nightMinutes / 2;
+  const offset = ((((into - dawn) * 60) % cycle) + cycle) % cycle;
+  const t = Math.floor(Math.max(0, now) / cycle) * cycle + offset;
+  return t < now ? t + cycle : t;
+}
+
+/** Prochain instant (s de jeu) au milieu de la saison `index` (0 printemps … 3 hiver), à partir de `now`. */
+export function timeAtSeason(now: number, cfg: TimeSettings, index: number): number {
+  const year = yearSeconds(cfg);
+  let start = 0;
+  for (let i = 0; i < index; i++) start += cfg.shares[i] / 100;
+  const t = Math.floor(Math.max(0, now) / year) * year + (start + cfg.shares[index] / 200) * year;
+  return t < now ? t + year : t;
+}

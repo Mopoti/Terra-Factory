@@ -9,6 +9,7 @@ import { footprint, normalizeMachines, type Machine } from '../factory/factory';
 import { machineDef } from '../data/machines';
 import { itemById, type EquipSlot } from '../data/items';
 import { baseOf, levelInfo } from '../data/itemData';
+import type { WeatherOverrides } from './weather';
 import { migrateItemId, normalizeInventory, type Inventory } from './inventory';
 import type { Enemy } from './threat';
 import { resourceById } from '../data/resources';
@@ -164,6 +165,8 @@ export interface WorldChanges {
   equipment: Partial<Record<EquipSlot, string>>;
   /** Batterie portable insérée dans une pièce d'armure T4 ou T5 (au plus une par emplacement). */
   armorBattery: Partial<Record<EquipSlot, string>>;
+  /** Météo imposée par les commandes du chat. */
+  weather: WeatherOverrides;
   /** Technologies déjà recherchées. */
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
@@ -265,6 +268,7 @@ export function emptyChanges(): WorldChanges {
     nextMachineId: 1,
     equipment: {},
     armorBattery: {},
+    weather: {},
     unlocked: [],
     admin: false,
     tutorialDone: [],
@@ -454,6 +458,12 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
+  if (typeof r.weather === 'object' && r.weather !== null) {
+    const w = r.weather as Record<string, unknown>;
+    if (isNum(w.tempC)) result.weather.tempC = Math.max(-100, Math.min(100, w.tempC));
+    if (isNum(w.windSpeed)) result.weather.windSpeed = Math.max(0, Math.min(1, w.windSpeed));
+    if (isNum(w.windDir)) result.weather.windDir = w.windDir;
+  }
   result.tutorialSkipped = r.tutorialSkipped === true;
   result.beacon = r.beacon === true;
   if (typeof r.quantum === 'object' && r.quantum !== null && !Array.isArray(r.quantum)) {

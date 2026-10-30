@@ -233,16 +233,31 @@ export function slabAt(pieces: Pieces, face: number, gx: number, gz: number): st
   return null;
 }
 
-/** Une pièce de bord (mur, porte…) touche-t-elle un côté de cette case, à n'importe quelle hauteur de l'étage ? */
-export function wallBeside(pieces: Pieces, level: number, gx: number, gz: number): boolean {
-  const sides: Array<{ gx: number; gz: number; axis: 'x' | 'z' }> = [
-    { gx, gz, axis: 'x' },
-    { gx, gz: gz + 1, axis: 'x' },
-    { gx, gz, axis: 'z' },
-    { gx: gx + 1, gz, axis: 'z' },
+/**
+ * Côté d'une case où une pièce de bord (mur, porte…) touche, à n'importe quelle hauteur de l'étage : vecteur (dx, dz)
+ * de la case vers ce mur (nord −z, sud +z, ouest −x, est +x), ou null s'il n'y en a pas.
+ */
+export function wallSide(
+  pieces: Pieces,
+  level: number,
+  gx: number,
+  gz: number,
+): [number, number] | null {
+  const sides: Array<{ gx: number; gz: number; axis: 'x' | 'z'; dir: [number, number] }> = [
+    { gx, gz, axis: 'x', dir: [0, -1] },
+    { gx, gz: gz + 1, axis: 'x', dir: [0, 1] },
+    { gx, gz, axis: 'z', dir: [-1, 0] },
+    { gx: gx + 1, gz, axis: 'z', dir: [1, 0] },
   ];
   for (const side of sides)
     for (let layer = 0; layer < LAYERS_PER_STOREY; layer++)
-      if (pieces[pieceKey({ slot: 'edge', level, ...side, layer })]) return true;
-  return false;
+      if (
+        pieces[pieceKey({ slot: 'edge', level, gx: side.gx, gz: side.gz, axis: side.axis, layer })]
+      )
+        return side.dir;
+  return null;
 }
+
+/** Une pièce de bord touche-t-elle un côté de cette case ? */
+export const wallBeside = (pieces: Pieces, level: number, gx: number, gz: number): boolean =>
+  wallSide(pieces, level, gx, gz) !== null;

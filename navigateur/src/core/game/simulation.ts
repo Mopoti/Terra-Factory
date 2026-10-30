@@ -10,7 +10,7 @@ import { labResearchLevel } from '../data/techs';
 import { dims, Factory, type Machine } from '../factory/factory';
 import { emptyFluid } from '../factory/fluids';
 import { stepChargers } from './charging';
-import { windAt } from './weather';
+import { windWith } from './weather';
 import { dayLight, DEFAULT_TIME, type TimeSettings } from './seasons';
 import type { GameState } from './state';
 import type { Threat, ThreatTarget } from './threat';
@@ -92,7 +92,7 @@ export class WorldSimulation {
       return b ? `machine:${b.id}` : null;
     };
     factory.daylight = dayLight(state.changes.time, this.timeCfg).light;
-    factory.windSpeed = windAt(this.windSeed, state.changes.time).speed;
+    factory.windSpeed = windWith(this.windSeed, state.changes.time, state.changes.weather).speed;
     factory.tradeOpen = state.changes.beacon;
     factory.labDemand = state.studyRemaining();
     factory.labNeeds = state.studyNeeds();

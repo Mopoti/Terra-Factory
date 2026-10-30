@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { itemById } from '../data/items';
 import { DEFAULT_TIME, cycleSeconds } from './seasons';
-import { coldDamagePerS, comfortLimitC, temperatureAt, windAt } from './weather';
+import {
+  airTempWith,
+  coldDamagePerS,
+  comfortLimitC,
+  shelterTempC,
+  temperatureAt,
+  windAt,
+  windWith,
+} from './weather';
 
 describe('vent', () => {
   it('est le même pour la même seed et le même temps', () => {
@@ -74,5 +82,23 @@ describe('chaleur de l’équipement', () => {
     expect(itemById('armor3_torso~5').equip!.warmth).toBeLessThan(
       itemById('armor3_torso').equip!.warmth,
     );
+  });
+});
+
+describe('abri et commandes', () => {
+  it('un abri clos adoucit le froid comme la chaleur', () => {
+    expect(shelterTempC(-16)).toBeGreaterThan(-16);
+    expect(shelterTempC(-16)).toBeLessThan(14);
+    expect(shelterTempC(40)).toBeLessThan(40);
+    expect(shelterTempC(14)).toBe(14);
+  });
+
+  it('les valeurs imposées remplacent le calcul, le reste est inchangé', () => {
+    expect(airTempWith(7, undefined)).toBe(7);
+    expect(airTempWith(7, { tempC: -3 })).toBe(-3);
+    const normal = windAt(5, 100);
+    expect(windWith(5, 100, {})).toEqual(normal);
+    expect(windWith(5, 100, { windSpeed: 0.9 })).toEqual({ dir: normal.dir, speed: 0.9 });
+    expect(windWith(5, 100, { windDir: 1 }).dir).toBe(1);
   });
 });

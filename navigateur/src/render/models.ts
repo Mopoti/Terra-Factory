@@ -138,6 +138,7 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   transformer: 'accumulateur_t3',
   breaker: 'accumulateur_t3',
   lamp: 'poteau_electrique',
+  // Icônes seulement : en jeu, ces trois-là sont dessinés par `weatherProps.ts` (formes simples animées).
   thermometer: 'poteau_electrique',
   vane: 'poteau_electrique',
   wind_turbine: 'poteau_electrique',

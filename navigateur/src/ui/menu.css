@@ -3516,3 +3516,49 @@ input[type='range'] {
   width: 20px;
   height: 20px;
 }
+
+/* Chat et commandes (touche Entrée). */
+#chat {
+  position: fixed;
+  left: 12px;
+  bottom: 96px;
+  width: min(460px, 70vw);
+  z-index: 7;
+  pointer-events: none;
+}
+#chat.open {
+  pointer-events: auto;
+}
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.chat-line {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(20, 28, 34, 0.55);
+  color: #e6f6ff;
+  font-size: 0.85rem;
+  transition: opacity 1s;
+}
+.chat-line.bad {
+  color: #ffb4a8;
+}
+.chat-line.old {
+  opacity: 0;
+}
+#chat.open .chat-line.old {
+  opacity: 1;
+}
+.chat-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(140, 220, 255, 0.6);
+  background: rgba(20, 28, 34, 0.9);
+  color: #e6f6ff;
+  font: inherit;
+}
