@@ -612,6 +612,14 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
 - **Jour/nuit** : luminosité lissée (aube et crépuscule d'au plus 1 min), la partie **commence en plein jour**. Éclairage hémisphérique + soleil dont l'intensité suit la lumière du jour ; ciel et brouillard suivent. Le soleil ne se déplace pas dans le ciel 🔶.
 - Le **temps de jeu** (secondes) est enregistré avec la partie.
 
+### 10.3 Climat : température et vent ⏳ (décidé avec le PO, pas encore codé)
+
+- **Température** : le monde a une température locale qui dépend du **biome**, de la **saison** et de l'**heure** (plus froid la nuit et en hiver). Elle sert au gameplay (chauffage des abris, combustible d'hiver, effets des vêtements : voir §15). Les bruits de température et d'humidité qui donnent déjà les biomes (§3.2) en sont la base.
+- **Voir la température** n'est pas gratuit : une **découverte** donne le **thermomètre**, un objet **posable contre un mur** qui affiche la température de l'endroit (dans une pièce close, celle de l'abri). Sans lui, le joueur ne perçoit la température que par ses effets. Unité au choix dans les paramètres (°C, °F, K).
+- **Vent** : il doit **ressembler au vent réel** : une **direction** et une **force** qui évoluent lentement et de façon cohérente dans la durée (rafales, calmes, changements de direction progressifs), et non plus une simple oscillation propre à chaque éolienne comme aujourd'hui (🔶 §7.3). Le même vent s'applique à toutes les éoliennes d'une zone ; leur production suit la force du vent.
+- **Voir le vent** : un objet qui **se pose sur une dalle** (la **manche à air** ou girouette, nom à trancher) montre la **direction** et la **force** du vent ; il suit la même découverte que le thermomètre ou une découverte voisine.
+- Le vent pourra plus tard orienter la fumée, la pollution ou les nuages ; non décidé.
+
 ---
 
 ## 11. Interface, commandes et paramètres
@@ -778,18 +786,18 @@ Voir §9.1. Rythme d'apparition des ennemis : coût 12 (agressif 8) de pollution
 
 ### 15.2 Prévu / à décider
 
-| Sujet                                                                                                                                      | Statut                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| **Vrais modèles 3D** pour les objets, machines et véhicules récents, modèles portés de l'équipement (liste : `docs/objets-sans-design.md`) | ⏳ faits dans la conversation des modèles |
-| **Équilibrage** global (coûts, puissances, vie, vitesses) : toutes les valeurs sont des points de départ                                   | ⏳ après la version complète du jeu       |
-| **Emplacements d'amélioration** sur les machines (consommation, production, vitesse, rendement ; un objet inséré)                          | ⏳ idée validée, à concevoir              |
-| **Réparer une armure** avec un kit, **usure des armes**, portails ouverts aux véhicules, chargement d'un véhicule sur un wagon plateforme  | ⏳                                        |
-| **Signaux et cantons** pour les trains, rails électrifiés (la locomotive électrique ne se recharge toujours qu'à la borne)                 | ⏳                                        |
-| **Effets des vêtements**, température, météo, chauffage des abris                                                                          | ⏳                                        |
-| **Succès** (désactivés en mode admin), structure de réapparition                                                                           | ⏳                                        |
-| **Terrain creusable** (voxels : gisements qui descendent, renforts sous les foreuses, terrain aplani par le joueur)                        | ⏳ prévu avec la version Unreal           |
-| **Version Unreal** : après une version navigateur équilibrée (la démo = la version 1 complète)                                             | ⏳                                        |
-| **Mods / données externes**, **mode photo**                                                                                                | ⏳ / ❌                                   |
+| Sujet                                                                                                                                                     | Statut                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Vrais modèles 3D** pour les objets, machines et véhicules récents, modèles portés de l'équipement (liste : `docs/objets-sans-design.md`)                | ⏳ faits dans la conversation des modèles |
+| **Équilibrage** global (coûts, puissances, vie, vitesses) : toutes les valeurs sont des points de départ                                                  | ⏳ après la version complète du jeu       |
+| **Emplacements d'amélioration** sur les machines (consommation, production, vitesse, rendement ; un objet inséré)                                         | ⏳ idée validée, à concevoir              |
+| **Réparer une armure** avec un kit, **usure des armes**, portails ouverts aux véhicules, chargement d'un véhicule sur un wagon plateforme                 | ⏳                                        |
+| **Signaux et cantons** pour les trains, rails électrifiés (la locomotive électrique ne se recharge toujours qu'à la borne)                                | ⏳                                        |
+| **Effets des vêtements**, **température** (thermomètre posé contre un mur), **vent réaliste** (girouette posée sur une dalle), météo, chauffage des abris | ⏳ conception décidée (§10.3)             |
+| **Succès** (désactivés en mode admin), structure de réapparition                                                                                          | ⏳                                        |
+| **Terrain creusable** (voxels : gisements qui descendent, renforts sous les foreuses, terrain aplani par le joueur)                                       | ⏳ prévu avec la version Unreal           |
+| **Version Unreal** : après une version navigateur équilibrée (la démo = la version 1 complète)                                                            | ⏳                                        |
+| **Mods / données externes**, **mode photo**                                                                                                               | ⏳ / ❌                                   |
 
 ### 15.3 Risques
 
@@ -800,7 +808,7 @@ Performance (nombre de triangles du décor lointain, chunks actifs, envoi de la 
 1. Pour l'équilibrage : quelles valeurs fixer en premier (coûts de découvertes, puissances, vie des barrières) ?
 2. Conception des **emplacements d'amélioration** : un ou plusieurs par machine, quels producteurs en premier ?
 3. Que doit faire le joueur « à la fin » : au-delà du comptoir spatial, objectifs, succès ?
-4. Place de la **température** et des saisons dans le gameplay (chauffage, combustible d'hiver, cultures ?).
+4. **Température** : principe décidé (§10.3 : un objet pour la voir, un vent réaliste avec girouette). À trancher : effets exacts (chauffage, combustible d'hiver, cultures, vêtements) et nom des deux objets.
 5. Signalisation ferroviaire : signaux simples ou cantons complets ?
 
 ---
