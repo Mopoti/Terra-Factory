@@ -1031,6 +1031,7 @@ export function startGameView(
     if (item !== lastBuildItem) {
       lastBuildItem = item;
       buildRot = null; // une autre pièce : retour à l'orientation automatique
+      buildMachineLevel = 0; // et au sol : « à l'étage » (PageUp) ne suit pas d'une machine à l'autre
     }
     if (value !== building || machine !== buildingMachine) {
       building = value;
