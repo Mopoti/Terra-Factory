@@ -150,6 +150,11 @@ const RESOURCE_MODELS: Record<string, string> = {
   res_tree: 'arbre_prairie_1',
   res_rock: 'rocher_prairie_1',
   res_fiber_bush: 'buisson_prairie_1',
+  // Onglet « Ennemis » du mode Créatif.
+  res_nest: 'nid',
+  res_scout: 'ennemi_eclaireur',
+  res_guard: 'ennemi_gardien',
+  res_spitter: 'ennemi_cracheur',
 };
 
 /**

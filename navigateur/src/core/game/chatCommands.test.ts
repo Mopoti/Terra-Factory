@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { COMMANDS, findCommand, runChat, usageOf, type ChatContext } from './chatCommands';
+import {
+  COMMANDS,
+  canUseCommands,
+  findCommand,
+  runChat,
+  usageOf,
+  type ChatContext,
+} from './chatCommands';
 import { DEFAULT_TIME, climateAt, dayLight } from './seasons';
 import { GameState } from './state';
+import { emptyChanges, normalizeChanges } from './worldChanges';
 
-const ctx = (): ChatContext => ({ state: new GameState({ inventory: {} }), time: DEFAULT_TIME });
+const ctx = (creative = true): ChatContext => {
+  const state = new GameState({ inventory: {} });
+  state.creative = creative;
+  return { state, time: DEFAULT_TIME };
+};
 
 describe('commandes du chat', () => {
   it('une ligne sans / n’est pas une commande, une commande inconnue est refusée', () => {
@@ -72,5 +84,31 @@ describe('commandes du chat', () => {
     for (const cmd of COMMANDS) expect(usageOf(cmd)).toContain(`/${cmd.name}`);
     const help = runChat('/aide', ctx()).text;
     for (const cmd of COMMANDS) expect(help).toContain(`/${cmd.name}`);
+  });
+
+  it('les commandes sont réservées au Créatif, tant que la partie n’a pas servi d’une commande', () => {
+    const c = ctx(false);
+    expect(canUseCommands(c.state)).toBe(false);
+    expect(runChat('/jour', c).ok).toBe(false);
+    expect(c.state.changes.admin).toBe(false);
+  });
+
+  it('/survie quitte le Créatif mais garde les commandes ; /creatif revient', () => {
+    const c = ctx(true);
+    expect(runChat('/survie', c).ok).toBe(true);
+    expect(c.state.creative).toBe(false);
+    expect(c.state.changes.modeOverride).toBe('survival');
+    expect(canUseCommands(c.state)).toBe(true);
+    expect(runChat('/jour', c).ok).toBe(true);
+    expect(runChat('/creatif', c).ok).toBe(true);
+    expect(c.state.creative).toBe(true);
+    expect(c.state.changes.modeOverride).toBe('creative');
+  });
+
+  it('le mode choisi par commande survit à l’enregistrement', () => {
+    const changes = emptyChanges();
+    changes.modeOverride = 'survival';
+    expect(normalizeChanges(JSON.parse(JSON.stringify(changes))).modeOverride).toBe('survival');
+    expect(normalizeChanges({ modeOverride: 'nimporte' }).modeOverride).toBeUndefined();
   });
 });

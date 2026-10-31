@@ -355,6 +355,10 @@ const EXTRA_GROUPS: Record<string, string[]> = {
       'barriere_holographique',
     ].map((n) => [n, ['poteau_g', 'poteau_d']]),
   ),
+  // Ennemis (icônes de l'onglet Créatif ; ils sont dessinés en jeu par `enemyView.ts`).
+  ennemi_eclaireur: [],
+  ennemi_gardien: [],
+  ennemi_cracheur: [],
   // Portails : battants (pivots verticaux aux gonds), vantail coulissant du portail blindé, nappe de lumière.
   portail_bois: ['battant_g', 'battant_d'],
   portail_beton: ['battant_g', 'battant_d'],

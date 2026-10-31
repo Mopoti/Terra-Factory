@@ -419,6 +419,11 @@ export class Threat {
     }
   }
 
+  /** Mode Créatif : pose un ennemi de ce type ici (un gardien ou un cracheur reste près de cet endroit). */
+  spawnAt(x: number, z: number, kind: EnemyKind): void {
+    this.spawn(x, z, kind);
+  }
+
   private spawn(x: number, z: number, kind: EnemyKind = 'scout'): void {
     const mutant = this.toxicSources.some((s) => Math.hypot(s.x - x, s.z - z) <= TOXIC_RANGE_M);
     this.enemies.push({

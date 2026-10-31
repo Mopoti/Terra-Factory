@@ -288,6 +288,8 @@ L'énergie des combustibles est en **mégajoules par unité** ; les machines à 
 
 En Créatif, **un seul exemplaire** d'un objet suffit pour le poser **autant de fois qu'on veut** ; casser un objet le rend. La fabrication est **gratuite** et le sac sans limite de poids ni de volume ; les ressources du monde (arbre, rocher, gisements) se posent depuis un onglet dédié.
 
+En Créatif, l'onglet **Ennemis** de la fabrication permet de **poser un nid** (pas dans l'eau, pas contre un autre nid) et **chaque type d'ennemi** (éclaireur, gardien, cracheur) d'un clic, à portée. En Créatif, **les ennemis ignorent le joueur** (ils attaquent encore les machines). La commande **`/survie`** fait passer la partie en **survie** : les ennemis attaquent le joueur, la fabrication coûte, le sac a ses limites, mais les **avantages du Créatif restent** (les commandes du chat, le F9 complet) ; **`/creatif`** revient. Le mode choisi par commande est enregistré avec la partie. Les commandes sont **réservées au Créatif** (une partie lancée en Survie n'y a pas accès, sauf si elle en a déjà utilisé).
+
 En Créatif, le bouton **« Rechercher »** reste actif même quand des prérequis manquent : le clic recherche **rapidement** (une découverte toutes les 0,11 s) tous les prérequis manquants, dans l'ordre de l'arbre, jusqu'à la découverte choisie, sans coût. L'arbre reste centré sur la découverte choisie ; les prérequis passent du **rouge** (en attente) au **vert** (recherché). ✅
 
 L'arbre des découvertes a une **barre de recherche** (par nom de découverte ou d'objet débloqué) : choisir un résultat centre l'arbre dessus et la **fait clignoter**. ✅
@@ -432,13 +434,13 @@ Le jeu compte **79 machines**. Les emprises sont en cases de 50 cm (largeur × p
 | Tourelle laser                 | 3×2             | 1 m     | 10 × Plaque d'acier + 16 × Fil de cuivre + 4 × Puce en silicium + 1 × Moteur      | consomme 25 kW           |
 | Tourelle à plasma              | 3×3             | 1 m     | 20 × Plaque d'acier + 10 × Puce en silicium + 10 × Carapace + 1 × Moteur renforcé | consomme 70 kW           |
 | Tourelle à rail                | 3×3             | 1,4 m   | 1 × Aimant supraconducteur + 1 × Châssis composite + 1 × Batterie lithium         | consomme 1500 kW         |
-| Clôture en bois                | 3×1             | 1,5 m   | 6 × Bois + 2 × Tige en fer                                                        | 150 PV                   |
-| Barrière en béton              | 3×1             | 1,5 m   | 4 × Bloc de béton + 2 × Tige en fer                                               | 500 PV                   |
-| Barrière en béton armé         | 3×1             | 1,5 m   | 4 × Bloc de béton + 4 × Tige en acier                                             | 1200 PV                  |
+| Clôture en bois                | 3×1             | 1 m     | 6 × Bois + 2 × Tige en fer                                                        | 150 PV                   |
+| Barrière en béton              | 3×1             | 1 m     | 4 × Bloc de béton + 2 × Tige en fer                                               | 500 PV                   |
+| Barrière en béton armé         | 3×1             | 1 m     | 4 × Bloc de béton + 4 × Tige en acier                                             | 1200 PV                  |
 | Portail en bois                | 6×1             | 2,5 m   | 8 × Bois + 2 × Engrenage en fer + 2 × Tige en fer                                 | 200 PV                   |
 | Portail en béton               | 6×1             | 2,5 m   | 6 × Bloc de béton + 2 × Engrenage en fer + 2 × Tige en fer                        | 600 PV                   |
 | Portail en béton armé (moteur) | 6×1             | 2,5 m   | 6 × Bloc de béton + 4 × Tige en acier + 1 × Moteur                                | 1400 PV                  |
-| Mur holographique              | 3×1             | 1,5 m   | 1 × Microcontrôleur + 4 × Vitre + 1 × Batterie lithium                            | consomme 80 kW, 800 PV   |
+| Mur holographique              | 3×1             | 1 m     | 1 × Microcontrôleur + 4 × Vitre + 1 × Batterie lithium                            | consomme 80 kW, 800 PV   |
 | Portail holographique          | 6×1             | 2,5 m   | 1 × Microcontrôleur + 6 × Vitre + 1 × Batterie lithium + 1 × Moteur               | consomme 120 kW, 1000 PV |
 | Purificateur d’air             | 3×3             | 1,8 m   | 2 × Filtre en graphite + 1 × Châssis renforcé + 1 × Microcontrôleur               | consomme 150 kW          |
 
@@ -520,15 +522,17 @@ Une machine se pose en **un clic**, la touche R la tourne ; **même case = range
 
 ### 7.9 Barrières et portails ✅
 
+Les clôtures et barrières (1 m de haut) et les portails se posent **sur le bord de leurs cases** : deux rangées qui font un angle se rejoignent au coin, et les poteaux ne restent qu'aux bouts d'une rangée de même orientation.
+
 | Élément                          | Taille | Points de vie | Palier |
 | -------------------------------- | ------ | ------------- | ------ |
-| Clôture en bois                  | 1,5 m  | 150           | T1     |
-| Barrière en béton                | 1,5 m  | 500           | T2     |
-| Barrière en béton armé           | 1,5 m  | 1 200         | T3     |
+| Clôture en bois                  | 1 m    | 150           | T1     |
+| Barrière en béton                | 1 m    | 500           | T2     |
+| Barrière en béton armé           | 1 m    | 1 200         | T3     |
 | Portail en bois                  | 3 m    | 200           | T1     |
 | Portail en béton                 | 3 m    | 600           | T2     |
 | Portail en béton armé (motorisé) | 3 m    | 1 400         | T3     |
-| Mur holographique                | 1,5 m  | 800           | T4     |
+| Mur holographique                | 1 m    | 800           | T4     |
 | Portail holographique            | 3 m    | 1 000         | T4     |
 
 - Les barrières **bloquent le joueur et les ennemis**. **Les ennemis ne les contournent pas et ne les ouvrent pas : ils les attaquent** (et les détruisent s'ils les épuisent).
@@ -648,7 +652,7 @@ L'année dure 4 × (jours par saison) × (jour + nuit). Les réglages ne se modi
   - **torse** : une **barre de raccourcis en plus**, qui ne consomme presque rien ;
   - **mains** : remplacent l'**outil** ; **chaque coup consomme** de l'énergie.
   - **Interface** (essai demandé par le PO) : un **menu circulaire** (un « camembert creux » au centre de l'écran) liste les **avantages** offerts par les pièces équipées. Choisir un avantage soit l'**active ou le désactive**, soit ouvre un **second anneau** identique avec les **options** de cet avantage (ex. casque : désactivé, simple, complet). Ouverture par la touche de l'armure (J pour l'instant). ✅ Premier jet : seul l'avantage du **casque** (réalité augmentée : désactivé, simple, complet) est dans le menu ; les autres pièces et la **batterie par pièce** ⏳ viendront une à une.
-- **Chat et commandes** ✅ : la touche **Entrée** ouvre une ligne de saisie (le curseur y est) ; **Entrée** envoie, **Échap** ferme ; les dernières lignes restent affichées quelques secondes. Les commandes commencent par « / » : `/aide`, `/jour`, `/nuit`, `/saison <printemps|été|automne|hiver>`, `/temperature <°C|auto>`, `/vent <force 0-100|auto> [n|ne|e|se|s|so|o|no]`, `/meteo` (tout remettre en automatique). Les commandes sont **réservées à l'hôte** (ou au joueur seul) et marquent la partie « admin ». Elles sont toutes déclarées par `defineCommand` (nom, alias, arguments typés) : l'analyse, les erreurs et l'aide se font toutes seules, ce qui rend l'ajout d'une commande facile.
+- **Chat et commandes** ✅ : la touche **Entrée** ouvre une ligne de saisie (le curseur y est) ; **Entrée** envoie, **Échap** ferme ; les dernières lignes restent affichées quelques secondes. Les commandes commencent par « / » : `/aide`, `/jour`, `/nuit`, `/saison <printemps|été|automne|hiver>`, `/temperature <°C|auto>`, `/vent <force 0-100|auto> [n|ne|e|se|s|so|o|no]`, `/meteo` (tout remettre en automatique), `/survie` et `/creatif` (changer de mode). Les commandes sont **réservées à l'hôte** (ou au joueur seul) **en mode Créatif** (ou dans une partie qui a quitté le Créatif par `/survie`), et marquent la partie « admin ». Elles sont toutes déclarées par `defineCommand` (nom, alias, arguments typés) : l'analyse, les erreurs et l'aide se font toutes seules, ce qui rend l'ajout d'une commande facile.
 - ⏳ Reste à concevoir : chauffage des abris, combustible d'hiver, cultures ; le vent pourra plus tard orienter la fumée, la pollution ou les nuages.
 
 ---

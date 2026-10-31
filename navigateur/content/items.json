@@ -2404,6 +2404,42 @@
       "recipe": {}
     },
     {
+      "id": "res_nest",
+      "category": "enemies",
+      "creative": true,
+      "weightKg": 0,
+      "volumeL": 0,
+      "color": "#6b4a7a",
+      "recipe": {}
+    },
+    {
+      "id": "res_scout",
+      "category": "enemies",
+      "creative": true,
+      "weightKg": 0,
+      "volumeL": 0,
+      "color": "#b5483a",
+      "recipe": {}
+    },
+    {
+      "id": "res_guard",
+      "category": "enemies",
+      "creative": true,
+      "weightKg": 0,
+      "volumeL": 0,
+      "color": "#8f2f2f",
+      "recipe": {}
+    },
+    {
+      "id": "res_spitter",
+      "category": "enemies",
+      "creative": true,
+      "weightKg": 0,
+      "volumeL": 0,
+      "color": "#6fa04a",
+      "recipe": {}
+    },
+    {
       "id": "res_tree",
       "category": "resources",
       "creative": true,

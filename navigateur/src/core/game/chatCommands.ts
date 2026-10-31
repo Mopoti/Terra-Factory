@@ -154,6 +154,27 @@ export const COMMANDS: ChatCommand[] = [
     },
   }),
   defineCommand({
+    name: 'survie',
+    aliases: ['survival'],
+    args: [],
+    run: ({ state }) => {
+      // Les ennemis attaquent, la fabrication coûte, le sac a ses limites ; les commandes et le F9 complet restent permis.
+      state.creative = false;
+      state.changes.modeOverride = 'survival';
+      return t('chat.mode.survival');
+    },
+  }),
+  defineCommand({
+    name: 'creatif',
+    aliases: ['creative'],
+    args: [],
+    run: ({ state }) => {
+      state.creative = true;
+      state.changes.modeOverride = 'creative';
+      return t('chat.mode.creative');
+    },
+  }),
+  defineCommand({
     name: 'meteo',
     aliases: ['weather'],
     args: [],
@@ -163,6 +184,9 @@ export const COMMANDS: ChatCommand[] = [
     },
   }),
 ];
+
+/** Les commandes sont un avantage du Créatif ; une partie qui l'a quitté (ou a déjà servi d'une commande) les garde. */
+export const canUseCommands = (state: GameState): boolean => state.creative || state.changes.admin;
 
 /** Retrouve une commande par son nom ou un alias (sans accents ni majuscules). */
 export function findCommand(name: string): ChatCommand | null {
@@ -201,6 +225,7 @@ function readArg(spec: ArgSpec, word: string | undefined): { value: ArgValue } |
 /** Exécute une ligne tapée dans le chat (`/vent 80 no`) ; renvoie ce qu'il faut afficher. */
 export function runChat(line: string, ctx: ChatContext): { ok: boolean; text: string } {
   const text = line.trim();
+  if (!canUseCommands(ctx.state)) return { ok: false, text: t('chat.locked') };
   if (!text.startsWith('/')) return { ok: false, text: t('chat.notCommand') };
   const [head, ...rest] = text.split(/\s+/);
   const command = findCommand(head);

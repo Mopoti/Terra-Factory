@@ -3,7 +3,7 @@ import { carPoses } from '../core/rail/train';
 import { itemIconUrl } from '../ui/itemIcon';
 import { VEHICLES, vehicleKindOfItem, type VehicleKind } from '../core/data/vehicles';
 import { CARS, isCargoWindow, isLocoWindow } from '../core/data/trains';
-import { ITEMS, creativeResourceOf, itemById } from '../core/data/items';
+import { ITEMS, creativeEnemyOf, creativeResourceOf, itemById } from '../core/data/items';
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
@@ -3308,7 +3308,28 @@ export function startGameView(
       }
     }
     // Mode Créatif : poser la ressource choisie (onglet « Ressources ») ; bouton maintenu = on peint case après case.
-    const resId = options.state.creative ? creativeResourceOf(spawnItem) : null;
+    // Mode Créatif, onglet « Ennemis » : un clic pose un nid ou un ennemi du type choisi.
+    const enemyPick = options.state.creative ? creativeEnemyOf(spawnItem) : null;
+    if (enemyPick && down && !placeWasDown && !building && !uiOpen) {
+      computeRay();
+      const cell = cellOnPlane(rayOrigin, rayDir, 0);
+      if (cell) {
+        const x = center(cell.gx);
+        const z = center(cell.gz);
+        if (Math.hypot(x - playerX, z - playerZ) > CREATIVE_REACH_M) playSfx('deny');
+        else if (enemyPick === 'nest') {
+          if (placeCreativeNest(x, z)) playSfx('placeStone');
+          else {
+            playSfx('deny');
+            options.onMessage?.(t('creative.nestBlocked'));
+          }
+        } else {
+          threat.spawnAt(x, z, enemyPick);
+          playSfx('placeStone');
+        }
+      }
+    }
+    const resId = options.state.creative && !enemyPick ? creativeResourceOf(spawnItem) : null;
     if (down && resId && !building && !uiOpen) {
       computeRay();
       const cell = cellOnPlane(rayOrigin, rayDir, 0);
@@ -3711,6 +3732,19 @@ export function startGameView(
     },
     treesIn: (pcx, pcz) => (scanCell(pcx, pcz), treeCache.get(`${pcx},${pcz}`) ?? 0),
   };
+  /** Mode Créatif : pose un nid où l'on veut (pas dans l'eau, pas contre un autre nid). */
+  function placeCreativeNest(x: number, z: number): boolean {
+    const changes = options.state.changes;
+    const gx = Math.floor(x / CELL_SIZE_M);
+    const gz = Math.floor(z / CELL_SIZE_M);
+    if (changes.nests.length >= MAX_EXTRA_NESTS) return false;
+    if (waterCellAt(gx, gz) || waterCellAt(gx + 1, gz + 1)) return false;
+    if (nestsNear(x, z, 10).length > 0) return false;
+    changes.nests.push({ gx, gz, cells: 4 });
+    nestCache.delete(`${Math.floor(x / POLLUTION_CELL_M)},${Math.floor(z / POLLUTION_CELL_M)}`);
+    dirtyChunks.add(`${Math.floor(gx / CHUNK_CELLS)},${Math.floor(gz / CHUNK_CELLS)}`);
+    return true;
+  }
   const threat = new Threat(
     options.state.changes.pollution,
     options.state.changes.groundPollution,
@@ -4220,7 +4254,7 @@ export function startGameView(
     const biome = generator.biomeAt(playerX, playerZ);
     const info = renderer.info;
     // En survie : l'essentiel (graine, date, vue, position, biome) ; en Créatif : toutes les informations.
-    const full = options.state.creative;
+    const full = options.state.creative || options.state.changes.admin;
     const only = (...keep: string[]): string[] => keep;
     const lines = [
       `${t('debug.seed')} : ${game.world.seed}`,

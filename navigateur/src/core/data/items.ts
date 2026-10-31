@@ -117,6 +117,7 @@ export const ITEM_CATEGORIES = [
   'rail',
   'vehicles',
   'resources',
+  'enemies',
 ] as const;
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 
@@ -131,6 +132,17 @@ export function categoryOf(item: ItemDef): ItemCategory | null {
  */
 export const creativeResourceOf = (item: string | null): string | null =>
   item && item.startsWith('res_') ? item.slice(4) : null;
+
+/** Mode Créatif, onglet « Ennemis » : ce que pose chaque objet (un nid, ou un ennemi de ce type). */
+export const CREATIVE_ENEMIES = {
+  res_nest: 'nest',
+  res_scout: 'scout',
+  res_guard: 'guard',
+  res_spitter: 'spitter',
+} as const;
+export type CreativeEnemy = (typeof CREATIVE_ENEMIES)[keyof typeof CREATIVE_ENEMIES];
+export const creativeEnemyOf = (item: string | null): CreativeEnemy | null =>
+  item && item in CREATIVE_ENEMIES ? CREATIVE_ENEMIES[item as keyof typeof CREATIVE_ENEMIES] : null;
 
 /**
  * Mode Créatif, onglet « Ressources » : l'objet brut qui va avec chaque case de ressource (`res_<ressource>`), pour

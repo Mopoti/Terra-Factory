@@ -167,6 +167,8 @@ export interface WorldChanges {
   armorBattery: Partial<Record<EquipSlot, string>>;
   /** Météo imposée par les commandes du chat. */
   weather: WeatherOverrides;
+  /** Mode changé en cours de partie par une commande (`/survie`, `/creatif`) : prend le pas sur celui de la création. */
+  modeOverride?: 'survival' | 'creative';
   /** Technologies déjà recherchées. */
   unlocked: string[];
   /** Le mode débogage a servi dans cette partie : pas de succès à débloquer. */
@@ -458,6 +460,8 @@ export function normalizeChanges(raw: unknown): WorldChanges {
   }
   // Une ancienne sauvegarde (sans recherche) garde tout ce qu'elle avait : tout est débloqué.
   result.admin = r.admin === true;
+  if (r.modeOverride === 'survival' || r.modeOverride === 'creative')
+    result.modeOverride = r.modeOverride;
   if (typeof r.weather === 'object' && r.weather !== null) {
     const w = r.weather as Record<string, unknown>;
     if (isNum(w.tempC)) result.weather.tempC = Math.max(-100, Math.min(100, w.tempC));
