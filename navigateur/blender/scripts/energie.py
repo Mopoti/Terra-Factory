@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, 'blender', 'lib'))
 import terra as T  # noqa: E402
 sys.path.insert(0, HERE)
 
+import bmesh  # noqa: E402
 import bpy  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
@@ -843,24 +844,25 @@ def eolienne(coll, leger=True):
     """Éolienne (`wind_turbine`) : 2 x 2 cases ; tour de 5 m, rotor de 3 m de diamètre (tout en haut : 6,3 m).
 
     Socle en béton, tour blanche effilée, nacelle arrondie, moyeu en ogive vers l'avant (-Y), trois pales fines et un peu
-    vrillées, bout des pales rouge. Pièce mobile : groupe `rotor_` (moyeu et pales), qui tourne autour de l'axe Y du
-    `pivot_rotor` quand l'éolienne produit.
+    vrillées, bout des pales rouge. Pièces mobiles : groupe `rotor_` (moyeu et pales), qui tourne autour de l'axe Y du
+    `pivot_rotor` quand l'éolienne produit ; groupe `nacelle_` (pivot vertical `pivot_nacelle`, en haut de la tour), qui
+    se tourne face au vent en emportant le rotor (le rotor est son enfant).
     """
     import outils as O
     n = 3 if leger else 5
-    lot, rotor = T.Lot(coll, 'pieces'), T.Lot(coll, 'rotor')
+    lot, rotor, nac = T.Lot(coll, 'pieces'), T.Lot(coll, 'rotor'), T.Lot(coll, 'nacelle')
     _socle(lot, 0.7, 0.35, n)
     ZN = 9.6  # axe du rotor
     _fut(lot, 'eolienne', 0.35, ZN - 0.25, 0.28, 0.14, n)
     _fut(lot, 'eolienne_gris', 0.35, 0.5, 0.31, 0.31, n)
     _fut(lot, 'eolienne_gris', ZN - 0.45, ZN - 0.3, 0.17, 0.17, n)
     # Nacelle : volume arrondi allongé selon Y, un peu plus haut derrière.
-    O._loft(lot, 'eolienne', [((0, -0.5, ZN), O.X, O.Z, 0.17, 0.17, 0.15),
+    O._loft(nac, 'eolienne', [((0, -0.5, ZN), O.X, O.Z, 0.17, 0.17, 0.15),
                               ((0, -0.38, ZN), O.X, O.Z, 0.24, 0.25, 0.2),
                               ((0, 0.3, ZN + 0.02), O.X, O.Z, 0.26, 0.28, 0.22),
                               ((0, 0.75, ZN + 0.02), O.X, O.Z, 0.2, 0.22, 0.17),
                               ((0, 0.86, ZN + 0.02), O.X, O.Z, 0.1, 0.12, 0.09)], n + 1)
-    O._rond(lot, 'eolienne_gris', (0, -0.1, ZN + 0.28), (0, 0.55, ZN + 0.28), 0.12, 0.025, n, k=0.01)  # trappe
+    O._rond(nac, 'eolienne_gris', (0, -0.1, ZN + 0.28), (0, 0.55, ZN + 0.28), 0.12, 0.025, n, k=0.01)  # trappe
     # Rotor : ogive du moyeu et trois pales.
     yh = -0.62
     O._loft(rotor, 'eolienne', [((0, yh + 0.14, ZN), O.X, O.Z, 0.16, 0.16, 0.16),
@@ -885,7 +887,8 @@ def eolienne(coll, leger=True):
         O._loft(rotor, 'eolienne_rouge', [(Vector(s[0]), s[1], s[2], s[3], s[4], s[5]) for s in sections[coupe:]], n,
                 (False, True))
     T.pivot(coll, 'pivot_rotor', (0, yh, ZN), (0, 1, 0))
-    for l in (lot, rotor):
+    T.pivot(coll, 'pivot_nacelle', (0, 0, ZN), (0, 0, 1))
+    for l in (lot, rotor, nac):
         l.finir()
     T.poser_au_sol(coll, 1.0)
     _doux(coll)
@@ -1095,6 +1098,101 @@ def accumulateur_base(coll, leger=True):
     _doux(coll)
 
 
+
+# --- Météo : thermomètre mural et girouette (dessinés pour l'instant par `weatherProps.ts`). -------------------------
+for _k, _v in {'meteo_boitier': '#e3e6ea', 'meteo_cadre': '#3a4048', 'meteo_ecran': '#10222b',
+               'meteo_ecran_texte': '#173845', 'meteo_mat': '#8a8f94', 'meteo_fleche': '#b33a2e',
+               'meteo_empennage': '#d9d2c0', 'meteo_dalle': '#9c968b'}.items():
+    T.PALETTE.setdefault(_k, _v)
+
+
+def thermometre(coll, leger=True):
+    """Thermomètre mural (`thermometer`) : 1 case. Boîtier blanc à angles doux fixé contre le mur (le dos sur le bord +Y
+    de la case, l'écran tourné vers -Y), centre de l'écran à 1,2 m. Écran d'affichage vide, prêt à recevoir la
+    température : maillage `ecran_affichage`, un rectangle plat de 0,32 x 0,24 m (coordonnées de texture de 0 à 1, bas
+    gauche en (0, 0) vu de face) que le jeu recouvre de l'image du texte ; repère `ecran` en son centre. Cadre sombre en
+    retrait autour de l'écran, petit auvent, sonde à grille sous le boîtier, deux vis de fixation."""
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    zc, yd = 2.4, 0.46  # centre de l'écran, dos du boîtier
+    yf = yd - 0.1  # face avant
+    O._rond(lot, 'meteo_cadre', (0, yd - 0.01, zc), (0, yd + 0.03, zc), 0.44, 0.36, n, k=0.01, r=0.06)  # platine murale
+    O._rond(lot, 'meteo_boitier', (0, yd, zc), (0, yf, zc), 0.4, 0.32, n, k=0.03, r=0.08)
+    O._rond(lot, 'meteo_cadre', (0, yf + 0.01, zc), (0, yf - 0.01, zc), 0.34, 0.26, n, k=0.005, r=0.04)
+    # Écran : fond sombre, puis surface d'affichage plate (0,64 x 0,48 unités = 0,32 x 0,24 m) avec ses coordonnées de
+    # texture, juste devant, pour que le jeu y plaque l'image de la température.
+    O._rond(lot, 'meteo_ecran', (0, yf - 0.005, zc), (0, yf - 0.018, zc), 0.33, 0.25, 2, k=0.003, r=0.02)
+    ye, w, h = yf - 0.02, 0.32, 0.24
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new('UVMap')
+    vs = [bm.verts.new(p) for p in ((-w, ye, zc - h), (w, ye, zc - h), (w, ye, zc + h), (-w, ye, zc + h))]
+    f = bm.faces.new(vs)
+    bm.normal_update()
+    if f.normal.y > 0:  # la face regarde vers -Y (devant)
+        f.normal_flip()
+    for loop in f.loops:  # coordonnées de texture d'après la position (vu de face : +X à droite, +Z en haut)
+        loop[uv].uv = ((loop.vert.co.x + w) / (2 * w), (loop.vert.co.z - zc + h) / (2 * h))
+    T._object(coll, 'ecran_affichage', bm, 'meteo_ecran_texte')
+    T.reperer(coll, 'ecran', (0, ye, zc))
+    O._rond(lot, 'meteo_cadre', (0, yd, zc + 0.36), (0, yf - 0.1, zc + 0.4), 0.42, 0.03, n, k=0.01)  # auvent
+    O._cyl(lot, 'meteo_cadre', (0, yf + 0.04, zc - 0.32), (0, yf + 0.04, zc - 0.42), 0.04, n)
+    O._cyl(lot, 'meteo_boitier', (0, yf + 0.04, zc - 0.42), (0, yf + 0.04, zc - 0.62), 0.07, n + 1)  # sonde
+    for k in range(3):
+        O._cyl(lot, 'meteo_cadre', (0, yf + 0.04, zc - 0.46 - k * 0.05), (0, yf + 0.04, zc - 0.48 - k * 0.05), 0.075, n + 1)
+    for x in (-0.36, 0.36):
+        O._cyl(lot, 'meteo_mat', (x, yd - 0.01, zc + 0.28), (x, yd - 0.04, zc + 0.28), 0.025, n)
+    lot.finir()
+    _doux(coll)
+
+
+def girouette(coll, leger=True):
+    """Girouette (`vane`) : 1 case, 2,6 m. Petite dalle, mât gris, croix des points cardinaux (N rouge) fixe ; flèche
+    rouge à empennage crème (groupe `fleche_`, pivot vertical `pivot_fleche` à 1,95 m ; au repos, la pointe regarde
+    vers -Y) que le jeu tourne vers le vent ; anémomètre à trois coupelles en haut du mât (groupe `anemometre_`, pivot
+    vertical `pivot_anemometre`), qui tourne d'autant plus vite que le vent est fort."""
+    import outils as O
+    n = 3 if leger else 5
+    lot = T.Lot(coll, 'pieces')
+    O._rond(lot, 'meteo_dalle', (0, 0, 0), (0, 0, 0.12), 0.42, 0.42, n, k=0.03, r=0.08)
+    O._cyl(lot, 'meteo_cadre', (0, 0, 0.1), (0, 0, 0.3), 0.12, n + 1)
+    O._cyl(lot, 'meteo_mat', (0, 0, 0.3), (0, 0, 4.7), 0.045, n + 1)
+    # Croix des points cardinaux à 3,4 (lettres stylisées : N rouge).
+    zx = 3.4
+    for a, mat in ((0, 'meteo_fleche'), (math.pi / 2, 'meteo_cadre'), (math.pi, 'meteo_cadre'), (-math.pi / 2, 'meteo_cadre')):
+        d = (math.sin(a), -math.cos(a))
+        lot.barre('meteo_cadre', (0, 0, zx), (d[0] * 0.5, d[1] * 0.5, zx), 0.03)
+        O._cyl(lot, mat, (d[0] * 0.56, d[1] * 0.56, zx - 0.07), (d[0] * 0.56, d[1] * 0.56, zx + 0.07), 0.06, n)
+    # Flèche (tourne vers le vent).
+    zf = 3.9
+    O._cyl(lot, 'meteo_cadre', (0, 0, zf - 0.1), (0, 0, zf - 0.04), 0.08, n)
+    fl = T.Lot(coll, 'fleche')
+    O._cyl(fl, 'meteo_cadre', (0, 0, zf - 0.04), (0, 0, zf + 0.06), 0.06, n)
+    O._rond(fl, 'meteo_fleche', (0, 0.7, zf), (0, -0.62, zf), 0.025, 0.025, n, k=0.01)
+    O._loft(fl, 'meteo_fleche', [((0, -0.6, zf), O.X, O.Z, 0.03, 0.1, 0.0), ((0, -0.9, zf), O.X, O.Z, 0.02, 0.005, 0.0)], 1)
+    fl.cube('meteo_empennage', (0.03, 0.44, 0.42), (0, 0.55, zf + 0.08), 0.01)
+    T.pivot(coll, 'pivot_fleche', (0, 0, zf), (0, 0, 1))
+    # Anémomètre : trois bras et coupelles en haut du mât.
+    za = 4.7
+    an = T.Lot(coll, 'anemometre')
+    O._cyl(an, 'meteo_cadre', (0, 0, za), (0, 0, za + 0.12), 0.05, n)
+    for k in range(3):
+        a = 2 * math.pi * k / 3
+        c, s_ = math.cos(a), math.sin(a)
+        an.barre('meteo_mat', (0, 0, za + 0.08), (c * 0.36, s_ * 0.36, za + 0.08), 0.025)
+        cx, cy = c * 0.38, s_ * 0.38
+        t = (-s_, c)  # coupelle ouverte dans le sens de rotation
+        O._loft(an, 'meteo_boitier', [((cx - t[0] * 0.06, cy - t[1] * 0.06, za + 0.08), Vector((c, s_, 0)), O.Z, 0.02, 0.02, 0.02),
+                                      ((cx, cy, za + 0.08), Vector((c, s_, 0)), O.Z, 0.08, 0.08, 0.08),
+                                      ((cx + t[0] * 0.04, cy + t[1] * 0.04, za + 0.08), Vector((c, s_, 0)), O.Z, 0.08, 0.08, 0.08)],
+                n, (True, False))
+    T.pivot(coll, 'pivot_anemometre', (0, 0, za), (0, 0, 1))
+    for l in (lot, fl, an):
+        l.finir()
+    T.poser_au_sol(coll, 0.5)
+    _doux(coll)
+
+
 MODELES = {
     'transformateur': transformateur,
     'disjoncteur': disjoncteur,
@@ -1105,6 +1203,8 @@ MODELES = {
     'poteau_tres_haute_tension': poteau_tres_haute_tension,
     'lampadaire': lampadaire,
     'eolienne': eolienne,
+    'thermometre': thermometre,
+    'girouette': girouette,
     'roue_a_aubes': roue_a_aubes,
     'manivelle_reamorcage': manivelle_reamorcage,
     'chaudiere': chaudiere,

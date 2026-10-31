@@ -8,13 +8,8 @@ Liste faite sur le jeu en marche (`content/items.json`, `content/machines.json`,
 
 Fait le 30 octobre : poteaux haute et très haute tension, lampadaire, éolienne (icône ; en jeu elle est dessinée par
 `weatherProps.ts`), transformateur, disjoncteur, panneau solaire, accumulateur, assembleur avancé, et les dix machines
-avancées (`blender/scripts/avancees.py`, branchées dans `TERRA_MODELS`). Restent :
-
-
-| Objet | Modèle provisoire | Emprise (cases de 50 cm) | Ce qu'il faut |
-| --- | --- | --- | --- |
-| Thermomètre (`machine_thermometer`) | `poteau_electrique` | 1×1, haut. 1.2 m | petit thermomètre à cadran sur pied, 1,3 m |
-| Girouette (`machine_vane`) | `poteau_electrique` | 1×1, haut. 2.5 m | mât de 2,6 m, girouette qui tourne dans le sens du vent (pièce animée) |
+avancées (`blender/scripts/avancees.py`, branchées dans `TERRA_MODELS`), thermomètre et girouette (31 octobre, branchés
+avec l'éolienne dans `weatherProps.ts`).
 
 ### 1b. Barrières et portails (dessinés par le code : poteaux et lisses, aucun modèle)
 
@@ -65,6 +60,5 @@ Le droit, la rampe, la **courbe 45°** (`rail_courbe`) et le **droit en diagonal
 
 ## 2. Résumé
 
-- **À modéliser** : thermomètre et girouette (section 1a).
 - **À brancher dans le jeu** : barrières et portails (section 1b, rendu à adapter : trois tronçons par pièce du jeu).
 - **Plus tard** : caténaires (avec les voies électrifiées), croisement en diagonale et aiguillage visuel.

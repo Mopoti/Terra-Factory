@@ -360,3 +360,19 @@ violet nuit, piliers d'angle et serrure lumineux `voyant_quantique`, couvercle `
 (`pivot_couvercle`, comme les coffres), cristal flottant `cristal_` qui tourne (`pivot_cristal`)), `tourelle_rail` (3 x 2
 comme les autres tourelles : batteries de condensateurs, tourelle `tourelle_` (`pivot_tourelle`, Z) à deux rails, bobines
 d'accélération et rail lumineux `voyant_rail`).
+
+## Météo (31 octobre)
+
+`energie.py` : `thermometre` (boîtier mural : dos sur le bord +Y de la case, écran vers -Y, centre de l'écran à 1,2 m ;
+surface d'affichage `ecran_affichage` de 0,32 x 0,24 m avec coordonnées de texture de 0 à 1 : le jeu y plaque l'image
+de la température, par exemple la `CanvasTexture` de `weatherProps.ts`, avec `flipY = false` comme toute texture glTF ;
+repère `ecran` en son centre), `girouette`
+(2,6 m : dalle, mât, croix des points cardinaux, flèche `fleche_` sur `pivot_fleche` (vertical, 1,95 m ; au repos la
+pointe regarde vers -Y), anémomètre `anemometre_` sur `pivot_anemometre`). L'éolienne a maintenant une nacelle mobile
+(`nacelle_`, `pivot_nacelle` vertical) dont le rotor est l'enfant. Branchés dans `weatherProps.ts` (31 octobre) : le
+thermomètre affiche la température sur son écran, la flèche de la girouette et la nacelle de l'éolienne se tournent vers
+le vent, l'anémomètre et le rotor tournent selon sa force (formes simples gardées si un modèle n'est pas chargé).
+Groupes déclarés dans `EXTRA_GROUPS` (`models.ts`).
+
+Icônes des machines (31 octobre) : `dropGeometry` ajoute les pièces mobiles dans leur position de repos (tourelles,
+bras, couvercles, rotor…), qui manquaient jusque-là.

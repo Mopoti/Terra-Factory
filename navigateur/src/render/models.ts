@@ -136,10 +136,11 @@ export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
   transformer: 'transformateur',
   breaker: 'disjoncteur',
   lamp: 'lampadaire',
-  // Icônes seulement : en jeu, ces trois-là sont dessinés par `weatherProps.ts` (formes simples animées).
-  // Thermomètre et girouette : provisoires, leur modèle n'est pas encore dessiné.
-  thermometer: 'poteau_electrique',
-  vane: 'poteau_electrique',
+  // Icônes seulement : en jeu, ces trois-là sont dessinés par `weatherProps.ts` (formes simples animées). Leurs modèles
+  // ont les pièces pour les remplacer : `nacelle_` + `rotor_` (éolienne), `fleche_` + `anemometre_` (girouette), repère
+  // `ecran` (thermomètre).
+  thermometer: 'thermometre',
+  vane: 'girouette',
   wind_turbine: 'eolienne',
   solar_panel: 'panneau_solaire',
   accumulator_basic: 'accumulateur_base',
@@ -340,6 +341,11 @@ const EXTRA_GROUPS: Record<string, string[]> = {
   // Camionnette à benne et charrette à bras (poussée) : roues qui roulent.
   camionnette: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   charrette: ['roue_g', 'roue_d'],
+  // Objets de météo, dessinés par `weatherProps.ts` : nacelle (face au vent) et rotor de l'éolienne, flèche et
+  // anémomètre de la girouette ; le thermomètre n'a pas de pièce mobile.
+  eolienne: ['nacelle', 'rotor'],
+  girouette: ['fleche', 'anemometre'],
+  thermometre: [],
   // Quai de la gare (`ferroviaire.py`), dessiné par `stationView.ts`.
   gare: [],
   // Voies et trains (voir `docs/trains.md`) : les roues des trains tournent par groupes ; les bras d'attelage

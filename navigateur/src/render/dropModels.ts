@@ -227,6 +227,12 @@ export function dropGeometry(item: string, count: number): THREE.BufferGeometry 
   if (!machine) k *= SHAPE_SCALE[dropShape(item)] ?? 1;
   if (machine) k = MINI_MACHINE_M / Math.max(model.size.x, model.size.y, model.size.z, 1e-6);
   b.model(model, 0, 0, 0, 0, k);
+  if (machine) {
+    // Pièces mobiles (tourelle, bras, couvercle, rotor…) dans leur position de repos : sans elles, l'icône ne montrerait
+    // que le socle. Même repère que le corps (son enveloppe sert de référence).
+    for (const part of Object.values(model.groups ?? {}))
+      b.model({ ...part, min: model.min, size: model.size }, 0, 0, 0, 0, k);
+  }
   if (shape) {
     // Les faces magenta prennent la couleur de l'objet.
     // Couleur de l'objet en linéaire, comme les couleurs des modèles.
