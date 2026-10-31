@@ -7,7 +7,7 @@ import { ITEMS, creativeEnemyOf, creativeResourceOf, itemById } from '../core/da
 import { scienceCost, techById } from '../core/data/techs';
 import * as THREE from 'three';
 import { CELL_SIZE_M, CHUNK_CELLS, CHUNK_SIZE_M } from '../core/constants';
-import { cellOnPlane } from '../core/build/aim';
+import { cellOnPlane, chainSlot } from '../core/build/aim';
 import {
   evaluatePlan,
   planSlabs,
@@ -1213,6 +1213,9 @@ export function startGameView(
   let poleChain: Machine | null = null;
   const MAX_BELT_PATH = 150;
   let machineWasDown = false;
+  /** Clôtures, barrières et portails : en gardant le clic, on les pose à la suite (dernier posé et sa position). */
+  let lastBarrier: Machine | null = null;
+  let lastBarrierKey = '';
   const autoRot = (): number => riseFromDirection(-Math.sin(rig.yaw), -Math.cos(rig.yaw));
   /**
    * Orientation automatique d'une machine posée : la SORTIE fait face à la caméra (l'entrée est au fond, comme on
@@ -1354,13 +1357,29 @@ export function startGameView(
       const blockedMounted = mount
         ? (cell: Cell): boolean => blockedHere(cell) || mount(cell)
         : blockedHere;
-      const { w, d } = dims(def.id, baseRot);
-      const gx = c.gx - Math.floor(w / 2);
-      const gz = c.gz - Math.floor(d / 2);
+      let rotHere = baseRot;
+      let { w, d } = dims(def.id, rotHere);
+      let gx = c.gx - Math.floor(w / 2);
+      let gz = c.gz - Math.floor(d / 2);
+      // Clic maintenu : la pièce suivante se cale bout à bout derrière la dernière posée (dans son sens) dès que le
+      // curseur s'en approche ; on enchaîne ainsi les pièces jusqu'à ce qu'on relâche.
+      if (def.barrier && down && lastBarrier && factory.machines.includes(lastBarrier)) {
+        const last = lastBarrier;
+        const here = dims(def.id, last.rot);
+        const there = dims(last.type, last.rot);
+        const slot = chainSlot({ gx: last.gx, gz: last.gz, ...there }, here, c);
+        if (slot) {
+          rotHere = last.rot;
+          w = here.w;
+          d = here.d;
+          gx = slot.gx;
+          gz = slot.gz;
+        }
+      }
       let ok =
         stock > 0 &&
         within({ gx: gx + Math.floor(w / 2), gz: gz + Math.floor(d / 2) }) &&
-        factory.canPlace(def.id, gx, gz, baseRot, blockedMounted, level);
+        factory.canPlace(def.id, gx, gz, rotHere, blockedMounted, level);
       let why = stock > 0 ? '' : t('build.missing');
       if (ok && upper && isDrill(def.id)) {
         ok = false;
@@ -1368,15 +1387,16 @@ export function startGameView(
       } else if (
         ok &&
         isDrill(def.id) &&
-        factory.oreUnder(emptyMachine(0, def.id, gx, gz, baseRot)).total === 0
+        factory.oreUnder(emptyMachine(0, def.id, gx, gz, rotHere)).total === 0
       ) {
         ok = false;
         why = t('factory.needOre');
       } else if (!ok && stock > 0) {
         why = def.id === 'pump' ? t('factory.needWater') : t('factory.cannotPlace');
       }
-      factoryView.showGhost([{ type: def.id, gx, gz, rot: baseRot, ok, lift: level }]);
-      if (down && !machineWasDown) {
+      factoryView.showGhost([{ type: def.id, gx, gz, rot: rotHere, ok, lift: level }]);
+      const spot = `${gx},${gz},${rotHere}`;
+      if (down && (!machineWasDown || (def.barrier && ok && spot !== lastBarrierKey))) {
         if (
           ok &&
           bus.dispatch<'placeMachine'>({
@@ -1384,12 +1404,16 @@ export function startGameView(
             machine: def.id,
             gx,
             gz,
-            rot: baseRot,
+            rot: rotHere,
             lift: level,
             tier: 1,
           }) === 'ok'
         ) {
           if (isPole(def.id)) poleChain = factory.machines[factory.machines.length - 1];
+          if (def.barrier) {
+            lastBarrier = factory.machines[factory.machines.length - 1];
+            lastBarrierKey = spot;
+          }
           playSfx('placeStone');
           buildMessage = '';
         } else {
@@ -1400,6 +1424,7 @@ export function startGameView(
       }
       // Poteaux : en gardant le clic et en marchant, un nouveau se pose à la limite du câble.
       if (isPole(def.id)) extendPoleLine(down, def.id);
+      if (!down) lastBarrier = null;
       machineWasDown = down;
       return;
     }

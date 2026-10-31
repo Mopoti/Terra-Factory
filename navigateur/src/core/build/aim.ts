@@ -217,3 +217,33 @@ export function aimExisting(
   const pos = hit ? parseKey(hit.key) : null;
   return pos ? { pos, cell: { gx: pos.gx, gz: pos.gz } } : null;
 }
+
+/**
+ * Pose à la suite : emplacement (case d'angle) de la pièce qui se cale bout à bout avec la dernière posée, dans son
+ * sens, du côté le plus proche du curseur ; null si le curseur en est trop loin. `last` et `next` sont des emprises
+ * (largeur et profondeur en cases, déjà tournées par le sens de `last`).
+ */
+export function chainSlot(
+  last: { gx: number; gz: number; w: number; d: number },
+  next: { w: number; d: number },
+  cursor: { gx: number; gz: number },
+): { gx: number; gz: number } | null {
+  const alongX = next.w >= next.d;
+  const candidates = alongX
+    ? [
+        { gx: last.gx + last.w, gz: last.gz },
+        { gx: last.gx - next.w, gz: last.gz },
+      ]
+    : [
+        { gx: last.gx, gz: last.gz + last.d },
+        { gx: last.gx, gz: last.gz - next.d },
+      ];
+  const reach = Math.max(next.w, next.d) * 0.75 + 1;
+  const best = candidates
+    .map((k) => ({
+      k,
+      dist: Math.hypot(k.gx + next.w / 2 - cursor.gx, k.gz + next.d / 2 - cursor.gz),
+    }))
+    .sort((a, b) => a.dist - b.dist)[0];
+  return best.dist <= reach ? best.k : null;
+}

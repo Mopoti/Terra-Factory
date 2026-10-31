@@ -1708,10 +1708,11 @@ function addBarrierModel(
     const groups = model.groups ?? {};
     const minus = groups.poteau_g;
     const plus = groups.poteau_d;
-    // Les poteaux restent visibles à chaque jonction (la rangée n'est pas un mur uni) ; deux poteaux au même endroit
-    // se confondent.
-    if (minus) mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
-    if (plus) mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);
+    // Un poteau à chaque bout de la pièce (les deux du milieu n'existent pas) : une rangée de plusieurs pièces garde
+    // donc ses poteaux à la jonction de deux pièces, jamais à l'intérieur d'une pièce.
+    if (minus && i === 0) mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
+    if (plus && i === tiles - 1)
+      mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);
   }
   return true;
 }
