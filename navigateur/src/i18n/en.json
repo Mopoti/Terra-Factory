@@ -1637,6 +1637,8 @@
   "armor.boots": "Feet: jump springs",
   "armor.noPart.noBoots": "T4 or T5 armour boots are needed.",
   "threat.armor": "Armour",
+  "factory.needWall": "The thermometer goes against a wall.",
+  "factory.needSlab": "The wind vane goes on a slab.",
   "action.route": "Train destination (autopilot)",
   "touch.route": "Destination",
   "item.train_station": "Station",

@@ -1637,6 +1637,8 @@
   "armor.boots": "Pieds : ressorts de saut",
   "armor.noPart.noBoots": "Il faut porter des bottes d'armure T4 ou T5.",
   "threat.armor": "Armure",
+  "factory.needWall": "Le thermomètre se pose contre un mur.",
+  "factory.needSlab": "La girouette se pose sur une dalle.",
   "action.route": "Destination du train (pilote automatique)",
   "touch.route": "Destination",
   "item.train_station": "Station",

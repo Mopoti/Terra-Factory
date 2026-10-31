@@ -1413,7 +1413,14 @@ export function startGameView(
         ok = false;
         why = t('factory.needOre');
       } else if (!ok && stock > 0) {
-        why = def.id === 'pump' ? t('factory.needWater') : t('factory.cannotPlace');
+        why =
+          def.id === 'pump'
+            ? t('factory.needWater')
+            : def.id === 'thermometer'
+              ? t('factory.needWall')
+              : def.id === 'vane'
+                ? t('factory.needSlab')
+                : t('factory.cannotPlace');
       }
       factoryView.showGhost([{ type: def.id, gx, gz, rot: rotHere, ok, lift: level }]);
       const spot = `${gx},${gz},${rotHere}`;
