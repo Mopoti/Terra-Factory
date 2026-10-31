@@ -411,35 +411,9 @@ export class FactoryView {
     return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
   }
 
-  /** Usure et voisins d'une barrière, pour son dessin (voir `BarrierContext`). */
+  /** Usure d'une barrière, pour son dessin (voir `BarrierContext`). */
   private barrierContext(m: Machine): BarrierContext {
-    const def = machineDef(m.type);
-    const none = { level: 0, joinedMinus: false, joinedPlus: false };
-    if (!def.barrier || def.gate) return { ...none, level: this.damageLevel(m) };
-    const { w, d } = dims(m.type, m.rot);
-    const a = (m.rot % 4) * (Math.PI / 2);
-    const dirX = Math.round(Math.cos(a));
-    const dirZ = Math.round(-Math.sin(a));
-    // Cellule voisine au-delà du bout du tronçon, dans la direction (dx, dz).
-    const beyond = (dx: number, dz: number): boolean => {
-      const gx = dx > 0 ? m.gx + w : dx < 0 ? m.gx - 1 : m.gx;
-      const gz = dz > 0 ? m.gz + d : dz < 0 ? m.gz - 1 : m.gz;
-      const other = this.factory.machineAt(gx, gz);
-      // Même orientation seulement : la rangée continue sur le même bord de case. Dans un angle, les deux tronçons gardent
-      // leur poteau, qui tombent au même endroit (le coin des cases) et n'en font qu'un.
-      return (
-        !!other &&
-        other !== m &&
-        machineDef(other.type).barrier === true &&
-        !machineDef(other.type).gate &&
-        other.rot % 4 === m.rot % 4
-      );
-    };
-    return {
-      level: this.damageLevel(m),
-      joinedMinus: beyond(-dirX, -dirZ),
-      joinedPlus: beyond(dirX, dirZ),
-    };
+    return { level: this.damageLevel(m) };
   }
 
   /** Redessine les machines dont l'aspect a changé (elles noircissent à mesure qu'elles s'abîment ; les portails s'ouvrent). */
@@ -1630,13 +1604,10 @@ function growBody(mb: MeshBuilder, start: number, m: Machine): void {
 /** Quarts de tour à donner à un modèle du kit selon l'orientation de la machine. */
 const MODEL_TURNS = [0, 1, 2, 3] as const;
 
-/** Ce que le dessin d'une barrière sait de son entourage : usure, et rangée prolongée par un voisin de chaque côté. */
+/** Ce que le dessin d'une barrière doit savoir en plus de son modèle. */
 interface BarrierContext {
   /** Usure (0 intacte à 3 très abîmée). */
   level: number;
-  /** Une autre barrière touche le bout −X / +X du tronçon (dans le repère du modèle) : le poteau de ce bout est caché. */
-  joinedMinus: boolean;
-  joinedPlus: boolean;
 }
 
 /** Un groupe de pièces d'un modèle, dessiné comme un modèle (même repère et même centrage que le modèle entier). */
@@ -1737,10 +1708,10 @@ function addBarrierModel(
     const groups = model.groups ?? {};
     const minus = groups.poteau_g;
     const plus = groups.poteau_d;
-    if (minus && i === 0 && !ctx.joinedMinus)
-      mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
-    if (plus && i === tiles - 1 && !ctx.joinedPlus)
-      mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);
+    // Les poteaux restent visibles à chaque jonction (la rangée n'est pas un mur uni) ; deux poteaux au même endroit
+    // se confondent.
+    if (minus) mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
+    if (plus) mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);
   }
   return true;
 }
@@ -1828,7 +1799,7 @@ function addMachineBody(
   tint?: string,
   staticOnly = false,
   open = false,
-  barrier: BarrierContext = { level: 0, joinedMinus: false, joinedPlus: false },
+  barrier: BarrierContext = { level: 0 },
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);

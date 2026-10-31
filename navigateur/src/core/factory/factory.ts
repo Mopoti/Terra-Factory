@@ -110,6 +110,8 @@ export interface Machine {
   hp?: number;
   /** Coffre quantique : nom du joueur qui l'a posé ('' pour l'hôte) ; son contenu est celui de ce joueur, partagé par tous ses coffres quantiques. */
   owner?: string;
+  /** Portail pouvant être automatique (`autoGate`) : vrai = s'ouvre seul à l'approche ; absent = manuel (touche E). */
+  auto?: boolean;
   /** Tapis : forme verticale (voir `LIFTS`) ; 0 = à plat au sol, 4 / 5 = entrée / sortie de tunnel. */
   lift: number;
   /** Balise : nom affiché (« Balise » par défaut) et couleur (#rrggbb). */
@@ -598,6 +600,7 @@ export function normalizeMachines(raw: unknown): Machine[] {
         machine.type === 'fusion_reactor' ||
         machine.type === 'breaker');
     if (isNum(m.hp) && m.hp > 0 && m.hp < Factory.maxHealth(machine.type)) machine.hp = m.hp;
+    if (m.auto === true && machineDef(machine.type).autoGate) machine.auto = true;
     if (machine.type === 'quantum_chest') {
       if (typeof m.owner === 'string' && m.owner) machine.owner = m.owner;
     }
@@ -1425,7 +1428,18 @@ export class Factory {
         return there ? there.type === 'conveyor' && there.lift === 0 : !blocked(c);
       });
     }
-    return cells.every((c) => !this.cells.has(`${c.gx},${c.gz}`) && !blocked(c));
+    // Clôtures, barrières et portails peuvent se rejoindre en angle : ils partagent alors une case avec un autre de ces
+    // éléments posé dans l'autre sens (jamais le même sens, qui ferait un doublon).
+    const meets = (c: Cell): boolean => {
+      const there = this.cells.get(`${c.gx},${c.gz}`);
+      if (!there) return true;
+      return (
+        machineDef(type).barrier === true &&
+        machineDef(there.type).barrier === true &&
+        there.rot % 2 !== rot % 2
+      );
+    };
+    return cells.every((c) => meets(c) && !blocked(c));
   }
 
   /** Tapis qu'un séparateur / groupeur posé là remplacerait. */
@@ -1934,18 +1948,27 @@ export class Factory {
     return machineDef(m.type).gate === true && m.wear === 1;
   }
 
-  /** Ouvre ou ferme un portail à la main (les portails motorisés se règlent seuls avec `tickGates`). */
+  /** Ouvre ou ferme un portail à la main (un portail en mode automatique se règle seul avec `tickGates`). */
   toggleGate(m: Machine): void {
-    if (machineDef(m.type).gate) {
+    if (machineDef(m.type).gate && !m.auto) {
       m.wear = m.wear === 1 ? 0 : 1;
       this.visualVersion++;
     }
   }
 
-  /** Portails à moteur : ils s'ouvrent quand un joueur est à moins de `GATE_SENSE_M` de leur centre, et se referment sinon. */
+  /** Passe un portail qui peut être automatique du mode manuel au mode automatique, et inversement ; faux s'il ne le peut pas. */
+  toggleGateMode(m: Machine): boolean {
+    if (!machineDef(m.type).autoGate) return false;
+    if (m.auto) delete m.auto;
+    else m.auto = true;
+    this.visualVersion++;
+    return true;
+  }
+
+  /** Portails en mode automatique : ils s'ouvrent quand un joueur est à moins de `GATE_SENSE_M` de leur centre, et se referment sinon. */
   tickGates(points: { x: number; z: number }[]): void {
     for (const m of this.machines) {
-      if (!machineDef(m.type).autoGate) continue;
+      if (!machineDef(m.type).autoGate || !m.auto) continue;
       const c = centerOf(m);
       const wear = points.some((p) => Math.hypot(p.x - c.x, p.z - c.z) <= Factory.GATE_SENSE_M)
         ? 1

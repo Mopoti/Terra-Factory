@@ -117,6 +117,7 @@ export interface MachineDef {
   barrier?: boolean;
   gate?: boolean;
   /** Portail à moteur : s'ouvre seul quand un joueur approche. */
+  /** Portail qui peut être réglé en mode automatique (s'ouvre à l'approche) ; manuel par défaut. */
   autoGate?: boolean;
   maxHp?: number;
   /** Combustible : seuls ces objets sont acceptés (pile à combustible). */

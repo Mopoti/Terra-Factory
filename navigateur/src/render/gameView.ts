@@ -1884,6 +1884,10 @@ export function startGameView(
       rows.push(
         `<div>${t('factory.router.holding', { v: m.stock ? t(`item.${m.stock.item}` as TranslationKey) : t('factory.router.empty') })}</div>`,
       );
+    } else if (machineDef(m.type).gate && machineDef(m.type).autoGate) {
+      rows.push(
+        `<div class="sub">${t(m.auto ? 'gate.mode.auto' : 'gate.mode.manual')} · ${t('gate.mode.hint')}</div>`,
+      );
     } else if (m.type === 'transformer') {
       const flow = factory.transformerFlow(m);
       rows.push(
@@ -2892,6 +2896,11 @@ export function startGameView(
   trainSolid = (x, z, y0, y1) => !trains.isMounted() && trains.solidAt(x, z, y0, y1);
   let trainUse = false;
   let trainCouple = false;
+  /** Maintien de E sur un portail qui peut être automatique (voir plus bas). */
+  let gateHeld: Machine | null = null;
+  let gateHold = 0;
+  let gateModeDone = false;
+  const GATE_HOLD_S = 0.6;
   let trainRoute = false;
   let trainRotate = false;
   let trainLevelUp = false;
@@ -4835,12 +4844,41 @@ export function startGameView(
         options.onMessage?.(t(`machine.repairKit.${result}` as TranslationKey));
       }
     }
-    // Portail à commande manuelle : la touche d'activation (E) l'ouvre ou le ferme.
-    if (!paused && !uiOpen && pressed('activate') && aimedMachine) {
-      const def = machineDef(aimedMachine.type);
-      if (def.gate && !def.autoGate) {
-        factory.toggleGate(aimedMachine);
-        playSfx(factory.gateOpen(aimedMachine) ? 'doorOpen' : 'doorClose');
+    // Portail : la touche d'activation (E) l'ouvre ou le ferme. Un portail qui peut être automatique garde E appuyée :
+    // un appui court l'ouvre ou le ferme (mode manuel), un appui long (0,6 s) change de mode (manuel ↔ automatique).
+    {
+      const gate =
+        !paused && !uiOpen && aimedMachine && machineDef(aimedMachine.type).gate
+          ? aimedMachine
+          : null;
+      const holdable = gate && machineDef(gate.type).autoGate === true;
+      if (gate && !holdable && pressed('activate')) {
+        factory.toggleGate(gate);
+        playSfx(factory.gateOpen(gate) ? 'doorOpen' : 'doorClose');
+      } else if (holdable && input.isActionActive('activate')) {
+        if (gateHeld !== gate) {
+          gateHeld = gate;
+          gateHold = 0;
+          gateModeDone = false;
+        }
+        gateHold += dt;
+        if (!gateModeDone && gateHold >= GATE_HOLD_S) {
+          gateModeDone = true;
+          factory.toggleGateMode(gate);
+          playSfx('wrench');
+          options.onMessage?.(t(gate.auto ? 'gate.mode.auto' : 'gate.mode.manual'));
+        }
+      } else {
+        // Relâchée avant la fin du maintien : appui court.
+        if (gateHeld && !gateModeDone && gateHold > 0 && factory.machines.includes(gateHeld)) {
+          if (gateHeld.auto) options.onMessage?.(t('gate.mode.hint'));
+          else {
+            factory.toggleGate(gateHeld);
+            playSfx(factory.gateOpen(gateHeld) ? 'doorOpen' : 'doorClose');
+          }
+        }
+        gateHeld = null;
+        gateHold = 0;
       }
     }
     if (!paused && !uiOpen && pressed('use') && aimedMachine && hasWindow(aimedMachine.type))

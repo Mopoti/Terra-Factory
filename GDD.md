@@ -522,7 +522,7 @@ Une machine se pose en **un clic**, la touche R la tourne ; **même case = range
 
 ### 7.9 Barrières et portails ✅
 
-Les clôtures et barrières (1 m de haut) et les portails se posent **sur le bord de leurs cases** : deux rangées qui font un angle se rejoignent au coin, et les poteaux ne restent qu'aux bouts d'une rangée de même orientation.
+Les clôtures et barrières (1 m de haut) et les portails se posent **sur le bord de leurs cases** : deux rangées qui font un angle se rejoignent au coin, et **les poteaux restent visibles à chaque jonction** (une rangée n'est pas un mur uni). **Angles** : une clôture, une barrière ou un portail peut se poser **contre l'angle de n'importe quel autre** (ils partagent alors une case, à condition d'être posés dans l'autre sens). **Portails** : manuels par défaut (**E** les ouvre et les ferme) ; ceux qui peuvent être automatiques (portail en béton armé à moteur, portail holographique) changent de mode quand on **garde E appuyée** (0,6 s) : en automatique ils s'ouvrent à l'approche et se referment après, et E ne les commande plus.
 
 | Élément                          | Taille | Points de vie | Palier |
 | -------------------------------- | ------ | ------------- | ------ |

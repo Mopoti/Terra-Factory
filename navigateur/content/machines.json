@@ -492,6 +492,7 @@
       "barrier": true,
       "gate": true,
       "holo": true,
+      "autoGate": true,
       "maxHp": 1000,
       "consumesKw": 120
     },

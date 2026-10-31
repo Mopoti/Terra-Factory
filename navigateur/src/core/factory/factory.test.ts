@@ -2388,9 +2388,12 @@ describe('barrières et portails', () => {
     expect(f.gateOpen(fence)).toBe(false);
   });
 
-  it('le portail motorisé s’ouvre à l’approche d’un joueur et se referme', () => {
+  it('le portail motorisé, réglé en automatique, s’ouvre à l’approche d’un joueur et se referme', () => {
     const gate = emptyMachine(1, 'gate_reinforced', 0, 0, 0);
     const f = new Factory([gate], world);
+    f.tickGates([{ x: 1.5, z: 1 }]);
+    expect(f.gateOpen(gate)).toBe(false); // manuel par défaut
+    f.toggleGateMode(gate);
     f.tickGates([{ x: 1.5, z: 1 }]);
     expect(f.gateOpen(gate)).toBe(true);
     f.tickGates([{ x: 30, z: 30 }]);
