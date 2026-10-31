@@ -68,3 +68,24 @@ describe('barrières en angle', () => {
     expect(f.canPlace('lamp', 2, 0, 0, free)).toBe(false); // une machine ne se glisse pas sous une barrière
   });
 });
+
+describe('usure des barrières attaquées', () => {
+  it('l’aspect ne change (donc rien n’est redessiné) que quand la machine passe à un autre niveau d’usure', () => {
+    const wall = emptyMachine(1, 'barrier_concrete', 0, 0, 0); // 500 PV
+    const f = new Factory([wall], world);
+    const version = f.visualVersion;
+    f.health.set(1, 480); // 96 % : toujours niveau 0
+    f.health.set(1, 400); // 80 %
+    expect(f.visualVersion).toBe(version);
+    f.health.set(1, 370); // 74 % : niveau 1
+    expect(f.visualVersion).toBe(version + 1);
+    f.health.set(1, 300); // 60 % : toujours niveau 1
+    expect(f.visualVersion).toBe(version + 1);
+    f.health.set(1, 200); // 40 % : niveau 2
+    expect(f.visualVersion).toBe(version + 2);
+    expect(f.damageLevel(wall)).toBe(2);
+    f.health.delete(1); // réparée
+    expect(f.visualVersion).toBe(version + 3);
+    expect(f.damageLevel(wall)).toBe(0);
+  });
+});

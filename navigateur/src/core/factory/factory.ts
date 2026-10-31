@@ -1898,18 +1898,22 @@ export class Factory {
   readonly health = {
     get: (id: number): number | undefined => this.machines.find((m) => m.id === id)?.hp,
     has: (id: number): boolean => this.machines.find((m) => m.id === id)?.hp !== undefined,
+    // L'aspect ne change que quand la machine passe à un autre niveau d'usure : redessiner toutes les machines à chaque
+    // coup des ennemis ferait ramer la partie.
     set: (id: number, hp: number): void => {
       const m = this.machines.find((x) => x.id === id);
       if (m) {
+        const before = this.damageLevel(m);
         m.hp = hp;
-        this.visualVersion++;
+        if (this.damageLevel(m) !== before) this.visualVersion++;
       }
     },
     delete: (id: number): void => {
       const m = this.machines.find((x) => x.id === id);
       if (m) {
+        const before = this.damageLevel(m);
         delete m.hp;
-        this.visualVersion++;
+        if (before !== 0) this.visualVersion++;
       }
     },
   };
@@ -1921,6 +1925,13 @@ export class Factory {
   /** Points de vie maximaux d'une machine (barrières et portails en ont plus). */
   static maxHealth(type: MachineType): number {
     return machineDef(type).maxHp ?? Factory.MACHINE_HEALTH;
+  }
+
+  /** Niveau d'usure d'une machine abîmée par les ennemis : 0 (intacte), 1 (moins de 75 %), 2 (moins de 50 %), 3 (moins de 25 %). */
+  damageLevel(m: Machine): number {
+    if (m.hp === undefined) return 0;
+    const f = this.healthFraction(m);
+    return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
   }
 
   /** Part de vie restante d'une machine (1 = intacte). */

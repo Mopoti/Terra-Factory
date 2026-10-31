@@ -397,6 +397,7 @@ export class FactoryView {
 
   /** Version de l'aspect des machines au dernier dessin, et machines abîmées à cette version. */
   private visualSeen = -1;
+  private lastRebuildAt = 0;
   private damaged: Machine[] = [];
   /** Tuyaux et turbines (fumées), repérés au dernier dessin pour ne pas parcourir toutes les machines à chaque image. */
   private pipes: Machine[] = [];
@@ -406,9 +407,7 @@ export class FactoryView {
 
   /** Niveau d'usure d'une machine abîmée par les ennemis : 0 (intacte), 1 (moins de 75 %), 2 (moins de 50 %), 3 (moins de 25 %). */
   private damageLevel(m: Machine): number {
-    if (m.hp === undefined) return 0;
-    const f = this.factory.healthFraction(m);
-    return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
+    return this.factory.damageLevel(m);
   }
 
   /** Usure d'une barrière, pour son dessin (voir `BarrierContext`). */
@@ -419,6 +418,10 @@ export class FactoryView {
   /** Redessine les machines dont l'aspect a changé (elles noircissent à mesure qu'elles s'abîment ; les portails s'ouvrent). */
   updateDamage(): void {
     if (this.factory.visualVersion === this.visualSeen) return;
+    // Redessiner toutes les machines coûte cher : au plus quatre fois par seconde, même sous une pluie de coups.
+    const now = performance.now();
+    if (now - this.lastRebuildAt < 250) return;
+    this.lastRebuildAt = now;
     this.visualSeen = this.factory.visualVersion;
     this.damaged = this.factory.machines.filter((m) => m.hp !== undefined);
     this.rebuild();
