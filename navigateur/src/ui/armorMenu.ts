@@ -93,6 +93,36 @@ export function mountArmorMenu(
         })),
       });
     }
+    if (state.hasExtraBar()) {
+      list.push({
+        id: 'bar',
+        label: t('armor.bar'),
+        status: t(state.extraBarEnabled ? 'armor.exo.1' : 'armor.exo.0'),
+        choices: [false, true].map((on) => ({
+          label: t(on ? 'armor.exo.1' : 'armor.exo.0'),
+          active: state.extraBarEnabled === on,
+          apply: () => {
+            const r = state.setExtraBar(on);
+            return r === 'ok' ? null : t(`armor.noPart.${r}` as TranslationKey);
+          },
+        })),
+      });
+    }
+    if (state.gauntletAvailable()) {
+      list.push({
+        id: 'hands',
+        label: t('armor.hands'),
+        status: t(state.gauntletEnabled ? 'armor.exo.1' : 'armor.exo.0'),
+        choices: [false, true].map((on) => ({
+          label: t(on ? 'armor.exo.1' : 'armor.exo.0'),
+          active: state.gauntletEnabled === on,
+          apply: () => {
+            const r = state.setGauntlet(on);
+            return r === 'ok' ? null : t(`armor.noPart.${r}` as TranslationKey);
+          },
+        })),
+      });
+    }
     return list;
   };
 

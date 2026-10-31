@@ -975,9 +975,25 @@ export class GameState {
     return /^armor[45]_torso$/.test(baseOf(this.changes.equipment.torso ?? ''));
   }
 
-  /** La barre en plus fonctionne : plastron T4 ou T5 et de l'énergie dans l'armure (gratuit en Créatif). */
+  /** Barre en plus activée par le joueur dans le menu de l'armure (non enregistré). */
+  extraBarEnabled = true;
+
+  /** La barre en plus fonctionne : plastron T4 ou T5, activée, et de l'énergie dans l'armure (gratuit en Créatif). */
   extraBarOn(): boolean {
-    return this.hasExtraBar() && (this.creative || this.hasArEnergy());
+    return this.hasExtraBar() && this.extraBarEnabled && (this.creative || this.hasArEnergy());
+  }
+
+  /** Active ou coupe la barre en plus ; renvoie ce qui empêche, le cas échéant. */
+  setExtraBar(on: boolean): 'ok' | 'noTorso' | 'noBattery' {
+    if (!on) {
+      this.extraBarEnabled = false;
+      this.tickExtraBar(0);
+      return 'ok';
+    }
+    if (!this.hasExtraBar()) return 'noTorso';
+    this.extraBarEnabled = true;
+    if (!this.creative && !this.hasArEnergy()) return 'noBattery';
+    return 'ok';
   }
 
   /** Passe des touches 1 à 0 d'une barre à l'autre ; renvoie la barre choisie. */
@@ -992,6 +1008,7 @@ export class GameState {
       this.hotbarPage === 1 ||
       (this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length);
     if (!inUse) return;
+    if (dt === 0 && this.extraBarOn()) return;
     if (
       !this.extraBarOn() ||
       (!this.creative && !this.drainArmor(dt * GameState.EXTRA_BAR_DRAIN))
@@ -1017,10 +1034,29 @@ export class GameState {
     return m ? GameState.GAUNTLETS[m[1] as 'armor4' | 'armor5'] : null;
   }
 
-  /** L'outil des gantelets, s'ils sont portés (T4 ou T5) et que l'armure a de l'énergie ; sinon null. */
+  /** Outil des gantelets activé par le joueur dans le menu de l'armure (non enregistré). */
+  gauntletEnabled = true;
+
+  /** Les gantelets portés sont une armure T4 ou T5 (qui contient l'outil intégré). */
+  gauntletAvailable(): boolean {
+    return this.gauntletSpec() !== null;
+  }
+
+  /** Active ou coupe l'outil des gantelets ; renvoie ce qui empêche, le cas échéant. */
+  setGauntlet(on: boolean): 'ok' | 'noHands' | 'noBattery' {
+    if (!on) {
+      this.gauntletEnabled = false;
+      return 'ok';
+    }
+    if (!this.gauntletAvailable()) return 'noHands';
+    this.gauntletEnabled = true;
+    return !this.creative && !this.hasArEnergy() ? 'noBattery' : 'ok';
+  }
+
+  /** L'outil des gantelets, s'ils sont portés (T4 ou T5), activés, et que l'armure a de l'énergie ; sinon null. */
   gauntletTool(): { speed: number; yield: number; gauntlet: true } | null {
     const spec = this.gauntletSpec();
-    if (!spec || (!this.creative && !this.hasArEnergy())) return null;
+    if (!spec || !this.gauntletEnabled || (!this.creative && !this.hasArEnergy())) return null;
     return { speed: spec.speed, yield: spec.yield, gauntlet: true };
   }
 

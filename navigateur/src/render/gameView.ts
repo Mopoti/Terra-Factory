@@ -4567,9 +4567,11 @@ export function startGameView(
         if (pressed('hotbarPage') && options.state.hasExtraBar()) {
           const page = options.state.toggleHotbarPage();
           options.onMessage?.(
-            options.state.hasExtraBar() && page === 0 && !options.state.extraBarOn()
-              ? t('hotbar.extra.noEnergy')
-              : t(page === 1 ? 'hotbar.page.extra' : 'hotbar.page.main'),
+            page === 0 && !options.state.extraBarEnabled
+              ? t('hotbar.extra.disabled')
+              : page === 0 && !options.state.extraBarOn()
+                ? t('hotbar.extra.noEnergy')
+                : t(page === 1 ? 'hotbar.page.extra' : 'hotbar.page.main'),
           );
         }
         // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).

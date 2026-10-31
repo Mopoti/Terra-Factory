@@ -312,6 +312,52 @@ describe('barre de raccourcis en plus (plastron T4 ou T5)', () => {
   });
 });
 
+describe('activer ou couper chaque partie de l’armure', () => {
+  const full = (): GameState => {
+    const s = new GameState({ inventory: {} });
+    Object.assign(s.changes.equipment, {
+      head: 'armor5_head',
+      torso: 'armor5_torso',
+      legs: 'armor5_legs',
+      hands: 'armor5_hands',
+    });
+    s.changes.armorBattery.torso = variantId('battery_portable', 5);
+    return s;
+  };
+
+  it('la barre en plus se coupe et se rallume ; coupée, on revient à la barre principale', () => {
+    const s = full();
+    expect(s.extraBarOn()).toBe(true);
+    s.toggleHotbarPage();
+    expect(s.hotbarPage).toBe(1);
+    expect(s.setExtraBar(false)).toBe('ok');
+    expect(s.extraBarOn()).toBe(false);
+    expect(s.hotbarPage).toBe(0);
+    expect(s.toggleHotbarPage()).toBe(0);
+    expect(s.setExtraBar(true)).toBe('ok');
+    expect(s.extraBarOn()).toBe(true);
+  });
+
+  it('l’outil des gantelets se coupe : coupé, aucun coup n’est payé et l’outil en main reprend', () => {
+    const s = full();
+    expect(s.harvestTool()).toMatchObject({ gauntlet: true });
+    expect(s.setGauntlet(false)).toBe('ok');
+    expect(s.harvestTool()).toBeNull();
+    expect(s.setGauntlet(true)).toBe('ok');
+    expect(s.harvestTool()).toMatchObject({ gauntlet: true });
+  });
+
+  it('on ne peut pas allumer une partie qu’on ne porte pas, et on est prévenu sans énergie', () => {
+    const bare = new GameState({ inventory: {} });
+    expect(bare.setExtraBar(true)).toBe('noTorso');
+    expect(bare.setGauntlet(true)).toBe('noHands');
+    const dry = full();
+    delete dry.changes.armorBattery.torso;
+    expect(dry.setExtraBar(true)).toBe('noBattery');
+    expect(dry.setGauntlet(true)).toBe('noBattery');
+  });
+});
+
 describe('sauvegarde de la batterie d’armure', () => {
   it('survit à l’enregistrement, mais pas sans pièce T4 ou T5 pour la porter', () => {
     const changes = emptyChanges();
