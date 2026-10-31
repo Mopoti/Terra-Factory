@@ -277,15 +277,20 @@ describe('barre de raccourcis en plus (plastron T4 ou T5)', () => {
     expect(bare.selectedSlot).toBeNull();
   });
 
-  it('les touches passent d’une barre à l’autre ; sans énergie ou sans plastron on revient à la principale', () => {
+  it('sans énergie ou sans plastron, une case de la barre en plus se lâche, et on sait pourquoi', () => {
     const s = torso('armor4_torso');
-    expect(s.toggleHotbarPage()).toBe(1);
-    expect(s.toggleHotbarPage()).toBe(0);
-    s.toggleHotbarPage();
+    s.assignSlot(12, 'wood');
+    s.selectSlot(12);
+    expect(s.selectedItem()).toBe('wood');
+    expect(s.extraBarRefusal()).toBeNull();
     delete s.changes.armorBattery.torso;
     s.tickExtraBar(0.05);
-    expect(s.hotbarPage).toBe(0);
-    expect(torso('armor3_torso').toggleHotbarPage()).toBe(0);
+    expect(s.selectedSlot).toBeNull();
+    expect(s.extraBarRefusal()).toBe('noBattery');
+    expect(torso('armor3_torso').extraBarRefusal()).toBe('noTorso');
+    const off = torso('armor5_torso');
+    off.setExtraBar(false);
+    expect(off.extraBarRefusal()).toBe('disabled');
   });
 
   it('elle consomme presque rien, seulement quand elle sert', () => {
@@ -293,11 +298,12 @@ describe('barre de raccourcis en plus (plastron T4 ou T5)', () => {
     idle.tickExtraBar(60);
     expect(idle.changes.armorBattery.torso).toBe('battery_portable~5');
     const busy = torso('armor4_torso');
-    busy.toggleHotbarPage();
+    busy.assignSlot(12, 'wood');
+    busy.selectSlot(12);
     for (let i = 0; i < 60 * 20; i++) busy.tickExtraBar(0.05); // une minute
     // 0,05 s d'affichage par seconde : 3 s en une minute, très loin d'un niveau (150 s).
     expect(busy.changes.armorBattery.torso).toBe('battery_portable~4');
-    expect(busy.hotbarPage).toBe(1);
+    expect(busy.selectedSlot).toBe(12);
   });
 
   it('elle est enregistrée avec la partie (un objet par case, dans les deux barres)', () => {
@@ -366,12 +372,12 @@ describe('activer ou couper chaque partie de l’armure', () => {
   it('la barre en plus se coupe et se rallume ; coupée, on revient à la barre principale', () => {
     const s = full();
     expect(s.extraBarOn()).toBe(true);
-    s.toggleHotbarPage();
-    expect(s.hotbarPage).toBe(1);
+    s.assignSlot(12, 'wood');
+    s.selectSlot(12);
+    expect(s.selectedSlot).toBe(12);
     expect(s.setExtraBar(false)).toBe('ok');
     expect(s.extraBarOn()).toBe(false);
-    expect(s.hotbarPage).toBe(0);
-    expect(s.toggleHotbarPage()).toBe(0);
+    expect(s.selectedSlot).toBeNull();
     expect(s.setExtraBar(true)).toBe('ok');
     expect(s.extraBarOn()).toBe(true);
   });

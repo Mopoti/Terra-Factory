@@ -965,8 +965,6 @@ export class GameState {
 
   // --- Barre de raccourcis en plus (plastron d'armure T4 ou T5) -------------------------------
 
-  /** Barre dont les touches 1 à 0 et la molette parcourent les cases : 0 = la barre, 1 = la barre en plus (non enregistré). */
-  hotbarPage: 0 | 1 = 0;
   /** Énergie dépensée par seconde tant que la barre en plus sert (secondes d'affichage simple) : presque rien. */
   static readonly EXTRA_BAR_DRAIN = 0.05;
 
@@ -996,28 +994,24 @@ export class GameState {
     return 'ok';
   }
 
-  /** Passe des touches 1 à 0 d'une barre à l'autre ; renvoie la barre choisie. */
-  toggleHotbarPage(): 0 | 1 {
-    this.hotbarPage = this.hotbarPage === 0 && this.extraBarOn() ? 1 : 0;
-    return this.hotbarPage;
+  /** Pourquoi la barre en plus ne sert pas (pour le dire au joueur), ou null si elle sert. */
+  extraBarRefusal(): 'noTorso' | 'disabled' | 'noBattery' | null {
+    if (!this.hasExtraBar()) return 'noTorso';
+    if (!this.extraBarEnabled) return 'disabled';
+    return this.extraBarOn() ? null : 'noBattery';
   }
 
   /** Une image : la barre en plus puise un peu d'énergie quand elle sert, et se referme sans plastron ou sans énergie. */
   tickExtraBar(dt: number): void {
-    const inUse =
-      this.hotbarPage === 1 ||
-      (this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length);
+    const inUse = this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length;
     if (!inUse) return;
     if (dt === 0 && this.extraBarOn()) return;
     if (
       !this.extraBarOn() ||
       (!this.creative && !this.drainArmor(dt * GameState.EXTRA_BAR_DRAIN))
     ) {
-      this.hotbarPage = 0;
-      if (this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length) {
-        this.selectedSlot = null;
-        this.emit({ type: 'hotbar' });
-      }
+      this.selectedSlot = null;
+      this.emit({ type: 'hotbar' });
     }
   }
 

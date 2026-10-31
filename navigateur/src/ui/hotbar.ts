@@ -18,7 +18,11 @@ export const ITEM_DRAG_TYPE = 'text/x-terra-item';
  * sélectionne ; si elle contient une pièce de construction, on peut la poser. On y range un objet en le
  * glissant depuis le sac, ou en le choisissant dans le sac puis en cliquant la case. Clic droit : vider.
  */
-export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
+export function mountHotbar(
+  root: HTMLElement,
+  state: GameState,
+  actions: { onMessage?: (text: string) => void } = {},
+): Hotbar {
   const bar = document.createElement('div');
   bar.className = 'hotbar';
   bar.setAttribute('role', 'toolbar');
@@ -35,8 +39,9 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
     // Les informations de survie (santé, armure, munitions) montent au-dessus des deux barres.
     document.body.classList.toggle('extra-hotbar', state.hasExtraBar());
     extra.classList.toggle('off', !state.extraBarOn());
-    extra.classList.toggle('active', state.hotbarPage === 1);
-    bar.classList.toggle('active', state.hotbarPage === 0 && state.hasExtraBar());
+    const inExtra = state.selectedSlot !== null && state.selectedSlot >= HOTBAR_SLOTS;
+    extra.classList.toggle('active', inExtra);
+    bar.classList.toggle('active', !inExtra && state.selectedSlot !== null && state.hasExtraBar());
     if (state.hasExtraBar()) fill(extra, HOTBAR_SLOTS);
     else extra.replaceChildren();
   }
@@ -78,8 +83,13 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
           state.returnHand();
         } else if (state.carried) state.assignSlot(i, state.carried);
         else {
-          state.selectSlot(i);
-          playSfx('select');
+          // Une case de la barre en plus ne se choisit pas sans plastron T4 ou T5 allumé et chargé : on dit pourquoi.
+          const refusal = i >= HOTBAR_SLOTS ? state.extraBarRefusal() : null;
+          if (refusal) actions.onMessage?.(t(`hotbar.extra.${refusal}` as TranslationKey));
+          else {
+            state.selectSlot(i);
+            playSfx('select');
+          }
         }
       });
       slot.addEventListener('contextmenu', (e) => {

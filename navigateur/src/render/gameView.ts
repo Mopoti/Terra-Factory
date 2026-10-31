@@ -2202,8 +2202,8 @@ export function startGameView(
   function stepHotbar(step: number): void {
     // La molette parcourt la barre dont les touches sont actives (la barre en plus, avec le plastron T4 ou T5).
     const len = options.state.changes.hotbar.length;
-    const base = options.state.hotbarPage * len;
     const sel = options.state.selectedSlot;
+    const base = sel !== null && sel >= len ? len : 0;
     let i = sel !== null && sel >= base && sel < base + len ? sel - base : step > 0 ? -1 : 0;
     for (let n = 0; n < len; n++) {
       i = (i + step + len) % len;
@@ -4559,9 +4559,14 @@ export function startGameView(
     if (!paused && uiOpen) {
       const chosen = options.state.hand?.item ?? options.state.carried ?? options.state.pointed;
       if (chosen) {
+        const ctrl = input.isBindingActive('Control');
         for (let i = 1; i <= HOTBAR_SLOTS; i++) {
-          if (pressed(`hotbar${i}` as ActionId)) {
-            options.state.assignSlot(i - 1 + options.state.hotbarPage * HOTBAR_SLOTS, chosen);
+          if (!ctrl && pressed(`hotbar${i}` as ActionId)) {
+            options.state.assignSlot(i - 1, chosen);
+            playSfx('select');
+          }
+          if (pressed(`hotbarExtra${i}` as ActionId)) {
+            options.state.assignSlot(i - 1 + HOTBAR_SLOTS, chosen);
             playSfx('select');
           }
         }
@@ -4582,21 +4587,22 @@ export function startGameView(
           if (input.isActionActive('rotateLeft')) rig.rotate(CAMERA_YAW_SPEED * dt, views);
           if (input.isActionActive('rotateRight')) rig.rotate(-CAMERA_YAW_SPEED * dt, views);
         }
-        if (pressed('hotbarPage') && options.state.hasExtraBar()) {
-          const page = options.state.toggleHotbarPage();
-          options.onMessage?.(
-            page === 0 && !options.state.extraBarEnabled
-              ? t('hotbar.extra.disabled')
-              : page === 0 && !options.state.extraBarOn()
-                ? t('hotbar.extra.noEnergy')
-                : t(page === 1 ? 'hotbar.page.extra' : 'hotbar.page.main'),
-          );
-        }
         // Barre de raccourcis : 1 à 9 sélectionnent une case (une pièce de construction active la pose).
+        // Ctrl + numéro est réservé à la barre en plus : le numéro seul ne choisit alors rien.
+        const ctrl = input.isBindingActive('Control');
         for (let i = 1; i <= HOTBAR_SLOTS; i++) {
-          if (pressed(`hotbar${i}` as ActionId)) {
-            options.state.selectSlot(i - 1 + options.state.hotbarPage * HOTBAR_SLOTS);
+          if (!ctrl && pressed(`hotbar${i}` as ActionId)) {
+            options.state.selectSlot(i - 1);
             playSfx('select');
+          }
+          // Barre en plus (plastron T4 ou T5) : Ctrl + le numéro.
+          if (pressed(`hotbarExtra${i}` as ActionId)) {
+            const refusal = options.state.extraBarRefusal();
+            if (refusal) options.onMessage?.(t(`hotbar.extra.${refusal}` as TranslationKey));
+            else {
+              options.state.selectSlot(i - 1 + HOTBAR_SLOTS);
+              playSfx('select');
+            }
           }
         }
         if (building) {

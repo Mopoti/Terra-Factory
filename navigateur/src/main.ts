@@ -350,7 +350,7 @@ function startGame(
     view,
     pause: null as unknown as PauseMenu,
     inventory: null as unknown as InventoryWindow,
-    hotbar: mountHotbar(document.body, state),
+    hotbar: mountHotbar(document.body, state, { onMessage: (text) => showToast(text) }),
     machine: null as unknown as MachineWindow,
     map: null as unknown as MapWindow,
     tech: null as unknown as TechWindow,
@@ -366,6 +366,7 @@ function startGame(
     toastTimer: 0,
   };
   session = s;
+  (window as unknown as { __s: unknown }).__s = s;
 
   /** Renomme une station : fenêtre de saisie, le jeu continue derrière. */
   const renameStation = async (id: number): Promise<void> => {

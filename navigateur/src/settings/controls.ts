@@ -49,6 +49,13 @@ interface ActionDef {
   fixed?: boolean;
 }
 
+/** Barre en plus (plastron d'armure T4 ou T5) : Ctrl + le numéro de la case. */
+const hotbarExtra = (n: number): ActionDef => ({
+  id: `hotbarExtra${n}`,
+  category: 'hotbar',
+  defaults: [`Control+Digit${n % 10}`, null],
+});
+
 const hotbar = (n: number): ActionDef => ({
   id: `hotbar${n}`,
   category: 'hotbar',
@@ -106,7 +113,7 @@ export const ACTIONS = [
   hotbar(7),
   hotbar(8),
   hotbar(9),
-  { id: 'hotbarPage', category: 'hotbar', defaults: ['L:B', null] },
+  ...Array.from({ length: 10 }, (_, i) => hotbarExtra(i + 1)),
   { id: 'hotbarNext', category: 'hotbar', defaults: ['WheelUp', null] },
   { id: 'hotbarPrev', category: 'hotbar', defaults: ['WheelDown', null] },
   { id: 'hotbar10', category: 'hotbar', defaults: ['Digit0', null] },
