@@ -13,16 +13,16 @@ avec l'éolienne dans `weatherProps.ts`).
 
 ### 1b. Barrières et portails (dessinés par le code : poteaux et lisses, aucun modèle)
 
-| Objet                                                      | Emprise          | Ce qu'il faut                                                  |
-| ---------------------------------------------------------- | ---------------- | -------------------------------------------------------------- |
-| Clôture en bois (`machine_fence_wood`)                     | 3×1, haut. 1.5 m | clôture à lattes, 1,5 m ; 3 états d'usure                      |
-| Barrière en béton (`machine_barrier_concrete`)             | 3×1, haut. 1.5 m | mur bas en béton, 1,5 m ; fissures selon l'usure               |
-| Barrière en béton armé (`machine_barrier_reinforced`)      | 3×1, haut. 1.5 m | béton armé avec armatures apparentes ; usure                   |
-| Portail en bois (`machine_gate_wood`)                      | 6×1, haut. 2.5 m | portail à deux vantaux ou coulissant, 3 m ; fermé / ouvert     |
-| Portail en béton (`machine_gate_concrete`)                 | 6×1, haut. 2.5 m | portail béton, 3 m ; fermé / ouvert                            |
+| Objet | Emprise | Ce qu'il faut |
+| --- | --- | --- |
+| Clôture en bois (`machine_fence_wood`) | 3×1, haut. 1.5 m | clôture à lattes, 1,5 m ; 3 états d'usure |
+| Barrière en béton (`machine_barrier_concrete`) | 3×1, haut. 1.5 m | mur bas en béton, 1,5 m ; fissures selon l'usure |
+| Barrière en béton armé (`machine_barrier_reinforced`) | 3×1, haut. 1.5 m | béton armé avec armatures apparentes ; usure |
+| Portail en bois (`machine_gate_wood`) | 6×1, haut. 2.5 m | portail à deux vantaux ou coulissant, 3 m ; fermé / ouvert |
+| Portail en béton (`machine_gate_concrete`) | 6×1, haut. 2.5 m | portail béton, 3 m ; fermé / ouvert |
 | Portail en béton armé (moteur) (`machine_gate_reinforced`) | 6×1, haut. 2.5 m | portail blindé à moteur visible, 3 m ; ouvre seul à l'approche |
-| Mur holographique (`machine_hologram_projector`)           | 3×1, haut. 1.5 m | deux émetteurs et un voile de lumière, 1,5 m                   |
-| Portail holographique (`machine_hologram_gate`)            | 6×1, haut. 2.5 m | émetteurs et voile de lumière, 3 m ; ouvert / fermé            |
+| Mur holographique (`machine_hologram_projector`) | 3×1, haut. 1.5 m | deux émetteurs et un voile de lumière, 1,5 m |
+| Portail holographique (`machine_hologram_gate`) | 6×1, haut. 2.5 m | émetteurs et voile de lumière, 3 m ; ouvert / fermé |
 
 Modèles (`blender/scripts/clotures.py`), **branchés dans le jeu le 31 octobre** : `cloture_bois`, `barriere_beton` et
 `barriere_beton_arme` (avec `_abime1` / `_abime2`), `portail_bois`, `portail_beton`, `portail_beton_arme`,

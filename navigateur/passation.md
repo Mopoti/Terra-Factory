@@ -10,13 +10,11 @@
 **Avant de pousser** (depuis `navigateur/`) : `npx tsc --noEmit`, `npx eslint src`, `npx prettier --write src`, `npx vitest run`. Commit avec les lignes `Co-Authored-By` et `Claude-Session` demandées par la session, puis `git pull --rebase origin <branche>` et `git push -u origin <branche>`. Jamais de PR sans demande. Jamais de `pkill` dans une commande.
 
 **Bugs ouverts / non reproduits** (une ligne par bug : date, symptôme, ce qui a été essayé, ce qui manque) :
-
 - 25/10 · Rails : depuis un virage violet (large), D ne mène pas sur un virage marron (très large) qui part du même point que la ligne droite ; le PO pense qu'aucun embranchement n'est créé. Non reproduit : en test (virage → ligne + virage tangents au même port, `choiceAhead` + `stepConsist` avec `pick`), l'embranchement existe et D le prend. Manque : un rapport de bug (bouton « Signaler un bug » du menu pause) fait juste après, ou l'ordre de pose exact. Piste : le virage marron part peut-être de la ligne vers le côté d'où vient le train (demi-tour impossible).
 
 **Chantiers en attente** : programmation de la locomotive (`docs/trains-programmation.md`), essai « sans virages grand/géant » (sinon l'inverse), courbes à 45°, prérequis des technologies de début de partie, import de l'arbre des compétences (Ludicart), hitbox de la gare à ajuster à l'œil (`SOLIDS`), icônes de la benne sans quantité ni touche de basculement, contrôle visuel des couleurs de virages.
 
 **Ce qu'il faut consigner pour un bug** (le bouton « Signaler un bug » du menu pause en fournit presque tout dans un fichier ; sinon à demander au PO) :
-
 1. l'action faite, pas à pas, et ce qui était attendu / constaté ;
 2. la sauvegarde (export de la partie) ou, à défaut, l'ordre de pose des pièces ;
 3. la position du joueur, la vue, l'objet en main, le véhicule ou le train conduit ;
@@ -26,16 +24,13 @@
 **Règles de mise à jour du fichier** : une ligne « Tour N » par unité de travail (la plus récente en haut de la liste des tours), avec ce qui a changé, ce qui n'a pas été vérifié à l'écran, et la décision du PO si elle a été prise. Mettre à jour cette section (bugs ouverts, chantiers) à chaque fin de session, et les `docs/*.md` concernés.
 
 ## Rôles
-
 - **Utilisateur = Product Owner** : décide de l'avancement et donne les directives. Non développeur (aucun langage maîtrisé).
 - **Claude = dev sénior** : propose, tranche les choix techniques, code, explique simplement et sans jargon inutile.
 
 ## Vision
-
 Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans le navigateur**.
 
 ## Exigences exprimées par le joueur/porteur du projet
-
 - Vues au choix du joueur, changeables en jeu : 1ère personne, 3ème personne, vue du dessus.
 - Contrôles clavier (ex. ZQSD), **tous remappables** par le joueur.
 - Sauvegardes : restaurer une sauvegarde, ou démarrer une nouvelle partie **sans perdre les anciennes** (plusieurs slots).
@@ -45,19 +40,16 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Unity envisagé comme **évolution future** (pas de compétence actuelle).
 
 ## Méthode de travail
-
 - Une étape à la fois : Claude réalise → le PO valide → on continue ; blocage → on analyse ensemble.
 - Quand le PO doit agir (Claude ne peut pas), guider **pas à pas**, sans jargon, avec résultat attendu.
 
 ## Documents de référence
-
 - **`GDD.md` (racine) : Game Design Document complet (référence du jeu tel qu'il est).**
 - `docs/architecture.md` : plan technique et chantiers du prototype (PROPOSITION en attente de validation du PO).
 - `docs/besoins.md` : cahier des charges (menu, édition de partie, paramètres, simulation).
 - `docs/risques.md` : sujets à trancher tôt pour éviter de gros chantiers.
 
 ## Décisions
-
 - Stack validée par le PO : TypeScript + Vite + Three.js.
 - Multijoueur à prévoir dès l'architecture : d'abord **hôte = un joueur** (pas de serveur dédié), plus tard **mini serveur dédié**.
 - Terrain : plat au départ, mais l'architecture doit permettre plus tard un **terrain creusable** : voxels par blocs (navigateur, profondeur limitée à ~3-5 couches) ; en Unity, creusage profond. Le sol plat = un monde voxel à une seule couche de hauteur utile.
@@ -308,14 +300,12 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Tranché au §9 (murs sur bords de cases en navigateur, libres sous Unity ; dalles 10 cm ; angles = pilier 10×10×50 à étudier plus tard).
 
 ## Règles d'architecture (pour garder ces portes ouvertes)
-
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.
 - Tous les changements passent par des **commandes/événements** (ex. « construire X en position Y ») : base du multijoueur et des sauvegardes.
 - Simulation déterministe à pas fixe (même seed + mêmes commandes = même résultat).
 - Monde découpé en chunks avec une grille 3D (même si une seule couche utile au début).
 
 ## Proposition de stack (à valider)
-
 - TypeScript + Vite
 - Three.js (rendu WebGL) — alternative : Babylon.js
 - Assets : glTF/GLB (export Blender natif ; les packs Unity doivent être convertis, vérifier les licences)
@@ -324,16 +314,13 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Simulation usine : tick à pas fixe, séparée du rendu (Web Worker à terme)
 
 ## Points d'attention
-
 - Les assets Unity/Asset Store ne sont pas utilisables tels quels : conversion vers glTF + vérification de la licence (certaines interdisent la redistribution en dehors de Unity).
 - Performance : instancing (InstancedMesh) obligatoire pour les convoyeurs/machines en nombre.
 - Déterminisme : ne jamais utiliser `Math.random()` dans la génération du monde.
 
 ## Prochaines étapes
-
 - **Mode Créatif (octobre 2026)** : onglet « Ressources » (poser minerais, arbres, rochers, buissons, eau), aperçu avant la pose et remplacement, destruction au clic droit maintenu 1 s, corbeille dans le sac, vol libre (double Saut), portée de 24 m ; voir [`docs/refonte-objets.md`](docs/refonte-objets.md) (fin). Idées « mode dieu » proposées au PO, à valider.
 - **Modèles 3D (octobre 2026)** : dernières machines, arbres, buissons, sol, rochers et amas de minerai faits (voir [`docs/modeles3d.md`](docs/modeles3d.md)) ; personnage du joueur : étape 1 faite (modèles homme et femme sur squelette commun, dans le jeu), tête agrandie (cou plus court) et 10 coupes de cheveux faites ; suite selon [`docs/personnage.md`](docs/personnage.md) (formes de déformation, écran de personnalisation, animations). **Objets au sol** : 17 formes maison (`blender/scripts/objets.py`, `objet_*.glb` : bûches, minerai, lingot, plaque, baril, paquet de science…) teintées à la couleur de l'objet, et les machines posées au sol en miniature (`src/render/dropModels.ts`). **Construction** : murs, sols / plafonds, portes, escaliers et piliers en modèles maison bois et pierre (`blender/scripts/construction.py`, `addPieceModel` dans `buildingView.ts`). **Derniers modèles** : tourelle de base, balise (teinte du joueur), presse à plastique, ennemis animés (3 variantes), nid, dépouilles, pioches de pierre et de fer, pistolet, fusil ; véhicules à l'échelle du personnage (buggy agrandi, quad, tank) avec personnage assis au volant ; voies ferrées (droit, virage, rampe) et trains (locomotive à vapeur, locomotive électrique moderne, wagon de fret couvert, wagon citerne) prêts pour plus tard (`docs/modeles3d.md`). Reste : armures visibles sur le personnage.
-
 0. Finir la discussion de cadrage (`docs/risques.md`) avant de coder.
 1. Périmètre du prototype : menu d'accueil complet (Continuer/Nouvelle/Charger/Paramètres/Quitter), édition de partie, sol plat, 3 vues.
 2. Prototype : scène Three.js, sol plat, caméra 3 vues, contrôles remappables.
