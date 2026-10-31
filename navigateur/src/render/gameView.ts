@@ -4883,6 +4883,9 @@ export function startGameView(
     // Construction libre : tous les étages restent visibles (une pièce posée haut ne disparaît jamais) ; seul le
     // plafond de la pièce où l'on se trouve est masqué.
     buildingView.setVisibility(99, inRoom && !building ? inRoom.level : null);
+    // Filet de sécurité : si l'objet en main est une pièce ou une machine mais que le mode construction n'est pas
+    // actif (événement manqué), on le resynchronise ici plutôt que de rester sans patron.
+    if ((selectedKind() !== null || selectedMachine() !== null) !== building) syncBuilding();
     if (building && !paused && !uiOpen) updateBuild(dt);
     // Monde : simulation à pas fixe (20 par seconde), la même que celle d'un hôte multijoueur.
     if (guest) {
