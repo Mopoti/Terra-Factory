@@ -106,6 +106,7 @@ export const ACTIONS = [
   hotbar(7),
   hotbar(8),
   hotbar(9),
+  { id: 'hotbarPage', category: 'hotbar', defaults: ['L:B', null] },
   { id: 'hotbarNext', category: 'hotbar', defaults: ['WheelUp', null] },
   { id: 'hotbarPrev', category: 'hotbar', defaults: ['WheelDown', null] },
   { id: 'hotbar10', category: 'hotbar', defaults: ['Digit0', null] },

@@ -1,0 +1,14 @@
+<!doctype html><html><body style="margin:0;background:#8aa;height:100vh">
+<script type="module">
+import '/src/ui/menu.css';
+import { GameState } from '/src/core/game/state.ts';
+import { mountHotbar } from '/src/ui/hotbar.ts';
+const s = new GameState({ inventory: { iron_plate: 5, wood: 5, stone: 5, pickaxe: 1 } });
+s.changes.equipment.torso = 'armor4_torso';
+s.changes.armorBattery.torso = 'battery_portable~5';
+s.assignSlot(0, 'iron_plate'); s.assignSlot(11, 'wood'); s.assignSlot(13, 'stone');
+mountHotbar(document.body, s);
+s.toggleHotbarPage();
+s.selectSlot(11);
+window.__done = true;
+</script></body></html>

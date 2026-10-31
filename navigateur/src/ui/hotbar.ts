@@ -22,19 +22,36 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
   const bar = document.createElement('div');
   bar.className = 'hotbar';
   bar.setAttribute('role', 'toolbar');
-  root.appendChild(bar);
+  // Barre en plus (plastron d'armure T4 ou T5), au-dessus de la principale.
+  const extra = document.createElement('div');
+  extra.className = 'hotbar hotbar-extra';
+  extra.setAttribute('role', 'toolbar');
+  extra.title = t('hotbar.extra');
+  root.append(extra, bar);
 
   function render(): void {
-    bar.replaceChildren();
-    for (let i = 0; i < HOTBAR_SLOTS; i++) {
-      const item = state.changes.hotbar[i];
+    fill(bar, 0);
+    extra.hidden = !state.hasExtraBar();
+    extra.classList.toggle('off', !state.extraBarOn());
+    extra.classList.toggle('active', state.hotbarPage === 1);
+    bar.classList.toggle('active', state.hotbarPage === 0 && state.hasExtraBar());
+    if (state.hasExtraBar()) fill(extra, HOTBAR_SLOTS);
+    else extra.replaceChildren();
+  }
+
+  /** Remplit une barre : ses 10 cases sont celles de `first` à `first + 9`. */
+  function fill(target: HTMLElement, first: number): void {
+    target.replaceChildren();
+    for (let k = 0; k < HOTBAR_SLOTS; k++) {
+      const i = first + k;
+      const item = state.slotItem(i);
       const slot = document.createElement('button');
       slot.type = 'button';
       slot.className = 'hot-slot';
       slot.classList.toggle('selected', state.selectedSlot === i);
       const key = document.createElement('span');
       key.className = 'hot-key';
-      key.textContent = String((i + 1) % 10);
+      key.textContent = String((k + 1) % 10);
       slot.append(key);
       if (item) {
         const def = itemById(item);
@@ -76,7 +93,7 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
         e.preventDefault();
         state.assignSlot(i, id);
       });
-      bar.append(slot);
+      target.append(slot);
     }
   }
 
@@ -90,6 +107,7 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
       off();
       offLocale();
       bar.remove();
+      extra.remove();
     },
   };
 }

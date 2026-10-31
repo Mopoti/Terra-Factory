@@ -3567,3 +3567,14 @@ input[type='range'] {
 .equip-row > .equip-with-battery:nth-child(2) {
   flex: 0 0 56px;
 }
+
+/* Barre de raccourcis en plus (plastron d'armure T4 ou T5) : au-dessus de la principale, grisée sans énergie. */
+.hotbar-extra {
+  bottom: 150px;
+}
+.hotbar-extra.off {
+  opacity: 0.45;
+}
+.hotbar.active {
+  box-shadow: 0 0 0 2px rgba(140, 220, 255, 0.55);
+}

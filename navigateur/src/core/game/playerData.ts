@@ -11,6 +11,7 @@ import type { MultiplayerOptions } from '../save/saveIndex';
 /** Toujours individuel : barre d'objets, outils, équipement, munitions, cadavres, réapparition, tutoriel. */
 export const PLAYER_KEYS = [
   'hotbar',
+  'hotbarExtra',
   'tools',
   'toolsHeld',
   'equipment',

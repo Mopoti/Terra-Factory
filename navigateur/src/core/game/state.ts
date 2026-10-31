@@ -788,10 +788,17 @@ export class GameState {
 
   /** Sélectionne la case (ou la désélectionne si elle l'était déjà). Une case vide ne se sélectionne pas. */
   selectSlot(index: number): void {
-    if (index < 0 || index >= this.changes.hotbar.length) return;
+    if (index < 0 || index >= 2 * this.changes.hotbar.length) return;
+    if (index >= this.changes.hotbar.length && !this.extraBarOn()) return;
     this.held = null;
-    this.selectedSlot = this.selectedSlot === index || !this.changes.hotbar[index] ? null : index;
+    this.selectedSlot = this.selectedSlot === index || !this.slotItem(index) ? null : index;
     this.emit({ type: 'hotbar' });
+  }
+
+  /** Objet rangé dans une case : 0 à 9 pour la barre, 10 à 19 pour la barre en plus. */
+  slotItem(index: number): string | null {
+    const n = this.changes.hotbar.length;
+    return (index < n ? this.changes.hotbar[index] : this.changes.hotbarExtra[index - n]) ?? null;
   }
 
   /** Objet de la case sélectionnée. */
@@ -804,7 +811,7 @@ export class GameState {
       return null;
     }
     if (this.selectedSlot === null) return null;
-    const item = this.changes.hotbar[this.selectedSlot];
+    const item = this.slotItem(this.selectedSlot);
     if (item && (this.inventory[item] ?? 0) <= 0) {
       // Une case de la barre sans plus aucun exemplaire ne garde pas son patron actif.
       this.selectedSlot = null;
@@ -880,6 +887,7 @@ export class GameState {
     if ((this.inventory[id] ?? 0) === 0 && to) {
       if (this.held === id) this.held = to;
       this.changes.hotbar = this.changes.hotbar.map((x) => (x === id ? to : x));
+      this.changes.hotbarExtra = this.changes.hotbarExtra.map((x) => (x === id ? to : x));
     }
     this.emit({ type: 'inventory' });
     return true;
@@ -955,6 +963,47 @@ export class GameState {
     return gauntlet && (!held || gauntlet.speed > held.speed) ? gauntlet : held;
   }
 
+  // --- Barre de raccourcis en plus (plastron d'armure T4 ou T5) -------------------------------
+
+  /** Barre dont les touches 1 à 0 et la molette parcourent les cases : 0 = la barre, 1 = la barre en plus (non enregistré). */
+  hotbarPage: 0 | 1 = 0;
+  /** Énergie dépensée par seconde tant que la barre en plus sert (secondes d'affichage simple) : presque rien. */
+  static readonly EXTRA_BAR_DRAIN = 0.05;
+
+  /** Le plastron porté est une armure T4 ou T5 (qui contient la barre en plus). */
+  hasExtraBar(): boolean {
+    return /^armor[45]_torso$/.test(baseOf(this.changes.equipment.torso ?? ''));
+  }
+
+  /** La barre en plus fonctionne : plastron T4 ou T5 et de l'énergie dans l'armure (gratuit en Créatif). */
+  extraBarOn(): boolean {
+    return this.hasExtraBar() && (this.creative || this.hasArEnergy());
+  }
+
+  /** Passe des touches 1 à 0 d'une barre à l'autre ; renvoie la barre choisie. */
+  toggleHotbarPage(): 0 | 1 {
+    this.hotbarPage = this.hotbarPage === 0 && this.extraBarOn() ? 1 : 0;
+    return this.hotbarPage;
+  }
+
+  /** Une image : la barre en plus puise un peu d'énergie quand elle sert, et se referme sans plastron ou sans énergie. */
+  tickExtraBar(dt: number): void {
+    const inUse =
+      this.hotbarPage === 1 ||
+      (this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length);
+    if (!inUse) return;
+    if (
+      !this.extraBarOn() ||
+      (!this.creative && !this.drainArmor(dt * GameState.EXTRA_BAR_DRAIN))
+    ) {
+      this.hotbarPage = 0;
+      if (this.selectedSlot !== null && this.selectedSlot >= this.changes.hotbar.length) {
+        this.selectedSlot = null;
+        this.emit({ type: 'hotbar' });
+      }
+    }
+  }
+
   // --- Gantelets d'armure : outil intégré (armures T4 et T5) ---------------------------------------
 
   /** Outil intégré aux gantelets : vitesse, unités par coup et énergie par coup (secondes d'affichage simple). */
@@ -984,12 +1033,16 @@ export class GameState {
 
   /** Range un objet dans une case (un objet n'occupe qu'une case) ou la vide (`null`). */
   assignSlot(index: number, item: string | null): void {
-    if (index < 0 || index >= this.changes.hotbar.length) return;
+    const n = this.changes.hotbar.length;
+    if (index < 0 || index >= 2 * n) return;
+    if (index >= n && !this.hasExtraBar()) return;
     if (item !== null) {
       this.changes.hotbar = this.changes.hotbar.map((x) => (x === item ? null : x));
+      this.changes.hotbarExtra = this.changes.hotbarExtra.map((x) => (x === item ? null : x));
     }
-    this.changes.hotbar[index] = item;
-    if (this.selectedSlot !== null && !this.changes.hotbar[this.selectedSlot]) {
+    if (index < n) this.changes.hotbar[index] = item;
+    else this.changes.hotbarExtra[index - n] = item;
+    if (this.selectedSlot !== null && !this.slotItem(this.selectedSlot)) {
       this.selectedSlot = null;
     }
     this.carried = null;

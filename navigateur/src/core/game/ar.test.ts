@@ -246,6 +246,72 @@ describe('gantelets : outil intégré', () => {
   });
 });
 
+describe('barre de raccourcis en plus (plastron T4 ou T5)', () => {
+  const torso = (piece: string, level: number | null = 5): GameState => {
+    const s = new GameState({ inventory: { iron_plate: 5, wood: 5, stone: 5 } });
+    s.changes.equipment.torso = piece;
+    if (level !== null) s.changes.armorBattery.torso = variantId('battery_portable', level);
+    return s;
+  };
+
+  it('seul un plastron T4 ou T5 donne la barre en plus, et elle demande de l’énergie', () => {
+    expect(torso('armor3_torso').hasExtraBar()).toBe(false);
+    expect(torso('jacket').hasExtraBar()).toBe(false);
+    expect(torso('armor4_torso').extraBarOn()).toBe(true);
+    expect(torso('armor5_torso', null).hasExtraBar()).toBe(true);
+    expect(torso('armor5_torso', null).extraBarOn()).toBe(false);
+  });
+
+  it('on y range et on y choisit des objets (cases 10 à 19) ; un objet n’est que dans une case', () => {
+    const s = torso('armor4_torso');
+    s.assignSlot(0, 'iron_plate');
+    s.assignSlot(12, 'iron_plate'); // déplacé dans la barre en plus
+    expect(s.slotItem(0)).toBeNull();
+    expect(s.slotItem(12)).toBe('iron_plate');
+    s.selectSlot(12);
+    expect(s.selectedItem()).toBe('iron_plate');
+    const bare = new GameState({ inventory: { iron_plate: 1 } });
+    bare.assignSlot(12, 'iron_plate');
+    expect(bare.slotItem(12)).toBeNull(); // sans plastron : refusé
+    bare.selectSlot(12);
+    expect(bare.selectedSlot).toBeNull();
+  });
+
+  it('les touches passent d’une barre à l’autre ; sans énergie ou sans plastron on revient à la principale', () => {
+    const s = torso('armor4_torso');
+    expect(s.toggleHotbarPage()).toBe(1);
+    expect(s.toggleHotbarPage()).toBe(0);
+    s.toggleHotbarPage();
+    delete s.changes.armorBattery.torso;
+    s.tickExtraBar(0.05);
+    expect(s.hotbarPage).toBe(0);
+    expect(torso('armor3_torso').toggleHotbarPage()).toBe(0);
+  });
+
+  it('elle consomme presque rien, seulement quand elle sert', () => {
+    const idle = torso('armor4_torso');
+    idle.tickExtraBar(60);
+    expect(idle.changes.armorBattery.torso).toBe('battery_portable~5');
+    const busy = torso('armor4_torso');
+    busy.toggleHotbarPage();
+    for (let i = 0; i < 60 * 20; i++) busy.tickExtraBar(0.05); // une minute
+    // 0,05 s d'affichage par seconde : 3 s en une minute, très loin d'un niveau (150 s).
+    expect(busy.changes.armorBattery.torso).toBe('battery_portable~4');
+    expect(busy.hotbarPage).toBe(1);
+  });
+
+  it('elle est enregistrée avec la partie (un objet par case, dans les deux barres)', () => {
+    const changes = emptyChanges();
+    changes.hotbar[0] = 'wood';
+    changes.hotbarExtra[3] = 'iron_plate';
+    const back = normalizeChanges(JSON.parse(JSON.stringify(changes)));
+    expect(back.hotbarExtra[3]).toBe('iron_plate');
+    const dup = JSON.parse(JSON.stringify(changes));
+    dup.hotbarExtra[5] = 'wood'; // déjà dans la barre principale
+    expect(normalizeChanges(dup).hotbarExtra[5]).toBeNull();
+  });
+});
+
 describe('sauvegarde de la batterie d’armure', () => {
   it('survit à l’enregistrement, mais pas sans pièce T4 ou T5 pour la porter', () => {
     const changes = emptyChanges();
