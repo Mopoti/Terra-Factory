@@ -20,6 +20,7 @@ import { playSfx } from '../audio/sfx';
 import { ITEM_DRAG_TYPE } from './hotbar';
 import { PIECES } from '../core/data/buildings';
 import { machineForItem } from '../core/data/machines';
+import { levelInfo } from '../core/data/itemData';
 import type { CommandBus } from '../core/game/commands';
 import { BAG_SLOT_TYPE, bagCellsShown, takeAsked, takeHalf, updateHandCursor } from './pick';
 import './menu.css';
@@ -252,7 +253,8 @@ export function mountInventory(
         line.append(el('small', undefined, t('inv.have', { n: String(have) })));
         tooltip.append(line);
       }
-    } else {
+    } else if (!levelInfo(hovered)) {
+      // Un objet à niveaux (batterie, kit, armure) n'est pas une ressource brute : pas de note.
       tooltip.append(el('div', 'note', t('inv.raw')));
     }
     if (def.equip && (def.equip.bonus.slots || def.equip.bonus.weightG)) {
