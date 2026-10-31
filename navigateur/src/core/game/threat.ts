@@ -231,8 +231,8 @@ export class Threat {
     });
   }
 
-  /** Le joueur frappe : touche l'ennemi le plus proche à portée. Renvoie 'kill', 'hit' ou null. */
-  hit(x: number, z: number, range: number, damage: number): 'kill' | 'hit' | null {
+  /** L'ennemi le plus proche de ce point, à `range` m au plus, ou null. */
+  nearest(x: number, z: number, range: number): Enemy | null {
     let best: Enemy | null = null;
     let bestD = range;
     for (const e of this.enemies) {
@@ -242,13 +242,23 @@ export class Threat {
         bestD = d;
       }
     }
-    if (!best) return null;
-    best.hp -= damage;
-    if (best.hp <= 0) {
-      this.kill(best);
+    return best;
+  }
+
+  /** Inflige des dégâts à cet ennemi (il meurt à zéro). Renvoie 'kill' ou 'hit'. */
+  damage(e: Enemy, amount: number): 'kill' | 'hit' {
+    e.hp -= amount;
+    if (e.hp <= 0) {
+      this.kill(e);
       return 'kill';
     }
     return 'hit';
+  }
+
+  /** Le joueur frappe : touche l'ennemi le plus proche à portée. Renvoie 'kill', 'hit' ou null. */
+  hit(x: number, z: number, range: number, damage: number): 'kill' | 'hit' | null {
+    const best = this.nearest(x, z, range);
+    return best ? this.damage(best, damage) : null;
   }
 
   /** Un tir (rayon) : touche l'ennemi le plus proche sur la ligne de tir. Renvoie le résultat et la distance parcourue. */

@@ -3840,6 +3840,58 @@ export function startGameView(
   tracer.visible = false;
   tracer.frustumCulled = false;
   scene.add(tracer);
+  // Tirs des tourelles : un trait lumineux de la tourelle à l'ennemi, qui s'éteint vite (quelques traits à la fois).
+  const TURRET_SHOT_STYLE: Partial<
+    Record<MachineType, { color: number; width: number; life: number }>
+  > = {
+    turret: { color: 0xffe28a, width: 0.03, life: 0.09 },
+    turret_heavy: { color: 0xffb04a, width: 0.04, life: 0.09 },
+    turret_laser: { color: 0x7fd0ff, width: 0.05, life: 0.16 },
+    turret_plasma: { color: 0xd08cff, width: 0.12, life: 0.2 },
+    turret_rail: { color: 0xffffff, width: 0.08, life: 0.35 },
+  };
+  const turretShots: { mesh: THREE.Mesh; life: number; max: number }[] = [];
+  const turretShotGeometry = new THREE.BoxGeometry(1, 1, 1);
+  function addTurretShot(m: Machine, tx: number, tz: number): void {
+    const style = TURRET_SHOT_STYLE[m.type];
+    if (!style) return;
+    const { w, d } = dims(m.type, m.rot);
+    const from = new THREE.Vector3(
+      (m.gx + w / 2) * CELL_SIZE_M,
+      levelY(m.lift) + machineDef(m.type).height * 0.8,
+      (m.gz + d / 2) * CELL_SIZE_M,
+    );
+    const to = new THREE.Vector3(tx, 0.5, tz);
+    let shot = turretShots.find((s) => s.life <= 0);
+    if (!shot) {
+      if (turretShots.length >= 12) return;
+      shot = {
+        mesh: new THREE.Mesh(
+          turretShotGeometry,
+          new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }),
+        ),
+        life: 0,
+        max: 1,
+      };
+      scene.add(shot.mesh);
+      turretShots.push(shot);
+    }
+    (shot.mesh.material as THREE.MeshBasicMaterial).color.setHex(style.color);
+    shot.mesh.position.copy(from).add(to).multiplyScalar(0.5);
+    shot.mesh.lookAt(to);
+    shot.mesh.scale.set(style.width, style.width, from.distanceTo(to));
+    shot.life = shot.max = style.life;
+    shot.mesh.visible = true;
+  }
+  function updateTurretShots(dt: number): void {
+    for (const s of turretShots) {
+      if (s.life <= 0) continue;
+      s.life -= dt;
+      const material = s.mesh.material as THREE.MeshBasicMaterial;
+      if (s.life <= 0) s.mesh.visible = false;
+      else material.opacity = Math.min(1, (s.life / s.max) * 1.5);
+    }
+  }
   // Pistolet : en main (1ère personne) et au bout du bras du personnage.
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x4a4f57 });
   const gripMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22 });
@@ -4044,9 +4096,12 @@ export function startGameView(
         playSfx('pipeBurst');
         options.onMessage?.(t('factory.pipeBurst'));
         break;
-      case 'turretShot':
+      case 'turretShot': {
         playSfx(e.kill ? 'rockBreak' : 'shot');
+        const turret = factory.machines.find((x) => x.id === e.id);
+        if (turret) addTurretShot(turret, e.tx, e.tz);
         break;
+      }
       case 'produced':
         if (e.item === 'iron_ingot') tutorial.signal('iron');
         break;
@@ -4810,6 +4865,7 @@ export function startGameView(
       factoryView.updateFlames(now / 1000, { x: playerX, z: playerZ });
       factoryView.updateParts(now / 1000, { x: playerX, z: playerZ });
       factoryView.weather.update(dt);
+      updateTurretShots(dt);
     });
     enemyView.update(
       threat.enemies,

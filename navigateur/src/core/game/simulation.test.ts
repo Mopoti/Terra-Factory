@@ -94,3 +94,68 @@ describe('simulation du monde à pas fixe', () => {
     expect(factory.machines[0].broken).toBe(true);
   });
 });
+
+describe('tourelles : repérer, viser, tirer', () => {
+  const enemyAt = (id: number, x: number, z: number, hp = 25): Enemy => ({
+    id,
+    x,
+    z,
+    hp,
+    cooldown: 0,
+    idle: 0,
+    target: null,
+  });
+  const laser = (): ReturnType<typeof emptyMachine> => emptyMachine(1, 'turret_laser', 0, 0, 0);
+  const powered = (m: ReturnType<typeof emptyMachine>): ReturnType<typeof emptyMachine>[] => [
+    emptyMachine(2, 'generator', 8, 0, 0),
+    emptyMachine(3, 'pole', 4, 4, 0),
+    m,
+  ];
+
+  it('la tourelle vise l’ennemi le plus proche à portée, et le touche', () => {
+    const turret = laser();
+    const gen = emptyMachine(2, 'generator', 8, 0, 0);
+    gen.fuel = { item: 'coal', count: 10 };
+    const { sim, factory, threat } = make(
+      [gen, emptyMachine(3, 'pole', 4, 4, 0), turret],
+      [enemyAt(1, 30, 0, 100), enemyAt(2, 10, 0, 100), enemyAt(3, 200, 0, 100)],
+    );
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 8; i++) sim.step([], events);
+    expect(factory.turretAim.get(1)).toEqual({ x: 10, z: 0 });
+    const shots = events.filter((e) => e.type === 'turretShot');
+    expect(shots.length).toBeGreaterThan(0);
+    expect(shots[0]).toMatchObject({ id: 1, tx: 10, tz: 0 });
+    expect(threat.enemies.find((e) => e.id === 2)!.hp).toBeLessThan(100);
+    expect(threat.enemies.find((e) => e.id === 1)!.hp).toBe(100);
+  });
+
+  it('hors de portée, ou sans courant, ou sans ennemi : elle ne vise pas et ne tire pas', () => {
+    const far = make([...powered(laser())], [enemyAt(1, 500, 0)]);
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 8; i++) far.sim.step([], events);
+    expect(far.factory.turretAim.size).toBe(0);
+    expect(events.some((e) => e.type === 'turretShot')).toBe(false);
+    // Sans générateur alimenté : pas de courant, donc pas de tir.
+    const dark = make([laser()], [enemyAt(1, 10, 0)]);
+    for (let i = 0; i < 8; i++) dark.sim.step([], events);
+    expect(dark.factory.turretAim.size).toBe(0);
+    expect(events.some((e) => e.type === 'turretShot')).toBe(false);
+    // Plus d'ennemi : la visée est effacée.
+    const calm = make([...powered(laser())], []);
+    calm.factory.turretAim.set(1, { x: 1, z: 1 });
+    calm.sim.step([], events);
+    expect(calm.factory.turretAim.size).toBe(0);
+  });
+
+  it('la tourelle à munitions tire jusqu’à épuisement des balles', () => {
+    const turret = emptyMachine(1, 'turret', 0, 0, 0);
+    turret.input = { item: 'magazine', count: 1 };
+    const { sim, threat } = make([turret], [enemyAt(1, 5, 0, 10_000)]);
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 20 * 30; i++) sim.step([], events);
+    const shots = events.filter((e) => e.type === 'turretShot').length;
+    expect(shots).toBe(12); // un chargeur de 12 balles
+    expect(threat.enemies[0].hp).toBe(10_000 - 12 * 9);
+  });
+});

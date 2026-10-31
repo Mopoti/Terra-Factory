@@ -11,6 +11,7 @@ import { CELL_SIZE_M } from '../core/constants';
 import { levelY } from '../core/factory/factory';
 import type { Machine } from '../core/factory/factory';
 import type { Wind } from '../core/game/weather';
+import { turnToward } from './angles';
 
 /** Ce que les objets de météo lisent dans le monde. */
 export interface WeatherSource {
@@ -40,14 +41,6 @@ const box = (w: number, h: number, d: number, color: number): THREE.Mesh =>
     new THREE.BoxGeometry(w, h, d),
     new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.2 }),
   );
-
-/** Angle (radians) le plus court de `from` vers `to`, avancé d'au plus `step`. */
-function turnToward(from: number, to: number, step: number): number {
-  let diff = (to - from) % (Math.PI * 2);
-  if (diff > Math.PI) diff -= Math.PI * 2;
-  if (diff < -Math.PI) diff += Math.PI * 2;
-  return from + Math.max(-step, Math.min(step, diff));
-}
 
 /** Modèle maison posé à son origine (pièces mobiles sur leurs pivots), ou null s'il n'est pas chargé. */
 function modelMesh(

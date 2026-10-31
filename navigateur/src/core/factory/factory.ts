@@ -2294,6 +2294,9 @@ export class Factory {
     return false;
   }
 
+  /** Tourelles qui ont un ennemi en vue : identifiant → position visée (fixé par la simulation, lu par l'affichage). */
+  readonly turretAim = new Map<number, { x: number; z: number }>();
+
   /** Une tourelle a-t-elle de quoi tirer (balles dans le chargeur en place ou chargeurs en réserve) ? */
   turretReady(m: Machine): boolean {
     const spec = turretSpec(m.type);

@@ -31,7 +31,8 @@ export type SimEvent =
   | { type: 'machineLost'; id: number }
   | { type: 'machineAcid'; id: number }
   | { type: 'pipeBurst'; id: number }
-  | { type: 'turretShot'; id: number; kill: boolean }
+  /** Une tourelle a tiré : l'ennemi visé est en (tx, tz). */
+  | { type: 'turretShot'; id: number; kill: boolean; tx: number; tz: number }
   | { type: 'produced'; item: string; count: number }
   | { type: 'autoStudy'; tech: string };
 
@@ -180,20 +181,30 @@ export class WorldSimulation {
     }
     // Les nids proches de chaque joueur gardent leurs gardiens.
     if (!state.creative) for (const p of players) threat.keepGuards(p.x, p.z, dt);
-    // Tourelles automatiques : elles tirent sur l'ennemi le plus proche à portée tant qu'elles ont des balles.
-    if (threat.enemies.length > 0) {
-      for (const m of factory.machines) {
-        if (!isTurret(m.type)) continue;
-        m.progress = Math.max(0, m.progress - dt);
-        if (m.progress > 0 || !factory.turretReady(m)) continue;
-        const c = centerOf(m);
-        const spec = turretSpec(m.type);
-        const result = threat.hit(c.x, c.z, spec.range, spec.damage);
-        if (!result) continue;
-        factory.turretTake(m);
-        m.progress = spec.every;
-        events.push({ type: 'turretShot', id: m.id, kill: result === 'kill' });
+    // Tourelles automatiques : elles repèrent l'ennemi le plus proche à portée, se tournent vers lui (`turretAim`, lu par
+    // l'affichage) et tirent tant qu'elles ont des balles ou du courant.
+    if (threat.enemies.length === 0) {
+      if (factory.turretAim.size > 0) factory.turretAim.clear();
+      return;
+    }
+    for (const m of factory.machines) {
+      if (!isTurret(m.type)) continue;
+      m.progress = Math.max(0, m.progress - dt);
+      const c = centerOf(m);
+      const spec = turretSpec(m.type);
+      const enemy = factory.turretReady(m) ? threat.nearest(c.x, c.z, spec.range) : null;
+      if (!enemy) {
+        factory.turretAim.delete(m.id);
+        continue;
       }
+      factory.turretAim.set(m.id, { x: enemy.x, z: enemy.z });
+      if (m.progress > 0) continue;
+      const tx = enemy.x;
+      const tz = enemy.z;
+      const result = threat.damage(enemy, spec.damage);
+      factory.turretTake(m);
+      m.progress = spec.every;
+      events.push({ type: 'turretShot', id: m.id, kill: result === 'kill', tx, tz });
     }
   }
 }

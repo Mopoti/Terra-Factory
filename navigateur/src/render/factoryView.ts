@@ -24,6 +24,10 @@ import {
 import * as THREE from 'three';
 import { CELL_SIZE_M } from '../core/constants';
 import { WeatherProps, isWeatherProp } from './weatherProps';
+import { bearingOf, turnToward, wrapAngle } from './angles';
+
+/** Vitesse de rotation de la tête d'une tourelle qui suit un ennemi (radians par seconde). */
+const TURRET_TURN_RAD_S = 4;
 import { RISE_DIR } from '../core/data/buildings';
 import { itemById } from '../core/data/items';
 import {
@@ -175,6 +179,8 @@ interface PartItem {
   axis: THREE.Vector3;
   modelAxis: { x: number; y: number; z: number };
   spin: number;
+  /** Tête de tourelle : angle actuel de visée (radians), qui rejoint doucement l'ennemi repéré ou le balayage. */
+  aim?: number;
 }
 
 interface PartMachine {
@@ -883,6 +889,24 @@ export class FactoryView {
   }
 
   /**
+   * Angle de la tête d'une tourelle : vers l'ennemi qu'elle a en vue (cap de la cible moins cap du modèle au repos),
+   * sinon celui du balayage ; elle y arrive à vitesse limitée.
+   */
+  private aimedAngle(m: Machine, item: PartItem, sweep: number, dt: number): number {
+    const aim = this.factory.turretAim.get(m.id);
+    let want = sweep;
+    if (aim) {
+      const { w, d } = dims(m.type, m.rot);
+      const cx = (m.gx + w / 2) * CELL_SIZE_M;
+      const cz = (m.gz + d / 2) * CELL_SIZE_M;
+      // Au repos le canon regarde vers `rot` quarts de tour (voir `MODEL_TURNS`).
+      want = wrapAngle(bearingOf(aim.x - cx, aim.z - cz) - (m.rot % 4) * (Math.PI / 2));
+    }
+    item.aim = turnToward(item.aim ?? sweep, want, dt * TURRET_TURN_RAD_S);
+    return item.aim;
+  }
+
+  /**
    * Anime les pièces mobiles (appelée à chaque image, `time` en secondes) : elles bougent tant que la machine travaille et
    * s'arrêtent en douceur sinon. Seules les matrices des objets changent ; machines à plus de `range` m de `near` ignorées.
    */
@@ -923,6 +947,9 @@ export class FactoryView {
           const pose = poseOf(motion, p.phase, i.spin, cycle, i.modelAxis, p.level);
           angle = pose.angle;
           off = new THREE.Vector3(...p.turn(pose.dx, pose.dy, pose.dz));
+          // Tourelle : la tête se tourne vers l'ennemi repéré (sinon elle balaye l'horizon).
+          if (i.name === 'tourelle' && isTurret(p.m.type))
+            angle = this.aimedAngle(p.m, i, angle, dt);
         }
         off.multiplyScalar(p.scale);
         // Une pièce portée par une autre (chariot sur portique…) suit son déplacement total.

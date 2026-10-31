@@ -612,6 +612,8 @@ Un nid a **150 PV de dégâts cumulés** (sauvegardés) : on le détruit **en ti
 
 Cinq tourelles : légère et lourde (munitions), **laser**, **plasma** et **à rail** (électriques, sans munitions ; la tourelle à rail, T5, tire à 70 m pour 220 dégâts toutes les 1,6 s).
 
+**Repérage et tir** : une tourelle qui a de quoi tirer (balles ou courant) **repère l'ennemi le plus proche dans sa portée**, **tourne sa tête vers lui** (4 rad/s ; sans cible, elle balaye l'horizon) et lui tire dessus à sa cadence. Chaque tir est montré par un **trait lumineux** de la tourelle à l'ennemi (jaune pour la légère, orange pour la lourde, bleu pour le laser, violet épais pour le plasma, blanc long pour le rail) avec son bruit de tir ; un ennemi tué fait un autre bruit. Une tourelle sans munitions ou sans courant ne vise pas.
+
 ---
 
 ## 10. Jour, nuit et saisons
