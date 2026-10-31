@@ -75,6 +75,14 @@ const center = (g: number): number => (g + 0.5) * CELL_SIZE_M;
 
 /** Flammes d'une machine : couleurs de sommet sans éclairage (elles brillent), vues des deux côtés. */
 const flameMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+/** Nappes de lumière des murs et portails holographiques : translucides, sans ombre ni éclairage. */
+const holoMaterial = new THREE.MeshBasicMaterial({
+  vertexColors: true,
+  transparent: true,
+  opacity: 0.5,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
 
 interface FlameInstance {
   m: Machine;
@@ -411,8 +419,29 @@ export class FactoryView {
   }
 
   /** Usure d'une barrière, pour son dessin (voir `BarrierContext`). */
-  private barrierContext(m: Machine): BarrierContext {
-    return { level: this.damageLevel(m) };
+  private barrierContext(m: Machine, holo?: MeshBuilder): BarrierContext {
+    return { level: this.damageLevel(m), holo };
+  }
+
+  /** Nappes de lumière des murs et portails holographiques (maillages à part), refaites avec les machines. */
+  private holos: { m: Machine; mesh: THREE.Mesh }[] = [];
+
+  /** La nappe d'un mur ou portail holographique se voit-elle ? Seulement alimentée (et portail fermé). */
+  private holoLit(m: Machine): boolean {
+    return this.factory.powerFactor(m) > 0 && !this.factory.gateOpen(m);
+  }
+
+  private clearHolos(): void {
+    for (const h of this.holos) {
+      this.root.remove(h.mesh);
+      h.mesh.geometry.dispose();
+    }
+    this.holos = [];
+  }
+
+  /** Allume ou éteint les nappes holographiques selon le courant (à chaque image). */
+  updateHolos(): void {
+    for (const h of this.holos) h.mesh.visible = this.holoLit(h.m);
   }
 
   /** Redessine les machines dont l'aspect a changé (elles noircissent à mesure qu'elles s'abîment ; les portails s'ouvrent). */
@@ -438,6 +467,7 @@ export class FactoryView {
     const bands = new BandBuilder();
     this.entries.clear();
     this.clearMovers();
+    this.clearHolos();
     for (const m of this.factory.machines) {
       if (isWeatherProp(m.type)) continue; // dessiné par `WeatherProps`
       // Les modèles se chargent en arrière-plan : on n'affiche pas d'abord la forme simple puis le modèle. Une machine
@@ -473,6 +503,7 @@ export class FactoryView {
               ? (m.tint ?? WAYPOINT_COLORS[0])
               : undefined;
         const parts = animatedParts(m.type);
+        const holo = machineDef(m.type).holo ? new MeshBuilder() : undefined;
         const piped =
           m.type === 'pipe' &&
           addPipeModel(mb, m, this.factory.fluidSides(m), tint ? hexToRgb(tint) : undefined);
@@ -488,8 +519,16 @@ export class FactoryView {
             tint,
             !!parts,
             this.factory.gateOpen(m),
-            this.barrierContext(m),
+            this.barrierContext(m, holo),
           );
+        if (holo && holo.positions.length > 0) {
+          liftBody(holo, 0, m.lift);
+          const mesh = new THREE.Mesh(geometryOf(holo), holoMaterial);
+          mesh.renderOrder = 3;
+          mesh.visible = this.holoLit(m);
+          this.root.add(mesh);
+          this.holos.push({ m, mesh });
+        }
         const worn = this.damageLevel(m);
         if (worn > 0) burn(mb, start, worn);
         if (parts) this.addMover(m, parts);
@@ -672,6 +711,7 @@ export class FactoryView {
    * de `range` mètres de `near` sont mises à jour ; on ne réécrit que les sommets des flammes.
    */
   updateFlames(time: number, near?: { x: number; z: number }, range = 70): void {
+    this.updateHolos();
     const dt = Math.min(0.1, Math.max(0, time - this.flameTime));
     this.flameTime = time;
     for (const f of this.flameList) {
@@ -1230,6 +1270,7 @@ export class FactoryView {
   dispose(): void {
     this.scene.remove(this.root, this.ghost);
     this.clearMovers();
+    this.clearHolos();
     for (const child of [...this.flags.children]) this.flags.remove(child);
     this.bodies.geometry.dispose();
     this.items.geometry.dispose();
@@ -1611,6 +1652,8 @@ const MODEL_TURNS = [0, 1, 2, 3] as const;
 interface BarrierContext {
   /** Usure (0 intacte à 3 très abîmée). */
   level: number;
+  /** Où mettre la nappe de lumière d'un mur ou d'un portail holographique (maillage à part, caché sans courant). */
+  holo?: MeshBuilder;
 }
 
 /** Un groupe de pièces d'un modèle, dessiné comme un modèle (même repère et même centrage que le modèle entier). */
@@ -1690,7 +1733,9 @@ function addBarrierModel(
     for (const [name, g] of Object.entries(base.groups ?? {})) {
       let part = g;
       if (name === 'holo_portail') {
-        if (open) continue; // la nappe de lumière s'éteint pour laisser passer
+        // La nappe de lumière s'éteint pour laisser passer ; elle est à part (translucide, cachée sans courant).
+        if (!open && ctx.holo) ctx.holo.model(groupAsModel(base, name, part), x, 0, z, turn, scale);
+        continue;
       } else if (open) {
         // Battants : ouverts à angle droit vers l'extérieur ; vantail : glisse hors de l'ouverture.
         if (name === 'battant_g') part = rotatedGroup(g, Math.PI / 2);
@@ -1713,6 +1758,8 @@ function addBarrierModel(
     const plus = groups.poteau_d;
     // Un poteau à chaque bout de la pièce (les deux du milieu n'existent pas) : une rangée de plusieurs pièces garde
     // donc ses poteaux à la jonction de deux pièces, jamais à l'intérieur d'une pièce.
+    if (groups.holo_mur && ctx.holo)
+      ctx.holo.model(groupAsModel(model, 'holo_mur', groups.holo_mur), tx, 0, tz, turn, 1);
     if (minus && i === 0) mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
     if (plus && i === tiles - 1)
       mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);

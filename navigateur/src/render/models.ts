@@ -352,9 +352,10 @@ const EXTRA_GROUPS: Record<string, string[]> = {
       'barriere_beton_arme',
       'barriere_beton_arme_abime1',
       'barriere_beton_arme_abime2',
-      'barriere_holographique',
     ].map((n) => [n, ['poteau_g', 'poteau_d']]),
   ),
+  // Mur holographique : sa nappe de lumière (`holo_mur`) est dessinée à part, translucide, et seulement s'il est alimenté.
+  barriere_holographique: ['poteau_g', 'poteau_d', 'holo_mur'],
   // Ennemis (icônes de l'onglet Créatif ; ils sont dessinés en jeu par `enemyView.ts`).
   ennemi_eclaireur: [],
   ennemi_gardien: [],

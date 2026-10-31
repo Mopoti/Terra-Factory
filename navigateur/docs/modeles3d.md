@@ -329,7 +329,8 @@ mêmes places. Le jeu cache le poteau d'un côté où touche une barrière **de 
 poteaux qu'à ses deux bouts. Les barrières et portails sont posés **sur le bord de leurs cases** (côté dos du modèle,
 choisi en tournant la pièce), pas au milieu : deux rangées qui font un angle se rejoignent au coin des cases et leurs deux
 poteaux d'angle tombent au même endroit (31 octobre). Hauteur des clôtures et barrières : 1 m (`H` = 2 unités ; les
-portails gardent la leur).
+portails gardent la leur). Holographiques : la nappe de lumière (`holo_mur`, `holo_portail`) est un maillage à part,
+translucide, visible seulement quand la machine est alimentée (et le portail fermé) : `FactoryView.updateHolos`.
 
 Holographique (palier 5, même famille) : `barriere_holographique` (rail et demi-poteaux émetteurs, nappe de lumière
 `holo_mur`), `portail_holographique` (piliers émetteurs, seuil à chevrons, nappe `holo_portail` que le jeu éteint pour
