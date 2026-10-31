@@ -3562,3 +3562,8 @@ input[type='range'] {
   color: #e6f6ff;
   font: inherit;
 }
+
+/* Gantelets (mains) : la case de batterie garde la largeur étroite de la case des mains. */
+.equip-row > .equip-with-battery:nth-child(2) {
+  flex: 0 0 56px;
+}

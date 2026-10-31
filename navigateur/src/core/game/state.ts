@@ -943,10 +943,43 @@ export class GameState {
     }
   }
 
-  /** Bonus de récolte de l'outil en place (null = mains nues). */
-  harvestTool(): { speed: number; yield: number } | null {
+  /**
+   * Bonus de récolte de l'outil en place (null = mains nues). Des gantelets d'armure T4 ou T5 remplacent l'outil
+   * quand ils sont meilleurs et que l'armure a de l'énergie ; `gauntlet` demande alors de payer chaque coup
+   * (`payGauntletStroke`).
+   */
+  harvestTool(): { speed: number; yield: number; gauntlet?: true } | null {
     const id = this.toolItem();
-    return id ? itemById(id).tool : null;
+    const held = id ? itemById(id).tool : null;
+    const gauntlet = this.gauntletTool();
+    return gauntlet && (!held || gauntlet.speed > held.speed) ? gauntlet : held;
+  }
+
+  // --- Gantelets d'armure : outil intégré (armures T4 et T5) ---------------------------------------
+
+  /** Outil intégré aux gantelets : vitesse, unités par coup et énergie par coup (secondes d'affichage simple). */
+  static readonly GAUNTLETS = {
+    armor4: { speed: 4.5, yield: 3, cost: 3 },
+    armor5: { speed: 6, yield: 4, cost: 2.4 },
+  } as const;
+
+  private gauntletSpec(): (typeof GameState.GAUNTLETS)[keyof typeof GameState.GAUNTLETS] | null {
+    const m = /^(armor[45])_hands$/.exec(baseOf(this.changes.equipment.hands ?? ''));
+    return m ? GameState.GAUNTLETS[m[1] as 'armor4' | 'armor5'] : null;
+  }
+
+  /** L'outil des gantelets, s'ils sont portés (T4 ou T5) et que l'armure a de l'énergie ; sinon null. */
+  gauntletTool(): { speed: number; yield: number; gauntlet: true } | null {
+    const spec = this.gauntletSpec();
+    if (!spec || (!this.creative && !this.hasArEnergy())) return null;
+    return { speed: spec.speed, yield: spec.yield, gauntlet: true };
+  }
+
+  /** Paye l'énergie d'un coup des gantelets ; faux (le coup se fait alors à mains nues) s'il n'y en a plus. */
+  payGauntletStroke(): boolean {
+    const spec = this.gauntletSpec();
+    if (!spec) return false;
+    return this.creative || this.drainArmor(spec.cost);
   }
 
   /** Range un objet dans une case (un objet n'occupe qu'une case) ou la vide (`null`). */

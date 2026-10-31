@@ -341,7 +341,7 @@ Les maillages `holo_*` sont faits pour être dessinés translucides et lumineux 
 Batterie portable : `objet_batterie_portable` (`objets.py`), pile de poche de la teinte, face sombre à éclair et jauge de
 quatre barres, clip de ceinture ; la vraie jauge de charge sera une barre dessinée par-dessus l'icône.
 
-## Machines avancées (30 octobre, pas encore dans le jeu)
+## Machines avancées (30 octobre ; branchées dans le jeu)
 
 Nouvelle famille `blender/scripts/avancees.py` (`avancees.blend`), pour les machines des nouveaux chantiers. Dimensions
 proposées, à confirmer : `borne_recharge` (1 x 1 case, 1,6 m ; écran `voyant_ecran`, anneau lumineux `voyant_charge`,

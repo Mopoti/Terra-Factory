@@ -13,7 +13,7 @@ export interface Tracked {
   start: 'full' | 'empty';
 }
 
-const ARMOR = /^armor[1-5]_(head|torso|legs|feet)$/;
+const ARMOR = /^armor[1-5]_(head|torso|legs|feet|hands)$/;
 
 /** Description du suivi d'un objet de base, ou null s'il n'en a pas. */
 export function trackedOf(base: string): Tracked | null {

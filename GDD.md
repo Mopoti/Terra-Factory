@@ -220,13 +220,13 @@ Six emplacements : **Tête, Tronc, Dos, Mains, Jambes, Pieds** ; s'équipe par g
 
 **Pièces d'armure et bonus** (protection en % / chaleur en points ; les armures remplacent le vêtement du même emplacement) :
 
-| Emplacement | Vêtement             | T1        | T2        | T3         | T4                                                       | T5                                                                        |
-| ----------- | -------------------- | --------- | --------- | ---------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Tête        | Capuche : chaleur 1  | 4 % / 1   | 8 % / 2   | 10 % / 2,5 | 13 % / 3,2 + batterie + **réalité augmentée**            | 16 % / 4 + batterie + **réalité augmentée** (−20 % d'énergie)             |
-| Tronc       | Veste : chaleur 3    | 8 % / 2   | 16 % / 4  | 20 % / 5   | 26 % / 6,5 + batterie + barre de raccourcis ⏳           | 32 % / 8 + batterie + barre de raccourcis ⏳                              |
-| Jambes      | Pantalon : chaleur 2 | 6 % / 1,5 | 12 % / 3  | 15 % / 3,8 | 19 % / 4,8 + batterie + **exosquelette** (+40 kg, +10 %) | 23 % / 5,8 + batterie + **exosquelette** (+80 kg, +20 %, −20 % d'énergie) |
-| Pieds       | Bottes : chaleur 1   | 4 % / 1   | 9 % / 2,2 | 11 % / 2,8 | 14 % / 3,5 + batterie                                    | 17 % / 4,2 + batterie                                                     |
-| Mains       | Gants : chaleur 1    | —         | —         | —          | outil intégré ⏳ (pièce à créer)                         | outil intégré ⏳ (pièce à créer)                                          |
+| Emplacement | Vêtement             | T1        | T2        | T3         | T4                                                                          | T5                                                                                       |
+| ----------- | -------------------- | --------- | --------- | ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Tête        | Capuche : chaleur 1  | 4 % / 1   | 8 % / 2   | 10 % / 2,5 | 13 % / 3,2 + batterie + **réalité augmentée**                               | 16 % / 4 + batterie + **réalité augmentée** (−20 % d'énergie)                            |
+| Tronc       | Veste : chaleur 3    | 8 % / 2   | 16 % / 4  | 20 % / 5   | 26 % / 6,5 + batterie + barre de raccourcis ⏳                              | 32 % / 8 + batterie + barre de raccourcis ⏳                                             |
+| Jambes      | Pantalon : chaleur 2 | 6 % / 1,5 | 12 % / 3  | 15 % / 3,8 | 19 % / 4,8 + batterie + **exosquelette** (+40 kg, +10 %)                    | 23 % / 5,8 + batterie + **exosquelette** (+80 kg, +20 %, −20 % d'énergie)                |
+| Pieds       | Bottes : chaleur 1   | 4 % / 1   | 9 % / 2,2 | 11 % / 2,8 | 14 % / 3,5 + batterie                                                       | 17 % / 4,2 + batterie                                                                    |
+| Mains       | Gants : chaleur 1    | 3 % / 0,8 | 6 % / 1,5 | 8 % / 1,9  | 10 % / 2,4 + batterie + **outil intégré** (vitesse ×4,5, 3 unités par coup) | 12 % / 3 + batterie + **outil intégré** (vitesse ×6, 4 unités par coup, −20 % d'énergie) |
 
 La protection totale est plafonnée à 80 %. Le T3 « Exosquelette » (jambes, sans énergie) donne +40 kg et +10 % de vitesse. Les pièces T4 et T5 ont une **case de batterie portable** ; la réalité augmentée, l'exosquelette et (plus tard) l'outil des mains puisent dans la somme des batteries portées.
 

@@ -577,6 +577,9 @@ export class Interaction {
       }
       while (!destroying && hit.type !== 'structure' && this.holdingTime >= seconds) {
         this.holdingTime -= seconds;
+        // Les gantelets d'armure paient chaque coup avec les batteries ; à court d'énergie, c'est à mains nues.
+        const stroke =
+          hit.type === 'target' && tool?.gauntlet ? this.state.payGauntletStroke() : true;
         const result =
           hit.type === 'drop'
             ? this.state.pickUp(hit.stack.id)
@@ -584,7 +587,7 @@ export class Interaction {
                 hit.target.key,
                 hit.target.total,
                 hit.target.item,
-                tool?.yield ?? 1,
+                stroke ? (tool?.yield ?? 1) : 1,
               );
         if (result.gained > 0) {
           this.addFeed(item, result.gained);

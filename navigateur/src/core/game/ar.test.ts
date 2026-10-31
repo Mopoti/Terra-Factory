@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { variantId } from '../data/itemData';
+import { levelInfo, variantId } from '../data/itemData';
 import { GameState } from './state';
 import { emptyChanges, normalizeChanges } from './worldChanges';
 
@@ -197,6 +197,52 @@ describe('exosquelette des jambes', () => {
   it('l’ancien exosquelette (T3) reste actif sans énergie', () => {
     const s = legs('exoskeleton', null);
     expect(s.exoPower()).toBe(1);
+  });
+});
+
+describe('gantelets : outil intégré', () => {
+  const hands = (piece: string, level: number | null = 5): GameState => {
+    const s = new GameState({ inventory: {} });
+    s.changes.equipment.hands = piece;
+    if (level !== null) s.changes.armorBattery.hands = variantId('battery_portable', level);
+    return s;
+  };
+
+  it('seuls les gantelets T4 et T5 ont un outil, et il faut de l’énergie', () => {
+    expect(hands('armor3_hands').harvestTool()).toBeNull();
+    expect(hands('gloves').harvestTool()).toBeNull();
+    expect(hands('armor4_hands', null).harvestTool()).toBeNull();
+    expect(hands('armor4_hands').harvestTool()).toMatchObject({ speed: 4.5, yield: 3 });
+    expect(hands('armor5_hands').harvestTool()).toMatchObject({ speed: 6, yield: 4 });
+  });
+
+  it('ils remplacent l’outil en main seulement s’ils sont meilleurs', () => {
+    const s = hands('armor4_hands');
+    s.inventory.tool_iron = 1;
+    s.assignSlot(0, 'tool_iron');
+    s.selectSlot(0);
+    expect(s.harvestTool()).toMatchObject({ gauntlet: true }); // 4,5 > 3,5
+    const weak = hands('armor4_hands', null);
+    weak.inventory.tool_iron = 1;
+    weak.assignSlot(0, 'tool_iron');
+    weak.selectSlot(0);
+    expect(weak.harvestTool()).toEqual({ speed: 3.5, yield: 2 }); // sans énergie : l'outil
+  });
+
+  it('chaque coup consomme de l’énergie, la T5 un peu moins ; à court, le coup est à mains nues', () => {
+    const t4 = hands('armor4_hands', 1);
+    let strokes = 0;
+    while (t4.payGauntletStroke() && strokes < 1000) strokes++;
+    expect(strokes).toBe(Math.ceil(150 / 3)); // un niveau de 150 s à 3 s par coup
+    expect(t4.harvestTool()).toBeNull();
+    const t5 = hands('armor5_hands', 1);
+    let strokes5 = 0;
+    while (t5.payGauntletStroke() && strokes5 < 1000) strokes5++;
+    expect(strokes5).toBeGreaterThan(strokes);
+  });
+
+  it('les gantelets s’usent et ont leur jauge comme les autres pièces', () => {
+    expect(levelInfo('armor3_hands')).toEqual({ base: 'armor3_hands', level: 10, steps: 10 });
   });
 });
 
