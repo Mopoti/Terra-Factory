@@ -545,11 +545,60 @@ def _armure_icone(coll, leger, p, piece):
     T.adoucir(coll)
 
 
+def _gantelet_icone(coll, leger, p):
+    """Gantelet d'armure posé au sol : la main gantée du personnage (`outils.main_gantee`, doigts tendus) assombrie,
+    avec les plaques du gantelet porté (`gantelets.py`), couchée paume en bas ; un second, en miroir, à côté."""
+    import outils as OU
+    import gantelets as G
+    tmp = T.collection(coll.name + '_main')
+    OU.main_gantee(tmp, leger)
+    for lot in G.plaques(tmp, leger, p):
+        lot.finir()
+    # Pièces à plat (hiérarchie appliquée), gant assombri : le gantelet se lit à la couleur de l'armure.
+    sombre = {'gant': 'teinte_sombre', 'gant_sangle': 'teinte_sombre', 'gant_sombre': 'teinte_sombre', 'peau_main': 'teinte_sombre'}
+    objs = list(tmp.objects)
+    bpy.context.view_layer.update()
+    mondes = {o: o.matrix_world.copy() for o in objs}
+    for o in objs:
+        if o.type != 'MESH':
+            continue
+        o.data.transform(mondes[o])
+        for i, m in enumerate(o.data.materials):
+            nom = m.name.split('.')[0]
+            if nom in sombre:
+                o.data.materials[i] = T.material(sombre[nom])
+    k = 1.25
+    for sx, pos, rz in ((1, (0.07, 0.02, 0), 0.3), (-1, (-0.09, -0.03, 0), -0.25)):
+        for o in objs:
+            if o.type != 'MESH':
+                continue
+            c = o.copy()
+            c.data = o.data.copy()
+            c.parent = None
+            c.matrix_world = Matrix()
+            c.data.transform(Matrix.Diagonal((sx * k, k, k, 1)))
+            if sx < 0:
+                c.data.flip_normals()
+            c.data.transform(Matrix.Rotation(rz, 4, 'Z'))
+            c.data.transform(Matrix.Translation(pos))
+            coll.objects.link(c)
+    for o in objs:
+        bpy.data.objects.remove(o, do_unlink=True)
+    bpy.data.collections.remove(tmp)
+    zmin = min((v.co.z for o in coll.objects if o.type == 'MESH' for v in o.data.vertices))
+    for o in coll.objects:
+        if o.type == 'MESH':
+            o.data.transform(Matrix.Translation((0, 0, -zmin)))
+    O._brillant()
+    T.adoucir(coll)
+
+
 def _armures():
     m = {}
     for p in (1, 2, 3, 4, 5):
         for piece in ('casque', 'plastron', 'jambieres', 'bottes'):
             m[f'objet_armure{p}_{piece}'] = lambda c, leger, p=p, piece=piece: _armure_icone(c, leger, p, piece)
+        m[f'objet_armure{p}_gants'] = lambda c, leger, p=p: _gantelet_icone(c, leger, p)
     return m
 
 

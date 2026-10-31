@@ -215,7 +215,7 @@ Il n'y a **ni niveaux ni points d'expérience** : le personnage progresse par se
 Six emplacements : **Tête, Tronc, Dos, Mains, Jambes, Pieds** ; s'équipe par glisser-déposer ou sélection puis clic ; l'équipement porté est dessiné sur le personnage (modèles portés encore provisoires pour la plupart).
 
 - **Vêtements** (tissu) : sac à dos (+10 cases, +20 kg, +30 L), capuche, pantalon, bottes, gants (cosmétiques pour l'instant ⏳).
-- **Armures de 1 à 5** : casque, plastron, jambières et bottes de chaque palier ; chaque pièce réduit les dégâts reçus (somme des pièces, plafonnée). **Usure** : chaque coup reçu use les pièces portées (un niveau sur dix tous les 60 dégâts par pièce) ; une pièce usée protège moins ; à zéro elle **se brise**. Une armure neuve est pleine ; les pièces usées sont des objets à part (voir §5.3).
+- **Armures de 1 à 5** : casque, plastron, jambières, bottes et gantelets de chaque palier ; chaque pièce réduit les dégâts reçus (somme des pièces, plafonnée). **Usure** : chaque coup reçu use les pièces portées (un niveau sur dix tous les 60 dégâts par pièce) ; une pièce usée protège moins ; à zéro elle **se brise**. Une armure neuve est pleine ; les pièces usées sont des objets à part (voir §5.3).
 - **Exosquelette** (palier 4) et **propulseur dorsal** (palier 4, emplacement Dos) : le propulseur donne de brèves poussées verticales et brûle d'abord les **batteries portables** (rechargées à une borne), puis les batteries au lithium du sac (20 s chacune).
 
 **Pièces d'armure et bonus** (protection en % / chaleur en points ; les armures remplacent le vêtement du même emplacement) :

@@ -114,6 +114,7 @@ const ADDED_AFTER_LEGACY = new Set([
   'train_locomotive_electric',
   'train_wagon_flat',
   'battery_portable',
+  ...[1, 2, 3, 4, 5].map((n) => `armor${n}_hands`),
   'vehicle_quad_electric',
   'machine_barrier_concrete',
   'machine_barrier_reinforced',

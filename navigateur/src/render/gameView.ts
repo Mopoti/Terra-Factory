@@ -196,7 +196,7 @@ import { Miner, loadMiner } from './minerModel';
 import { Avatar, loadAvatar } from './avatarModel';
 import { getCharacter } from '../core/profile/store';
 import { loadPickModel, loadRawModel, loadWeaponModel } from './toolModel';
-import { isGloves, wornHidesHair, wornModelName } from './wornModels';
+import { gauntletModelName, isGloves, wornHidesHair, wornModelName } from './wornModels';
 import { GRIP_TILT, GUN_FILES, GunRig, holdGunGrip } from './gunAnim';
 import { GuestBus, type GuestSync } from '../core/net/worldSync';
 import { HOST_ID } from '../core/net/host';
@@ -567,10 +567,29 @@ export function startGameView(
       const item = eq[slot];
       if (!own) return false;
       if (slot === 'hands') {
-        own.setGloveColor(
-          item && isGloves(item) ? new THREE.Color(itemById(item).color).getHex() : null,
-        );
-        return !!item && isGloves(item);
+        // Gants en tissu : ils teintent les mains gantées. Gantelets d'armure : gant assombri à la couleur de l'armure
+        // et plaques accrochées aux mains gantées (aussi celles de la vue subjective).
+        const base = item ? baseOf(item) : null;
+        const gauntlet = base ? gauntletModelName(base) : null;
+        const color = item ? new THREE.Color(itemById(item).color) : null;
+        const hands = [own, firstArm instanceof Avatar ? firstArm : null];
+        for (const a of hands) {
+          if (!a) continue;
+          a.setGloveColor(
+            color && base && isGloves(base)
+              ? color.getHex()
+              : color && gauntlet
+                ? color.clone().multiplyScalar(0.55).getHex()
+                : null,
+          );
+          if (!gauntlet) a.setGauntlets(null);
+        }
+        if (gauntlet && color)
+          void loadRawModel(`terra/${gauntlet}`).then((model) => {
+            if (!model || !viewAlive || options.state.changes.equipment.hands !== item) return;
+            for (const a of hands) a?.setGauntlets(model.clone(), color.getHex());
+          });
+        return !!base && (isGloves(base) || !!gauntlet);
       }
       const name = item ? wornModelName(item) : null;
       if (!item || !name) {
@@ -615,6 +634,8 @@ export function startGameView(
       for (const slot of ['back', 'torso', 'head', 'legs', 'feet'] as const)
         if (!eq[slot]) own.wear(slot, null);
     if (own && !eq.hands) own.setGloveColor(null);
+    if (!eq.hands)
+      for (const a of [own, firstArm instanceof Avatar ? firstArm : null]) a?.setGauntlets(null);
   }
   refreshWorn();
 

@@ -52,7 +52,7 @@ différente).
 
 ### 1f. Équipement
 
-- **Modèles portés** : faits pour tout l'équipement (vêtements, armures 1 à 5, exosquelette, propulseur ; `blender/scripts/porte.py`), les gants teintent les mains gantées.
+- **Modèles portés** : faits pour tout l'équipement (vêtements, armures 1 à 5, exosquelette, propulseur ; `blender/scripts/porte.py`), les gants teintent les mains gantées ; gantelets d'armure des paliers 1 à 5 (`blender/scripts/gantelets.py`, 31 octobre).
 
 ### 1g. Rails
 

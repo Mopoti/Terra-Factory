@@ -357,6 +357,12 @@ export class Avatar {
   private hairHidden = false;
   /** Matériaux des gants des vues extérieures et leur couleur d'origine (`setGloveColor`). */
   private readonly gloveMats: { mat: THREE.MeshStandardMaterial; base: THREE.Color }[] = [];
+  /** Mains gantées habillées par ce personnage (vues extérieures, vue subjective, armes) : les gantelets s'y accrochent. */
+  private readonly gloveRoots: THREE.Object3D[] = [];
+  /** Gantelets d'armure portés (`gantelet_armure<n>`) et leur couleur, ou null. */
+  private gauntlet: { source: THREE.Object3D; color: number } | null = null;
+  /** Peau des doigts des mains gantées (gants sans doigts) et sa couleur : les gantelets la couvrent. */
+  private readonly fingerMats: { mat: THREE.MeshStandardMaterial; base: THREE.Color }[] = [];
 
   /**
    * `height` : taille (m) ; `color` : couleur de la combinaison ; `silhouette` : homme ou femme ; `appearance` : le
@@ -537,6 +543,63 @@ export class Avatar {
     this.worn.set(slot, pieces);
   }
 
+  /**
+   * Gantelets d'armure (`blender/scripts/gantelets.py`) : leurs pièces `<nœud>__…` s'accrochent aux nœuds de même nom
+   * de chaque main gantée (`main` : dos de la main ; `manchette` : poignet), dans le repère de la main gantée ; faces
+   * `teinte` à la couleur de l'objet. Null : on les retire.
+   */
+  setGauntlets(source: THREE.Object3D | null, color = 0xffffff): void {
+    this.gauntlet = source ? { source, color } : null;
+    for (const glove of this.gloveRoots) this.dressGauntlet(glove);
+    this.coverFingers();
+  }
+
+  /** Doigts des mains gantées : couverts (couleur sombre de l'armure) sous des gantelets, peau nue sinon. */
+  private coverFingers(): void {
+    const c = this.gauntlet ? new THREE.Color(this.gauntlet.color).multiplyScalar(0.45) : null;
+    for (const f of this.fingerMats) f.mat.color.copy(c ?? f.base);
+  }
+
+  private dressGauntlet(glove: THREE.Object3D): void {
+    const old: THREE.Object3D[] = [];
+    glove.traverse((o) => {
+      if (o.userData.gauntlet) old.push(o);
+    });
+    for (const o of old) {
+      o.removeFromParent();
+      const mesh = o as THREE.Mesh;
+      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) m?.dispose();
+    }
+    if (!this.gauntlet) return;
+    const { source, color } = this.gauntlet;
+    source.updateMatrixWorld(true);
+    const planes = this.materials[0]?.clippingPlanes ?? null;
+    source.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const node = /^(.+?)__/.exec(mesh.name)?.[1] ?? /^(.+?)__/.exec(mesh.parent?.name ?? '')?.[1];
+      const target = node ? glove.getObjectByName(node) : undefined;
+      if (!target) return;
+      const own = (m: THREE.Material): THREE.Material => {
+        const c = (m as THREE.MeshStandardMaterial).clone();
+        if (m.name.replace(/\.\d+$/, '') === 'teinte') c.color.setHex(color);
+        c.roughness = 0.6;
+        c.clippingPlanes = planes;
+        return c;
+      };
+      const piece = new THREE.Mesh(
+        mesh.geometry,
+        Array.isArray(mesh.material) ? mesh.material.map(own) : own(mesh.material),
+      );
+      piece.userData.gauntlet = true;
+      piece.castShadow = !this.firstPerson;
+      piece.frustumCulled = false;
+      // Même repère que la main gantée : le nœud visé est à l'origine du modèle au repos.
+      mesh.matrixWorld.decompose(piece.position, piece.quaternion, piece.scale);
+      target.add(piece);
+    });
+  }
+
   /** Couleur des gants des vues extérieures (paire de gants portée), ou null pour leur couleur d'origine. */
   setGloveColor(color: number | null): void {
     for (const g of this.gloveMats) {
@@ -664,6 +727,8 @@ export class Avatar {
 
   /** Matériaux propres à un modèle porté (gant, manche) : peau et combinaison aux couleurs du joueur, découpe. */
   private tintGlove(root: THREE.Object3D): void {
+    const fresh = !this.gloveRoots.includes(root);
+    if (fresh) this.gloveRoots.push(root);
     const planes = this.materials[0]?.clippingPlanes ?? null;
     root.traverse((o) => {
       const mesh = o as THREE.Mesh;
@@ -679,12 +744,17 @@ export class Avatar {
         c.name = name;
         if (name === 'gant' || name === 'gant_sombre')
           this.gloveMats.push({ mat: c as THREE.MeshStandardMaterial, base: c.color.clone() });
+        if (name === 'peau_main')
+          this.fingerMats.push({ mat: c as THREE.MeshStandardMaterial, base: c.color.clone() });
         return c;
       };
       mesh.material = Array.isArray(mesh.material)
         ? mesh.material.map(own)
         : own(mesh.material as THREE.Material);
     });
+    // Gantelets portés : posés après la teinte (leurs matériaux sont à eux).
+    if (fresh) this.dressGauntlet(root);
+    this.coverFingers();
   }
 
   /** Doigts de la main gantée refermés en poing (autour d'un manche), pouce par-dessus l'index. */

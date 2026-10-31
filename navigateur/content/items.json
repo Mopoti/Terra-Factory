@@ -2171,6 +2171,24 @@
       }
     },
     {
+      "id": "armor1_hands",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 0.8,
+      "volumeL": 2.4,
+      "color": "#8a6d4b",
+      "recipe": {
+        "carapace": 1,
+        "cloth": 1,
+        "iron_plate": 2
+      },
+      "equip": {
+        "slot": "hands",
+        "armor": 3,
+        "warmth": 0.8
+      }
+    },
+    {
       "id": "armor2_head",
       "stack": 1,
       "category": "armor",
@@ -2236,6 +2254,23 @@
         "slot": "feet",
         "armor": 9,
         "warmth": 2.2
+      }
+    },
+    {
+      "id": "armor2_hands",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 1.4,
+      "volumeL": 4.2,
+      "color": "#6f7a86",
+      "recipe": {
+        "carapace": 2,
+        "steel_plate": 1
+      },
+      "equip": {
+        "slot": "hands",
+        "armor": 6,
+        "warmth": 1.5
       }
     },
     {
@@ -2308,6 +2343,24 @@
         "slot": "feet",
         "armor": 14,
         "warmth": 3.5
+      }
+    },
+    {
+      "id": "armor4_hands",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 2.0,
+      "volumeL": 6.0,
+      "color": "#3b3f47",
+      "recipe": {
+        "carapace": 2,
+        "steel_plate": 2,
+        "silicon_chip": 1
+      },
+      "equip": {
+        "slot": "hands",
+        "armor": 10,
+        "warmth": 2.4
       }
     },
     {
@@ -2903,6 +2956,24 @@
       }
     },
     {
+      "id": "armor3_hands",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 1.1,
+      "volumeL": 3.3,
+      "color": "#8ea3b3",
+      "recipe": {
+        "aluminium_plate": 1,
+        "cloth": 2,
+        "plastic_insulator": 1
+      },
+      "equip": {
+        "slot": "hands",
+        "armor": 8,
+        "warmth": 1.9
+      }
+    },
+    {
       "id": "armor5_head",
       "stack": 1,
       "category": "armor",
@@ -2972,6 +3043,24 @@
         "slot": "feet",
         "armor": 17,
         "warmth": 4.2
+      }
+    },
+    {
+      "id": "armor5_hands",
+      "stack": 1,
+      "category": "armor",
+      "weightKg": 1.6,
+      "volumeL": 4.8,
+      "color": "#2d3a52",
+      "recipe": {
+        "carbon_fiber": 2,
+        "aluminium_plate": 1,
+        "microcontroller": 1
+      },
+      "equip": {
+        "slot": "hands",
+        "armor": 12,
+        "warmth": 3.0
       }
     },
     {

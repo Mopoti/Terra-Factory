@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGloves, wornHidesHair, wornModelName } from './wornModels';
+import { gauntletModelName, isGloves, wornHidesHair, wornModelName } from './wornModels';
 
 describe('équipement porté', () => {
   it('donne le modèle porté des vêtements', () => {
@@ -13,5 +13,12 @@ describe('équipement porté', () => {
     expect(wornHidesHair('hood')).toBe(true);
     expect(wornHidesHair('jacket')).toBe(false);
     expect(isGloves('gloves')).toBe(true);
+  });
+
+  it('donne les gantelets d’armure, accrochés aux mains gantées', () => {
+    expect(gauntletModelName('armor1_hands')).toBe('gantelet_armure1');
+    expect(gauntletModelName('armor5_hands')).toBe('gantelet_armure5');
+    expect(gauntletModelName('gloves')).toBeNull();
+    expect(wornModelName('armor3_hands')).toBeNull();
   });
 });

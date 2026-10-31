@@ -37,3 +37,12 @@ export const wornHidesHair = (item: string): boolean => HIDES_HAIR.has(item);
 
 /** Les gants n'ont pas de modèle à part : ils teintent les mains gantées du personnage. */
 export const isGloves = (item: string): boolean => item === 'gloves';
+
+/**
+ * Gantelets d'armure (`armor<n>_hands`) : plaques accrochées aux mains gantées (`gantelet_armure<n>`, voir
+ * `Avatar.setGauntlets`), le gant lui-même assombri à la couleur de l'armure. Null si l'objet n'en est pas.
+ */
+export const gauntletModelName = (item: string): string | null => {
+  const m = /^armor([1-5])_hands$/.exec(item);
+  return m ? `gantelet_armure${m[1]}` : null;
+};

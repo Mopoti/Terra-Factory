@@ -74,7 +74,7 @@ describe('onglets de fabrication', () => {
         c === 'resources'
           ? 30
           : c === 'armor'
-            ? 24
+            ? 30 // cinq armures de cinq pièces (gantelets compris), plus l'équipement de combat
             : c === 'industrial' || c === 'buildings'
               ? 24
               : c === 'energy'

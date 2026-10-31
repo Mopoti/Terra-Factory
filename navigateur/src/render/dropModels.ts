@@ -37,7 +37,7 @@ const EQUIPMENT_SHAPES: Record<string, DropShape> = {
   rifle_magazine: 'chargeur_fusil',
   sniper_magazine: 'chargeur_sniper',
 };
-/** Pièces des armures 1 à 5 : une forme par palier et par emplacement (détails propres au palier). */
+/** Pièces des armures 1 à 5 : une forme par palier et par emplacement (détails propres au palier), gantelets compris. */
 const ARMOR_SHAPES = Object.fromEntries(
   ([1, 2, 3, 4, 5] as const).flatMap((n) =>
     (
@@ -46,6 +46,7 @@ const ARMOR_SHAPES = Object.fromEntries(
         ['torso', 'plastron'],
         ['legs', 'jambieres'],
         ['feet', 'bottes'],
+        ['hands', 'gants'],
       ] as const
     ).map(([slot, shape]) => [`${n}_${slot}`, `armure${n}_${shape}` as DropShape]),
   ),
@@ -130,7 +131,7 @@ export function dropShape(itemId: string): DropShape {
   if (item === 'jetpack') return 'propulseur';
   const own = EQUIPMENT_SHAPES[item];
   if (own) return own;
-  const armor = /^armor(1|2|3|4|5)_(head|torso|legs|feet)$/.exec(item);
+  const armor = /^armor(1|2|3|4|5)_(head|torso|legs|feet|hands)$/.exec(item);
   if (armor) return ARMOR_SHAPES[`${armor[1]}_${armor[2]}`];
   return 'caisse';
 }

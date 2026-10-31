@@ -529,6 +529,7 @@ export const DROP_SHAPES = [
         `armure${n}_plastron`,
         `armure${n}_jambieres`,
         `armure${n}_bottes`,
+        `armure${n}_gants`,
       ] as const,
   ),
 ] as const;

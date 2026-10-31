@@ -381,3 +381,14 @@ Groupes déclarés dans `EXTRA_GROUPS` (`models.ts`).
 
 Icônes des machines (31 octobre) : `dropGeometry` ajoute les pièces mobiles dans leur position de repos (tourelles,
 bras, couvercles, rotor…), qui manquaient jusque-là.
+
+## Gantelets d'armure (31 octobre)
+
+Nouvel objet du jeu `armor<n>_hands` (emplacement « mains », un par palier, débloqué avec l'armure du palier ; batterie
+portable possible aux paliers 4 et 5 comme les autres pièces). Modèles : `blender/scripts/gantelets.py`
+(`gantelets.blend`), `gantelet_armure1` … `gantelet_armure5`, dans le repère et à l'échelle de la main gantée
+(`outils.main_gantee`) : plaques `main__…` (dos de la main en lames, garde des jointures) et `manchette__…` (bracelet au
+poignet), finitions du palier comme les armures portées. Le jeu les accroche aux nœuds `main` / `manchette` de chaque
+main gantée (`Avatar.setGauntlets`, vues extérieures, vue subjective et armes), assombrit le gant à la couleur de
+l'armure et couvre les doigts (gant sans doigts). Icônes `objet_armure<n>_gants` (`equipement.py`) : paire de mains
+gantées couchées, avec les mêmes plaques.
