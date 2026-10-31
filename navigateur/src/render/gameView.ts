@@ -1228,8 +1228,8 @@ export function startGameView(
   const machineBlocked = (c: Cell): boolean => {
     if (bridgeAt(c.gx, c.gz)) return false;
     if (blocked.has(`${c.gx},${c.gz}`)) return true;
+    // Une dalle au sol ne bloque pas : on y pose tourelles, machines, tapis… (seul un escalier occupe la case).
     const pieces = options.state.changes.pieces;
-    if (pieces[`f:0:${c.gx},${c.gz}`]) return true;
     return [0, 1, 2, 3].some((r) => pieces[`s:0:${c.gx},${c.gz}:0:${r}`]);
   };
   const dirIndex = (from: Cell, to: Cell): number =>

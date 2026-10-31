@@ -509,7 +509,7 @@ Items : énergie en **MJ par unité**. Machines : **`burnKw`** en kW à pleine c
 
 ### 7.7 Poser et déplacer
 
-Une machine se pose en **un clic**, la touche R la tourne ; **même case = ranger** (la machine revient au sac avec ses contenus, sauf le contenu du coffre quantique). Les tapis et tuyaux peuvent chevaucher partiellement une machine. Les machines à l'étage exigent une dalle sous chacune de leurs cases.
+Une machine se pose en **un clic**, la touche R la tourne ; **même case = ranger** (la machine revient au sac avec ses contenus, sauf le contenu du coffre quantique). **Les machines (tourelles comprises) se posent aussi sur une dalle** : au sol (une dalle de sol ne bloque plus la case ; seul un escalier l'occupe) ou à l'étage (PageUp, sur la dalle de l'étage). Les tapis et tuyaux peuvent chevaucher partiellement une machine. Les machines à l'étage exigent une dalle sous chacune de leurs cases.
 
 ### 7.8 Voies ferrées et trains ✅
 
