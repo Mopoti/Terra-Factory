@@ -281,7 +281,7 @@
       "d": 1,
       "item": "machine_fence_wood",
       "color": "#9a7448",
-      "height": 1.5,
+      "height": 1.0,
       "fuel": false,
       "barrier": true,
       "maxHp": 150
@@ -292,7 +292,7 @@
       "d": 1,
       "item": "machine_barrier_concrete",
       "color": "#8b8f93",
-      "height": 1.5,
+      "height": 1.0,
       "fuel": false,
       "barrier": true,
       "maxHp": 500
@@ -303,7 +303,7 @@
       "d": 1,
       "item": "machine_barrier_reinforced",
       "color": "#5f6469",
-      "height": 1.5,
+      "height": 1.0,
       "fuel": false,
       "barrier": true,
       "maxHp": 1200
@@ -475,7 +475,7 @@
       "item": "machine_hologram_projector",
       "color": "#47d6e8",
       "fuel": false,
-      "height": 1.5,
+      "height": 1.0,
       "barrier": true,
       "holo": true,
       "maxHp": 800,

@@ -2,7 +2,7 @@
 
 Dimensions proposées (à confirmer avec le PO), en unités Blender (1 unité = 1 case = 50 cm), le long de X comme les murs
 de `construction.py` :
-- `cloture_bois`, `barriere_beton`, `barriere_beton_arme` : un tronçon d'une case, 1,2 × 0,3 × 3 (1,5 m de haut, on ne
+- `cloture_bois`, `barriere_beton`, `barriere_beton_arme` : un tronçon d'une case, 1,2 × 0,3 × 2 (1 m de haut ; on ne
   peut pas sauter par-dessus). Barrières (béton, béton armé, holographique) : les deux poteaux sont des groupes à part,
   `poteau_g_` (-X) et `poteau_d_` (+X), centrés sur le bord de la case ; le jeu cache le poteau d'un côté où touche un
   autre tronçon, pour qu'une rangée n'ait de poteaux qu'à ses deux bouts. Le panneau déborde de 2 cm de chaque côté pour
@@ -67,7 +67,7 @@ def _palette():
 
 
 _palette()
-H = 3.0  # hauteur d'une clôture (1,5 m)
+H = 2.0  # hauteur d'une clôture ou d'une barrière (1 m ; les portails gardent leur hauteur)
 
 
 def _n(leger):
@@ -86,11 +86,11 @@ def cloture_bois(coll, leger=True):
     horizontales, planches verticales à bout pointu serrées entre les lisses, chapeaux sur les poteaux."""
     n = _n(leger)
     lot = T.Lot(coll, 'cloture')
-    for x in (-0.55, 0.55):
+    for x in (-0.5, 0.5):  # poteaux sur les bords de la case (partagés avec le tronçon voisin)
         O._rond(lot, 'poteau_bois', (x, 0, 0), (x, 0, H + 0.1), 0.07, 0.07, n, k=0.02)
         O._rond(lot, 'planche_cl_sombre', (x, 0, H + 0.1), (x, 0, H + 0.18), 0.085, 0.085, n, k=0.03)
-    for z in (0.5, 1.6, 2.6):
-        O._rond(lot, 'planche_cl_sombre', (-0.6, -0.08, z), (0.6, -0.08, z), 0.04, 0.07, n, k=0.012)
+    for z in (0.35, 1.05, 1.7):
+        O._rond(lot, 'planche_cl_sombre', (-0.52, -0.08, z), (0.52, -0.08, z), 0.04, 0.07, n, k=0.012)
     rnd = random.Random(4)
     for k in range(5):
         x = -0.4 + 0.2 * k
@@ -99,7 +99,7 @@ def cloture_bois(coll, leger=True):
         O._rond(lot, teinte, (x, -0.13, 0.08), (x, -0.13, h), 0.085, 0.022, n, k=0.012)
         O._loft(lot, teinte, [((x, -0.13, h - 0.01), O.X, O.Y, 0.085, 0.022, 0.01),
                               ((x, -0.13, h + 0.12), O.X, O.Y, 0.012, 0.018, 0.006)], 2)  # pointe
-    for z in (0.5, 1.6, 2.6):  # clous
+    for z in (0.35, 1.05, 1.7):  # clous
         for k in range(5):
             O._cyl(lot, 'noir_cl', (-0.4 + 0.2 * k, -0.155, z), (-0.4 + 0.2 * k, -0.16, z), 0.008, 2)
     lot.finir()
@@ -160,14 +160,14 @@ def _barriere(coll, leger, arme, etat):
         O._rond(lot, 'acier_cl', (-L, 0, H + 0.0), (L, 0, H + 0.0), 0.05, 0.05, n, k=0.01)
         for s_, p in poteaux:
             x = s_ * 0.5
-            O._rond(p, 'acier_cl', (x, -0.16, 0.6), (x, -0.16, 2.4), 0.06, 0.008, 2, k=0.003)
-            for z in (0.8, 1.5, 2.2):
+            O._rond(p, 'acier_cl', (x, -0.16, 0.5), (x, -0.16, 1.6), 0.06, 0.008, 2, k=0.003)
+            for z in (0.7, 1.05, 1.4):
                 O._cyl(p, 'acier_cl_clair', (x, -0.168, z), (x, -0.18, z), 0.018, 2)
         for k in range(5):
             x = -0.4 + 0.2 * k
             lot.cube('jaune_cl' if k % 2 == 0 else 'noir_cl', (0.2, 0.012, 0.12), (x, -ep - 0.005, 0.32), 0.0)
     else:
-        for z in (1.0, 2.0):  # joints de coffrage
+        for z in (0.7, 1.35):  # joints de coffrage
             lot.cube('beton_cl_sombre', (2 * L - 0.04, 0.01, 0.015), (0, -ep - 0.003, z))
     lot.finir()
     for _, p in poteaux:

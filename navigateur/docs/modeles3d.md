@@ -318,14 +318,18 @@ visage.
 ## Clôtures, barrières et portails (30 octobre ; branchés dans le jeu le 31 octobre)
 
 Nouvelle famille `blender/scripts/clotures.py` (`clotures.blend`). Dimensions proposées, à confirmer : tronçon de clôture
-d'une case (1,2 × 0,3 × 3 unités, 1,5 m de haut) ; portail de 3 m (6 × 0,4 × 3,4) entre deux piliers.
+d'une case (1,2 × 0,3 × 2 unités, 1 m de haut) ; portail de 3 m (6 × 0,4 × 3,4) entre deux piliers.
 `cloture_bois` ; `barriere_beton` et `barriere_beton_arme` avec `_abime1` (éclats) et `_abime2` (fissures, morceau
 tombé, fers visibles pour le béton armé) ; `portail_bois` et `portail_beton` (battants `battant_g_` / `battant_d_`,
 pivots verticaux aux gonds) ; `portail_beton_arme` (vantail coulissant `vantail_`, `pivot_vantail` axe -X, moteur et voyant
 `voyant_moteur`). Fichiers chargés par le jeu (`TERRA_MODELS`, `EXTRA_GROUPS` dans `models.ts` ; dessin dans `addBarrierModel`, `factoryView.ts`) : tronçons d'une case posés par trois (poteaux cachés entre eux et là où une autre barrière prolonge la rangée), versions `_abime1` / `_abime2` selon la vie, portails mis à la largeur de l'emprise (battants tournés de 90° vers l'extérieur, vantail glissé sur son rail, nappe holographique éteinte à l'ouverture). `projecteur_mur_holographique` n'est pas utilisé (le mur holographique du jeu est une rangée de trois tronçons).
 Rangées de barrières (béton, béton armé, holographique) : les deux poteaux d'un tronçon sont des groupes à part,
-`poteau_g_` (-X) et `poteau_d_` (+X), centrés sur le bord de la case. Le jeu devra cacher le poteau d'un côté où touche
-un autre tronçon : une rangée n'a alors de poteaux qu'à ses deux bouts, le panneau (ou le mur de lumière) est continu.
+`poteau_g_` (-X) et `poteau_d_` (+X), centrés sur le bord de la case ; ceux de la clôture en bois sont dans le maillage, aux
+mêmes places. Le jeu cache le poteau d'un côté où touche une barrière **de même orientation** : une rangée n'a alors de
+poteaux qu'à ses deux bouts. Les barrières et portails sont posés **sur le bord de leurs cases** (côté dos du modèle,
+choisi en tournant la pièce), pas au milieu : deux rangées qui font un angle se rejoignent au coin des cases et leurs deux
+poteaux d'angle tombent au même endroit (31 octobre). Hauteur des clôtures et barrières : 1 m (`H` = 2 unités ; les
+portails gardent la leur).
 
 Holographique (palier 5, même famille) : `barriere_holographique` (rail et demi-poteaux émetteurs, nappe de lumière
 `holo_mur`), `portail_holographique` (piliers émetteurs, seuil à chevrons, nappe `holo_portail` que le jeu éteint pour

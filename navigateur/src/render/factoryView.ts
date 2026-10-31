@@ -425,11 +425,14 @@ export class FactoryView {
       const gx = dx > 0 ? m.gx + w : dx < 0 ? m.gx - 1 : m.gx;
       const gz = dz > 0 ? m.gz + d : dz < 0 ? m.gz - 1 : m.gz;
       const other = this.factory.machineAt(gx, gz);
+      // Même orientation seulement : la rangée continue sur le même bord de case. Dans un angle, les deux tronçons gardent
+      // leur poteau, qui tombent au même endroit (le coin des cases) et n'en font qu'un.
       return (
         !!other &&
         other !== m &&
         machineDef(other.type).barrier === true &&
-        !machineDef(other.type).gate
+        !machineDef(other.type).gate &&
+        other.rot % 4 === m.rot % 4
       );
     };
     return {
@@ -1578,7 +1581,7 @@ const DRAWN_HEIGHT: Partial<Record<MachineType, number>> = {
   fabricator: 2.1,
   quantum_chest: 1.0,
   turret_rail: 1.5,
-  hologram_projector: 1.6,
+  hologram_projector: 1.1,
   hologram_gate: 2.6,
   crank: 1.0,
   splitter: 0.4,
@@ -1696,14 +1699,17 @@ function addBarrierModel(
   if (!base) return false;
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
-  const x = (gx + w / 2) * CELL_SIZE_M;
-  const z = (gz + d / 2) * CELL_SIZE_M;
   const long = Math.max(w, d) * CELL_SIZE_M;
   const turn = MODEL_TURNS[rot % 4];
-  // Le modèle se lit le long de +X ; une fois tourné, il va vers (cos, −sin) dans le plan (x, z).
+  // Le modèle se lit le long de +X ; une fois tourné, il va vers (cos, −sin) dans le plan (x, z), et son dos (−z du
+  // modèle) vers (−sin, −cos).
   const a = (turn * Math.PI) / 2;
   const dirX = Math.round(Math.cos(a));
   const dirZ = Math.round(-Math.sin(a));
+  // Posée sur le bord de ses cases (côté dos, choisi en tournant la pièce) et non au milieu : deux rangées qui font un
+  // angle se rejoignent au coin des cases, et les poteaux sont sur les coins.
+  const x = (gx + w / 2) * CELL_SIZE_M - Math.round(Math.sin(a)) * (CELL_SIZE_M / 2);
+  const z = (gz + d / 2) * CELL_SIZE_M - Math.round(Math.cos(a)) * (CELL_SIZE_M / 2);
   if (def.gate) {
     const scale = (long - 0.06) / base.size.x;
     mb.model(base, x, 0, z, turn, scale);
