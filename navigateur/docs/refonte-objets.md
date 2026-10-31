@@ -5,20 +5,20 @@
 
 ## 0. Carte des points
 
-| #   | Point                                                                                                            | Statut                                                                 |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé et codé (Tour 85)**                                           |
-| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **codé** (richesse selon la distance, minerais par paliers, ponts)     |
-| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **codé** (3a Tour 87, 3b Tours 90–96)                                  |
+| #   | Point                                                                                                            | Statut                                                                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1   | Cadre : tiers, technologies par type, paquets de science, noms réels, outil, tier 0 (roue à aubes)               | **validé et codé (Tour 85)**                                                                        |
+| 2   | Monde : richesse selon la distance, nouveaux minerais, ponts sur les étangs                                      | **codé** (richesse selon la distance, minerais par paliers, ponts)                                  |
+| 3   | Métallurgie : fer + charbon, fonte, moules, estampeuse (3a, T1) ; Bessemer, béton, lavage, zinc, laiton (3b, T2) | **codé** (3a Tour 87, 3b Tours 90–96)                                                               |
 | 4   | Grille et structure : convoyeurs 1×1, piliers automatiques                                                       | **codé** (4b : les tapis surélevés ont leurs piliers depuis le Tour 94 ; les tuyaux restent au sol) |
-| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | **codé** (5a–5d, Tours 92–95)                                          |
-| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | **codé** (6a–6c, Tours 97–99)                                          |
-| 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | **codé** (7a–7d, Tours 100–103)                                        |
-| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | **codé** (Tour 106) ; expansion des colonies (Tour 127)                 |
-| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                           |
-| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | **codé** (10a–10c, Tours 107–109)                                      |
-| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | **codé** (11a–11d, Tours 110–113)                                      |
-| 12  | Multiplateforme : tactile, manettes, Steam                                                                       | **codé** : 12a tactile, 12b manette ; Steam plus tard                  |
+| 5   | Logistique : foreuses et convoyeurs T1–T3, bras filtrants, trieur, barils, tunnels « à patron »                  | **codé** (5a–5d, Tours 92–95)                                                                       |
+| 6   | Réseaux Volts et Bars : blackout, pression, friction, tuyaux T1–T3, réparation, refroidissement                  | **codé** (6a–6c, Tours 97–99)                                                                       |
+| 7   | Pétrole, plastique, câbles isolés (T3)                                                                           | **codé** (7a–7d, Tours 100–103)                                                                     |
+| 8   | Ennemis : éclaireurs, gardiens, cracheurs ; réparation                                                           | **codé** (Tour 106) ; expansion des colonies (Tour 127)                                             |
+| 9   | Survie : duvet, lit fixe, sac laissé sur le cadavre                                                              | **validé et codé (Tour 86)**                                                                        |
+| 10  | UX : tutoriel progressif, « Continuer » enrichi, ratio de distance, créatif/survie                               | **codé** (10a–10c, Tours 107–109)                                                                   |
+| 11  | Fin de partie : fission, fusion, balise, comptoir spatial                                                        | **codé** (11a–11d, Tours 110–113)                                                                   |
+| 12  | Multiplateforme : tactile, manettes, Steam                                                                       | **codé** : 12a tactile, 12b manette ; Steam plus tard                                               |
 
 Les contradictions des points #4 et #9 ont été tranchées au Tour 86 (voir §4 et §9).
 
@@ -506,17 +506,20 @@ Premiers vrais modèles dans le jeu : 24 modèles du Factory Kit de Kenney (CC0)
 - Les tests lisent les durées dans les recettes (`secs`, `cycle`) : ces délais restent à régler en jouant (voir `docs/equilibrage.md`).
 
 ## Visibilité et coût des technologies (Tour 144)
+
 - Chaque technologie a un `tier` (1 à 5) et, pour le palier 2 et plus, un `reveal` : la ou les technologies à avoir recherchées pour la faire apparaître (par défaut ses `requires`). Ex. : Métallurgie T2 apparaît avec Métallurgie, Logistique T2 avec Logistique, Fusion avec Fission.
 - Palier 1 toujours visible. Paliers 2+ cachés tant que la technologie du palier inférieur n'est pas recherchée. Mode Créatif : tout est visible (`isTechVisible`).
 - Technologies de départ payées en objets à la main : Métallurgie (lingots de fer + pierre), Électricité (fer + cuivre), Laboratoire (fer + cuivre). La roue à aubes reste une découverte (10 plaques de cuivre).
 - Les autres technologies du palier 1 se découvrent en laboratoire avec des paquets T1 : Logistique, Manutention, Textile, Vêtements, Gants, Literie 10 ; Électricité de production, Vapeur, Machine à vapeur 15 ; Défense 15 ; Navigation 5 ; Automatisation 20.
 
 ## Balise, tapis et roue à aubes (Tour 156)
+
 - **Balise** (`waypoint`, objet « Balise », 1×1, débloquée par Manutention ; l'objet n'a pas le préfixe `machine_` donc ne compte pas dans la limite de 2 machines par technologie) : touche F → fenêtre avec un nom (24 caractères, « Balise » par défaut) et dix couleurs. Commande `setWaypoint` (jouable par les invités). Elle dresse un mât à fanion coloré, un faisceau lumineux de 60 m visible de loin et son nom flottant ; elle apparaît aussi sur la carte (losange coloré + nom, entrée de légende).
 - **Tapis** : `machine_conveyor` est débloqué par Logistique (T1), plus libre dès le départ. Pour respecter la limite de 2 machines par technologie, le séparateur et le groupeur passent dans une nouvelle technologie **Aiguillage** (`routing`, T1, 10 paquets, après Logistique) ; une ancienne sauvegarde qui avait Logistique reçoit aussi Aiguillage.
 - **Roue à aubes** : elle doit être posée à cheval sur la rive (au moins une case dans l'eau et au moins une sur la terre) : plus sur la terre ferme ni au milieu de l'eau. Les cases d'eau ne la bloquent pas, un obstacle sur la terre (arbre, rocher, machine) si.
 
 ## Journal, technologies réorganisées, roue à aubes (Tour 158)
+
 - **Journal de la partie** (`WorldChanges.log`, 300 lignes au plus) : bouton « Journal » dans la fenêtre des technologies. Il note chaque technologie recherchée à la main, étudiée en laboratoire, débloquée en Créatif, découverte, et celles ajoutées par la mise à jour d'une ancienne sauvegarde (horodatées).
 - **Cause du déblocage fantôme** : le découpage des anciennes technologies (`LEGACY_TECH_SPLITS`) était rejoué à CHAQUE chargement ; Électricité payée à la main redonnait donc Production d'énergie et Laboratoire sans paquets. La sauvegarde porte maintenant `techVersion` (3) : seules les sauvegardes d'avant sont complétées, une fois, et les ajouts apparaissent au journal. Une partie qui a déjà perdu ces technologies ne peut pas être corrigée automatiquement.
 - **Technologies** : Production d'énergie (T1) débloque l'outil en fer ; **Électricité T2** (`electricity_2`, 30 paquets) débloque le générateur ; **Production d'énergie T2** (`power_generation_2`, 30 paquets) la foreuse électrique ; **Logistique est renommée Automatisation** (tapis + bras robotique, T1) ; l'ancienne Automatisation devient **Automatisation T2** (assembleur + bras électrique, 30 paquets, visible après Automatisation T1). Manutention garde le coffre en fer et la balise.
@@ -524,6 +527,7 @@ Premiers vrais modèles dans le jeu : 24 modèles du Factory Kit de Kenney (CC0)
 - **Fenêtre des technologies** : cartes plus petites, section « À rechercher » en haut et « Recherchées » en bas, texte sur le laboratoire retiré.
 
 ## Mode Créatif : poser et détruire des ressources, corbeille (octobre 2026)
+
 - **Onglet « Ressources »** dans la fabrication, visible seulement en Créatif (objets `res_<ressource>` de `items.json`, champ `creative: true`, recette vide donc gratuits ; cachés en Survie par `isUnlocked`, absents du comptoir spatial, des filtres et des recettes d'assembleur) : une case de chaque minerai (hématite, malachite, charbon, sphalérite, bauxite, pierre, uraninite, sable, pétrole), arbre, rocher, buisson de fibres, case d'eau.
 - **Poser** : choisir l'objet dans la barre de raccourcis, clic gauche sur le sol (jusqu'à 24 m) ; bouton maintenu, on « peint » case après case. L'objet n'est pas consommé. Case de minerai : quantité tirée au hasard entre 300 et 3 000 ; arbre, rocher, buisson : 2 × 2 cases, taille (petit, moyen, grand) et quantité tirées comme dans le monde généré ; eau : une case d'eau (les pompes s'en servent, elle bloque le passage). La place doit être libre (pas de machine, d'objet, d'eau ; pas de minerai sous un arbre ou de l'eau). Une case de minerai peut en remplacer une autre.
 - **Détruire** : clic droit maintenu 1 s sur une ressource (barre de progression de la récolte), jusqu'à 24 m : arbre, rocher, buisson, case de minerai (pétrole compris) ou case d'eau, posés ou du monde d'origine. En Créatif, la récolte à la main porte aussi à 24 m.

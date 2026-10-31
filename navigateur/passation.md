@@ -10,11 +10,13 @@
 **Avant de pousser** (depuis `navigateur/`) : `npx tsc --noEmit`, `npx eslint src`, `npx prettier --write src`, `npx vitest run`. Commit avec les lignes `Co-Authored-By` et `Claude-Session` demandées par la session, puis `git pull --rebase origin <branche>` et `git push -u origin <branche>`. Jamais de PR sans demande. Jamais de `pkill` dans une commande.
 
 **Bugs ouverts / non reproduits** (une ligne par bug : date, symptôme, ce qui a été essayé, ce qui manque) :
+
 - 25/10 · Rails : depuis un virage violet (large), D ne mène pas sur un virage marron (très large) qui part du même point que la ligne droite ; le PO pense qu'aucun embranchement n'est créé. Non reproduit : en test (virage → ligne + virage tangents au même port, `choiceAhead` + `stepConsist` avec `pick`), l'embranchement existe et D le prend. Manque : un rapport de bug (bouton « Signaler un bug » du menu pause) fait juste après, ou l'ordre de pose exact. Piste : le virage marron part peut-être de la ligne vers le côté d'où vient le train (demi-tour impossible).
 
 **Chantiers en attente** : programmation de la locomotive (`docs/trains-programmation.md`), essai « sans virages grand/géant » (sinon l'inverse), courbes à 45°, prérequis des technologies de début de partie, import de l'arbre des compétences (Ludicart), hitbox de la gare à ajuster à l'œil (`SOLIDS`), icônes de la benne sans quantité ni touche de basculement, contrôle visuel des couleurs de virages.
 
 **Ce qu'il faut consigner pour un bug** (le bouton « Signaler un bug » du menu pause en fournit presque tout dans un fichier ; sinon à demander au PO) :
+
 1. l'action faite, pas à pas, et ce qui était attendu / constaté ;
 2. la sauvegarde (export de la partie) ou, à défaut, l'ordre de pose des pièces ;
 3. la position du joueur, la vue, l'objet en main, le véhicule ou le train conduit ;
@@ -24,13 +26,16 @@
 **Règles de mise à jour du fichier** : une ligne « Tour N » par unité de travail (la plus récente en haut de la liste des tours), avec ce qui a changé, ce qui n'a pas été vérifié à l'écran, et la décision du PO si elle a été prise. Mettre à jour cette section (bugs ouverts, chantiers) à chaque fin de session, et les `docs/*.md` concernés.
 
 ## Rôles
+
 - **Utilisateur = Product Owner** : décide de l'avancement et donne les directives. Non développeur (aucun langage maîtrisé).
 - **Claude = dev sénior** : propose, tranche les choix techniques, code, explique simplement et sans jargon inutile.
 
 ## Vision
+
 Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans le navigateur**.
 
 ## Exigences exprimées par le joueur/porteur du projet
+
 - Vues au choix du joueur, changeables en jeu : 1ère personne, 3ème personne, vue du dessus.
 - Contrôles clavier (ex. ZQSD), **tous remappables** par le joueur.
 - Sauvegardes : restaurer une sauvegarde, ou démarrer une nouvelle partie **sans perdre les anciennes** (plusieurs slots).
@@ -40,16 +45,19 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Unity envisagé comme **évolution future** (pas de compétence actuelle).
 
 ## Méthode de travail
+
 - Une étape à la fois : Claude réalise → le PO valide → on continue ; blocage → on analyse ensemble.
 - Quand le PO doit agir (Claude ne peut pas), guider **pas à pas**, sans jargon, avec résultat attendu.
 
 ## Documents de référence
+
 - **`GDD.md` (racine) : Game Design Document complet (référence du jeu tel qu'il est).**
 - `docs/architecture.md` : plan technique et chantiers du prototype (PROPOSITION en attente de validation du PO).
 - `docs/besoins.md` : cahier des charges (menu, édition de partie, paramètres, simulation).
 - `docs/risques.md` : sujets à trancher tôt pour éviter de gros chantiers.
 
 ## Décisions
+
 - Stack validée par le PO : TypeScript + Vite + Three.js.
 - Multijoueur à prévoir dès l'architecture : d'abord **hôte = un joueur** (pas de serveur dédié), plus tard **mini serveur dédié**.
 - Terrain : plat au départ, mais l'architecture doit permettre plus tard un **terrain creusable** : voxels par blocs (navigateur, profondeur limitée à ~3-5 couches) ; en Unity, creusage profond. Le sol plat = un monde voxel à une seule couche de hauteur utile.
@@ -65,6 +73,7 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - **Tour 163** : chaîne de modèles 3D maison : `blender/` (`lib/terra.py`, `scripts/extraction.py`, `extraction.blend`), `export/foreuse_t1.glb`, `scripts/sync-modeles.mjs`, `TERRA_MODELS` dans `models.ts` (priorité sur le kit Kenney) ; échelle 1 unité = 1 case, export en mètres ; premier modèle : foreuse à combustible (vérifiée dans le jeu).
 - **Tour 287** : **GDD.md mis à jour** (était au tour 83) : en-tête, §2.2 paliers T0 à T5, §4.6 à 4.8 (équipement, armures et usure, propulseur, véhicules dont le quad électrique), §5 refondu (251 objets, onglets, règles de recette, **données par objet**, Créatif), §7 refondu (catalogue des 77 machines généré depuis `content/`, énergie à trois niveaux, transformateur, disjoncteur, renouvelables, stockage, rails et trains, barrières et portails, recharge, santé et réparation), §8 découvertes (163), §9.5-9.6, §11.5 (préréglage graphique), §12 (Créatif, multijoueur, coffre quantique), §14 tableaux, §15 feuille de route et questions ouvertes. Les sections 1, 3, 6, 10 et 11 (hors 11.5) n'ont pas été reprises à fond : à relire avec le PO.
 - **Tour 288** : réponses du PO au GDD : **GDD à jour D'ACCORD**, **questions ouvertes D'ACCORD**. Décision sur la température : une **découverte** donne un objet **posable contre un mur** qui affiche la température ; le **vent** doit devenir réaliste (direction et force cohérentes dans le temps, partagées par les éoliennes d'une zone) et un objet **posé sur une dalle** montre son sens et sa force. Consigné dans `GDD.md` §10.3 (nouvelle), §15.2 et §15.4 question 4. Rien de codé : à concevoir (effets de la température, noms des objets, vent global à la place de `Factory.windFactor`).
+- **Tour 308** : récupéré les deux commits de l'autre conversation (modèles 3D : armures, équipement porté, énergie, machines avancées, météo) et vérifié ce qui n'était pas branché : seuls restaient les **clôtures, barrières et portails**. Branchés : `TERRA_MODELS` + `EXTRA_GROUPS` (`poteau_g/d`, `battant_g/d`, `vantail`, `holo_portail`) dans `models.ts`, `damagedModel`, et `addBarrierModel` / `barrierContext` dans `factoryView.ts` (tronçons d'une case posés par trois, poteaux cachés au milieu et là où une barrière voisine prolonge la rangée, modèle abîmé 1 ou 2 selon la vie, portails à la largeur de l'emprise, battants ouverts à 90°, vantail coulissant décalé sur son rail, nappe holo éteinte ouverte ; formes de secours gardées si un modèle manque). Vérifié par une capture WebGL de test (fermés, ouverts, abîmés, rangées collées, rotation). Pas animés (ouverture instantanée) et la nappe holographique est opaque. `projecteur_mur_holographique` non utilisé.
 - **Tour 307** : retours du PO sur la page « suite (15) ». **Chat et commandes** : `ui/chat.ts` (Entrée ouvre, Entrée envoie, Échap ferme, historique ↑↓), `core/game/chatCommands.ts` (`defineCommand`, `COMMANDS`, `runChat`, `usageOf` : arguments typés number/choice/text, `auto`, aide et erreurs automatiques), commandes `/aide /jour /nuit /saison /temperature /vent /meteo` ; `changes.weather` (`WeatherOverrides`, enregistré) imposé au vent (`windWith`) et à la température (`airTempWith`) ; hôte seulement, marque `admin`. **Abri** : `shelterTempC` (pièce close → vers 14 °C), utilisée par le froid du joueur et le thermomètre. **Thermomètre / girouette / éolienne** dessinés par `render/weatherProps.ts` (écran à canvas fixé au mur côté case, flèche qui pointe vers l'origine du vent, rotor de l'éolienne face au vent qui tourne avec sa force ; `wallSide` dans `build/pieces.ts` ; les corps habituels ne sont plus dessinés, `models.ts` ne garde ces trois types que pour les icônes). Vérifié par une capture WebGL de test. Tests : `chatCommands.test.ts`, `weather.test.ts`, `build/mount.test.ts`.
 - **Tour 306** : (1) **thermomètre posé contre un mur, girouette sur une dalle** : `mountRule` dans `gameView.ts` (cases interdites sinon, aperçu rouge et commande ; `wallBeside` dans `build/pieces.ts`, test `build/mount.test.ts`). (2) **Froid adouci** (`weather.ts`) : seuil 6 °C − 1 °C par point de chaleur (avant 12 − 1,3), 0,05 PV/s par °C (avant 0,1), la santé remonte si le froid est léger (< 0,15 PV/s) ; avant, un joueur nu perdait 0,75 PV/s chaque nuit de printemps en prairie. (3) Tableau « pièces d'armure et bonus » dans le GDD §4.6. À créer : pièces de mains T4/T5 (`armor4_hands`, `armor5_hands`), fonction des pieds à décider.
 - **Tour 305** : **jambes de l'armure** codées (menu circulaire validé par le PO). `GameState.exoOn/exoAvailable/exoPower/setExo/tickExo` : jambes `armor4_legs`/`armor5_legs` allumées dans le menu (avantage « Jambes : exosquelette »), puissance 1 ou 2 → portage +40/+80 kg (`limits`), vitesse de marche ×(1 + 0,1·puissance), le tapis n'emporte plus (`gameView.ts`, `exoPower()`), énergie dépensée seulement en marchant via `drainArmor` (partagé avec la réalité augmentée ; T4 2/s, T5 1,6/s ; extinction + message `exo.off` à court d'énergie). L'ancienne pièce `exoskeleton` (T3) garde son effet (puissance 1, sans énergie). Tests `ar.test.ts`. Non vérifié en jeu. Reste : torse (barre de raccourcis en plus), mains (outil intégré).
@@ -299,12 +308,14 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Tour 5 : détails construction/machines/convoyeurs/pièces/transparence → `docs/besoins.md` §8. Tranché au §9 (murs sur bords de cases en navigateur, libres sous Unity ; dalles 10 cm ; angles = pilier 10×10×50 à étudier plus tard).
 
 ## Règles d'architecture (pour garder ces portes ouvertes)
+
 - Logique de jeu séparée du rendu ; l'état du monde est des **données** (sérialisables), pas des objets 3D.
 - Tous les changements passent par des **commandes/événements** (ex. « construire X en position Y ») : base du multijoueur et des sauvegardes.
 - Simulation déterministe à pas fixe (même seed + mêmes commandes = même résultat).
 - Monde découpé en chunks avec une grille 3D (même si une seule couche utile au début).
 
 ## Proposition de stack (à valider)
+
 - TypeScript + Vite
 - Three.js (rendu WebGL) — alternative : Babylon.js
 - Assets : glTF/GLB (export Blender natif ; les packs Unity doivent être convertis, vérifier les licences)
@@ -313,13 +324,16 @@ Jeu 3D d'automatisation d'usinage (inspiration Factorio / Satisfactory), **dans 
 - Simulation usine : tick à pas fixe, séparée du rendu (Web Worker à terme)
 
 ## Points d'attention
+
 - Les assets Unity/Asset Store ne sont pas utilisables tels quels : conversion vers glTF + vérification de la licence (certaines interdisent la redistribution en dehors de Unity).
 - Performance : instancing (InstancedMesh) obligatoire pour les convoyeurs/machines en nombre.
 - Déterminisme : ne jamais utiliser `Math.random()` dans la génération du monde.
 
 ## Prochaines étapes
+
 - **Mode Créatif (octobre 2026)** : onglet « Ressources » (poser minerais, arbres, rochers, buissons, eau), aperçu avant la pose et remplacement, destruction au clic droit maintenu 1 s, corbeille dans le sac, vol libre (double Saut), portée de 24 m ; voir [`docs/refonte-objets.md`](docs/refonte-objets.md) (fin). Idées « mode dieu » proposées au PO, à valider.
 - **Modèles 3D (octobre 2026)** : dernières machines, arbres, buissons, sol, rochers et amas de minerai faits (voir [`docs/modeles3d.md`](docs/modeles3d.md)) ; personnage du joueur : étape 1 faite (modèles homme et femme sur squelette commun, dans le jeu), tête agrandie (cou plus court) et 10 coupes de cheveux faites ; suite selon [`docs/personnage.md`](docs/personnage.md) (formes de déformation, écran de personnalisation, animations). **Objets au sol** : 17 formes maison (`blender/scripts/objets.py`, `objet_*.glb` : bûches, minerai, lingot, plaque, baril, paquet de science…) teintées à la couleur de l'objet, et les machines posées au sol en miniature (`src/render/dropModels.ts`). **Construction** : murs, sols / plafonds, portes, escaliers et piliers en modèles maison bois et pierre (`blender/scripts/construction.py`, `addPieceModel` dans `buildingView.ts`). **Derniers modèles** : tourelle de base, balise (teinte du joueur), presse à plastique, ennemis animés (3 variantes), nid, dépouilles, pioches de pierre et de fer, pistolet, fusil ; véhicules à l'échelle du personnage (buggy agrandi, quad, tank) avec personnage assis au volant ; voies ferrées (droit, virage, rampe) et trains (locomotive à vapeur, locomotive électrique moderne, wagon de fret couvert, wagon citerne) prêts pour plus tard (`docs/modeles3d.md`). Reste : armures visibles sur le personnage.
+
 0. Finir la discussion de cadrage (`docs/risques.md`) avant de coder.
 1. Périmètre du prototype : menu d'accueil complet (Continuer/Nouvelle/Charger/Paramètres/Quitter), édition de partie, sol plat, 3 vues.
 2. Prototype : scène Three.js, sol plat, caméra 3 vues, contrôles remappables.

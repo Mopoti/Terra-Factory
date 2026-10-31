@@ -1,6 +1,7 @@
 import {
   animatedParts,
   beltModel,
+  damagedModel,
   hasModelPlanned,
   pipeModel,
   pipeShape,
@@ -9,6 +10,7 @@ import {
   type AnimKind,
   type BakedModel,
   type BeltShape,
+  type PartGroup,
 } from './models';
 import {
   MOTIONS,
@@ -409,6 +411,34 @@ export class FactoryView {
     return f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.25 ? 2 : 3;
   }
 
+  /** Usure et voisins d'une barrière, pour son dessin (voir `BarrierContext`). */
+  private barrierContext(m: Machine): BarrierContext {
+    const def = machineDef(m.type);
+    const none = { level: 0, joinedMinus: false, joinedPlus: false };
+    if (!def.barrier || def.gate) return { ...none, level: this.damageLevel(m) };
+    const { w, d } = dims(m.type, m.rot);
+    const a = (m.rot % 4) * (Math.PI / 2);
+    const dirX = Math.round(Math.cos(a));
+    const dirZ = Math.round(-Math.sin(a));
+    // Cellule voisine au-delà du bout du tronçon, dans la direction (dx, dz).
+    const beyond = (dx: number, dz: number): boolean => {
+      const gx = dx > 0 ? m.gx + w : dx < 0 ? m.gx - 1 : m.gx;
+      const gz = dz > 0 ? m.gz + d : dz < 0 ? m.gz - 1 : m.gz;
+      const other = this.factory.machineAt(gx, gz);
+      return (
+        !!other &&
+        other !== m &&
+        machineDef(other.type).barrier === true &&
+        !machineDef(other.type).gate
+      );
+    };
+    return {
+      level: this.damageLevel(m),
+      joinedMinus: beyond(-dirX, -dirZ),
+      joinedPlus: beyond(dirX, dirZ),
+    };
+  }
+
   /** Redessine les machines dont l'aspect a changé (elles noircissent à mesure qu'elles s'abîment ; les portails s'ouvrent). */
   updateDamage(): void {
     if (this.factory.visualVersion === this.visualSeen) return;
@@ -478,6 +508,7 @@ export class FactoryView {
             tint,
             !!parts,
             this.factory.gateOpen(m),
+            this.barrierContext(m),
           );
         const worn = this.damageLevel(m);
         if (worn > 0) burn(mb, start, worn);
@@ -1596,6 +1627,118 @@ function growBody(mb: MeshBuilder, start: number, m: Machine): void {
 /** Quarts de tour à donner à un modèle du kit selon l'orientation de la machine. */
 const MODEL_TURNS = [0, 1, 2, 3] as const;
 
+/** Ce que le dessin d'une barrière sait de son entourage : usure, et rangée prolongée par un voisin de chaque côté. */
+interface BarrierContext {
+  /** Usure (0 intacte à 3 très abîmée). */
+  level: number;
+  /** Une autre barrière touche le bout −X / +X du tronçon (dans le repère du modèle) : le poteau de ce bout est caché. */
+  joinedMinus: boolean;
+  joinedPlus: boolean;
+}
+
+/** Un groupe de pièces d'un modèle, dessiné comme un modèle (même repère et même centrage que le modèle entier). */
+function groupAsModel(
+  model: BakedModel,
+  name: string,
+  g: PartGroup,
+): Parameters<MeshBuilder['model']>[0] {
+  void name;
+  return { ...g, min: model.min, size: model.size };
+}
+
+/** Copie d'un groupe tourné de `angle` (radians) autour de son axe passant par le pivot (battant qui s'ouvre). */
+function rotatedGroup(g: PartGroup, angle: number): PartGroup {
+  const axis = new THREE.Vector3(g.axis.x, g.axis.y, g.axis.z).normalize();
+  const pivot = new THREE.Vector3(g.pivot.x, g.pivot.y, g.pivot.z);
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+  const positions = new Float32Array(g.positions.length);
+  const normals = new Float32Array(g.normals.length);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < g.positions.length; i += 3) {
+    v.set(g.positions[i], g.positions[i + 1], g.positions[i + 2])
+      .sub(pivot)
+      .applyQuaternion(q)
+      .add(pivot);
+    positions.set([v.x, v.y, v.z], i);
+    v.set(g.normals[i], g.normals[i + 1], g.normals[i + 2]).applyQuaternion(q);
+    normals.set([v.x, v.y, v.z], i);
+  }
+  return { ...g, positions, normals };
+}
+
+/** Copie d'un groupe glissé de `distance` (m du modèle) le long de son axe, et décalé de `aside` en travers (vantail sur son rail). */
+function slidGroup(g: PartGroup, distance: number, aside = 0): PartGroup {
+  const axis = new THREE.Vector3(g.axis.x, g.axis.y, g.axis.z).normalize().multiplyScalar(distance);
+  const positions = new Float32Array(g.positions.length);
+  for (let i = 0; i < g.positions.length; i += 3) {
+    positions[i] = g.positions[i] + axis.x;
+    positions[i + 1] = g.positions[i + 1] + axis.y;
+    positions[i + 2] = g.positions[i + 2] + axis.z + aside;
+  }
+  return { ...g, positions };
+}
+
+/**
+ * Barrière ou portail avec son modèle 3D. Une barrière est faite de tronçons d'une case posés côte à côte (trois pour
+ * un tronçon du jeu), sans poteau entre eux ni là où une autre barrière prolonge la rangée ; un portail est un seul
+ * modèle mis à la largeur de l'emprise, battants ouverts ou fermés. Renvoie faux si le modèle n'est pas chargé.
+ */
+function addBarrierModel(
+  mb: MeshBuilder,
+  type: MachineType,
+  gx: number,
+  gz: number,
+  rot: number,
+  open: boolean,
+  ctx: BarrierContext,
+): boolean {
+  const base = modelFor(type);
+  if (!base) return false;
+  const def = machineDef(type);
+  const { w, d } = dims(type, rot);
+  const x = (gx + w / 2) * CELL_SIZE_M;
+  const z = (gz + d / 2) * CELL_SIZE_M;
+  const long = Math.max(w, d) * CELL_SIZE_M;
+  const turn = MODEL_TURNS[rot % 4];
+  // Le modèle se lit le long de +X ; une fois tourné, il va vers (cos, −sin) dans le plan (x, z).
+  const a = (turn * Math.PI) / 2;
+  const dirX = Math.round(Math.cos(a));
+  const dirZ = Math.round(-Math.sin(a));
+  if (def.gate) {
+    const scale = (long - 0.06) / base.size.x;
+    mb.model(base, x, 0, z, turn, scale);
+    for (const [name, g] of Object.entries(base.groups ?? {})) {
+      let part = g;
+      if (name === 'holo_portail') {
+        if (open) continue; // la nappe de lumière s'éteint pour laisser passer
+      } else if (open) {
+        // Battants : ouverts à angle droit vers l'extérieur ; vantail : glisse hors de l'ouverture.
+        if (name === 'battant_g') part = rotatedGroup(g, Math.PI / 2);
+        else if (name === 'battant_d') part = rotatedGroup(g, -Math.PI / 2);
+        else if (name === 'vantail') part = slidGroup(g, base.size.x * 0.85, base.size.z * 0.6);
+      }
+      mb.model(groupAsModel(base, name, part), x, 0, z, turn, scale);
+    }
+    return true;
+  }
+  const model = damagedModel(type, ctx.level) ?? base;
+  const tiles = Math.max(1, Math.round(long / CELL_SIZE_M));
+  for (let i = 0; i < tiles; i++) {
+    const at = (i - (tiles - 1) / 2) * CELL_SIZE_M;
+    const tx = x + at * dirX;
+    const tz = z + at * dirZ;
+    mb.model(model, tx, 0, tz, turn, 1);
+    const groups = model.groups ?? {};
+    const minus = groups.poteau_g;
+    const plus = groups.poteau_d;
+    if (minus && i === 0 && !ctx.joinedMinus)
+      mb.model(groupAsModel(model, 'poteau_g', minus), tx, 0, tz, turn, 1);
+    if (plus && i === tiles - 1 && !ctx.joinedPlus)
+      mb.model(groupAsModel(model, 'poteau_d', plus), tx, 0, tz, turn, 1);
+  }
+  return true;
+}
+
 /** Barrière ou portail : poteaux, lisses ou pleins de béton ; un portail ouvert pousse son vantail sur le côté. */
 function addBarrierBody(
   mb: MeshBuilder,
@@ -1679,6 +1822,7 @@ function addMachineBody(
   tint?: string,
   staticOnly = false,
   open = false,
+  barrier: BarrierContext = { level: 0, joinedMinus: false, joinedPlus: false },
 ): void {
   const def = machineDef(type);
   const { w, d } = dims(type, rot);
@@ -1689,7 +1833,8 @@ function addMachineBody(
   const color = hexToRgb(tint ?? def.color);
   const [fx, fz] = RISE_DIR[rot];
   if (def.barrier) {
-    addBarrierBody(mb, type, x, z, sx, sz, color, open);
+    if (!addBarrierModel(mb, type, gx, gz, rot, open, barrier))
+      addBarrierBody(mb, type, x, z, sx, sz, color, open);
     return;
   }
   const model = modelFor(type);

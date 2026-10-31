@@ -4,52 +4,52 @@ Mesures faites par calcul sur les données du jeu (valeur d'un objet = celle du 
 
 ## Paquets de science (valeur en crédits)
 
-| Paquet | Recette | Valeur |
-|---|---|---|
-| T1 | engrenage + fil de cuivre | 15,8 |
-| T2 | plaque d'acier + tuyau de laiton | 20,0 |
-| T3 | puce + câble isolé | 17,9 |
-| T4 | puce + plaque d'acier + uranium appauvri | 33,6 |
+| Paquet | Recette                                  | Valeur |
+| ------ | ---------------------------------------- | ------ |
+| T1     | engrenage + fil de cuivre                | 15,8   |
+| T2     | plaque d'acier + tuyau de laiton         | 20,0   |
+| T3     | puce + câble isolé                       | 17,9   |
+| T4     | puce + plaque d'acier + uranium appauvri | 33,6   |
 
 ## Technologies
 
-| Technologie | Paquets | Valeur des paquets | Valeur des objets | 1 labo | 4 labos |
-|---|---|---|---|---|---|
-| logistics | 0 | 0 | 78 | 0 min | 0.0 min |
-| handling | 0 | 0 | 78 | 0 min | 0.0 min |
-| metallurgy | 0 | 0 | 88 | 0 min | 0.0 min |
-| metallurgy_2 | 30 | 474 | 0 | 3 min | 0.8 min |
-| construction_2 | 30 | 474 | 0 | 3 min | 0.8 min |
-| manufacturing_2 | 40 | 632 | 0 | 4 min | 1.0 min |
-| fluids_2 | 40 | 632 | 0 | 4 min | 1.0 min |
-| washing_2 | 40 | 632 | 0 | 4 min | 1.0 min |
-| heavy_press_3 | 100 | 2001 | 0 | 10 min | 2.5 min |
-| silicon_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
-| oil_3 | 140 | 2802 | 0 | 14 min | 3.5 min |
-| plastic_3 | 160 | 3202 | 0 | 16 min | 4.0 min |
-| fission_4 | 200 | 3581 | 0 | 20 min | 5.0 min |
-| reactor_4 | 300 | 5372 | 0 | 30 min | 7.5 min |
-| waste_4 | 250 | 4477 | 0 | 25 min | 6.3 min |
-| storage_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
-| fusion_5 | 300 | 8512 | 0 | 30 min | 7.5 min |
-| beacon_5 | 450 | 12768 | 0 | 45 min | 11.3 min |
-| logistics_2 | 40 | 632 | 0 | 4 min | 1.0 min |
-| logistics_3 | 100 | 2001 | 0 | 10 min | 2.5 min |
-| sorting_3 | 120 | 2402 | 0 | 12 min | 3.0 min |
-| extraction_3 | 60 | 1201 | 0 | 6 min | 1.5 min |
-| textile | 0 | 0 | 20 | 0 min | 0.0 min |
-| clothing | 0 | 0 | 20 | 0 min | 0.0 min |
-| handwear | 0 | 0 | 20 | 0 min | 0.0 min |
-| bedding | 0 | 0 | 20 | 0 min | 0.0 min |
-| electricity | 0 | 0 | 85 | 0 min | 0.0 min |
-| power_generation | 0 | 0 | 85 | 0 min | 0.0 min |
-| laboratory | 0 | 0 | 65 | 0 min | 0.0 min |
-| automation | 20 | 316 | 0 | 2 min | 0.5 min |
-| steam | 0 | 0 | 84 | 0 min | 0.0 min |
-| steam_power | 0 | 0 | 82 | 0 min | 0.0 min |
-| barrels_3 | 80 | 1601 | 0 | 8 min | 2.0 min |
-| navigation | 0 | 0 | 52 | 0 min | 0.0 min |
-| defense | 0 | 0 | 143 | 0 min | 0.0 min |
+| Technologie      | Paquets | Valeur des paquets | Valeur des objets | 1 labo | 4 labos  |
+| ---------------- | ------- | ------------------ | ----------------- | ------ | -------- |
+| logistics        | 0       | 0                  | 78                | 0 min  | 0.0 min  |
+| handling         | 0       | 0                  | 78                | 0 min  | 0.0 min  |
+| metallurgy       | 0       | 0                  | 88                | 0 min  | 0.0 min  |
+| metallurgy_2     | 30      | 474                | 0                 | 3 min  | 0.8 min  |
+| construction_2   | 30      | 474                | 0                 | 3 min  | 0.8 min  |
+| manufacturing_2  | 40      | 632                | 0                 | 4 min  | 1.0 min  |
+| fluids_2         | 40      | 632                | 0                 | 4 min  | 1.0 min  |
+| washing_2        | 40      | 632                | 0                 | 4 min  | 1.0 min  |
+| heavy_press_3    | 100     | 2001               | 0                 | 10 min | 2.5 min  |
+| silicon_3        | 120     | 2402               | 0                 | 12 min | 3.0 min  |
+| oil_3            | 140     | 2802               | 0                 | 14 min | 3.5 min  |
+| plastic_3        | 160     | 3202               | 0                 | 16 min | 4.0 min  |
+| fission_4        | 200     | 3581               | 0                 | 20 min | 5.0 min  |
+| reactor_4        | 300     | 5372               | 0                 | 30 min | 7.5 min  |
+| waste_4          | 250     | 4477               | 0                 | 25 min | 6.3 min  |
+| storage_3        | 120     | 2402               | 0                 | 12 min | 3.0 min  |
+| fusion_5         | 300     | 8512               | 0                 | 30 min | 7.5 min  |
+| beacon_5         | 450     | 12768              | 0                 | 45 min | 11.3 min |
+| logistics_2      | 40      | 632                | 0                 | 4 min  | 1.0 min  |
+| logistics_3      | 100     | 2001               | 0                 | 10 min | 2.5 min  |
+| sorting_3        | 120     | 2402               | 0                 | 12 min | 3.0 min  |
+| extraction_3     | 60      | 1201               | 0                 | 6 min  | 1.5 min  |
+| textile          | 0       | 0                  | 20                | 0 min  | 0.0 min  |
+| clothing         | 0       | 0                  | 20                | 0 min  | 0.0 min  |
+| handwear         | 0       | 0                  | 20                | 0 min  | 0.0 min  |
+| bedding          | 0       | 0                  | 20                | 0 min  | 0.0 min  |
+| electricity      | 0       | 0                  | 85                | 0 min  | 0.0 min  |
+| power_generation | 0       | 0                  | 85                | 0 min  | 0.0 min  |
+| laboratory       | 0       | 0                  | 65                | 0 min  | 0.0 min  |
+| automation       | 20      | 316                | 0                 | 2 min  | 0.5 min  |
+| steam            | 0       | 0                  | 84                | 0 min  | 0.0 min  |
+| steam_power      | 0       | 0                  | 82                | 0 min  | 0.0 min  |
+| barrels_3        | 80      | 1601               | 0                 | 8 min  | 2.0 min  |
+| navigation       | 0       | 0                  | 52                | 0 min  | 0.0 min  |
+| defense          | 0       | 0                  | 143               | 0 min  | 0.0 min  |
 
 ## Ce que ça montre
 

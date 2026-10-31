@@ -11,31 +11,31 @@ une machine garde une réserve énorme.
 
 ## Valeurs actuelles
 
-| Où | Valeur | Conséquence |
-|---|---|---|
-| Sac du joueur | 30 cases, **pile de 100**, 50 kg, 60 L | Les objets lourds sont limités par le poids avant la pile (100 pierres = 120 kg) ; seuls les objets légers (puces, fils, fibre) atteignent 100. Résultat : le sac contient peu de piles différentes. |
-| Combustible d'une machine (`stockMax`) | **100** (foreuse, four, estampeuse, concasseur) | 1 houille = 9 MJ. Four / foreuse (90 kW) : 100 s par houille, soit **2 h 47 de marche** pour une réserve pleine. Estampeuse / concasseur (60 kW) : **4 h 10**. |
-| Entrées d'une machine (`ingredientCap`) | `max(10, besoin × 4)` | 4 fournées d'avance : raisonnable pour un assembleur, beaucoup pour un four. |
-| Sortie d'une machine (`stockMax`) | **100** | La machine s'arrête seulement quand 100 produits attendent : un tapis bouché ne se remarque que très tard. |
-| Coffre | pile de 100 (`CHEST_STACK`) | Cohérent avec le sac aujourd'hui. |
-| Bras (10), laboratoire, tourelles, chaudière (20) | déjà petits | À garder. |
+| Où                                                | Valeur                                          | Conséquence                                                                                                                                                                                          |
+| ------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sac du joueur                                     | 30 cases, **pile de 100**, 50 kg, 60 L          | Les objets lourds sont limités par le poids avant la pile (100 pierres = 120 kg) ; seuls les objets légers (puces, fils, fibre) atteignent 100. Résultat : le sac contient peu de piles différentes. |
+| Combustible d'une machine (`stockMax`)            | **100** (foreuse, four, estampeuse, concasseur) | 1 houille = 9 MJ. Four / foreuse (90 kW) : 100 s par houille, soit **2 h 47 de marche** pour une réserve pleine. Estampeuse / concasseur (60 kW) : **4 h 10**.                                       |
+| Entrées d'une machine (`ingredientCap`)           | `max(10, besoin × 4)`                           | 4 fournées d'avance : raisonnable pour un assembleur, beaucoup pour un four.                                                                                                                         |
+| Sortie d'une machine (`stockMax`)                 | **100**                                         | La machine s'arrête seulement quand 100 produits attendent : un tapis bouché ne se remarque que très tard.                                                                                           |
+| Coffre                                            | pile de 100 (`CHEST_STACK`)                     | Cohérent avec le sac aujourd'hui.                                                                                                                                                                    |
+| Bras (10), laboratoire, tourelles, chaudière (20) | déjà petits                                     | À garder.                                                                                                                                                                                            |
 
 ## Proposition 1 : une taille de pile par objet
 
 Un champ `stack` par objet dans `content/items.json` (défaut 50), au lieu de `bag.stackMax = 100` pour tous. Le sac garde
 30 cases : le joueur porte **plus de piles différentes**, chacune plus petite, ce qui oblige à choisir et à trier.
 
-| Famille | Exemples | Pile proposée |
-|---|---|---|
-| Vrac lourd | pierre, bois, béton | 20 |
-| Minerais, sable, houille | malachite, hématite, houille | 50 |
-| Lingots et plaques | lingots, plaques | 50 |
-| Pièces | engrenages, fils, isolants | 100 (légers) |
-| Électronique, science | puces, paquets de science | 100 |
-| Barils, conteneurs | barils, déchets nucléaires | 10 |
-| Machines | four, foreuse, assembleur… | 10 (tapis : 50) |
-| Pièces de construction | murs, dalles… | 50 |
-| Équipement, outils | sac à dos, armure, pioche | 1 |
+| Famille                  | Exemples                     | Pile proposée   |
+| ------------------------ | ---------------------------- | --------------- |
+| Vrac lourd               | pierre, bois, béton          | 20              |
+| Minerais, sable, houille | malachite, hématite, houille | 50              |
+| Lingots et plaques       | lingots, plaques             | 50              |
+| Pièces                   | engrenages, fils, isolants   | 100 (légers)    |
+| Électronique, science    | puces, paquets de science    | 100             |
+| Barils, conteneurs       | barils, déchets nucléaires   | 10              |
+| Machines                 | four, foreuse, assembleur…   | 10 (tapis : 50) |
+| Pièces de construction   | murs, dalles…                | 50              |
+| Équipement, outils       | sac à dos, armure, pioche    | 1               |
 
 Effet : un sac plein de houille tient 12,5 kg par pile au lieu de 25 kg, et trois piles de minerai différentes ne
 mangent plus 3 × 100 unités de poids. Le poids / volume restent les vrais plafonds.
@@ -44,13 +44,13 @@ mangent plus 3 × 100 unités de poids. Le poids / volume restent les vrais plaf
 
 On sépare **trois tampons** par machine, chacun avec sa propre taille :
 
-| Tampon | Aujourd'hui | Proposition | Durée / effet |
-|---|---|---|---|
-| Combustible foreuse et four (90 kW) | 100 | **10** | 10 houilles = 16 min 40 de marche |
-| Combustible estampeuse et concasseur (60 kW) | 100 | **10** | 25 min |
-| Combustible bras (20 kW), chaudière, générateur | 10 / 20 / — | inchangé | |
-| Entrées (`ingredientCap`) | `max(10, besoin×4)` | `max(5, besoin×2)` | 2 fournées d'avance |
-| Sortie | 100 | **20** | la machine s'arrête plus tôt si la sortie bouche : le problème se voit vite |
+| Tampon                                          | Aujourd'hui         | Proposition        | Durée / effet                                                               |
+| ----------------------------------------------- | ------------------- | ------------------ | --------------------------------------------------------------------------- |
+| Combustible foreuse et four (90 kW)             | 100                 | **10**             | 10 houilles = 16 min 40 de marche                                           |
+| Combustible estampeuse et concasseur (60 kW)    | 100                 | **10**             | 25 min                                                                      |
+| Combustible bras (20 kW), chaudière, générateur | 10 / 20 / —         | inchangé           |                                                                             |
+| Entrées (`ingredientCap`)                       | `max(10, besoin×4)` | `max(5, besoin×2)` | 2 fournées d'avance                                                         |
+| Sortie                                          | 100                 | **20**             | la machine s'arrête plus tôt si la sortie bouche : le problème se voit vite |
 
 Variante « à cran » : la taille du tampon grandit avec la machine (T1 : 10 houilles, T2 : 20, T3 : 40), pour récompenser
 l'amélioration sans revenir à 100.

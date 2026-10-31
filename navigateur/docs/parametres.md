@@ -107,12 +107,12 @@ Les réglages s'appliquent immédiatement (pas de bouton « Appliquer »).
 - **À prévoir plus tard (contextes de touches)** : une combinaison comme Ctrl + Z ne doit agir qu'en mode construction, sinon elle croise « S'accroupir = Ctrl » + déplacement. Le moteur d'entrées devra donner la priorité à la combinaison la plus précise et activer les actions selon le contexte (marche, construction, menu…).
 - Réglages d'affichage, de sons et de vues : à tester en jeu (chantier 4) ; certains n'ont pas encore d'effet visible.
 
-
 ## Signaler un bug (menu pause)
 
 Menu pause → **Signaler un bug** : on écrit ce qu'on attendait et ce qui s'est passé, puis « Télécharger le rapport » crée `terra-bug-AAAAMMJJ-HHMMSS.json` sur l'appareil (rien n'est envoyé : le joueur le transmet lui-même). Disponible aussi en production et pour les invités.
 
 Contenu du fichier (`src/ui/bugReport.ts`, `buildBugReport`) :
+
 - `note`, `build` (dernier commit, `__BUILD_ID__` défini dans `vite.config.ts`), date, navigateur et taille de fenêtre ;
 - `game` (id, nom, seed), `player` (position, caméra), `info` (vue, véhicule ou voiture de train conduits, structure visée, état pause/construction) ;
 - `settings` (réglages dont les touches) ;

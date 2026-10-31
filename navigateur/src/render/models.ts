@@ -107,6 +107,15 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
  * `public/models/terra/` par `node scripts/sync-modeles.mjs`). Ils passent avant ceux du kit.
  */
 export const TERRA_MODELS: Partial<Record<MachineType, string>> = {
+  // Clôtures, barrières et portails (`clotures.py`) : tronçons d'une case posés par trois, battants animés par `factoryView.ts`.
+  fence_wood: 'cloture_bois',
+  barrier_concrete: 'barriere_beton',
+  barrier_reinforced: 'barriere_beton_arme',
+  gate_wood: 'portail_bois',
+  gate_concrete: 'portail_beton',
+  gate_reinforced: 'portail_beton_arme',
+  hologram_projector: 'barriere_holographique',
+  hologram_gate: 'portail_holographique',
   drill: 'foreuse_t1',
   drill_electric: 'foreuse_electrique_t2',
   drill_eco: 'foreuse_eco_t3',
@@ -333,6 +342,24 @@ export const pipeModel = (form: PipeForm, tier: number): BakedModel | null =>
  * `blender/scripts/vehicules.py`) et la végétation des biomes (`blender/scripts/vegetation.py`, voir `nature.ts`).
  */
 const EXTRA_GROUPS: Record<string, string[]> = {
+  // Rangées de barrières : les deux poteaux d'un tronçon sont à part (cachés là où un voisin touche) ; versions abîmées.
+  ...Object.fromEntries(
+    [
+      'cloture_bois',
+      'barriere_beton',
+      'barriere_beton_abime1',
+      'barriere_beton_abime2',
+      'barriere_beton_arme',
+      'barriere_beton_arme_abime1',
+      'barriere_beton_arme_abime2',
+      'barriere_holographique',
+    ].map((n) => [n, ['poteau_g', 'poteau_d']]),
+  ),
+  // Portails : battants (pivots verticaux aux gonds), vantail coulissant du portail blindé, nappe de lumière.
+  portail_bois: ['battant_g', 'battant_d'],
+  portail_beton: ['battant_g', 'battant_d'],
+  portail_beton_arme: ['vantail'],
+  portail_holographique: ['holo_portail'],
   buggy: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   quad: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
   quad_electrique: ['roue_avg', 'roue_avd', 'roue_arg', 'roue_ard'],
@@ -554,6 +581,12 @@ const NAMES = [
 ] as string[];
 const baked = new Map<string, BakedModel>();
 let loading: Promise<void> | null = null;
+
+/** Modèle abîmé d'une barrière (niveau d'usure 1 ou 2), ou null s'il n'y en a pas. */
+export const damagedModel = (type: MachineType, level: number): BakedModel | null => {
+  const own = TERRA_MODELS[type];
+  return own && level > 0 ? (baked.get(`${own}_abime${Math.min(2, level)}`) ?? null) : null;
+};
 
 export const modelFor = (type: MachineType): BakedModel | null => {
   // Le modèle maison s'il est chargé, sinon celui du kit (un .glb absent ou en échec ne laisse pas la machine nue).

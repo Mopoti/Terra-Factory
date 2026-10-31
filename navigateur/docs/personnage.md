@@ -25,17 +25,17 @@ casque à lampe).
 
 ## Personnalisation (réglages par morphing)
 
-Le même maillage est déformé par des curseurs (formes de déformation, *shape keys* dans Blender), plutôt que des
+Le même maillage est déformé par des curseurs (formes de déformation, _shape keys_ dans Blender), plutôt que des
 modèles séparés : léger à charger, et chaque réglage se combine avec les autres. Complet mais pas trop chargé.
 
-| Partie | Réglages |
-|---|---|
-| Corps | silhouette (homme / femme), taille, carrure, musculature, corpulence, poitrine, longueur des jambes |
-| Nez | taille, largeur, hauteur (placement) |
-| Bouche | largeur, épaisseur des lèvres, hauteur (placement) |
-| Yeux | forme, écart, couleur |
-| Cheveux | coupe (une dizaine de coupes, pièces séparées interchangeables), couleur libre |
-| Tenue | couleur de la combinaison, couleur des bandes |
+| Partie  | Réglages                                                                                            |
+| ------- | --------------------------------------------------------------------------------------------------- |
+| Corps   | silhouette (homme / femme), taille, carrure, musculature, corpulence, poitrine, longueur des jambes |
+| Nez     | taille, largeur, hauteur (placement)                                                                |
+| Bouche  | largeur, épaisseur des lèvres, hauteur (placement)                                                  |
+| Yeux    | forme, écart, couleur                                                                               |
+| Cheveux | coupe (une dizaine de coupes, pièces séparées interchangeables), couleur libre                      |
+| Tenue   | couleur de la combinaison, couleur des bandes                                                       |
 
 ## Écran de personnalisation
 
@@ -102,7 +102,7 @@ modèles séparés : léger à charger, et chaque réglage se combine avec les a
    os** (taille, carrure, corpulence, longueur des jambes, poitrine : `bodyScales` dans
    `src/core/profile/appearance.ts`, appliqué par `Avatar.look`). Couleurs libres (combinaison, bandes, peau, cheveux,
    yeux). Coupes de cheveux : les 10 coupes ou `none` (anciens profils `model` → coupe de la silhouette). **À faire dans Blender** : formes de
-   déformation (*shape keys*) nommées `nez_taille`, `nez_largeur`, `nez_hauteur`, `bouche_largeur`, `levres`,
+   déformation (_shape keys_) nommées `nez_taille`, `nez_largeur`, `nez_hauteur`, `bouche_largeur`, `levres`,
    `bouche_hauteur`, `yeux_forme`, `yeux_ecart` (valeur positive = `<nom>`, négative = `<nom>_moins`). Le jeu les
    détecte seul : les curseurs du visage n'apparaissent que pour celles que le modèle contient.
 3. ✅ Écran « Personnage » à l'accueil (onglets Corps / Visage / Cheveux / Tenue, rotation, aléatoire, réinitialiser,

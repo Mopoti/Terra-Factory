@@ -5,14 +5,14 @@ sont dans [`personnage.md`](personnage.md).
 
 ## Où se trouve quoi
 
-| Quoi | Fichier |
-|---|---|
-| Le modèle (forme, couleurs par défaut, squelette) | `blender/scripts/personnage.py` |
-| Le fichier Blender (refait par le script, non versionné) | `blender/personnage.blend` |
-| Les modèles exportés | `export/personnage_homme.glb`, `export/personnage_femme.glb` (+ `export/unity/`) |
-| La copie que charge le jeu | `public/models/terra/personnage_*.glb` (copiée par `node scripts/sync-modeles.mjs`) |
-| L'animation dans le jeu (marche, frappe, outil en main) | `src/render/avatarModel.ts` |
-| La couleur de la combinaison et la taille du joueur | `src/render/gameView.ts` (`0xd9822b`, `PLAYER_HEIGHT_M`) |
+| Quoi                                                     | Fichier                                                                             |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Le modèle (forme, couleurs par défaut, squelette)        | `blender/scripts/personnage.py`                                                     |
+| Le fichier Blender (refait par le script, non versionné) | `blender/personnage.blend`                                                          |
+| Les modèles exportés                                     | `export/personnage_homme.glb`, `export/personnage_femme.glb` (+ `export/unity/`)    |
+| La copie que charge le jeu                               | `public/models/terra/personnage_*.glb` (copiée par `node scripts/sync-modeles.mjs`) |
+| L'animation dans le jeu (marche, frappe, outil en main)  | `src/render/avatarModel.ts`                                                         |
+| La couleur de la combinaison et la taille du joueur      | `src/render/gameView.ts` (`0xd9822b`, `PLAYER_HEIGHT_M`)                            |
 
 **Important** : le personnage est fabriqué par le script. Une retouche faite à la main dans `personnage.blend` est
 perdue la prochaine fois que le script est relancé. Pour qu'une modification dure, elle doit être faite dans le
@@ -51,12 +51,12 @@ Ouvrir `blender/scripts/personnage.py` dans l'éditeur (VS Code par exemple). Le
 
 Les pièces s'ajoutent avec quelques briques :
 
-| Brique | Ce qu'elle fait |
-|---|---|
-| `m.tronc(teinte, os, anneaux, ...)` | Tronc ou membre fait d'anneaux `(hauteur, demi-largeur, demi-profondeur, décalage avant/arrière)` |
-| `m.membre(teinte, os, a, b, ra, rb)` | Segment rond d'un point `a` à un point `b`, rayon `ra` puis `rb` |
-| `m.boule(teinte, os, centre, rayon, ..., echelle)` | Boule à facettes, étirable avec `echelle` |
-| `m.boite(teinte, os, centre, taille, rot)` | Boîte (pour les bandes, sourcils, yeux, bouche…) |
+| Brique                                             | Ce qu'elle fait                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `m.tronc(teinte, os, anneaux, ...)`                | Tronc ou membre fait d'anneaux `(hauteur, demi-largeur, demi-profondeur, décalage avant/arrière)` |
+| `m.membre(teinte, os, a, b, ra, rb)`               | Segment rond d'un point `a` à un point `b`, rayon `ra` puis `rb`                                  |
+| `m.boule(teinte, os, centre, rayon, ..., echelle)` | Boule à facettes, étirable avec `echelle`                                                         |
+| `m.boite(teinte, os, centre, taille, rot)`         | Boîte (pour les bandes, sourcils, yeux, bouche…)                                                  |
 
 Chaque pièce indique une **teinte** (une des couleurs de `TEINTES`) et l'**os** qu'elle suit quand le personnage
 bouge (`tete`, `bras_d`, `cuisse_g`…). Rappel : `_g` = gauche du personnage, `_d` = droite ; le personnage regarde
