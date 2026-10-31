@@ -1847,11 +1847,20 @@
   font-weight: 600;
 }
 
+/* Informations de survie au-dessus de la barre de raccourcis (et de la barre en plus quand elle est là). */
+:root {
+  --hotbar-h: 80px;
+  --hud-base: 96px;
+}
+body.extra-hotbar {
+  --hud-base: calc(96px + var(--hotbar-h));
+}
+
 /* Barre de santé du joueur. */
 .health-bar {
   position: fixed;
   left: 50%;
-  bottom: 96px;
+  bottom: var(--hud-base);
   transform: translateX(-50%);
   width: 220px;
   height: 18px;
@@ -1879,7 +1888,7 @@
 .ammo-box {
   position: fixed;
   left: 50%;
-  bottom: 120px;
+  bottom: calc(var(--hud-base) + 46px);
   transform: translateX(-50%);
   padding: 3px 12px;
   border-radius: 6px;
@@ -3570,7 +3579,37 @@ input[type='range'] {
 
 /* Barre de raccourcis en plus (plastron d'armure T4 ou T5) : au-dessus de la principale, grisée sans énergie. */
 .hotbar-extra {
-  bottom: 150px;
+  /* Collée juste au-dessus de la barre principale. */
+  bottom: calc(14px + var(--hotbar-h));
+}
+
+/* Barre d'armure : collée au-dessus de la barre de santé, même longueur. */
+.armor-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--hud-base) + 18px);
+  transform: translateX(-50%);
+  width: 220px;
+  height: 18px;
+  border: 1px solid #3c4f63;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  background: rgba(240, 236, 229, 0.75);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+.armor-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a6a8a, #7aa3c8);
+}
+.armor-bar span {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
 }
 .hotbar-extra.off {
   opacity: 0.45;

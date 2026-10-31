@@ -312,6 +312,44 @@ describe('barre de raccourcis en plus (plastron T4 ou T5)', () => {
   });
 });
 
+describe('bottes : ressorts de saut', () => {
+  const boots = (piece: string, level: number | null = 5): GameState => {
+    const s = new GameState({ inventory: {} });
+    s.changes.equipment.feet = piece;
+    if (level !== null) s.changes.armorBattery.feet = variantId('battery_portable', level);
+    return s;
+  };
+
+  it('seules les bottes T4 et T5 donnent un saut plus haut, la T5 davantage', () => {
+    expect(boots('armor3_feet').useJumpBoost()).toBe(1);
+    expect(boots('boots').useJumpBoost()).toBe(1);
+    expect(boots('armor4_feet').useJumpBoost()).toBeCloseTo(1.15);
+    expect(boots('armor5_feet').useJumpBoost()).toBeCloseTo(1.3);
+  });
+
+  it('chaque saut paie un peu d’énergie, la T5 moins ; à court, le saut est normal', () => {
+    const t4 = boots('armor4_feet', 1);
+    let jumps = 0;
+    while (t4.useJumpBoost() > 1 && jumps < 1000) jumps++;
+    expect(jumps).toBe(100); // un niveau de 150 s à 1,5 s par saut
+    const t5 = boots('armor5_feet', 1);
+    let jumps5 = 0;
+    while (t5.useJumpBoost() > 1 && jumps5 < 1000) jumps5++;
+    expect(jumps5).toBeGreaterThan(jumps);
+    expect(boots('armor4_feet', null).useJumpBoost()).toBe(1);
+  });
+
+  it('on peut les couper dans le menu, et on est prévenu sans bottes ou sans énergie', () => {
+    const s = boots('armor5_feet');
+    expect(s.setBoots(false)).toBe('ok');
+    expect(s.useJumpBoost()).toBe(1);
+    expect(s.setBoots(true)).toBe('ok');
+    expect(s.useJumpBoost()).toBeGreaterThan(1);
+    expect(new GameState({ inventory: {} }).setBoots(true)).toBe('noBoots');
+    expect(boots('armor4_feet', null).setBoots(true)).toBe('noBattery');
+  });
+});
+
 describe('activer ou couper chaque partie de l’armure', () => {
   const full = (): GameState => {
     const s = new GameState({ inventory: {} });

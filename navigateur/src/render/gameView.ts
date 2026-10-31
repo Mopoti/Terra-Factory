@@ -2497,7 +2497,11 @@ export function startGameView(
     // Propulseur dorsal : Saut maintenu en l'air = poussée vers le haut (une batterie lithium dure 20 s).
     if (!next.onGround && input.isActionActive('jump') && options.state.useJetpack(dt))
       next.vy = Math.min(JETPACK_MAX_UP_M_S, next.vy + JETPACK_THRUST_M_S2 * dt);
-    if (onGround && !next.onGround && next.vy > 0) playSfx('jump');
+    if (onGround && !next.onGround && next.vy > 0) {
+      // Bottes d'armure T4 ou T5 : le saut est plus haut (et coûte un peu d'énergie).
+      next.vy *= options.state.useJumpBoost();
+      playSfx('jump');
+    }
     if (!onGround && next.onGround && airTime > 0.25) {
       playSfx('land', Math.min(1.4, Math.abs(velY) / 8));
     }
@@ -4090,6 +4094,13 @@ export function startGameView(
   healthBar.className = 'health-bar';
   healthBar.innerHTML = '<div class="health-fill"></div><span></span>';
   container.appendChild(healthBar);
+  // Barre d'armure : collée au-dessus de la barre de santé, même longueur ; elle montre la protection des pièces portées.
+  const armorBar = document.createElement('div');
+  armorBar.className = 'armor-bar';
+  armorBar.innerHTML = '<div class="armor-fill"></div><span></span>';
+  container.appendChild(armorBar);
+  const armorFill = armorBar.querySelector('.armor-fill') as HTMLElement;
+  const armorText = armorBar.querySelector('span') as HTMLElement;
   const healthFill = healthBar.querySelector('.health-fill') as HTMLElement;
   const healthText = healthBar.querySelector('span') as HTMLElement;
   const machineCenter = (m: Machine): { x: number; z: number } => {
@@ -4913,6 +4924,12 @@ export function startGameView(
       now / 1000,
     );
     healthBar.hidden = !showHealthSetting;
+    const armorPct = options.state.armorPercent();
+    armorBar.hidden = !showHealthSetting || armorPct <= 0;
+    if (!armorBar.hidden) {
+      armorFill.style.width = `${Math.round((armorPct / 80) * 100)}%`;
+      armorText.textContent = `${t('threat.armor')} ${Math.round(armorPct)} %`;
+    }
     // La rougeur de l'écran dit la gravité : elle monte avec les dégâts reçus et s'efface quand la santé revient.
     const hurt = Math.min(1, Math.max(0, (MAX_HEALTH - playerHealth) / MAX_HEALTH));
     hurtOverlay.style.opacity = String(
@@ -5154,6 +5171,7 @@ export function startGameView(
       enemyView.dispose();
       remotePlayers.dispose();
       healthBar.remove();
+      armorBar.remove();
       hurtOverlay.remove();
       unsubscribe();
       interaction.dispose();

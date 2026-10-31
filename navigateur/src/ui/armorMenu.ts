@@ -123,6 +123,21 @@ export function mountArmorMenu(
         })),
       });
     }
+    if (state.bootsAvailable()) {
+      list.push({
+        id: 'boots',
+        label: t('armor.boots'),
+        status: t(state.bootsEnabled ? 'armor.exo.1' : 'armor.exo.0'),
+        choices: [false, true].map((on) => ({
+          label: t(on ? 'armor.exo.1' : 'armor.exo.0'),
+          active: state.bootsEnabled === on,
+          apply: () => {
+            const r = state.setBoots(on);
+            return r === 'ok' ? null : t(`armor.noPart.${r}` as TranslationKey);
+          },
+        })),
+      });
+    }
     return list;
   };
 

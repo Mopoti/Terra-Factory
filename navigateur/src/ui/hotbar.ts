@@ -32,6 +32,8 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
   function render(): void {
     fill(bar, 0);
     extra.hidden = !state.hasExtraBar();
+    // Les informations de survie (santé, armure, munitions) montent au-dessus des deux barres.
+    document.body.classList.toggle('extra-hotbar', state.hasExtraBar());
     extra.classList.toggle('off', !state.extraBarOn());
     extra.classList.toggle('active', state.hotbarPage === 1);
     bar.classList.toggle('active', state.hotbarPage === 0 && state.hasExtraBar());
@@ -108,6 +110,7 @@ export function mountHotbar(root: HTMLElement, state: GameState): Hotbar {
       offLocale();
       bar.remove();
       extra.remove();
+      document.body.classList.remove('extra-hotbar');
     },
   };
 }

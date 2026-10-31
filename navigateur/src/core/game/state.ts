@@ -1021,6 +1021,45 @@ export class GameState {
     }
   }
 
+  // --- Bottes d'armure (T4 et T5) : ressorts de saut ---------------------------------------------
+
+  /** Ressorts des bottes activés par le joueur dans le menu de l'armure (non enregistré). */
+  bootsEnabled = true;
+  /** Vitesse de saut multipliée (la hauteur, elle, par le carré) et énergie dépensée par saut (secondes d'affichage simple). */
+  static readonly BOOTS = {
+    armor4: { jump: 1.15, cost: 1.5 },
+    armor5: { jump: 1.3, cost: 1.2 },
+  } as const;
+
+  private bootsSpec(): (typeof GameState.BOOTS)[keyof typeof GameState.BOOTS] | null {
+    const m = /^(armor[45])_feet$/.exec(baseOf(this.changes.equipment.feet ?? ''));
+    return m ? GameState.BOOTS[m[1] as 'armor4' | 'armor5'] : null;
+  }
+
+  /** Les bottes portées sont une armure T4 ou T5 (qui contient les ressorts). */
+  bootsAvailable(): boolean {
+    return this.bootsSpec() !== null;
+  }
+
+  /** Active ou coupe les ressorts ; renvoie ce qui empêche, le cas échéant. */
+  setBoots(on: boolean): 'ok' | 'noBoots' | 'noBattery' {
+    if (!on) {
+      this.bootsEnabled = false;
+      return 'ok';
+    }
+    if (!this.bootsAvailable()) return 'noBoots';
+    this.bootsEnabled = true;
+    return !this.creative && !this.hasArEnergy() ? 'noBattery' : 'ok';
+  }
+
+  /** Un saut : facteur à appliquer à la vitesse de saut (1 sans ressorts ou sans énergie) ; le saut paie son énergie. */
+  useJumpBoost(): number {
+    const spec = this.bootsSpec();
+    if (!spec || !this.bootsEnabled) return 1;
+    if (!this.creative && !this.drainArmor(spec.cost)) return 1;
+    return spec.jump;
+  }
+
   // --- Gantelets d'armure : outil intégré (armures T4 et T5) ---------------------------------------
 
   /** Outil intégré aux gantelets : vitesse, unités par coup et énergie par coup (secondes d'affichage simple). */
