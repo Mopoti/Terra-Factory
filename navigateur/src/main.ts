@@ -366,7 +366,6 @@ function startGame(
     toastTimer: 0,
   };
   session = s;
-  (window as unknown as { __s: unknown }).__s = s;
 
   /** Renomme une station : fenêtre de saisie, le jeu continue derrière. */
   const renameStation = async (id: number): Promise<void> => {
