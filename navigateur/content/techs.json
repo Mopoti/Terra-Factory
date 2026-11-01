@@ -10,6 +10,7 @@
     {"id": "mould_wire", "tier": 0, "cost": {"cast_iron_ingot": 4}, "requires": ["cast_iron"], "unlocks": ["mould_wire"]},
     {"id": "wires", "tier": 0, "cost": {"copper_ingot": 10}, "requires": ["stamper", "mould_wire"], "unlocks": ["copper_wire"]},
     {"id": "rods", "tier": 0, "cost": {"iron_ingot": 10}, "requires": ["stamper"], "unlocks": ["iron_rod"]},
+    {"id": "campfire", "tier": 0, "cost": {"wood": 10, "stone": 5}, "requires": [], "unlocks": ["machine_campfire"]},
     {"id": "crusher", "tier": 0, "cost": {"iron_ingot": 10, "stone": 10}, "requires": [], "unlocks": ["machine_crusher", "crushed_stone", "silica_sand"]},
     {"id": "glass", "tier": 0, "cost": {"stone": 10}, "requires": ["crusher"], "unlocks": ["glass"]},
     {"id": "kit_circuit", "tier": 0, "cost": {"copper_ingot": 10}, "requires": ["plates", "wires"], "unlocks": ["kit_circuit"]},

@@ -2501,3 +2501,23 @@ describe('transformateur dans les deux sens', () => {
     expect(f.transformerFlow(transformer)).toBeLessThan(0);
   });
 });
+
+describe('feu de camp', () => {
+  it('brûle son bois puis s\'éteint, et ne chauffe qu\'allumé', () => {
+    const { world } = makeWorld();
+    const f = new Factory([], world);
+    const fire = emptyMachine(1, 'campfire', 0, 0, 0);
+    f.add(fire);
+    f.tick(1);
+    expect(f.isLit(fire)).toBe(false);
+    fire.fuel = { item: 'wood', count: 1 };
+    f.tick(1);
+    expect(f.isLit(fire)).toBe(true);
+    expect(f.status(fire)).toBe('running');
+    // 1,8 MJ de bois à 6 kW : 300 s.
+    f.tick(250);
+    expect(f.isLit(fire)).toBe(true);
+    f.tick(60);
+    expect(f.isLit(fire)).toBe(false);
+  });
+});

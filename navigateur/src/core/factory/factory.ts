@@ -675,6 +675,7 @@ const MACHINE_TYPES: MachineType[] = [
   'transformer',
   'breaker',
   'lamp',
+  'campfire',
   'thermometer',
   'vane',
   'wind_turbine',
@@ -1549,6 +1550,7 @@ export class Factory {
       if (m.broken) return 'broken';
       return this.fusionOn(m) ? 'plasma' : this.fusionPriming(m) ? 'priming' : 'idle';
     }
+    if (m.type === 'campfire') return m.fuelLeft > 0 ? 'running' : 'idle';
     if (m.type === 'wind_turbine' || m.type === 'solar_panel')
       return this.gridInfo(m) && this.renewableKw(m) > 0.5 ? 'running' : 'idle';
     if (m.type === 'evaporation_tower') return m.fluid.dirty > 0.5 ? 'running' : 'idle';
@@ -1668,6 +1670,7 @@ export class Factory {
       else if (m.type === 'boiler') this.tickBoiler(m, dt);
       else if (m.type === 'cooling_tower') this.tickCooler(m, dt);
       else if (m.type === 'turbine') this.tickTurbine(m, dt);
+      else if (m.type === 'campfire') this.tickCampfire(m, dt);
       else if (isGenerator(m.type)) this.tickGenerator(m, dt);
       else if (hasOutput(m.type)) {
         this.pushOutput(m);
@@ -2107,6 +2110,16 @@ export class Factory {
     if (!g || g.blackout || g.demandKw <= 0 || g.capacityKw <= 0) return;
     if (!this.fire(m)) return;
     this.burn(m, dt * Math.min(1, g.demandKw / g.capacityKw));
+  }
+
+  /** Un feu de camp brûle tant qu'il a du bois (ou autre combustible) : il chauffe alentour, voir `campfireWarmC`. */
+  private tickCampfire(m: Machine, dt: number): void {
+    if (this.fire(m)) this.burn(m, dt);
+  }
+
+  /** Le feu de camp brûle-t-il ? */
+  isLit(m: Machine): boolean {
+    return m.type === 'campfire' && m.fuelLeft > 0;
   }
 
   /** Allume une unité de combustible si besoin ; renvoie vrai s'il y a de quoi brûler. */

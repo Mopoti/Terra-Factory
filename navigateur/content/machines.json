@@ -233,6 +233,17 @@
       "fuel": false
     },
     {
+      "id": "campfire",
+      "w": 1,
+      "d": 1,
+      "item": "machine_campfire",
+      "color": "#d9772b",
+      "height": 0.5,
+      "fuel": true,
+      "burnKw": 6,
+      "fuelMax": 10
+    },
+    {
       "id": "lamp",
       "w": 1,
       "d": 1,

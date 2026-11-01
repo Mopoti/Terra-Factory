@@ -102,3 +102,14 @@ describe('abri et commandes', () => {
     expect(windWith(5, 100, { windDir: 1 }).dir).toBe(1);
   });
 });
+
+describe('feu de camp', () => {
+  it('réchauffe de moins en moins avec la distance, jamais en dehors du rayon', async () => {
+    const { campfireTempC, CAMPFIRE_RADIUS_M, CAMPFIRE_TARGET_C } = await import('./weather');
+    expect(campfireTempC(-10, [0])).toBeCloseTo(CAMPFIRE_TARGET_C);
+    expect(campfireTempC(-10, [CAMPFIRE_RADIUS_M / 2])).toBeCloseTo((CAMPFIRE_TARGET_C - 10) / 2);
+    expect(campfireTempC(-10, [CAMPFIRE_RADIUS_M + 1])).toBe(-10);
+    // Par temps plus chaud que le feu, il ne refroidit pas.
+    expect(campfireTempC(30, [0])).toBe(30);
+  });
+});

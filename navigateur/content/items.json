@@ -608,6 +608,18 @@
       }
     },
     {
+      "id": "machine_campfire",
+      "stack": 10,
+      "category": "buildings",
+      "weightKg": 8,
+      "volumeL": 20,
+      "color": "#d9772b",
+      "recipe": {
+        "wood": 8,
+        "stone": 6
+      }
+    },
+    {
       "id": "machine_lamp",
       "stack": 10,
       "category": "buildings",

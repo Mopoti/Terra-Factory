@@ -88,6 +88,8 @@ export const MACHINE_MODELS: Partial<Record<MachineType, string>> = {
   lab: 'machine',
   heavy_press: 'piston-square',
   washer: 'machine-connection-pipe',
+  // Provisoire : une caisse du kit, en attendant le modèle « feu_de_camp » (bûches et flamme).
+  campfire: 'box-small',
   plastic_press: 'piston-thin-round',
   centrifuge: 'piston-round',
   refinery: 'hopper-high-square',

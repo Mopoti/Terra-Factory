@@ -104,6 +104,21 @@ export function airTempWith(computed: number, o?: WeatherOverrides): number {
   return o?.tempC ?? computed;
 }
 
+/** Feu de camp allumé : température (°C) au pied du feu et rayon (m) à l'intérieur duquel il réchauffe, de moins en moins. */
+export const CAMPFIRE_TARGET_C = 20;
+export const CAMPFIRE_RADIUS_M = 4;
+
+/** Température près de feux de camp allumés (distances en m) : la plus chaude des deux, l'air ambiant ou le feu. */
+export function campfireTempC(ambientC: number, distancesM: readonly number[]): number {
+  let temp = ambientC;
+  for (const d of distancesM) {
+    if (d >= CAMPFIRE_RADIUS_M) continue;
+    const warmed = ambientC + (CAMPFIRE_TARGET_C - ambientC) * (1 - d / CAMPFIRE_RADIUS_M);
+    if (warmed > temp) temp = warmed;
+  }
+  return temp;
+}
+
 /** Température visée à l'intérieur d'un abri clos (°C) et part de l'écart avec l'extérieur qu'il compense. */
 export const SHELTER_TARGET_C = 14;
 export const SHELTER_FACTOR = 0.5;

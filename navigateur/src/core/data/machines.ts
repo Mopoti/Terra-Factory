@@ -27,6 +27,7 @@ export type MachineType =
   | 'transformer'
   | 'breaker'
   | 'lamp'
+  | 'campfire'
   | 'thermometer'
   | 'vane'
   | 'wind_turbine'

@@ -70,6 +70,7 @@ import { climateAt, dayLight } from '../core/game/seasons';
 import {
   COLD_HURT_PER_S,
   airTempWith,
+  campfireTempC,
   coldDamagePerS,
   compassOf,
   shelterTempC,
@@ -3578,8 +3579,16 @@ export function startGameView(
       temperatureAt(generator.seed, x, z, changes.time, timeCfg),
       changes.weather,
     );
+    const air = insideAt(x, z) ? shelterTempC(outside) : outside;
+    // Les feux de camp allumés réchauffent autour d'eux.
+    const fires: number[] = [];
+    for (const m of factory.machines) {
+      if (!factory.isLit(m)) continue;
+      const c = centerOf(m);
+      fires.push(Math.hypot(c.x - x, c.z - z));
+    }
     return {
-      tempC: insideAt(x, z) ? shelterTempC(outside) : outside,
+      tempC: fires.length > 0 ? campfireTempC(air, fires) : air,
       wind: windWith(generator.seed, changes.time, changes.weather),
     };
   };
